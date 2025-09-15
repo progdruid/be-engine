@@ -3,6 +3,7 @@
 
 # Build outputs
 bin/
+bin-int/
 obj/
 *.exe
 *.dll
@@ -13,6 +14,8 @@ obj/
 *.sln
 *.vcxproj
 *.vcxproj.filters
+
+vendor/
 
 # Premake executable (explicitly include)
 !premake5.exe

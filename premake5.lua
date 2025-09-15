@@ -20,16 +20,17 @@ end
 
 -- workspace and project definitions
 workspace "DXSandbox"
-    configurations { "Debug", "Release" }            -- list syntax is { ... } with commas [5]
-    platforms { "Win64", "Win32" }                   -- simple strings or lists are allowed [5]
-    location "."                                     -- generate into current folder (optional) [5]
+    configurations { "Debug", "Release" }
+    system "windows"
+    architecture "x86_64"  
+    location "."                         
 
 project "Engine"
-    kind "ConsoleApp"                                -- function + simple string, no parentheses needed [5]
-    language "C++"                                   -- if using variables, parentheses become mandatory [5]
-    cppdialect "C++20"                               -- use C++17/20/etc., not raw /std switches [21]
+    kind "ConsoleApp"
+    language "C++"
+    cppdialect "C++20"
 
-    targetdir ("%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}")  -- parentheses ok [5]
+    targetdir ("%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}")
     objdir    ("%{wks.location}/bin-int/%{cfg.platform}/%{cfg.buildcfg}")
 
     files { 
@@ -39,15 +40,9 @@ project "Engine"
         "src/**.hpp" 
     }
 
-    includedirs { "src" }                                              -- simple include path [5]
-
-    filter "platforms:Win64"                                           -- activate a filter… [7]
-        system "windows"
-        architecture "x86_64"
-
-    filter "platforms:Win32"
-        system "windows"
-        architecture "x86"
+    includedirs { "src", "vendor/glfw/include" }
+    libdirs { "vendor/glfw/lib-vc2022" }
+    links { "glfw3", "opengl32", "d3d11", "dxgi", "d3dcompiler" }
 
     filter "configurations:Debug"
         symbols "On"
@@ -59,13 +54,13 @@ project "Engine"
         defines { "NDEBUG" }
         optimize "Full"
 
-    filter { "toolset:msc*", "language:C++" }                          -- multiple filter terms go in a list [7]
-        buildoptions { "/Zc:__cplusplus" }                             -- optional for correct __cplusplus [22]
+    filter { "toolset:msc*", "language:C++" }
+        buildoptions { "/Zc:__cplusplus" }
 
-    filter {}                                                          -- clear filters to avoid leakage [7]
+    filter {}
 
 project "MiscConfiguration"
-    kind "Utility"                                -- Utility project, no build output
+    kind "Utility"
     files {
         "premake5.lua",
         ".gitignore",
