@@ -1,0 +1,18 @@
+# Rider IDE
+.idea/
+
+# Build outputs
+bin/
+obj/
+*.exe
+*.dll
+*.lib
+*.pdb
+
+# solution files
+*.sln
+*.vcxproj
+*.vcxproj.filters
+
+# Premake executable (explicitly include)
+!premake5.exe
