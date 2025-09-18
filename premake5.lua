@@ -37,12 +37,17 @@ project "Engine"
         "src/**.cpp", 
         "src/**.c", 
         "src/**.h", 
-        "src/**.hpp" 
+        "src/**.hpp",
+        "src/**.hlsl", 
     }
+    
 
     includedirs { "src", "vendor/glfw/include", "vendor/glm" }
     libdirs { "vendor/glfw/lib-vc2022" }
     links { "glfw3", "d3d11", "dxgi", "d3dcompiler" }
+
+    filter { "files:**.hlsl" }
+        flags { "ExcludeFromBuild" }
 
     filter "configurations:Debug"
         symbols "On"

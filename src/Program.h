@@ -1,7 +1,5 @@
 ﻿#pragma once
 #include <GLFW/glfw3.h>
-#include <d3d11.h>
-#include <dxgi1_2.h>
 
 class Program {
 private:

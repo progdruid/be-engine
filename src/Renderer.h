@@ -2,17 +2,21 @@
 
 #include <d3d11.h>
 #include <dxgi1_2.h>
-#include <d3dcompiler.h>
+#include <glm.hpp>
+#include <memory>
 #include <wrl/client.h>
-using Microsoft::WRL::ComPtr;
 
-#include <string>
+#include "Shader.h"
+using Microsoft::WRL::ComPtr;
 
 class Renderer {
 public:
     explicit Renderer(HWND windowHandle, int width, int height);
     ~Renderer() = default;
 
+public:
+    glm::vec3 ClearColor = {0.071f, 0.04f, 0.561f};
+    
 private:
     bool _active = false;
 
@@ -27,9 +31,7 @@ private:
     ComPtr<IDXGIFactory2> _factory;
     ComPtr<IDXGISwapChain1> _swapchain;
     ComPtr<ID3D11RenderTargetView> _renderTarget;
-    ComPtr<ID3D11VertexShader> _vs;
-    ComPtr<ID3D11PixelShader> _ps;
-    ComPtr<ID3D11InputLayout> _inputLayout;
+    std::shared_ptr<Shader> _shader;
     ComPtr<ID3D11Buffer> _vertexBuffer;
     ComPtr<ID3D11Buffer> _indexBuffer;
 
