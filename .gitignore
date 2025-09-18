@@ -1,5 +1,6 @@
 # Rider IDE
 .idea/
+*.DotSettings.user
 
 # Build outputs
 bin/
