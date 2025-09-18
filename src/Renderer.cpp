@@ -1,6 +1,7 @@
 ﻿#include "Renderer.h"
 #include <cstdio>
 #include "DXUtils.h"
+#include "glm.hpp"
 
 static bool CompileShader(const char* source, const char* entry, const char* target, ComPtr<ID3DBlob>& outBlob) {
 
@@ -129,11 +130,11 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
     psBlob.Reset();
 
     
-    constexpr float vertices[] = {
+    constexpr glm::vec3 vertices[] = {
         // Position //-------// Color //-------//
-         0.0f,  0.5f, 0.0f,  1.0f, 0.0f, 0.0f, // Top (Red)
-         0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f, // Right (Green)
-        -0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f, // Left (Blue)
+         {0.0f,  0.5f, 0.0f},  {1.0f, 0.0f, 0.0f}, // Top (Red)
+         {0.5f, -0.5f, 0.0f},  {0.0f, 1.0f, 0.0f}, // Right (Green)
+        {-0.5f, -0.5f, 0.0f},  {0.0f, 0.0f, 1.0f}, // Left (Blue)
     };
     D3D11_BUFFER_DESC vertexBufferDescriptor = {};
     vertexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;

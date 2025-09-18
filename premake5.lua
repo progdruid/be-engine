@@ -40,7 +40,7 @@ project "Engine"
         "src/**.hpp" 
     }
 
-    includedirs { "src", "vendor/glfw/include" }
+    includedirs { "src", "vendor/glfw/include", "vendor/glm" }
     libdirs { "vendor/glfw/lib-vc2022" }
     links { "glfw3", "d3d11", "dxgi", "d3dcompiler" }
 
