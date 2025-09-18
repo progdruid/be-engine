@@ -21,6 +21,7 @@ namespace DX {
     };
 
     inline void ThrowIfFailed(const HRESULT hr) {
-        if (FAILED(hr)) throw com_exception(hr);
+        if (FAILED(hr))
+            throw com_exception(hr);
     }
 }
