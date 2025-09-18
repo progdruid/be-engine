@@ -16,7 +16,7 @@ obj/
 *.vcxproj
 *.vcxproj.filters
 
-vendor/
+# vendor/
 
 # Premake executable (explicitly include)
 !premake5.exe
