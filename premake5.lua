@@ -42,7 +42,7 @@ project "Engine"
 
     includedirs { "src", "vendor/glfw/include" }
     libdirs { "vendor/glfw/lib-vc2022" }
-    links { "glfw3", "opengl32", "d3d11", "dxgi", "d3dcompiler" }
+    links { "glfw3", "d3d11", "dxgi", "d3dcompiler" }
 
     filter "configurations:Debug"
         symbols "On"
