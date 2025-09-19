@@ -9,6 +9,7 @@
 
 #include <cstdio>
 #include <cassert>
+#include "gtc/matrix_transform.hpp"
 
 #include "Renderer.h"
 
@@ -20,23 +21,50 @@ Program::Program() = default;
 Program::~Program() = default;
 
 auto Program::run() -> int {
+
+    int width = 800, height = 600;
+    
     glfwSetErrorCallback(errorCallback);
     if (!glfwInit()) return -1;
 
     // No client API: Direct3D will render
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    window = glfwCreateWindow(800, 600, "GLFW + D3D11 Triangle", nullptr, nullptr);
+    window = glfwCreateWindow(width, height, "GLFW + D3D11 Triangle", nullptr, nullptr);
     if (!window) { terminate(); return -1; }
 
     const HWND hwnd = glfwGetWin32Window(window);
     assert(hwnd != nullptr);
-
-    Renderer renderer(hwnd, 800, 600);
+    
+    Renderer renderer(hwnd, width, height);
     if (!renderer.isActive()) { terminate(); return -1; }
+
+    glm::vec3 cameraPos = {3.0f, 3.0f, -3.0f};
+    glm::vec3 cameraDirection = {-1.0f, -1.0f, 1.0f};
+    glm::float32 fov = 45.0f;
+    constexpr float radius = 5.0f; // Distance from origin
+
+    
     
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+        {
+            // Rotating camera around the origin
+            static float angle = 0.0f;
+            angle += 0.01f; // Adjust speed as needed
+            cameraPos = glm::vec3(
+                radius * sin(angle),
+                3.0f, // Keep Y fixed for a simple orbit
+                radius * cos(angle)
+            );
+            cameraDirection = glm::normalize(-cameraPos); // Always look at the origin
+        }
+        glm::mat4x4 view = glm::lookAtLH(cameraPos, cameraPos + cameraDirection, {0.0f, 1.0f, 0.0f});
+        glm::mat4x4 projection = glm::perspectiveFovLH(glm::radians(fov), static_cast<float>(width), static_cast<float>(height), 0.1f, 100.0f);
+        glm::mat4x4 projectionView = projection * view;
+        renderer.setProjectionView(projectionView);
+        
         renderer.render();
     }
     
