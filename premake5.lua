@@ -4,7 +4,7 @@
 -- cleaning previously generated files and folders
 local function cleanGenerated()
     os.rmdir("bin")
-    os.rmdir("bin-int")
+    os.rmdir("obj")
     os.remove("**.sln")
     os.remove("**.vcxproj")
     os.remove("**.vcxproj.filters")
@@ -31,20 +31,24 @@ project "Engine"
     cppdialect "C++20"
 
     targetdir ("%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}")
-    objdir    ("%{wks.location}/bin-int/%{cfg.platform}/%{cfg.buildcfg}")
+    objdir    ("%{wks.location}/obj/%{cfg.platform}/%{cfg.buildcfg}")
 
     files { 
         "src/**.cpp", 
         "src/**.c", 
         "src/**.h", 
         "src/**.hpp",
-        "src/**.hlsl", 
+        "assets/**.hlsl", 
     }
     
 
-    includedirs { "src", "vendor/glfw/include", "vendor/glm" }
-    libdirs { "vendor/glfw/lib-vc2022" }
-    links { "glfw3", "d3d11", "dxgi", "d3dcompiler" }
+    includedirs { "src", "vendor/glfw/include", "vendor/glm", "vendor/Assimp/include" }
+    libdirs { "vendor/glfw/lib-vc2022", "vendor/Assimp/lib/x64" }
+    links { "glfw3", "d3d11", "dxgi", "d3dcompiler", "assimp-vc143-mt" }
+
+    postbuildcommands {
+        "{COPY} %{wks.location}/vendor/Assimp/bin/x64/assimp-vc143-mt.dll %{cfg.targetdir}"
+    }
 
     filter { "files:**.hlsl" }
         flags { "ExcludeFromBuild" }

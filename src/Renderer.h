@@ -11,6 +11,13 @@ using Microsoft::WRL::ComPtr;
 
 class Renderer {
 
+    struct Vertex {
+        glm::vec3 pos;
+        glm::vec3 color;
+        //glm::vec3 normal;
+        //glm::vec2 uv;
+    };
+    
     struct alignas(16) UniformData {
         glm::mat4x4 ProjectionView;
     };
@@ -43,6 +50,7 @@ private:
     std::shared_ptr<Shader> _shader;
     ComPtr<ID3D11Buffer> _vertexBuffer;
     ComPtr<ID3D11Buffer> _indexBuffer;
+    size_t _indexCount;
     
     glm::vec3 _cameraPos = {3.0f, 3.0f, -3.0f};
     glm::vec3 _cameraDirection = {-1.0f, -1.0f, 1.0f};
