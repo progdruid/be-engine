@@ -38,10 +38,10 @@ auto Program::run() -> int {
     Renderer renderer(hwnd, width, height);
     if (!renderer.isActive()) { terminate(); return -1; }
 
-    glm::vec3 cameraPos = {3.0f, 3.0f, -3.0f};
+    glm::vec3 cameraPos = {10.0f, 10.0f, -3.0f};
     glm::vec3 cameraDirection = {-1.0f, -1.0f, 1.0f};
     glm::float32 fov = 45.0f;
-    constexpr float radius = 5.0f; // Distance from origin
+    const float radius = cameraPos.x; // Distance from origin
 
     
     
@@ -55,7 +55,7 @@ auto Program::run() -> int {
             angle += 0.01f; // Adjust speed as needed
             cameraPos = glm::vec3(
                 radius * sin(angle),
-                3.0f, // Keep Y fixed for a simple orbit
+                cameraPos.y, // Keep Y fixed for a simple orbit
                 radius * cos(angle)
             );
             cameraDirection = glm::normalize(-cameraPos); // Always look at the origin

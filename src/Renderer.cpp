@@ -1,10 +1,14 @@
 ﻿#include "Renderer.h"
 
 #include <d3dcompiler.h>
+#include <glm.hpp>
+#include <stdexcept>
+#include <gtc/matrix_transform.hpp>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include "DXUtils.h"
-#include "glm.hpp"
-#include "gtc/matrix_transform.hpp"
 #include "StandardGeometry.h"
 
 Renderer::Renderer(HWND windowHandle, int width, int height) {
@@ -75,27 +79,58 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
 
 
     // Create buffers for objects
-    constexpr glm::vec3 vertices[] = {
-        StandardGeometry::Square::Vertices[0], {1.0f, 0.0f, 0.0f}, // Top (Red)
-        StandardGeometry::Square::Vertices[1],  {0.0f, 1.0f, 0.0f}, // Right (Green)
-        StandardGeometry::Square::Vertices[2],  {0.0f, 0.0f, 1.0f}, // Left (Blue)
-        StandardGeometry::Square::Vertices[3],  {1.0f, 1.0f, 0.0f}, // Bottom (Yellow)
-    };
+    static Assimp::Importer importer;
+    constexpr auto flags = (
+        aiProcess_Triangulate |
+        aiProcess_GenNormals |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_ImproveCacheLocality |
+        aiProcess_CalcTangentSpace |
+        aiProcess_ValidateDataStructure |
+        aiProcess_OptimizeMeshes |
+        aiProcess_OptimizeGraph);
+
+    const aiScene* scene = importer.ReadFile("assets/model.fbx", flags);
+    if (!scene || !scene->mRootNode)
+        throw std::runtime_error("Failed to load model: assets/model.fbx");
+    auto mesh = scene->mMeshes[1];
+    
+    
+    std::vector<Vertex> vertices; vertices.reserve(mesh->mNumVertices);
+    for (unsigned i=0; i<mesh->mNumVertices; ++i) {
+        aiVector3D p = mesh->mVertices[i];
+        //aiVector3D n = mesh->HasNormals() ? mesh->mNormals[i] : aiVector3D(0,0,1);
+        //aiVector3D t = mesh->HasTextureCoords(0) ? mesh->mTextureCoords[0][i] : aiVector3D(0,0,0);
+        //verts.push_back({ {p.x,p.y,p.z}, {n.x,n.y,n.z}, {t.x,t.y} });
+        vertices.push_back({ {p.x,p.y,p.z}, { 1.0, 0.0, 0.0 } });
+    }
+
+    std::vector<uint32_t> indices; indices.reserve(3 * mesh->mNumFaces);
+    for (unsigned f=0; f<mesh->mNumFaces; ++f) {
+        const aiFace& face = mesh->mFaces[f];
+        if (face.mNumIndices == 3) { // keep it simple (triangles)
+            indices.push_back(face.mIndices[0]);
+            indices.push_back(face.mIndices[1]);
+            indices.push_back(face.mIndices[2]);
+        }
+    }
+    _indexCount = indices.size();
+    
     
     D3D11_BUFFER_DESC vertexBufferDescriptor = {};
     vertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     vertexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
-    vertexBufferDescriptor.ByteWidth = sizeof(vertices);
+    vertexBufferDescriptor.ByteWidth = static_cast<UINT>(vertices.size() * sizeof(Vertex));
     D3D11_SUBRESOURCE_DATA vertexData = {};
-    vertexData.pSysMem = vertices;
+    vertexData.pSysMem = vertices.data();
     DX::ThrowIfFailed(_device->CreateBuffer(&vertexBufferDescriptor, &vertexData, &_vertexBuffer));
 
     D3D11_BUFFER_DESC indexBufferDescriptor = {};
     indexBufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;
     indexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
-    indexBufferDescriptor.ByteWidth = sizeof(StandardGeometry::Square::Indices);
+    indexBufferDescriptor.ByteWidth = static_cast<UINT>(indices.size() * sizeof(uint32_t));
     D3D11_SUBRESOURCE_DATA indexData = {};
-    indexData.pSysMem = StandardGeometry::Square::Indices;
+    indexData.pSysMem = indices.data();
     DX::ThrowIfFailed(_device->CreateBuffer(&indexBufferDescriptor, &indexData, &_indexBuffer));
 
     D3D11_BUFFER_DESC uniformBufferDescriptor = {};
@@ -153,12 +188,12 @@ auto Renderer::render() -> void {
 
     
     // Draw call
-    constexpr UINT stride = 6 * sizeof(float);
+    constexpr UINT stride = sizeof(Vertex);
     constexpr UINT offset = 0;
     _context->IASetVertexBuffers(0, 1, _vertexBuffer.GetAddressOf(), &stride, &offset);
     _context->IASetIndexBuffer(_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
     _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    _context->DrawIndexed(_countof(StandardGeometry::Square::Indices), 0, 0);
+    _context->DrawIndexed(_indexCount, 0, 0);
 
     
     _swapchain->Present(1, 0);
