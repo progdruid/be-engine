@@ -29,7 +29,7 @@ auto Program::run() -> int {
 
     // No client API: Direct3D will render
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    window = glfwCreateWindow(width, height, "GLFW + D3D11 Triangle", nullptr, nullptr);
+    window = glfwCreateWindow(width, height, "Best Engine Ever", nullptr, nullptr);
     if (!window) { terminate(); return -1; }
 
     const HWND hwnd = glfwGetWin32Window(window);
