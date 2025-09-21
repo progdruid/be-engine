@@ -38,7 +38,7 @@ auto Program::run() -> int {
     Renderer renderer(hwnd, width, height);
     if (!renderer.isActive()) { terminate(); return -1; }
 
-    glm::vec3 cameraPos = {10.0f, 10.0f, -3.0f};
+    glm::vec3 cameraPos = {15.0f, 15.0f, 0.0f};
     glm::vec3 cameraDirection = {-1.0f, -1.0f, 1.0f};
     glm::float32 fov = 45.0f;
     const float radius = cameraPos.x; // Distance from origin

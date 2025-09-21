@@ -7,6 +7,7 @@
 #include <wrl/client.h>
 
 #include "Shader.h"
+class ModelAsset;
 using Microsoft::WRL::ComPtr;
 
 class Renderer {
@@ -47,11 +48,13 @@ private:
     ComPtr<IDXGIFactory2> _factory;
     ComPtr<IDXGISwapChain1> _swapchain;
     ComPtr<ID3D11RenderTargetView> _renderTarget;
+    ComPtr<ID3D11DepthStencilView> _depthStencilView;
+    ComPtr<ID3D11DepthStencilState> _depthStencilState;
     std::shared_ptr<Shader> _shader;
+    std::shared_ptr<ModelAsset> _model;
     ComPtr<ID3D11Buffer> _vertexBuffer;
     ComPtr<ID3D11Buffer> _indexBuffer;
-    size_t _indexCount;
-    
+
     glm::vec3 _cameraPos = {3.0f, 3.0f, -3.0f};
     glm::vec3 _cameraDirection = {-1.0f, -1.0f, 1.0f};
     glm::float32 _fov = 45.0f;

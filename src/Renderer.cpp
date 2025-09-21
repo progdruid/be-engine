@@ -2,14 +2,11 @@
 
 #include <d3dcompiler.h>
 #include <glm.hpp>
-#include <stdexcept>
 #include <gtc/matrix_transform.hpp>
-#include <assimp/Importer.hpp>
 #include <assimp/scene.h>
-#include <assimp/postprocess.h>
 
 #include "DXUtils.h"
-#include "StandardGeometry.h"
+#include "ModelAsset.h"
 
 Renderer::Renderer(HWND windowHandle, int width, int height) {
 
@@ -62,11 +59,36 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
 
     
     // Create RTV
-    ComPtr<ID3D11Texture2D> backBuffer;
-    DX::ThrowIfFailed(_swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
-    DX::ThrowIfFailed(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_renderTarget));
-    backBuffer.Reset();
+    {
+        ComPtr<ID3D11Texture2D> backBuffer;
+        DX::ThrowIfFailed(_swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
+        DX::ThrowIfFailed(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_renderTarget));
+    
+        D3D11_TEXTURE2D_DESC depthStencilDescriptor = {};
+        depthStencilDescriptor.Width = _width;
+        depthStencilDescriptor.Height = _height;
+        depthStencilDescriptor.MipLevels = 1;
+        depthStencilDescriptor.ArraySize = 1;
+        depthStencilDescriptor.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; // 24-bit depth, 8-bit stencil
+        depthStencilDescriptor.SampleDesc.Count = 1;
+        depthStencilDescriptor.SampleDesc.Quality = 0;
+        depthStencilDescriptor.Usage = D3D11_USAGE_DEFAULT;
+        depthStencilDescriptor.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+        depthStencilDescriptor.CPUAccessFlags = 0;
+        depthStencilDescriptor.MiscFlags = 0;
+        ComPtr<ID3D11Texture2D> depthStencilBuffer;
+        DX::ThrowIfFailed(_device->CreateTexture2D(&depthStencilDescriptor,nullptr, depthStencilBuffer.GetAddressOf()));
+        DX::ThrowIfFailed(_device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, _depthStencilView.GetAddressOf()));
 
+        D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor;
+        depthStencilStateDescriptor.DepthEnable = true;
+        depthStencilStateDescriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+        depthStencilStateDescriptor.DepthFunc = D3D11_COMPARISON_LESS;
+        depthStencilStateDescriptor.StencilEnable = false;
+        
+        DX::ThrowIfFailed(_device->CreateDepthStencilState(&depthStencilStateDescriptor, _depthStencilState.GetAddressOf()));
+        _context->OMSetDepthStencilState(_depthStencilState.Get(), 1);
+    }
     
     // Compile shaders
     std::vector<D3D11_INPUT_ELEMENT_DESC> inputElementDescriptors{
@@ -78,45 +100,14 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
     _shader = std::make_shared<Shader>(_device.Get(), L"assets/shaders/default", inputElementDescriptors);
 
 
-    // Create buffers for objects
-    static Assimp::Importer importer;
-    constexpr auto flags = (
-        aiProcess_Triangulate |
-        aiProcess_GenNormals |
-        aiProcess_JoinIdenticalVertices |
-        aiProcess_ImproveCacheLocality |
-        aiProcess_CalcTangentSpace |
-        aiProcess_ValidateDataStructure |
-        aiProcess_OptimizeMeshes |
-        aiProcess_OptimizeGraph);
-
-    const aiScene* scene = importer.ReadFile("assets/model.fbx", flags);
-    if (!scene || !scene->mRootNode)
-        throw std::runtime_error("Failed to load model: assets/model.fbx");
-    auto mesh = scene->mMeshes[1];
+    _model = std::make_shared<ModelAsset>("assets/model.fbx");
     
-    
-    std::vector<Vertex> vertices; vertices.reserve(mesh->mNumVertices);
-    for (unsigned i=0; i<mesh->mNumVertices; ++i) {
-        aiVector3D p = mesh->mVertices[i];
-        //aiVector3D n = mesh->HasNormals() ? mesh->mNormals[i] : aiVector3D(0,0,1);
-        //aiVector3D t = mesh->HasTextureCoords(0) ? mesh->mTextureCoords[0][i] : aiVector3D(0,0,0);
-        //verts.push_back({ {p.x,p.y,p.z}, {n.x,n.y,n.z}, {t.x,t.y} });
-        vertices.push_back({ {p.x,p.y,p.z}, { 1.0, 0.0, 0.0 } });
+    const std::vector<uint32_t> indices = _model->Indices;
+    std::vector<Vertex> vertices; vertices.reserve(_model->Vertices.size());
+    for (unsigned i=0; i < _model->Vertices.size(); ++i) {
+        vertices.push_back({.pos = _model->Vertices[i], .color = _model->Colors[i] });
     }
 
-    std::vector<uint32_t> indices; indices.reserve(3 * mesh->mNumFaces);
-    for (unsigned f=0; f<mesh->mNumFaces; ++f) {
-        const aiFace& face = mesh->mFaces[f];
-        if (face.mNumIndices == 3) { // keep it simple (triangles)
-            indices.push_back(face.mIndices[0]);
-            indices.push_back(face.mIndices[1]);
-            indices.push_back(face.mIndices[2]);
-        }
-    }
-    _indexCount = indices.size();
-    
-    
     D3D11_BUFFER_DESC vertexBufferDescriptor = {};
     vertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     vertexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
@@ -154,7 +145,8 @@ auto Renderer::render() -> void {
     // Clear the back buffer
     auto fullClearColor = glm::vec4(ClearColor, 1.0f);
     _context->ClearRenderTargetView(_renderTarget.Get(), reinterpret_cast<FLOAT*>(&fullClearColor));
-    _context->OMSetRenderTargets(1, _renderTarget.GetAddressOf(), nullptr);
+    _context->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    _context->OMSetRenderTargets(1, _renderTarget.GetAddressOf(), _depthStencilView.Get());
 
 
     // Set viewport
@@ -180,7 +172,6 @@ auto Renderer::render() -> void {
     // Update object constant buffer
     ObjectData objData;
     objData.Model = glm::translate(glm::mat4(1.0f), _objectPos);
-    objData.Model = objData.Model;
     DX::ThrowIfFailed(_context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource));
     memcpy(mappedResource.pData, &objData, sizeof(ObjectData));
     _context->Unmap(_objectBuffer.Get(), 0);
@@ -193,8 +184,8 @@ auto Renderer::render() -> void {
     _context->IASetVertexBuffers(0, 1, _vertexBuffer.GetAddressOf(), &stride, &offset);
     _context->IASetIndexBuffer(_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
     _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    _context->DrawIndexed(_indexCount, 0, 0);
-
+    for (const auto& instruction : _model->DrawInstructions)
+        _context->DrawIndexed(instruction.IndexCount, instruction.StartIndexLocation, instruction.BaseVertexLocation);
     
     _swapchain->Present(1, 0);
 }
