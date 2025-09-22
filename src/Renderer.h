@@ -6,7 +6,9 @@
 #include <memory>
 #include <wrl/client.h>
 
-#include "Shader.h"
+#include "BeModel.h"
+
+class BeShader;
 class ModelAsset;
 using Microsoft::WRL::ComPtr;
 
@@ -15,8 +17,8 @@ class Renderer {
     struct Vertex {
         glm::vec3 pos;
         glm::vec3 color;
-        //glm::vec3 normal;
         //glm::vec2 uv;
+        //glm::vec3 normal;
     };
     
     struct alignas(16) UniformData {
@@ -32,7 +34,8 @@ public:
     ~Renderer() = default;
 
 public:
-    glm::vec3 ClearColor = {0.071f, 0.04f, 0.561f};
+    //glm::vec3 ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
+    glm::vec3 ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
     
 private:
     bool _active = false;
@@ -50,14 +53,9 @@ private:
     ComPtr<ID3D11RenderTargetView> _renderTarget;
     ComPtr<ID3D11DepthStencilView> _depthStencilView;
     ComPtr<ID3D11DepthStencilState> _depthStencilState;
-    std::shared_ptr<Shader> _shader;
-    std::shared_ptr<ModelAsset> _model;
-    ComPtr<ID3D11Buffer> _vertexBuffer;
-    ComPtr<ID3D11Buffer> _indexBuffer;
+    std::shared_ptr<BeShader> _shader;
+    std::shared_ptr<BeModel> _model; 
 
-    glm::vec3 _cameraPos = {3.0f, 3.0f, -3.0f};
-    glm::vec3 _cameraDirection = {-1.0f, -1.0f, 1.0f};
-    glm::float32 _fov = 45.0f;
     UniformData _uniformData;
     ComPtr<ID3D11Buffer> _uniformBuffer;
     

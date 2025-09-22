@@ -5,8 +5,8 @@
 #include <gtc/matrix_transform.hpp>
 #include <assimp/scene.h>
 
-#include "DXUtils.h"
-#include "ModelAsset.h"
+#include "BeShader.h"
+#include "Utils.h"
 
 Renderer::Renderer(HWND windowHandle, int width, int height) {
 
@@ -23,7 +23,7 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
 
     
     // Device and context
-    DX::ThrowIfFailed(D3D11CreateDevice(
+    Utils::ThrowIfFailed(D3D11CreateDevice(
         nullptr,
         D3D_DRIVER_TYPE_HARDWARE,
         nullptr,
@@ -38,9 +38,9 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
 
     
     // DXGI interfaces
-    DX::ThrowIfFailed(_device.As(&_dxgiDevice));
-    DX::ThrowIfFailed(_dxgiDevice->GetAdapter(&_adapter));
-    DX::ThrowIfFailed(_adapter->GetParent(IID_PPV_ARGS(&_factory)));
+    Utils::ThrowIfFailed(_device.As(&_dxgiDevice));
+    Utils::ThrowIfFailed(_dxgiDevice->GetAdapter(&_adapter));
+    Utils::ThrowIfFailed(_adapter->GetParent(IID_PPV_ARGS(&_factory)));
 
 
     // Swap chain
@@ -54,15 +54,15 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
     scDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     scDesc.Scaling = DXGI_SCALING_STRETCH;
     scDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-    DX::ThrowIfFailed(_factory->CreateSwapChainForHwnd(_device.Get(), _windowHandle, &scDesc, nullptr, nullptr, &_swapchain));
-    DX::ThrowIfFailed(_factory->MakeWindowAssociation(_windowHandle, DXGI_MWA_NO_ALT_ENTER));
+    Utils::ThrowIfFailed(_factory->CreateSwapChainForHwnd(_device.Get(), _windowHandle, &scDesc, nullptr, nullptr, &_swapchain));
+    Utils::ThrowIfFailed(_factory->MakeWindowAssociation(_windowHandle, DXGI_MWA_NO_ALT_ENTER));
 
     
     // Create RTV
     {
         ComPtr<ID3D11Texture2D> backBuffer;
-        DX::ThrowIfFailed(_swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
-        DX::ThrowIfFailed(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_renderTarget));
+        Utils::ThrowIfFailed(_swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
+        Utils::ThrowIfFailed(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_renderTarget));
     
         D3D11_TEXTURE2D_DESC depthStencilDescriptor = {};
         depthStencilDescriptor.Width = _width;
@@ -77,8 +77,8 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
         depthStencilDescriptor.CPUAccessFlags = 0;
         depthStencilDescriptor.MiscFlags = 0;
         ComPtr<ID3D11Texture2D> depthStencilBuffer;
-        DX::ThrowIfFailed(_device->CreateTexture2D(&depthStencilDescriptor,nullptr, depthStencilBuffer.GetAddressOf()));
-        DX::ThrowIfFailed(_device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, _depthStencilView.GetAddressOf()));
+        Utils::ThrowIfFailed(_device->CreateTexture2D(&depthStencilDescriptor,nullptr, depthStencilBuffer.GetAddressOf()));
+        Utils::ThrowIfFailed(_device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, _depthStencilView.GetAddressOf()));
 
         D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor;
         depthStencilStateDescriptor.DepthEnable = true;
@@ -86,57 +86,35 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
         depthStencilStateDescriptor.DepthFunc = D3D11_COMPARISON_LESS;
         depthStencilStateDescriptor.StencilEnable = false;
         
-        DX::ThrowIfFailed(_device->CreateDepthStencilState(&depthStencilStateDescriptor, _depthStencilState.GetAddressOf()));
+        Utils::ThrowIfFailed(_device->CreateDepthStencilState(&depthStencilStateDescriptor, _depthStencilState.GetAddressOf()));
         _context->OMSetDepthStencilState(_depthStencilState.Get(), 1);
     }
     
     // Compile shaders
-    std::vector<D3D11_INPUT_ELEMENT_DESC> inputElementDescriptors{
-        {.SemanticName = "POSITION", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 0,
-            .AlignedByteOffset = 0, .InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA, .InstanceDataStepRate = 0 },
-        {.SemanticName = "COLOR", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 0,
-            .AlignedByteOffset = 12, .InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA, .InstanceDataStepRate = 0 },
+    std::vector<BeVertexElementDescriptor> vertexLayout{
+        {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
+        {.Name = "Color", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Color3}
     };
-    _shader = std::make_shared<Shader>(_device.Get(), L"assets/shaders/default", inputElementDescriptors);
-
-
-    _model = std::make_shared<ModelAsset>("assets/model.fbx");
+    _shader = std::make_shared<BeShader>(_device.Get(), L"assets/shaders/default", vertexLayout);
     
-    const std::vector<uint32_t> indices = _model->Indices;
-    std::vector<Vertex> vertices; vertices.reserve(_model->Vertices.size());
-    for (unsigned i=0; i < _model->Vertices.size(); ++i) {
-        vertices.push_back({.pos = _model->Vertices[i], .color = _model->Colors[i] });
-    }
+    _model = std::make_shared<BeModel>(_shader, "assets/model.fbx", _device.Get());
+    //_model = std::make_shared<ModelAsset>("assets/cd.glb");
+    //_model = std::make_shared<ModelAsset>("assets/floppy-disks.glb");
 
-    D3D11_BUFFER_DESC vertexBufferDescriptor = {};
-    vertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    vertexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
-    vertexBufferDescriptor.ByteWidth = static_cast<UINT>(vertices.size() * sizeof(Vertex));
-    D3D11_SUBRESOURCE_DATA vertexData = {};
-    vertexData.pSysMem = vertices.data();
-    DX::ThrowIfFailed(_device->CreateBuffer(&vertexBufferDescriptor, &vertexData, &_vertexBuffer));
-
-    D3D11_BUFFER_DESC indexBufferDescriptor = {};
-    indexBufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    indexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
-    indexBufferDescriptor.ByteWidth = static_cast<UINT>(indices.size() * sizeof(uint32_t));
-    D3D11_SUBRESOURCE_DATA indexData = {};
-    indexData.pSysMem = indices.data();
-    DX::ThrowIfFailed(_device->CreateBuffer(&indexBufferDescriptor, &indexData, &_indexBuffer));
-
+    
     D3D11_BUFFER_DESC uniformBufferDescriptor = {};
     uniformBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     uniformBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     uniformBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     uniformBufferDescriptor.ByteWidth = sizeof(UniformData);
-    DX::ThrowIfFailed(_device->CreateBuffer(&uniformBufferDescriptor, nullptr, &_uniformBuffer));
+    Utils::ThrowIfFailed(_device->CreateBuffer(&uniformBufferDescriptor, nullptr, &_uniformBuffer));
     
     D3D11_BUFFER_DESC objectBufferDescriptor = {};
     objectBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     objectBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     objectBufferDescriptor.ByteWidth = sizeof(ObjectData);
-    DX::ThrowIfFailed(_device->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer));
+    Utils::ThrowIfFailed(_device->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer));
     _active = true;
 }
 
@@ -164,7 +142,7 @@ auto Renderer::render() -> void {
 
     // Update uniform constant buffer
     D3D11_MAPPED_SUBRESOURCE mappedResource;
-    DX::ThrowIfFailed(_context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource));
+    Utils::ThrowIfFailed(_context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource));
     memcpy(mappedResource.pData, &_uniformData, sizeof(UniformData));
     _context->Unmap(_uniformBuffer.Get(), 0);
     _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
@@ -172,17 +150,15 @@ auto Renderer::render() -> void {
     // Update object constant buffer
     ObjectData objData;
     objData.Model = glm::translate(glm::mat4(1.0f), _objectPos);
-    DX::ThrowIfFailed(_context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource));
+    Utils::ThrowIfFailed(_context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource));
     memcpy(mappedResource.pData, &objData, sizeof(ObjectData));
     _context->Unmap(_objectBuffer.Get(), 0);
     _context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
 
     
     // Draw call
-    constexpr UINT stride = sizeof(Vertex);
-    constexpr UINT offset = 0;
-    _context->IASetVertexBuffers(0, 1, _vertexBuffer.GetAddressOf(), &stride, &offset);
-    _context->IASetIndexBuffer(_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+    _context->IASetVertexBuffers(0, 1, _model->VertexBuffer.GetAddressOf(), &_model->Stride, &_model->Offset);
+    _context->IASetIndexBuffer(_model->IndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
     _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     for (const auto& instruction : _model->DrawInstructions)
         _context->DrawIndexed(instruction.IndexCount, instruction.StartIndexLocation, instruction.BaseVertexLocation);
