@@ -1,9 +1,10 @@
 ﻿#include "Renderer.h"
 
 #include <d3dcompiler.h>
-#include <glm.hpp>
-#include <gtc/matrix_transform.hpp>
 #include <assimp/scene.h>
+#include <glm.hpp>
+#include <gtc/quaternion.hpp>
+#include <gtc/type_ptr.hpp>
 
 #include "BeShader.h"
 #include "Utils.h"
@@ -90,30 +91,78 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
         _context->OMSetDepthStencilState(_depthStencilState.Get(), 1);
     }
     
+    
     // Compile shaders
     std::vector<BeVertexElementDescriptor> vertexLayout{
         {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
         {.Name = "Color", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Color3}
     };
     _shader = std::make_shared<BeShader>(_device.Get(), L"assets/shaders/default", vertexLayout);
-    
-    _model = std::make_shared<BeModel>(_shader, "assets/model.fbx", _device.Get());
-    //_model = std::make_shared<ModelAsset>("assets/cd.glb");
-    //_model = std::make_shared<ModelAsset>("assets/floppy-disks.glb");
 
+    
+    _objects.push_back({
+        .Position = {0, 0, 0},
+        .Model = std::make_unique<BeModel>(_shader, "assets/model.fbx", _device.Get()),
+        .MeshInstructions = {}
+    });
+    _objects.push_back({
+        .Position = {7.5f, 1, 3},
+        .Rotation = glm::quat(glm::vec3(0, glm::radians(150.f), 0)),
+        .Model = std::make_unique<BeModel>(_shader, "assets/floppy-disks.glb", _device.Get()),
+        .MeshInstructions = {}
+    });
+    
+    size_t totalVerticesNumber = 0;
+    size_t totalIndicesNumber = 0;
+    size_t totalDrawInstructions = 0;
+    for (const auto& object : _objects) {
+        totalVerticesNumber += object.Model->FullVertices.size();
+        totalIndicesNumber += object.Model->Indices.size();
+        totalDrawInstructions += object.Model->DrawInstructions.size();
+    }
+    
+    std::vector<BeFullVertex> fullVertices;
+    std::vector<uint32_t> indices;
+    fullVertices.reserve(totalVerticesNumber);
+    indices.reserve(totalIndicesNumber);
+    for (auto& object : _objects) {
+        fullVertices.insert(fullVertices.end(), object.Model->FullVertices.begin(), object.Model->FullVertices.end());
+        indices.insert(indices.end(), object.Model->Indices.begin(), object.Model->Indices.end());
+        for (BeModel::BeMeshInstruction instruction : object.Model->DrawInstructions) {
+            instruction.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - object.Model->FullVertices.size());
+            instruction.StartIndexLocation += static_cast<uint32_t>(indices.size() - object.Model->Indices.size());
+            object.MeshInstructions.push_back(instruction);
+        }
+    }
+    
+    D3D11_BUFFER_DESC vertexBufferDescriptor = {};
+    vertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    vertexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
+    vertexBufferDescriptor.ByteWidth = static_cast<UINT>(fullVertices.size() * sizeof(BeFullVertex));
+    D3D11_SUBRESOURCE_DATA vertexData = {};
+    vertexData.pSysMem = fullVertices.data();
+    Utils::ThrowIfFailed(_device->CreateBuffer(&vertexBufferDescriptor, &vertexData, &_sharedVertexBuffer));
+    
+    D3D11_BUFFER_DESC indexBufferDescriptor = {};
+    indexBufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    indexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
+    indexBufferDescriptor.ByteWidth = static_cast<UINT>(indices.size() * sizeof(uint32_t));
+    D3D11_SUBRESOURCE_DATA indexData = {};
+    indexData.pSysMem = indices.data();
+    Utils::ThrowIfFailed(_device->CreateBuffer(&indexBufferDescriptor, &indexData, &_sharedIndexBuffer));
     
     D3D11_BUFFER_DESC uniformBufferDescriptor = {};
     uniformBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     uniformBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     uniformBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    uniformBufferDescriptor.ByteWidth = sizeof(UniformData);
+    uniformBufferDescriptor.ByteWidth = sizeof(UniformBufferData);
     Utils::ThrowIfFailed(_device->CreateBuffer(&uniformBufferDescriptor, nullptr, &_uniformBuffer));
     
     D3D11_BUFFER_DESC objectBufferDescriptor = {};
     objectBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     objectBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    objectBufferDescriptor.ByteWidth = sizeof(ObjectData);
+    objectBufferDescriptor.ByteWidth = sizeof(ObjectBufferData);
     Utils::ThrowIfFailed(_device->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer));
     _active = true;
 }
@@ -143,25 +192,34 @@ auto Renderer::render() -> void {
     // Update uniform constant buffer
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     Utils::ThrowIfFailed(_context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource));
-    memcpy(mappedResource.pData, &_uniformData, sizeof(UniformData));
+    memcpy(mappedResource.pData, &_uniformData, sizeof(UniformBufferData));
     _context->Unmap(_uniformBuffer.Get(), 0);
     _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
-    
-    // Update object constant buffer
-    ObjectData objData;
-    objData.Model = glm::translate(glm::mat4(1.0f), _objectPos);
-    Utils::ThrowIfFailed(_context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource));
-    memcpy(mappedResource.pData, &objData, sizeof(ObjectData));
-    _context->Unmap(_objectBuffer.Get(), 0);
-    _context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
 
     
     // Draw call
-    _context->IASetVertexBuffers(0, 1, _model->VertexBuffer.GetAddressOf(), &_model->Stride, &_model->Offset);
-    _context->IASetIndexBuffer(_model->IndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+    uint32_t stride = sizeof(BeFullVertex);
+    uint32_t offset = 0;
+    _context->IASetVertexBuffers(0, 1, _sharedVertexBuffer.GetAddressOf(), &stride, &offset);
+    _context->IASetIndexBuffer(_sharedIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
     _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    for (const auto& instruction : _model->DrawInstructions)
-        _context->DrawIndexed(instruction.IndexCount, instruction.StartIndexLocation, instruction.BaseVertexLocation);
+    
+    for (const auto& object : _objects) {
+        // Update object constant buffer
+        ObjectBufferData objData;
+        objData.Model =
+            glm::translate(glm::mat4(1.0f), object.Position) *
+            glm::mat4_cast(object.Rotation) *
+            glm::scale(glm::mat4(1.0f), object.Scale);
+        Utils::ThrowIfFailed(_context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource));
+        memcpy(mappedResource.pData, &objData, sizeof(ObjectBufferData));
+        _context->Unmap(_objectBuffer.Get(), 0);
+        _context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+        
+        for (const auto& instruction : object.MeshInstructions) {
+            _context->DrawIndexed(instruction.IndexCount, instruction.StartIndexLocation, instruction.BaseVertexLocation);
+        }
+    }
     
     _swapchain->Present(1, 0);
 }

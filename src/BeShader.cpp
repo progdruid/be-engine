@@ -60,20 +60,17 @@ BeShader::BeShader(
     std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout;
     inputLayout.reserve(vertexLayout.size());
 
-    uint32_t offset = 0;
     for (const auto& descriptor : vertexLayout) {
         D3D11_INPUT_ELEMENT_DESC elementDesc;
         elementDesc.SemanticIndex = 0;
         elementDesc.InputSlot = 0;
-        elementDesc.AlignedByteOffset = offset;
+        elementDesc.AlignedByteOffset = BeVertexElementDescriptor::ElementOffsets.at(descriptor.Attribute);
         elementDesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
         elementDesc.InstanceDataStepRate = 0;
         elementDesc.SemanticName = BeVertexElementDescriptor::SemanticNames.at(descriptor.Attribute);
-        elementDesc.Format = BeVertexElementDescriptor::SemanticFormats.at(descriptor.Attribute);
+        elementDesc.Format = BeVertexElementDescriptor::ElementFormats.at(descriptor.Attribute);
         
         inputLayout.push_back(elementDesc);
-
-        offset += BeVertexElementDescriptor::SemanticSizes.at(descriptor.Attribute);
     }
 
     Utils::ThrowIfFailed(device->CreateInputLayout(
