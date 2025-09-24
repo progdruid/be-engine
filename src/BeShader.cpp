@@ -81,7 +81,7 @@ BeShader::BeShader(
         &ComputedInputLayout));
 }
 
-auto BeShader::bind(ID3D11DeviceContext* context) const -> void {
+auto BeShader::Bind(ID3D11DeviceContext* context) const -> void {
     context->IASetInputLayout(ComputedInputLayout.Get());
     context->VSSetShader(VertexShader.Get(), nullptr, 0);
     context->PSSetShader(PixelShader.Get(), nullptr, 0);

@@ -5,6 +5,7 @@
 #include <gtc/quaternion.hpp>
 #include <gtc/type_ptr.hpp>
 
+#include "BeAssetManager.h"
 #include "BeShader.h"
 #include "Utils.h"
 
@@ -90,10 +91,11 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
         Utils::ThrowIfFailed(_device->CreateDepthStencilState(&depthStencilStateDescriptor, _depthStencilState.GetAddressOf()));
         _context->OMSetDepthStencilState(_depthStencilState.Get(), 1);
     }
-    
+
+    BeAssetManager::Ins = std::make_unique<BeAssetManager>(_device);
     
     // Compile shaders
-    _shader = std::make_shared<BeShader>(
+    _colorShader = std::make_shared<BeShader>(
         _device.Get(),
         L"assets/shaders/default",
         std::vector<BeVertexElementDescriptor>{
@@ -101,65 +103,74 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
             {.Name = "Color", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Color3}
         }
     );
+    _texturedShader = std::make_shared<BeShader>(
+        _device.Get(),
+        L"assets/shaders/textured",
+        std::vector<BeVertexElementDescriptor>{
+            {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
+            {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
+        }
+    );
 
+    BeAssetManager::Ins->LoadModel("macintosh", "assets/model.fbx");
+    BeAssetManager::Ins->LoadModel("disks", "assets/floppy-disks.glb");
+    BeAssetManager::Ins->LoadModel("pagoda", "assets/pagoda.glb");
+    BeAssetManager::Ins->LoadModel("witch_items", "assets/witch_items.glb");
+    BeAssetManager::Ins->LoadModel("anvil", "assets/lowpoly_pixelart_anvil.glb");
+    BeAssetManager::Ins->LoadModel("rock", "assets/lowpoly_rock_1/scene.gltf");
+    
     
     _objects.push_back({
+        .Name = "Macintosh",
         .Position = {0, 0, -7},
-        .Model = std::make_unique<BeModel>("assets/model.fbx", _device.Get()),
+        .Model = BeAssetManager::Ins->GetModel("macintosh"),
+        .Shader = _colorShader,
     });
     _objects.push_back({
+        .Name = "Disks",
         .Position = {7.5f, 1, -4},
         .Rotation = glm::quat(glm::vec3(0, glm::radians(150.f), 0)),
-        .Model = std::make_unique<BeModel>("assets/floppy-disks.glb", _device.Get()),
+        .Model = BeAssetManager::Ins->GetModel("disks"),
+        .Shader = _colorShader,
     });
     _objects.push_back({
+        .Name = "Pagoda",
         .Position = {0, 0, 8},
         .Scale = glm::vec3(0.2f),
-        .Model = std::make_unique<BeModel>("assets/pagoda.glb", _device.Get()),
-        .Shader = std::make_shared<BeShader>(
-            _device.Get(),
-            L"assets/shaders/textured",
-            std::vector<BeVertexElementDescriptor>{
-                {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
-                {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
-            }
-        )
+        .Model = BeAssetManager::Ins->GetModel("pagoda"),
+        .Shader = _texturedShader,
     });
     _objects.push_back({
+        .Name = "Witch Items",
         .Position = {-3, 0, 5},
         .Scale = glm::vec3(3.f),
-        .Model = std::make_unique<BeModel>("assets/witch_items.glb", _device.Get()),
-        .Shader = std::make_shared<BeShader>(
-            _device.Get(),
-            L"assets/shaders/textured",
-            std::vector<BeVertexElementDescriptor>{
-                {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
-                {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
-            }
-        )
+        .Model = BeAssetManager::Ins->GetModel("witch_items"),
+        .Shader = _texturedShader,
     });
     _objects.push_back({
+        .Name = "Anvil",
         .Position = {7, 0, 5},
         //.Rotation = glm::quat(glm::vec3(glm::radians(-90.f), glm::radians(180.f), 0)),
         .Scale = glm::vec3(0.2f),
-        .Model = std::make_unique<BeModel>("assets/lowpoly_pixelart_anvil.glb", _device.Get()),
-        .Shader = std::make_shared<BeShader>(
-            _device.Get(),
-            L"assets/shaders/textured",
-            std::vector<BeVertexElementDescriptor>{
-                {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
-                {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
-            }
-        )
+        .Model = BeAssetManager::Ins->GetModel("anvil"),
+        .Shader = _texturedShader,
+    });
+    _objects.push_back({
+        .Name = "Rock",
+        .Position = {0, 0, 0},
+        .Rotation = glm::quat(glm::vec3(glm::radians(-90.f), 0, 0)),
+        .Scale = glm::vec3(1.5f),
+        .Model = BeAssetManager::Ins->GetModel("rock"),
+        .Shader = _texturedShader,
     });
     
     size_t totalVerticesNumber = 0;
     size_t totalIndicesNumber = 0;
     size_t totalDrawInstructions = 0;
     for (const auto& object : _objects) {
-        totalVerticesNumber += object.Model->FullVertices.size();
-        totalIndicesNumber += object.Model->Indices.size();
-        totalDrawInstructions += object.Model->MeshInstructions.size();
+        totalVerticesNumber += object.Model.FullVertices.size();
+        totalIndicesNumber += object.Model.Indices.size();
+        totalDrawInstructions += object.Model.MeshInstructions.size();
     }
     
     std::vector<BeFullVertex> fullVertices;
@@ -167,11 +178,11 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
     fullVertices.reserve(totalVerticesNumber);
     indices.reserve(totalIndicesNumber);
     for (auto& object : _objects) {
-        fullVertices.insert(fullVertices.end(), object.Model->FullVertices.begin(), object.Model->FullVertices.end());
-        indices.insert(indices.end(), object.Model->Indices.begin(), object.Model->Indices.end());
-        for (BeModel::BeMeshInstruction instruction : object.Model->MeshInstructions) {
-            instruction.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - object.Model->FullVertices.size());
-            instruction.StartIndexLocation += static_cast<uint32_t>(indices.size() - object.Model->Indices.size());
+        fullVertices.insert(fullVertices.end(), object.Model.FullVertices.begin(), object.Model.FullVertices.end());
+        indices.insert(indices.end(), object.Model.Indices.begin(), object.Model.Indices.end());
+        for (BeModel::BeMeshInstruction instruction : object.Model.MeshInstructions) {
+            instruction.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - object.Model.FullVertices.size());
+            instruction.StartIndexLocation += static_cast<uint32_t>(indices.size() - object.Model.Indices.size());
             object.MeshInstructions.push_back(instruction);
         }
     }
@@ -242,7 +253,7 @@ auto Renderer::render() -> void {
     _context->RSSetViewports(1, &viewport);
     
     // Bind shaders
-    _shader->bind(_context.Get());
+    _colorShader->Bind(_context.Get());
 
     // Update uniform constant buffer
     D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -263,7 +274,7 @@ auto Renderer::render() -> void {
     _context->PSSetSamplers(0, 1, _pointSampler.GetAddressOf());
     
     for (const auto& object : _objects) {
-        object.Shader ? object.Shader->bind(_context.Get()) : _shader->bind(_context.Get());
+        object.Shader ? object.Shader->Bind(_context.Get()) : _colorShader->Bind(_context.Get());
         
         // Update object constant buffer
         ObjectBufferData objData;
@@ -278,7 +289,7 @@ auto Renderer::render() -> void {
         
         for (const auto& instruction : object.MeshInstructions) {
             if (instruction.DiffuseTexture)
-                _context->PSSetShaderResources(0, 1, instruction.DiffuseTexture.GetAddressOf());
+                _context->PSSetShaderResources(0, 1, instruction.DiffuseTexture->SRV.GetAddressOf());
             _context->DrawIndexed(instruction.IndexCount, instruction.StartIndexLocation, instruction.BaseVertexLocation);
             _context->PSSetShaderResources(0, 0, nullptr); // unbind texture
         }
