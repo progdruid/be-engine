@@ -34,7 +34,7 @@ struct BeVertexElementDescriptor {
         {BeVertexSemantic::Normal, "NORMAL"},
         {BeVertexSemantic::Color3, "COLOR"},
         {BeVertexSemantic::Color4, "COLOR"},
-        {BeVertexSemantic::TexCoord0, "TEXCOORD0"},
+        {BeVertexSemantic::TexCoord0, "TEXCOORD"}, //????????
         {BeVertexSemantic::TexCoord1, "TEXCOORD1"},
         {BeVertexSemantic::TexCoord2, "TEXCOORD2"},
     };

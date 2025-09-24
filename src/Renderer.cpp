@@ -1,7 +1,6 @@
 ﻿#include "Renderer.h"
 
 #include <d3dcompiler.h>
-#include <assimp/scene.h>
 #include <glm.hpp>
 #include <gtc/quaternion.hpp>
 #include <gtc/type_ptr.hpp>
@@ -9,7 +8,7 @@
 #include "BeShader.h"
 #include "Utils.h"
 
-Renderer::Renderer(HWND windowHandle, int width, int height) {
+Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
 
     _active = false;
 
@@ -42,19 +41,19 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
     Utils::ThrowIfFailed(_device.As(&_dxgiDevice));
     Utils::ThrowIfFailed(_dxgiDevice->GetAdapter(&_adapter));
     Utils::ThrowIfFailed(_adapter->GetParent(IID_PPV_ARGS(&_factory)));
-
-
+    
     // Swap chain
-    DXGI_SWAP_CHAIN_DESC1 scDesc{};
-    scDesc.Width = _width;
-    scDesc.Height = _height;
-    scDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    scDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    scDesc.BufferCount = 2;
-    scDesc.SampleDesc.Count = 1;
-    scDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    scDesc.Scaling = DXGI_SCALING_STRETCH;
-    scDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+    DXGI_SWAP_CHAIN_DESC1 scDesc = {
+        .Width = _width,
+        .Height = _height,
+        .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+        .SampleDesc = { .Count = 1 },
+        .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+        .BufferCount = 2,
+        .Scaling = DXGI_SCALING_STRETCH,
+        .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+        .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
+    };
     Utils::ThrowIfFailed(_factory->CreateSwapChainForHwnd(_device.Get(), _windowHandle, &scDesc, nullptr, nullptr, &_swapchain));
     Utils::ThrowIfFailed(_factory->MakeWindowAssociation(_windowHandle, DXGI_MWA_NO_ALT_ENTER));
 
@@ -65,27 +64,28 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
         Utils::ThrowIfFailed(_swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
         Utils::ThrowIfFailed(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_renderTarget));
     
-        D3D11_TEXTURE2D_DESC depthStencilDescriptor = {};
-        depthStencilDescriptor.Width = _width;
-        depthStencilDescriptor.Height = _height;
-        depthStencilDescriptor.MipLevels = 1;
-        depthStencilDescriptor.ArraySize = 1;
-        depthStencilDescriptor.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; // 24-bit depth, 8-bit stencil
-        depthStencilDescriptor.SampleDesc.Count = 1;
-        depthStencilDescriptor.SampleDesc.Quality = 0;
-        depthStencilDescriptor.Usage = D3D11_USAGE_DEFAULT;
-        depthStencilDescriptor.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-        depthStencilDescriptor.CPUAccessFlags = 0;
-        depthStencilDescriptor.MiscFlags = 0;
+        D3D11_TEXTURE2D_DESC depthStencilDescriptor = {
+            .Width = _width,
+            .Height = _height,
+            .MipLevels = 1,
+            .ArraySize = 1,
+            .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, // 24-bit depth, 8-bit stencil
+            .SampleDesc = { .Count = 1, .Quality = 0 },
+            .Usage = D3D11_USAGE_DEFAULT,
+            .BindFlags = D3D11_BIND_DEPTH_STENCIL,
+            .CPUAccessFlags = 0,
+            .MiscFlags = 0,
+        };
         ComPtr<ID3D11Texture2D> depthStencilBuffer;
         Utils::ThrowIfFailed(_device->CreateTexture2D(&depthStencilDescriptor,nullptr, depthStencilBuffer.GetAddressOf()));
         Utils::ThrowIfFailed(_device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, _depthStencilView.GetAddressOf()));
 
-        D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor;
-        depthStencilStateDescriptor.DepthEnable = true;
-        depthStencilStateDescriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-        depthStencilStateDescriptor.DepthFunc = D3D11_COMPARISON_LESS;
-        depthStencilStateDescriptor.StencilEnable = false;
+        D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {
+            .DepthEnable = true,
+            .DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL,
+            .DepthFunc = D3D11_COMPARISON_LESS,
+            .StencilEnable = false,
+        };
         
         Utils::ThrowIfFailed(_device->CreateDepthStencilState(&depthStencilStateDescriptor, _depthStencilState.GetAddressOf()));
         _context->OMSetDepthStencilState(_depthStencilState.Get(), 1);
@@ -93,23 +93,64 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
     
     
     // Compile shaders
-    std::vector<BeVertexElementDescriptor> vertexLayout{
-        {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
-        {.Name = "Color", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Color3}
-    };
-    _shader = std::make_shared<BeShader>(_device.Get(), L"assets/shaders/default", vertexLayout);
+    _shader = std::make_shared<BeShader>(
+        _device.Get(),
+        L"assets/shaders/default",
+        std::vector<BeVertexElementDescriptor>{
+            {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
+            {.Name = "Color", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Color3}
+        }
+    );
 
     
     _objects.push_back({
-        .Position = {0, 0, 0},
-        .Model = std::make_unique<BeModel>(_shader, "assets/model.fbx", _device.Get()),
-        .MeshInstructions = {}
+        .Position = {0, 0, -7},
+        .Model = std::make_unique<BeModel>("assets/model.fbx", _device.Get()),
     });
     _objects.push_back({
-        .Position = {7.5f, 1, 3},
+        .Position = {7.5f, 1, -4},
         .Rotation = glm::quat(glm::vec3(0, glm::radians(150.f), 0)),
-        .Model = std::make_unique<BeModel>(_shader, "assets/floppy-disks.glb", _device.Get()),
-        .MeshInstructions = {}
+        .Model = std::make_unique<BeModel>("assets/floppy-disks.glb", _device.Get()),
+    });
+    _objects.push_back({
+        .Position = {0, 0, 8},
+        .Scale = glm::vec3(0.2f),
+        .Model = std::make_unique<BeModel>("assets/pagoda.glb", _device.Get()),
+        .Shader = std::make_shared<BeShader>(
+            _device.Get(),
+            L"assets/shaders/textured",
+            std::vector<BeVertexElementDescriptor>{
+                {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
+                {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
+            }
+        )
+    });
+    _objects.push_back({
+        .Position = {-3, 0, 5},
+        .Scale = glm::vec3(3.f),
+        .Model = std::make_unique<BeModel>("assets/witch_items.glb", _device.Get()),
+        .Shader = std::make_shared<BeShader>(
+            _device.Get(),
+            L"assets/shaders/textured",
+            std::vector<BeVertexElementDescriptor>{
+                {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
+                {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
+            }
+        )
+    });
+    _objects.push_back({
+        .Position = {7, 0, 5},
+        //.Rotation = glm::quat(glm::vec3(glm::radians(-90.f), glm::radians(180.f), 0)),
+        .Scale = glm::vec3(0.2f),
+        .Model = std::make_unique<BeModel>("assets/lowpoly_pixelart_anvil.glb", _device.Get()),
+        .Shader = std::make_shared<BeShader>(
+            _device.Get(),
+            L"assets/shaders/textured",
+            std::vector<BeVertexElementDescriptor>{
+                {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
+                {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
+            }
+        )
     });
     
     size_t totalVerticesNumber = 0;
@@ -118,7 +159,7 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
     for (const auto& object : _objects) {
         totalVerticesNumber += object.Model->FullVertices.size();
         totalIndicesNumber += object.Model->Indices.size();
-        totalDrawInstructions += object.Model->DrawInstructions.size();
+        totalDrawInstructions += object.Model->MeshInstructions.size();
     }
     
     std::vector<BeFullVertex> fullVertices;
@@ -128,7 +169,7 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
     for (auto& object : _objects) {
         fullVertices.insert(fullVertices.end(), object.Model->FullVertices.begin(), object.Model->FullVertices.end());
         indices.insert(indices.end(), object.Model->Indices.begin(), object.Model->Indices.end());
-        for (BeModel::BeMeshInstruction instruction : object.Model->DrawInstructions) {
+        for (BeModel::BeMeshInstruction instruction : object.Model->MeshInstructions) {
             instruction.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - object.Model->FullVertices.size());
             instruction.StartIndexLocation += static_cast<uint32_t>(indices.size() - object.Model->Indices.size());
             object.MeshInstructions.push_back(instruction);
@@ -164,6 +205,20 @@ Renderer::Renderer(HWND windowHandle, int width, int height) {
     objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     objectBufferDescriptor.ByteWidth = sizeof(ObjectBufferData);
     Utils::ThrowIfFailed(_device->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer));
+
+    
+    // Create point sampler state
+    D3D11_SAMPLER_DESC samplerDesc = {};
+    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    samplerDesc.MinLOD = 0;
+    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+    Utils::ThrowIfFailed(_device->CreateSamplerState(&samplerDesc, &_pointSampler));
+
+    
     _active = true;
 }
 
@@ -203,8 +258,13 @@ auto Renderer::render() -> void {
     _context->IASetVertexBuffers(0, 1, _sharedVertexBuffer.GetAddressOf(), &stride, &offset);
     _context->IASetIndexBuffer(_sharedIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
     _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    //here write and send a point sampler
+    _context->PSSetSamplers(0, 1, _pointSampler.GetAddressOf());
     
     for (const auto& object : _objects) {
+        object.Shader ? object.Shader->bind(_context.Get()) : _shader->bind(_context.Get());
+        
         // Update object constant buffer
         ObjectBufferData objData;
         objData.Model =
@@ -217,7 +277,10 @@ auto Renderer::render() -> void {
         _context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         
         for (const auto& instruction : object.MeshInstructions) {
+            if (instruction.DiffuseTexture)
+                _context->PSSetShaderResources(0, 1, instruction.DiffuseTexture.GetAddressOf());
             _context->DrawIndexed(instruction.IndexCount, instruction.StartIndexLocation, instruction.BaseVertexLocation);
+            _context->PSSetShaderResources(0, 0, nullptr); // unbind texture
         }
     }
     
