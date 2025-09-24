@@ -83,6 +83,6 @@ public:
     ComPtr<ID3D11PixelShader> PixelShader;
     ComPtr<ID3D11InputLayout> ComputedInputLayout;
     
-    auto bind (ID3D11DeviceContext* context) const -> void;
+    auto Bind (ID3D11DeviceContext* context) const -> void;
 
 };

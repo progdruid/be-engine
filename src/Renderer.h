@@ -24,10 +24,11 @@ class Renderer {
     };
 
     struct ObjectEntry {
+        std::string Name;
         glm::vec3 Position = {0.f, 0.f, 0.f};
         glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
         glm::vec3 Scale = {1.f, 1.f, 1.f};
-        std::unique_ptr<BeModel> Model;
+        BeModel& Model;
         std::vector<BeModel::BeMeshInstruction> MeshInstructions;
         std::shared_ptr<BeShader> Shader; // optional override
     };
@@ -67,7 +68,8 @@ private:
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
 
-    std::shared_ptr<BeShader> _shader;
+    std::shared_ptr<BeShader> _colorShader;
+    std::shared_ptr<BeShader> _texturedShader;
     ComPtr<ID3D11SamplerState> _pointSampler;
 
     std::vector<ObjectEntry> _objects;
