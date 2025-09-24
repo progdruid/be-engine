@@ -29,10 +29,11 @@ class Renderer {
         glm::vec3 Scale = {1.f, 1.f, 1.f};
         std::unique_ptr<BeModel> Model;
         std::vector<BeModel::BeMeshInstruction> MeshInstructions;
+        std::shared_ptr<BeShader> Shader; // optional override
     };
     
 public:
-    explicit Renderer(HWND windowHandle, int width, int height);
+    explicit Renderer(HWND windowHandle, uint32_t width, uint32_t height);
     ~Renderer() = default;
 
 public:
@@ -43,8 +44,8 @@ private:
     bool _active = false;
 
     HWND _windowHandle;
-    int _width;
-    int _height;
+    uint32_t _width;
+    uint32_t _height;
     
     ComPtr<ID3D11Device> _device;
     ComPtr<ID3D11DeviceContext> _context;
@@ -67,8 +68,10 @@ private:
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
 
     std::shared_ptr<BeShader> _shader;
+    ComPtr<ID3D11SamplerState> _pointSampler;
 
     std::vector<ObjectEntry> _objects;
+
 
 
 public:
