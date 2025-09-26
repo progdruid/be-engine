@@ -105,4 +105,16 @@ namespace Utils {
         std::cout << "\nScene Nodes:\n";
         PrintNode(scene->mRootNode, scene);
     }
+
+    struct ErrorStream {
+        ErrorStream& operator<<(const HRESULT msg) {
+            if (FAILED(msg)) {
+                std::cerr << "Error: HRESULT 0x" << std::hex << msg << std::dec << "\n";
+                throw com_exception(msg);
+            }
+            return *this;
+        }
+    };
+
+    inline ErrorStream Check;
 }
