@@ -24,7 +24,7 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
 
     
     // Device and context
-    Utils::ThrowIfFailed(D3D11CreateDevice(
+    Utils::Check << D3D11CreateDevice(
         nullptr,
         D3D_DRIVER_TYPE_HARDWARE,
         nullptr,
@@ -39,9 +39,10 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
 
     
     // DXGI interfaces
-    Utils::ThrowIfFailed(_device.As(&_dxgiDevice));
-    Utils::ThrowIfFailed(_dxgiDevice->GetAdapter(&_adapter));
-    Utils::ThrowIfFailed(_adapter->GetParent(IID_PPV_ARGS(&_factory)));
+    Utils::Check
+    << _device.As(&_dxgiDevice)
+    << _dxgiDevice->GetAdapter(&_adapter)
+    << _adapter->GetParent(IID_PPV_ARGS(&_factory));
     
     // Swap chain
     DXGI_SWAP_CHAIN_DESC1 scDesc = {
@@ -55,15 +56,16 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
         .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
         .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
     };
-    Utils::ThrowIfFailed(_factory->CreateSwapChainForHwnd(_device.Get(), _windowHandle, &scDesc, nullptr, nullptr, &_swapchain));
-    Utils::ThrowIfFailed(_factory->MakeWindowAssociation(_windowHandle, DXGI_MWA_NO_ALT_ENTER));
+    Utils::Check << _factory->CreateSwapChainForHwnd(_device.Get(), _windowHandle, &scDesc, nullptr, nullptr, &_swapchain));
+    Utils::Check << _factory->MakeWindowAssociation(_windowHandle, DXGI_MWA_NO_ALT_ENTER));
 
     
     // Create RTV
     {
         ComPtr<ID3D11Texture2D> backBuffer;
-        Utils::ThrowIfFailed(_swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
-        Utils::ThrowIfFailed(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_renderTarget));
+        Utils::Check
+        << _swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))
+        << _device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_renderTarget);
     
         D3D11_TEXTURE2D_DESC depthStencilDescriptor = {
             .Width = _width,
@@ -78,8 +80,9 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
             .MiscFlags = 0,
         };
         ComPtr<ID3D11Texture2D> depthStencilBuffer;
-        Utils::ThrowIfFailed(_device->CreateTexture2D(&depthStencilDescriptor,nullptr, depthStencilBuffer.GetAddressOf()));
-        Utils::ThrowIfFailed(_device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, _depthStencilView.GetAddressOf()));
+        Utils::Check
+        << _device->CreateTexture2D(&depthStencilDescriptor,nullptr, depthStencilBuffer.GetAddressOf())
+        << _device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, _depthStencilView.GetAddressOf());
 
         D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {
             .DepthEnable = true,
@@ -88,7 +91,7 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
             .StencilEnable = false,
         };
         
-        Utils::ThrowIfFailed(_device->CreateDepthStencilState(&depthStencilStateDescriptor, _depthStencilState.GetAddressOf()));
+        Utils::Check << _device->CreateDepthStencilState(&depthStencilStateDescriptor, _depthStencilState.GetAddressOf());
         _context->OMSetDepthStencilState(_depthStencilState.Get(), 1);
     }
 
@@ -193,7 +196,7 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
     vertexBufferDescriptor.ByteWidth = static_cast<UINT>(fullVertices.size() * sizeof(BeFullVertex));
     D3D11_SUBRESOURCE_DATA vertexData = {};
     vertexData.pSysMem = fullVertices.data();
-    Utils::ThrowIfFailed(_device->CreateBuffer(&vertexBufferDescriptor, &vertexData, &_sharedVertexBuffer));
+    Utils::Check << _device->CreateBuffer(&vertexBufferDescriptor, &vertexData, &_sharedVertexBuffer);
     
     D3D11_BUFFER_DESC indexBufferDescriptor = {};
     indexBufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;
@@ -201,21 +204,21 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
     indexBufferDescriptor.ByteWidth = static_cast<UINT>(indices.size() * sizeof(uint32_t));
     D3D11_SUBRESOURCE_DATA indexData = {};
     indexData.pSysMem = indices.data();
-    Utils::ThrowIfFailed(_device->CreateBuffer(&indexBufferDescriptor, &indexData, &_sharedIndexBuffer));
+    Utils::Check << _device->CreateBuffer(&indexBufferDescriptor, &indexData, &_sharedIndexBuffer);
     
     D3D11_BUFFER_DESC uniformBufferDescriptor = {};
     uniformBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     uniformBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     uniformBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     uniformBufferDescriptor.ByteWidth = sizeof(UniformBufferData);
-    Utils::ThrowIfFailed(_device->CreateBuffer(&uniformBufferDescriptor, nullptr, &_uniformBuffer));
+    Utils::Check << _device->CreateBuffer(&uniformBufferDescriptor, nullptr, &_uniformBuffer);
     
     D3D11_BUFFER_DESC objectBufferDescriptor = {};
     objectBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     objectBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     objectBufferDescriptor.ByteWidth = sizeof(ObjectBufferData);
-    Utils::ThrowIfFailed(_device->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer));
+    Utils::Check << _device->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer);
 
     
     // Create point sampler state
@@ -227,7 +230,7 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
     samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
     samplerDesc.MinLOD = 0;
     samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-    Utils::ThrowIfFailed(_device->CreateSamplerState(&samplerDesc, &_pointSampler));
+    Utils::Check << _device->CreateSamplerState(&samplerDesc, &_pointSampler);
 
     
     _active = true;
@@ -257,7 +260,7 @@ auto Renderer::render() -> void {
 
     // Update uniform constant buffer
     D3D11_MAPPED_SUBRESOURCE mappedResource;
-    Utils::ThrowIfFailed(_context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource));
+    Utils::Check << _context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
     memcpy(mappedResource.pData, &_uniformData, sizeof(UniformBufferData));
     _context->Unmap(_uniformBuffer.Get(), 0);
     _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
@@ -282,7 +285,7 @@ auto Renderer::render() -> void {
             glm::translate(glm::mat4(1.0f), object.Position) *
             glm::mat4_cast(object.Rotation) *
             glm::scale(glm::mat4(1.0f), object.Scale);
-        Utils::ThrowIfFailed(_context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource));
+        Utils::Check << _context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
         memcpy(mappedResource.pData, &objData, sizeof(ObjectBufferData));
         _context->Unmap(_objectBuffer.Get(), 0);
         _context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
