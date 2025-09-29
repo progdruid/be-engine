@@ -14,7 +14,7 @@ BeAssetManager::BeAssetManager(const ComPtr<ID3D11Device>& device) {
     
 }
 
-auto BeAssetManager::LoadModel(const std::string& name, const std::filesystem::path& modelPath) -> void {
+auto BeAssetManager::LoadModel(const std::string& name, const std::filesystem::path& modelPath) -> BeModel& {
     constexpr auto flags = (
         aiProcess_Triangulate |
         aiProcess_GenNormals |
@@ -109,6 +109,7 @@ auto BeAssetManager::LoadModel(const std::string& name, const std::filesystem::p
     }
 
     _models[name] = model;
+    return _models.at(name);
 }
 
 auto BeAssetManager::GetModel(const std::string& name) -> BeModel& {
@@ -141,6 +142,19 @@ auto BeAssetManager::LoadTextureFromFile(const std::string& name, const std::fil
 
 auto BeAssetManager::GetTexture(const std::string& name) -> BeTexture& {
     return _textures.at(name);
+}
+
+auto BeAssetManager::LoadShader(
+    const std::string& name,
+    const std::filesystem::path& shaderPath,
+    const std::vector<BeVertexElementDescriptor>& vertexLayout)
+-> BeShader& {
+    
+    auto pair = _shaders.try_emplace(name, _device.Get(), shaderPath.wstring(), vertexLayout);
+    if (!pair.second) {
+        throw std::runtime_error("Shader already exists: " + name);
+    }
+    return pair.first->second;
 }
 
 auto BeAssetManager::LoadTextureFromAssimpPath(
@@ -257,7 +271,7 @@ auto BeAssetManager::CreateSRV(BeTexture& texture) -> void {
     };
             
     ComPtr<ID3D11Texture2D> d3dTexture = nullptr;
-    Utils::ThrowIfFailed(_device->CreateTexture2D(&desc, &initData, &d3dTexture));
+    Utils::Check << _device->CreateTexture2D(&desc, &initData, &d3dTexture);
             
     // Create SRV
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDescriptor = {
@@ -265,5 +279,5 @@ auto BeAssetManager::CreateSRV(BeTexture& texture) -> void {
         .ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D,
         .Texture2D = { .MostDetailedMip = 0, .MipLevels = 1 },
     };
-    Utils::ThrowIfFailed(_device->CreateShaderResourceView(d3dTexture.Get(), &srvDescriptor, texture.SRV.GetAddressOf()));
+    Utils::Check << _device->CreateShaderResourceView(d3dTexture.Get(), &srvDescriptor, texture.SRV.GetAddressOf());
 }
