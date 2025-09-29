@@ -35,7 +35,7 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
         &_device,
         nullptr,
         &_context
-    ));
+    );
 
     
     // DXGI interfaces
@@ -56,8 +56,9 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
         .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
         .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
     };
-    Utils::Check << _factory->CreateSwapChainForHwnd(_device.Get(), _windowHandle, &scDesc, nullptr, nullptr, &_swapchain));
-    Utils::Check << _factory->MakeWindowAssociation(_windowHandle, DXGI_MWA_NO_ALT_ENTER));
+
+    Utils::Check << _factory->CreateSwapChainForHwnd(_device.Get(), _windowHandle, &scDesc, nullptr, nullptr, &_swapchain);
+    Utils::Check << _factory->MakeWindowAssociation(_windowHandle, DXGI_MWA_NO_ALT_ENTER);
 
     
     // Create RTV

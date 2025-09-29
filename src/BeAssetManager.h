@@ -25,13 +25,17 @@ private:
 
     std::unordered_map<std::string, BeModel> _models;
     std::unordered_map<std::string, BeTexture> _textures;
+    std::unordered_map<std::string, BeShader> _shaders;
     
 public:
-    auto LoadModel (const std::string& name, const std::filesystem::path& modelPath) -> void;
+    auto LoadModel (const std::string& name, const std::filesystem::path& modelPath) -> BeModel&;
     auto GetModel (const std::string& name) -> BeModel&;
 
     auto LoadTextureFromFile (const std::string& name, const std::filesystem::path& texturePath) -> BeTexture&;
     auto GetTexture (const std::string& name) -> BeTexture&;
+
+    auto LoadShader (const std::string& name, const std::filesystem::path& shaderPath, const std::vector<BeVertexElementDescriptor>&
+                     vertexLayout) -> BeShader&;
     
 private:
     auto LoadTextureFromAssimpPath (const std::string& name, const aiString& texPath, const aiScene* scene, const std::filesystem::path& parentPath) -> BeTexture&;

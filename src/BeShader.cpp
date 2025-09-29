@@ -52,8 +52,8 @@ BeShader::BeShader(
         }
     }
 
-    Utils::ThrowIfFailed(device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &VertexShader));
-    Utils::ThrowIfFailed(device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &PixelShader));
+    Utils::Check << device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &VertexShader);
+    Utils::Check << device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &PixelShader);
 
 
     //input layout
@@ -73,12 +73,12 @@ BeShader::BeShader(
         inputLayout.push_back(elementDesc);
     }
 
-    Utils::ThrowIfFailed(device->CreateInputLayout(
+    Utils::Check << device->CreateInputLayout(
         inputLayout.data(),
         static_cast<UINT>(inputLayout.size()),
         vsBlob->GetBufferPointer(),
         vsBlob->GetBufferSize(),
-        &ComputedInputLayout));
+        &ComputedInputLayout);
 }
 
 auto BeShader::Bind(ID3D11DeviceContext* context) const -> void {
