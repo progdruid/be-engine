@@ -101,7 +101,7 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
     // Compile shaders
     _colorShader = std::make_shared<BeShader>(
         _device.Get(),
-        L"assets/shaders/default",
+        "assets/shaders/default",
         std::vector<BeVertexElementDescriptor>{
             {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
             {.Name = "Color", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Color3}
@@ -109,7 +109,7 @@ Renderer::Renderer(HWND windowHandle, uint32_t width, uint32_t height) {
     );
     _texturedShader = std::make_shared<BeShader>(
         _device.Get(),
-        L"assets/shaders/textured",
+        "assets/shaders/textured",
         std::vector<BeVertexElementDescriptor>{
             {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
             {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
@@ -255,9 +255,7 @@ auto Renderer::render() -> void {
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     _context->RSSetViewports(1, &viewport);
-    
-    // Bind shaders
-    _colorShader->Bind(_context.Get());
+
 
     // Update uniform constant buffer
     D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -278,7 +276,7 @@ auto Renderer::render() -> void {
     _context->PSSetSamplers(0, 1, _pointSampler.GetAddressOf());
     
     for (const auto& object : _objects) {
-        object.Shader ? object.Shader->Bind(_context.Get()) : _colorShader->Bind(_context.Get());
+        object.Shader->Bind(_context.Get());
         
         // Update object constant buffer
         ObjectBufferData objData;
@@ -286,6 +284,7 @@ auto Renderer::render() -> void {
             glm::translate(glm::mat4(1.0f), object.Position) *
             glm::mat4_cast(object.Rotation) *
             glm::scale(glm::mat4(1.0f), object.Scale);
+
         Utils::Check << _context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
         memcpy(mappedResource.pData, &objData, sizeof(ObjectBufferData));
         _context->Unmap(_objectBuffer.Get(), 0);

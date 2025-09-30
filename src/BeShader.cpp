@@ -5,19 +5,21 @@
 
 BeShader::BeShader(
     ID3D11Device* device,
-    const std::wstring& filePathWithoutExtension,
+    const std::filesystem::path& filePathWithoutExtension,
     const std::vector<BeVertexElementDescriptor>& vertexLayout)
         : VertexLayout(vertexLayout) {
 
     
     
     //shaders
-    const std::wstring vsPath = filePathWithoutExtension + L"Vertex.hlsl";
-    const std::wstring psPath = filePathWithoutExtension + L"Pixel.hlsl";
+    std::filesystem::path vsPath = filePathWithoutExtension;
+    std::filesystem::path psPath = filePathWithoutExtension;
+    vsPath += "Vertex.hlsl";
+    psPath += "Pixel.hlsl";
 
     ComPtr<ID3DBlob> vsBlob, psBlob, errorBlob;
     auto hr = D3DCompileFromFile(
-        vsPath.c_str(),
+        vsPath.wstring().c_str(),
         nullptr,
         nullptr,
         "main",
@@ -35,7 +37,7 @@ BeShader::BeShader(
     }
     
     hr = D3DCompileFromFile(
-        psPath.c_str(),
+        psPath.wstring().c_str(),
         nullptr,
         nullptr,
         "main",
