@@ -30,7 +30,7 @@ class Renderer {
         glm::vec3 Scale = {1.f, 1.f, 1.f};
         BeModel& Model;
         std::vector<BeModel::BeMeshInstruction> MeshInstructions;
-        std::shared_ptr<BeShader> Shader; // optional override
+        std::shared_ptr<BeShader> Shader;
     };
 
 public:

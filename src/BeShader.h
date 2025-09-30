@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 #include <wrl/client.h>
+#include <filesystem>
 using Microsoft::WRL::ComPtr;
 
 struct BeFullVertex {
@@ -73,8 +74,9 @@ struct BeVertexElementDescriptor {
 
 class BeShader {
 public:
-    BeShader(ID3D11Device* device, const std::wstring& filePathWithoutExtension,
-           const std::vector<BeVertexElementDescriptor>& vertexLayout);
+    BeShader(ID3D11Device* device, 
+        const std::filesystem::path& filePathWithoutExtension,
+        const std::vector<BeVertexElementDescriptor>& vertexLayout);
     ~BeShader() = default;
 
     //get

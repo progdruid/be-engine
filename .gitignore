@@ -1,5 +1,6 @@
-# Rider IDE
+# IDEs
 .idea/
+.vs/
 *.DotSettings.user
 
 # Build outputs
@@ -14,6 +15,7 @@ obj/
 # solution files
 *.sln
 *.vcxproj
+*.vcxproj.user
 *.vcxproj.filters
 
 !vendor/
