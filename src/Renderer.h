@@ -17,20 +17,23 @@ using Microsoft::WRL::ComPtr;
 class Renderer {
     struct alignas(16) UniformBufferData {
         glm::mat4x4 ProjectionView;
+        glm::vec3 DirectionalLightVector;
+        glm::vec3 DirectionalLightColor;
     };
 
     struct alignas(16) ObjectBufferData {
         glm::mat4x4 Model;
     };
 
+public:
     struct ObjectEntry {
         std::string Name;
         glm::vec3 Position = {0.f, 0.f, 0.f};
         glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
         glm::vec3 Scale = {1.f, 1.f, 1.f};
-        BeModel& Model;
+        BeModel* Model;
         std::vector<BeModel::BeMeshInstruction> MeshInstructions;
-        std::shared_ptr<BeShader> Shader;
+        BeShader* Shader;
     };
 
 public:
@@ -42,12 +45,13 @@ public:
     //glm::vec3 ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
 
 private:
-    bool _active = false;
 
+    // window
     HWND _windowHandle;
     uint32_t _width;
     uint32_t _height;
 
+    // dx11 core components
     ComPtr<ID3D11Device> _device;
     ComPtr<ID3D11DeviceContext> _context;
     ComPtr<IDXGIDevice> _dxgiDevice;
@@ -55,32 +59,35 @@ private:
     ComPtr<IDXGIFactory2> _factory;
     ComPtr<IDXGISwapChain1> _swapchain;
 
+    // targets
     ComPtr<ID3D11RenderTargetView> _renderTarget;
     ComPtr<ID3D11DepthStencilView> _depthStencilView;
     ComPtr<ID3D11DepthStencilState> _depthStencilState;
 
+    // constant buffers
     UniformBufferData _uniformData;
     ComPtr<ID3D11Buffer> _uniformBuffer;
-
-    glm::vec3 _objectPos = {0.5f, 0.25f, 0.0f};
     ComPtr<ID3D11Buffer> _objectBuffer;
+    ComPtr<ID3D11SamplerState> _pointSampler;
 
+    // geometry buffers
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
 
-    std::shared_ptr<BeShader> _colorShader;
-    std::shared_ptr<BeShader> _texturedShader;
-    ComPtr<ID3D11SamplerState> _pointSampler;
 
+    // scene objects
     std::vector<ObjectEntry> _objects;
 
 public:
-    [[nodiscard]] auto isActive() const -> bool { return _active; }
+    [[nodiscard]] auto GetDevice() const -> ComPtr<ID3D11Device> { return _device; }
 
-    auto render() -> void;
+    auto LaunchDevice () -> void;
+    auto PushObjects (const std::vector<ObjectEntry>& objects) -> void;
+    auto Render() -> void;
 
-    auto setProjectionView(const glm::mat4x4& projectionView) -> void;
+    auto SetProjectionView(const glm::mat4x4& projectionView) -> void;
+    auto SetDirectionalLight(const glm::vec3& direction, const glm::vec3& color) -> void;
 
 private:
-    auto terminateRenderer() -> void;
+    void TerminateRenderer();
 };
