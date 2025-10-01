@@ -4,30 +4,18 @@
 #include <dxgi1_2.h>
 #include <glm.hpp>
 #include <gtc/quaternion.hpp>
-#include <memory>
 #include <vector>
 #include <wrl/client.h>
 
 #include "BeModel.h"
+#include "BeBuffers.h"
 
 class BeShader;
 class ModelAsset;
 using Microsoft::WRL::ComPtr;
 
+
 class Renderer {
-    struct alignas(16) UniformBufferData {
-        glm::mat4x4 ProjectionView;
-        glm::vec3 CameraPosition = {0.f, 0.f, 0.f}; float __pad0;
-
-        glm::vec3 AmbientColor = {0.f, 0.f, 0.f}; float __pad1;
-        glm::vec3 DirectionalLightVector = glm::normalize(glm::vec3(-1.f, -1.f, -1.f)); float __pad2;
-        glm::vec3 DirectionalLightColor = {1.f, 1.f, 1.f}; float __pad3;
-    };
-
-    struct alignas(16) ObjectBufferData {
-        glm::mat4x4 Model;
-    };
-
 public:
     struct ObjectEntry {
         std::string Name;
@@ -44,9 +32,8 @@ public:
     ~Renderer() = default;
 
 public:
-    glm::vec3 ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
-    //glm::vec3 ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
-
+    glm::vec3 ClearColor;
+    
     UniformBufferData UniformData;
 
 private:

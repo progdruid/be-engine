@@ -10,6 +10,7 @@ struct VertexInput {
 
 struct VertexOutput {
     float4 Position : SV_POSITION;
+    float3 WorldPosition : POSITION1;
     float3 Normal : NORMAL;
     float3 Color    : COLOR0;
 };
@@ -17,6 +18,7 @@ struct VertexOutput {
 VertexOutput main(VertexInput input) {
     VertexOutput o;
     o.Position = mul(float4(input.Position, 1.0), Model);
+    o.WorldPosition = o.Position.xyz;
     o.Position = mul(o.Position, ViewProjection);
     o.Normal = mul(float4(input.Normal, 1.f), (float3x3)Model);
     o.Color = input.Color;

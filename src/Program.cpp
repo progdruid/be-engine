@@ -69,8 +69,8 @@ auto Program::run() -> int {
     BeAssetManager::Ins->LoadModel("witch_items", "assets/witch_items.glb");
     BeAssetManager::Ins->LoadModel("anvil", "assets/lowpoly_pixelart_anvil.glb");
     BeAssetManager::Ins->LoadModel("rock", "assets/lowpoly_rock_1/scene.gltf");
-    
-    std::vector<Renderer::ObjectEntry> objects = {
+
+    const std::vector<Renderer::ObjectEntry> objects = {
         {
             .Name = "Macintosh",
             .Position = {0, 0, -7},
@@ -117,7 +117,13 @@ auto Program::run() -> int {
     };
 
     renderer.PushObjects(objects);
+    renderer.ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
+    //renderer.ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
+    //renderer.ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
     renderer.UniformData.AmbientColor = glm::vec3(0.5f);
+    renderer.UniformData.AmbientIntensity = 1.0f;
+    renderer.UniformData.DirectionalLightVector = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
+    renderer.UniformData.DirectionalLightColor = glm::vec3(1.0f);
     
     
     glm::vec3 cameraPos = {20.0f, 20.0f, 0.0f};
