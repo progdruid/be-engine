@@ -36,6 +36,7 @@ public:
 
     auto LoadShader (const std::string& name, const std::filesystem::path& shaderPath, const std::vector<BeVertexElementDescriptor>&
                      vertexLayout) -> BeShader&;
+    auto GetShader (const std::string& name) -> BeShader&;
     
 private:
     auto LoadTextureFromAssimpPath (const std::string& name, const aiString& texPath, const aiScene* scene, const std::filesystem::path& parentPath) -> BeTexture&;

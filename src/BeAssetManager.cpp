@@ -149,12 +149,16 @@ auto BeAssetManager::LoadShader(
     const std::filesystem::path& shaderPath,
     const std::vector<BeVertexElementDescriptor>& vertexLayout)
 -> BeShader& {
-    
-    auto pair = _shaders.try_emplace(name, _device.Get(), shaderPath.wstring(), vertexLayout);
-    if (!pair.second) {
+
+    auto [it, ok] = _shaders.try_emplace(name, _device.Get(), shaderPath, vertexLayout);
+    if (!ok) {
         throw std::runtime_error("Shader already exists: " + name);
     }
-    return pair.first->second;
+    return it->second;
+}
+
+auto BeAssetManager::GetShader(const std::string& name) -> BeShader& {
+    return _shaders.at(name);
 }
 
 auto BeAssetManager::LoadTextureFromAssimpPath(

@@ -1,3 +1,5 @@
+#include <BeInclude.hlsli>
+
 cbuffer UniformBuffer: register(b0) { row_major float4x4 ViewProjection; };
 cbuffer ObjectBuffer: register(b1) { row_major float4x4 Model; };
 
@@ -12,6 +14,7 @@ struct VertexOutput {
 };
 
 VertexOutput main(VertexInput input) {
+    Hello hello; // To test BeInclude.hlsli inclusion
     VertexOutput o;
     o.Position = mul(float4(input.Position, 1.0), Model);
     o.Position = mul(o.Position, ViewProjection);

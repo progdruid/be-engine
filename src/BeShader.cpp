@@ -2,6 +2,7 @@
 #include <d3dcompiler.h>
 #include <format>
 #include "Utils.h"
+#include "BeShaderIncludeHandler.hpp"
 
 BeShader::BeShader(
     ID3D11Device* device,
@@ -9,7 +10,10 @@ BeShader::BeShader(
     const std::vector<BeVertexElementDescriptor>& vertexLayout)
         : VertexLayout(vertexLayout) {
 
-    
+    BeShaderIncludeHandler includeHandler(
+        filePathWithoutExtension.parent_path().string(),
+        "src/shaders/"
+    );
     
     //shaders
     std::filesystem::path vsPath = filePathWithoutExtension;
@@ -21,7 +25,7 @@ BeShader::BeShader(
     auto hr = D3DCompileFromFile(
         vsPath.wstring().c_str(),
         nullptr,
-        nullptr,
+        &includeHandler,
         "main",
         "vs_5_0",
         0, 0,
@@ -39,7 +43,7 @@ BeShader::BeShader(
     hr = D3DCompileFromFile(
         psPath.wstring().c_str(),
         nullptr,
-        nullptr,
+        &includeHandler,
         "main",
         "ps_5_0",
         0, 0,

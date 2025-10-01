@@ -74,17 +74,19 @@ struct BeVertexElementDescriptor {
 
 class BeShader {
 public:
-    BeShader(ID3D11Device* device, 
-        const std::filesystem::path& filePathWithoutExtension,
-        const std::vector<BeVertexElementDescriptor>& vertexLayout);
-    ~BeShader() = default;
-
     //get
     const std::vector<BeVertexElementDescriptor> VertexLayout;
     ComPtr<ID3D11VertexShader> VertexShader;
     ComPtr<ID3D11PixelShader> PixelShader;
     ComPtr<ID3D11InputLayout> ComputedInputLayout;
+
+public:
+    BeShader(ID3D11Device* device, 
+        const std::filesystem::path& filePathWithoutExtension,
+        const std::vector<BeVertexElementDescriptor>& vertexLayout);
+    ~BeShader() = default;
     
     auto Bind (ID3D11DeviceContext* context) const -> void;
 
 };
+
