@@ -50,10 +50,12 @@ auto Program::run() -> int {
     // load assets
     BeAssetManager::Ins->LoadShader("Color", "assets/shaders/default", {
         {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
+        {.Name = "Normal", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Normal},
         {.Name = "Color", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Color3}
     });
     BeAssetManager::Ins->LoadShader("Textured", "assets/shaders/textured", {
         {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
+        {.Name = "Normal", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Normal},
         {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
     });
     
@@ -99,7 +101,7 @@ auto Program::run() -> int {
         {
             .Name = "Anvil",
             .Position = {7, 0, 5},
-            //.Rotation = glm::quat(glm::vec3(glm::radians(-90.f), glm::radians(180.f), 0)),
+            .Rotation = glm::quat(glm::vec3(0, glm::radians(90.f), 0)),
             .Scale = glm::vec3(0.2f),
             .Model = &BeAssetManager::Ins->GetModel("anvil"),
             .Shader = texturedShader,
@@ -115,7 +117,7 @@ auto Program::run() -> int {
     };
 
     renderer.PushObjects(objects);
-
+    renderer.UniformData.AmbientColor = glm::vec3(0.5f);
     
     
     glm::vec3 cameraPos = {20.0f, 20.0f, 0.0f};
@@ -141,7 +143,8 @@ auto Program::run() -> int {
         glm::mat4x4 view = glm::lookAtLH(cameraPos, cameraPos + cameraDirection, {0.0f, 1.0f, 0.0f});
         glm::mat4x4 projection = glm::perspectiveFovLH(glm::radians(fov), static_cast<float>(width), static_cast<float>(height), 0.1f, 100.0f);
         glm::mat4x4 projectionView = projection * view;
-        renderer.SetProjectionView(projectionView);
+        renderer.UniformData.ProjectionView = projectionView;
+        renderer.UniformData.CameraPosition = cameraPos;
         
         renderer.Render();
     }

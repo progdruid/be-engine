@@ -188,10 +188,10 @@ auto Renderer::Render() -> void {
     // Update uniform constant buffer
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     Utils::Check << _context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-    memcpy(mappedResource.pData, &_uniformData, sizeof(UniformBufferData));
+    memcpy(mappedResource.pData, &UniformData, sizeof(UniformBufferData));
     _context->Unmap(_uniformBuffer.Get(), 0);
     _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
-
+    _context->PSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
     
     // Draw call
     uint32_t stride = sizeof(BeFullVertex);
@@ -227,10 +227,6 @@ auto Renderer::Render() -> void {
     }
     
     _swapchain->Present(1, 0);
-}
-
-auto Renderer::SetProjectionView(const glm::mat4x4& projectionView) -> void {
-    _uniformData.ProjectionView = projectionView;
 }
 
 auto Renderer::TerminateRenderer() -> void {

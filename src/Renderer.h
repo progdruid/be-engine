@@ -17,8 +17,11 @@ using Microsoft::WRL::ComPtr;
 class Renderer {
     struct alignas(16) UniformBufferData {
         glm::mat4x4 ProjectionView;
-        glm::vec3 DirectionalLightVector;
-        glm::vec3 DirectionalLightColor;
+        glm::vec3 CameraPosition = {0.f, 0.f, 0.f}; float __pad0;
+
+        glm::vec3 AmbientColor = {0.f, 0.f, 0.f}; float __pad1;
+        glm::vec3 DirectionalLightVector = glm::normalize(glm::vec3(-1.f, -1.f, -1.f)); float __pad2;
+        glm::vec3 DirectionalLightColor = {1.f, 1.f, 1.f}; float __pad3;
     };
 
     struct alignas(16) ObjectBufferData {
@@ -44,6 +47,8 @@ public:
     glm::vec3 ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
     //glm::vec3 ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
 
+    UniformBufferData UniformData;
+
 private:
 
     // window
@@ -65,7 +70,6 @@ private:
     ComPtr<ID3D11DepthStencilState> _depthStencilState;
 
     // constant buffers
-    UniformBufferData _uniformData;
     ComPtr<ID3D11Buffer> _uniformBuffer;
     ComPtr<ID3D11Buffer> _objectBuffer;
     ComPtr<ID3D11SamplerState> _pointSampler;
@@ -73,8 +77,7 @@ private:
     // geometry buffers
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
-
-
+    
     // scene objects
     std::vector<ObjectEntry> _objects;
 
@@ -84,9 +87,6 @@ public:
     auto LaunchDevice () -> void;
     auto PushObjects (const std::vector<ObjectEntry>& objects) -> void;
     auto Render() -> void;
-
-    auto SetProjectionView(const glm::mat4x4& projectionView) -> void;
-    auto SetDirectionalLight(const glm::vec3& direction, const glm::vec3& color) -> void;
 
 private:
     void TerminateRenderer();
