@@ -100,7 +100,7 @@ auto Renderer::LaunchDevice() -> void {
     uniformBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     uniformBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     uniformBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    uniformBufferDescriptor.ByteWidth = sizeof(UniformBufferData);
+    uniformBufferDescriptor.ByteWidth = sizeof(UniformBufferDataGPU);
     Utils::Check << _device->CreateBuffer(&uniformBufferDescriptor, nullptr, &_uniformBuffer);
     
     D3D11_BUFFER_DESC objectBufferDescriptor = {};
@@ -186,9 +186,10 @@ auto Renderer::Render() -> void {
 
 
     // Update uniform constant buffer
+    UniformBufferDataGPU uniformDataGpu(UniformData);
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     Utils::Check << _context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-    memcpy(mappedResource.pData, &UniformData, sizeof(UniformBufferData));
+    memcpy(mappedResource.pData, &uniformDataGpu, sizeof(UniformBufferDataGPU));
     _context->Unmap(_uniformBuffer.Get(), 0);
     _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
     _context->PSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());

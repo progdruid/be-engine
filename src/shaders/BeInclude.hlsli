@@ -2,9 +2,10 @@
 
 cbuffer UniformBuffer: register(b0) {
     row_major float4x4 ViewProjection;
-    float3 CameraPosition;
+    float4 CameraPosition;
     
     float3 AmbientColor;
-    float3 DirectionalLightVector;
+    float AmbientIntensity;
     float3 DirectionalLightColor;
+    float3 DirectionalLightVector;
 };

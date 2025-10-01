@@ -16,10 +16,11 @@ float4 main(PixelInput input) : SV_Target {
     
     float3 normal = normalize(input.Normal);
 
-    float ambient = AmbientColor * 0.1f;
-
-    float sunIntensity = saturate(dot(normal, -DirectionalLightVector));
-    float diffuse = sunIntensity * DirectionalLightColor;
+    float3 ambient = AmbientColor * AmbientIntensity;
+    
+    float sunIntensity = saturate(dot(normal, -DirectionalLightVector.xyz));
+    
+    float3 diffuse = DirectionalLightColor * sunIntensity;
     
     float3 viewDirection = normalize(CameraPosition - input.WorldPosition);
     float3 reflectedLightDirection = reflect(DirectionalLightVector, normal);
