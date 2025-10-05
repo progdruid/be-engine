@@ -19,7 +19,7 @@ VertexOutput main(VertexInput input) {
     VertexOutput o;
     o.Position = mul(float4(input.Position, 1.0), Model);
     o.WorldPosition = o.Position.xyz;
-    o.Position = mul(o.Position, ViewProjection);
+    o.Position = mul(o.Position, _ViewProjection);
     o.Normal = mul(float4(input.Normal, 1.f), (float3x3)Model);
     o.Color = input.Color;
     return o;

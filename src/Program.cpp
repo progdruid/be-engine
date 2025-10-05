@@ -120,10 +120,10 @@ auto Program::run() -> int {
     renderer.ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
     //renderer.ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
     //renderer.ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
-    renderer.UniformData.AmbientColor = glm::vec3(0.5f);
-    renderer.UniformData.AmbientIntensity = 1.0f;
+    renderer.UniformData.AmbientColor = glm::vec3(0.1f);
     renderer.UniformData.DirectionalLightVector = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
-    renderer.UniformData.DirectionalLightColor = glm::vec3(1.0f);
+    renderer.UniformData.DirectionalLightColor = glm::vec3(1.0f, 1.0, 1.0);
+    renderer.UniformData.DirectionalLightPower = 1.0f;
     
     
     glm::vec3 cameraPos = {20.0f, 20.0f, 0.0f};

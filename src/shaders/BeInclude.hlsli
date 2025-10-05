@@ -1,11 +1,12 @@
-#pragma once
+
+#define PI 3.14159265359
 
 cbuffer UniformBuffer: register(b0) {
-    row_major float4x4 ViewProjection;
-    float4 CameraPosition;
+    row_major float4x4 _ViewProjection;
+    float3 _CameraPosition;
     
-    float3 AmbientColor;
-    float AmbientIntensity;
-    float3 DirectionalLightColor;
-    float3 DirectionalLightVector;
+    float3 _AmbientColor;
+    float3 _DirectionalLightVector;
+    float3 _DirectionalLightColor;
+    float _DirectionalLightPower;
 };
