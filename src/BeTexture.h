@@ -12,4 +12,7 @@ struct BeTexture {
     uint32_t Width = 0;
     uint32_t Height = 0;
     ComPtr<ID3D11ShaderResourceView> SRV = nullptr;
+    
+    auto FlipVertically() -> void;
+    auto CreateSRV(const ComPtr<ID3D11Device>& device) -> void;
 };
