@@ -5,7 +5,6 @@
 #include <gtc/quaternion.hpp>
 #include <gtc/type_ptr.hpp>
 
-#include "BeAssetManager.h"
 #include "BeShader.h"
 #include "Utils.h"
 
@@ -107,8 +106,8 @@ auto Renderer::LaunchDevice() -> void {
     objectBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     objectBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    objectBufferDescriptor.ByteWidth = sizeof(ObjectBufferData);
-    Utils::Check << _device->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer);
+    objectBufferDescriptor.ByteWidth = sizeof(MaterialBufferDataGPU);
+    Utils::Check << _device->CreateBuffer(&objectBufferDescriptor, nullptr, &_materialBuffer);
     
     // Create point sampler state
     D3D11_SAMPLER_DESC samplerDesc = {};
@@ -127,11 +126,11 @@ auto Renderer::PushObjects(const std::vector<ObjectEntry>& objects) -> void {
     
     size_t totalVerticesNumber = 0;
     size_t totalIndicesNumber = 0;
-    size_t totalDrawInstructions = 0;
+    size_t totalDrawSlices = 0;
     for (const auto& object : _objects) {
         totalVerticesNumber += object.Model->FullVertices.size();
         totalIndicesNumber += object.Model->Indices.size();
-        totalDrawInstructions += object.Model->MeshInstructions.size();
+        totalDrawSlices += object.Model->DrawSlices.size();
     }
     
     std::vector<BeFullVertex> fullVertices;
@@ -141,10 +140,10 @@ auto Renderer::PushObjects(const std::vector<ObjectEntry>& objects) -> void {
     for (auto& object : _objects) {
         fullVertices.insert(fullVertices.end(), object.Model->FullVertices.begin(), object.Model->FullVertices.end());
         indices.insert(indices.end(), object.Model->Indices.begin(), object.Model->Indices.end());
-        for (BeModel::BeMeshInstruction instruction : object.Model->MeshInstructions) {
-            instruction.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - object.Model->FullVertices.size());
-            instruction.StartIndexLocation += static_cast<uint32_t>(indices.size() - object.Model->Indices.size());
-            object.MeshInstructions.push_back(instruction);
+        for (BeModel::BeDrawSlice slice : object.Model->DrawSlices) {
+            slice.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - object.Model->FullVertices.size());
+            slice.StartIndexLocation += static_cast<uint32_t>(indices.size() - object.Model->Indices.size());
+            object.DrawSlices.push_back(slice);
         }
     }
     
@@ -187,9 +186,9 @@ auto Renderer::Render() -> void {
 
     // Update uniform constant buffer
     UniformBufferDataGPU uniformDataGpu(UniformData);
-    D3D11_MAPPED_SUBRESOURCE mappedResource;
-    Utils::Check << _context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-    memcpy(mappedResource.pData, &uniformDataGpu, sizeof(UniformBufferDataGPU));
+    D3D11_MAPPED_SUBRESOURCE uniformMappedResource;
+    Utils::Check << _context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &uniformMappedResource);
+    memcpy(uniformMappedResource.pData, &uniformDataGpu, sizeof(UniformBufferDataGPU));
     _context->Unmap(_uniformBuffer.Get(), 0);
     _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
     _context->PSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
@@ -207,23 +206,30 @@ auto Renderer::Render() -> void {
     for (const auto& object : _objects) {
         object.Shader->Bind(_context.Get());
         
-        // Update object constant buffer
-        ObjectBufferData objData;
-        objData.Model =
-            glm::translate(glm::mat4(1.0f), object.Position) *
-            glm::mat4_cast(object.Rotation) *
-            glm::scale(glm::mat4(1.0f), object.Scale);
+        for (const auto& slice : object.DrawSlices) {
+            
+            glm::mat4x4 modelMatrix =
+                glm::translate(glm::mat4(1.0f), object.Position) *
+                glm::mat4_cast(object.Rotation) *
+                glm::scale(glm::mat4(1.0f), object.Scale);
+            MaterialBufferDataGPU materialData(modelMatrix, slice.Material);
+            D3D11_MAPPED_SUBRESOURCE materialMappedResource;
+            Utils::Check << _context->Map(_materialBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &materialMappedResource);
+            memcpy(materialMappedResource.pData, &materialData, sizeof(MaterialBufferDataGPU));
+            _context->Unmap(_materialBuffer.Get(), 0);
+            _context->VSSetConstantBuffers(1, 1, _materialBuffer.GetAddressOf());
+            _context->PSSetConstantBuffers(1, 1, _materialBuffer.GetAddressOf());
+            
+            ID3D11ShaderResourceView* srvs[2] = {
+                slice.Material.DiffuseTexture ? slice.Material.DiffuseTexture->SRV.Get() : nullptr,
+                slice.Material.SpecularTexture ? slice.Material.SpecularTexture->SRV.Get() : nullptr,
+            };
+            _context->PSSetShaderResources(0, 2, srvs);
 
-        Utils::Check << _context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-        memcpy(mappedResource.pData, &objData, sizeof(ObjectBufferData));
-        _context->Unmap(_objectBuffer.Get(), 0);
-        _context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        
-        for (const auto& instruction : object.MeshInstructions) {
-            if (instruction.DiffuseTexture)
-                _context->PSSetShaderResources(0, 1, instruction.DiffuseTexture->SRV.GetAddressOf());
-            _context->DrawIndexed(instruction.IndexCount, instruction.StartIndexLocation, instruction.BaseVertexLocation);
-            _context->PSSetShaderResources(0, 0, nullptr); // unbind texture
+            _context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
+            
+            ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
+            _context->PSSetShaderResources(0, 2, nullSRVs);
         }
     }
     
