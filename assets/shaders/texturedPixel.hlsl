@@ -14,35 +14,27 @@ struct PixelInput {
 float4 main(PixelInput input) : SV_Target {
     float4 diffuseColor = Texture0.Sample(Samp, input.UV);
     if (diffuseColor.a < 0.5) discard;
-
+    
     //should be in material buffer
-    const float3 SpecularColor = float3(0.99, 0.99, 0.99) * 0.4;
-    const float Shininess = 32.0;
-    const float3 SpecularColor2 = float3(0.99, 0.99, 0.99) * 0.9;
-    const float Shininess2 = 1024.0;
+    const float3 SpecularColor0 = float3(0.99, 0.99, 0.99) * 0.4;
+    const float Shininess0 = 32.0;
+    const float3 SpecularColor1 = float3(0.99, 0.99, 0.99) * 0.9;
+    const float Shininess1 = 1024.0;
     
-    float3 normal = normalize(input.Normal);
-    float3 viewDir = normalize(input.ViewDirection);
-    float3 lightDir = normalize(-_DirectionalLightVector);
-    float diffuseValue = saturate(dot(normal, lightDir));
-    float specularValue = 0.0;
-    float specularValue2 = 0.0;
-    if (Shininess > 0) {
-        float3 reflectDir = normalize(reflect(-lightDir, normal));
-        specularValue = pow(saturate(dot(viewDir, reflectDir)), Shininess);
-        specularValue2 = pow(saturate(dot(viewDir, reflectDir)), Shininess2);
-
-        
-        //float3 halfVector = normalize(lightDir + viewDir);
-        //specularValue = pow(saturate(dot(normal, halfVector)), Shininess);
-    }
+    float3 color =
+        StandardLambertBlinnPhong(
+            input.Normal,
+            input.ViewDirection,
+            -_DirectionalLightVector,
+            _AmbientColor,
+            _DirectionalLightColor,
+            _DirectionalLightPower,
+            diffuseColor.rgb,
+            SpecularColor0,
+            SpecularColor1,
+            Shininess0,
+            Shininess1
+        );
     
-    float3 light = _DirectionalLightColor * _DirectionalLightPower;
-    float3 colorLinear =
-        _AmbientColor +
-        diffuseColor * diffuseValue * light +
-        SpecularColor * specularValue * light +
-        SpecularColor2 * specularValue2 * light;
-
-    return float4(colorLinear, 1.0);
+    return float4(color, 1.0);
 };
