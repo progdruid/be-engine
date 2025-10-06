@@ -15,6 +15,75 @@
 #include "BeAssetManager.h"
 #include "Renderer.h"
 
+
+// <AI> 
+struct FlyCamera {
+    glm::vec3 pos{0.0f, 2.0f, 6.0f};
+    float yaw{-90.0f};   // degrees, -Z forward
+    float pitch{0.0f};   // degrees
+    float fov{90.0f};
+    float moveSpeed{5.0f};   // units/sec
+    float mouseSens{0.1f};   // deg per pixel
+    glm::vec3 front{0,0,-1};
+    glm::vec3 up{0,1,0};
+    glm::vec3 right{1,0,0};
+    void updateVectors() {
+        const float cy = cos(glm::radians(yaw));
+        const float sy = sin(glm::radians(yaw));
+        const float cp = cos(glm::radians(pitch));
+        const float sp = sin(glm::radians(pitch));
+        front = glm::normalize(glm::vec3(cy*cp, sp, sy*cp));
+        right = glm::normalize(glm::cross(front, glm::vec3(0,1,0)));
+        up    = glm::normalize(glm::cross(right, front));
+    }
+    void applyZoom(float yoff) {
+        // scroll up (positive yoff) -> zoom in (smaller fov)
+        fov -= yoff;                           // 1:1 steps feel good; scale if needed
+        fov = glm::clamp(fov, 20.0f, 90.0f);   // clamp range
+    }
+};
+
+static bool GMouseCaptured = false;
+static double GLastX = 0.0, GLastY = 0.0;
+static bool GFirstMouse = true;
+
+// Optional: toggle capture with RMB
+static void MouseButtonCb(GLFWwindow* w, int button, int action, int mods) {
+    if (action == GLFW_PRESS) {
+        GMouseCaptured = true;
+        glfwSetInputMode(w, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        GFirstMouse = true;
+    }
+    else if (action == GLFW_RELEASE) {
+        GMouseCaptured = false;
+        glfwSetInputMode(w, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
+}
+
+// Cursor callback to accumulate yaw/pitch when captured
+static void CursorPosCb(GLFWwindow* w, double xpos, double ypos) {
+    if (!GMouseCaptured) { GFirstMouse = true; return; }
+    if (GFirstMouse) { GLastX = xpos; GLastY = ypos; GFirstMouse = false; return; }
+    double xoffset = GLastX - xpos; // invert X so moving right is +yaw;
+    double yoffset = GLastY - ypos; // invert Y so moving up is +pitch
+    GLastX = xpos; GLastY = ypos;
+
+    FlyCamera* cam = static_cast<FlyCamera*>(glfwGetWindowUserPointer(w));
+    cam->yaw   += static_cast<float>(xoffset) * cam->mouseSens;
+    cam->pitch += static_cast<float>(yoffset) * cam->mouseSens;
+    cam->pitch = glm::clamp(cam->pitch, -89.0f, 89.0f);
+    cam->updateVectors();
+}
+
+static void scrollCB(GLFWwindow* w, double xoffset, double yoffset) {
+    FlyCamera* cam = static_cast<FlyCamera*>(glfwGetWindowUserPointer(w));
+    if (!cam) return;
+    cam->applyZoom(static_cast<float>(yoffset));
+}
+
+// </AI>
+
+
 static auto errorCallback(int code, const char* desc) -> void {
     (void)std::fprintf(stderr, "GLFW error %d: %s\n", code, desc);
 }
@@ -22,10 +91,11 @@ static auto errorCallback(int code, const char* desc) -> void {
 Program::Program() = default;
 Program::~Program() = default;
 
+
 auto Program::run() -> int {
 
     // window
-    int width = 1920, height = 1080;
+    constexpr int width = 1920, height = 1080;
     
     glfwSetErrorCallback(errorCallback);
     if (!glfwInit()) return -1;
@@ -125,33 +195,45 @@ auto Program::run() -> int {
     renderer.UniformData.DirectionalLightColor = glm::vec3(1.0f, 1.0, 1.0);
     renderer.UniformData.DirectionalLightPower = 1.0f;
     
-    
-    glm::vec3 cameraPos = {20.0f, 20.0f, 0.0f};
-    glm::vec3 cameraDirection = {-1.0f, -1.0f, 1.0f};
-    glm::float32 fov = 45.0f;
-    const float radius = cameraPos.x; // Distance from origin
+
+    FlyCamera cam;
+    glfwSetWindowUserPointer(window, &cam);
+    glfwSetMouseButtonCallback(window, MouseButtonCb);
+    glfwSetCursorPosCallback(window, CursorPosCb);
+    glfwSetScrollCallback(window, scrollCB); 
+
+    // Enable raw mouse motion when available and cursor disabled
+    if (glfwRawMouseMotionSupported()) {
+        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    }
+
+    double lastTime = glfwGetTime();
     
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
-        {
-            // Rotating camera around the origin
-            static float angle = 0.0f;
-            angle += 0.01f; // Adjust speed as needed
-            cameraPos = glm::vec3(
-                radius * sin(angle),
-                cameraPos.y, // Keep Y fixed for a simple orbit
-                radius * cos(angle)
-            );
-            cameraDirection = glm::normalize(-cameraPos); // Always look at the origin
-        }
-        glm::mat4x4 view = glm::lookAtLH(cameraPos, cameraPos + cameraDirection, {0.0f, 1.0f, 0.0f});
-        glm::mat4x4 projection = glm::perspectiveFovLH(glm::radians(fov), static_cast<float>(width), static_cast<float>(height), 0.1f, 100.0f);
-        glm::mat4x4 projectionView = projection * view;
-        renderer.UniformData.ProjectionView = projectionView;
-        renderer.UniformData.CameraPosition = cameraPos;
-        
+        // Delta time
+        double now = glfwGetTime();
+        float dt = static_cast<float>(now - lastTime);
+        lastTime = now;
+
+        // Keyboard movement (WASD + Space/Ctrl)
+        float speed = cam.moveSpeed * dt;
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 2.0f;
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) cam.pos += cam.front * speed;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) cam.pos -= cam.front * speed;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) cam.pos -= cam.right * speed;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) cam.pos += cam.right * speed;
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cam.pos += cam.up * speed;
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cam.pos -= cam.up * speed;
+
+        // Build view/projection
+        glm::mat4 view = glm::lookAtLH(cam.pos, cam.pos + cam.front, cam.up);
+        glm::mat4 proj = glm::perspectiveFovLH(glm::radians(cam.fov), static_cast<float>(width), static_cast<float>(height), 0.1f, 100.0f);
+        renderer.UniformData.ProjectionView = proj * view;
+        renderer.UniformData.CameraPosition = cam.pos;
+
         renderer.Render();
     }
     
