@@ -12,7 +12,7 @@
 
 #include <gtc/matrix_transform.hpp>
 
-#include "BeAssetManager.h"
+#include "BeAssetImporter.h"
 #include "Renderer.h"
 
 
@@ -114,76 +114,73 @@ auto Program::run() -> int {
     renderer.LaunchDevice();
     
     const auto device = renderer.GetDevice();
-    BeAssetManager::Ins = std::make_unique<BeAssetManager>(device);
+    BeAssetImporter importer(device);
 
     
     // load assets
-    BeAssetManager::Ins->LoadShader("Color", "assets/shaders/default", {
+    BeShader colorShader(device.Get(), "assets/shaders/default", {
         {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
         {.Name = "Normal", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Normal},
         {.Name = "Color", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Color3}
     });
-    BeAssetManager::Ins->LoadShader("Textured", "assets/shaders/textured", {
+    BeShader texturedShader(device.Get(), "assets/shaders/textured", {
         {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
         {.Name = "Normal", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Normal},
         {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
     });
-    
-    // Compile shaders
-    const auto colorShader = &BeAssetManager::Ins->GetShader("Color");
-    const auto texturedShader = &BeAssetManager::Ins->GetShader("Textured");
 
-    BeAssetManager::Ins->LoadModel("macintosh", "assets/model.fbx");
-    BeAssetManager::Ins->LoadModel("disks", "assets/floppy-disks.glb");
-    BeAssetManager::Ins->LoadModel("pagoda", "assets/pagoda.glb");
-    BeAssetManager::Ins->LoadModel("witch_items", "assets/witch_items.glb");
-    BeAssetManager::Ins->LoadModel("anvil", "assets/lowpoly_pixelart_anvil.glb");
-    BeAssetManager::Ins->LoadModel("rock", "assets/lowpoly_rock_1/scene.gltf");
+    auto macintosh = importer.LoadModel("assets/model.fbx");
+    auto disks = importer.LoadModel("assets/floppy-disks.glb");
+    auto pagoda = importer.LoadModel("assets/pagoda.glb");
+    auto witchItems = importer.LoadModel("assets/witch_items.glb");
+    auto anvil = importer.LoadModel("assets/lowpoly_pixelart_anvil.glb");
+    auto rock = importer.LoadModel("assets/lowpoly_rock_1/scene.gltf");
+    
 
     const std::vector<Renderer::ObjectEntry> objects = {
         {
             .Name = "Macintosh",
             .Position = {0, 0, -7},
-            .Model = &BeAssetManager::Ins->GetModel("macintosh"),
-            .Shader = colorShader,
+            .Model = macintosh.get(),
+            .Shader = &colorShader,
         },
         {
             .Name = "Disks",
             .Position = {7.5f, 1, -4},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(150.f), 0)),
-            .Model = &BeAssetManager::Ins->GetModel("disks"),
-            .Shader = colorShader,
+            .Model = disks.get(),
+            .Shader = &colorShader,
         },
         {
             .Name = "Pagoda",
             .Position = {0, 0, 8},
             .Scale = glm::vec3(0.2f),
-            .Model = &BeAssetManager::Ins->GetModel("pagoda"),
-            .Shader = texturedShader,
+            .Model = pagoda.get(),
+            .Shader = &texturedShader,
         },
         {
             .Name = "Witch Items",
             .Position = {-3, 0, 5},
             .Scale = glm::vec3(3.f),
-            .Model = &BeAssetManager::Ins->GetModel("witch_items"),
-            .Shader = texturedShader,
+            .Model = witchItems.get(),
+            .Shader = &texturedShader,
         },
         {
             .Name = "Anvil",
             .Position = {7, 0, 5},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(90.f), 0)),
             .Scale = glm::vec3(0.2f),
-            .Model = &BeAssetManager::Ins->GetModel("anvil"),
-            .Shader = texturedShader,
+            .Model = anvil.get(),
+            .Shader = &texturedShader,
         },
         {
             .Name = "Rock",
             .Position = {0, 0, 0},
             .Rotation = glm::quat(glm::vec3(glm::radians(-90.f), 0, 0)),
             .Scale = glm::vec3(1.5f),
-            .Model = &BeAssetManager::Ins->GetModel("rock"),
-            .Shader = texturedShader,
-        },
+            .Model = rock.get(),
+            .Shader = &texturedShader,
+        }
     };
 
     renderer.PushObjects(objects);
