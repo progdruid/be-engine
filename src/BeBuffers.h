@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <glm.hpp>
+#include "BeModel.h"
 
 struct UniformBufferData {
     glm::mat4 ProjectionView {1.0f};
@@ -30,6 +31,21 @@ struct alignas(16) UniformBufferDataGPU {
 };
 
 
-struct alignas(16) ObjectBufferData {
+struct alignas(16) MaterialBufferDataGPU {
     glm::mat4x4 Model;
+
+    glm::vec4 DiffuseColor  {1, 1, 1, 1};
+    glm::vec3 SpecularColor {1, 1, 1};
+    float Shininess = 32.f; 
+    glm::vec3 SuperSpecularColor {1, 1, 1};
+    float SuperSpecularPower = -1.f;
+
+    explicit MaterialBufferDataGPU(const glm::mat4x4& model, const BeMaterial& material) {
+        Model = model;
+        DiffuseColor = glm::vec4(material.DiffuseColor, 1.f);
+        SpecularColor = material.SpecularColor;
+        Shininess = material.Shininess;
+        SuperSpecularColor = material.SuperSpecularColor;
+        SuperSpecularPower = material.SuperSpecularPower;
+    }
 };

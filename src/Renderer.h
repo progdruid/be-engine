@@ -23,7 +23,7 @@ public:
         glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
         glm::vec3 Scale = {1.f, 1.f, 1.f};
         BeModel* Model;
-        std::vector<BeModel::BeMeshInstruction> MeshInstructions;
+        std::vector<BeModel::BeDrawSlice> DrawSlices;
         BeShader* Shader;
     };
 
@@ -58,7 +58,7 @@ private:
 
     // constant buffers
     ComPtr<ID3D11Buffer> _uniformBuffer;
-    ComPtr<ID3D11Buffer> _objectBuffer;
+    ComPtr<ID3D11Buffer> _materialBuffer;
     ComPtr<ID3D11SamplerState> _pointSampler;
 
     // geometry buffers

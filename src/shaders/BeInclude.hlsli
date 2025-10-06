@@ -11,6 +11,16 @@ cbuffer UniformBuffer: register(b0) {
     float _DirectionalLightPower;
 };
 
+cbuffer MaterialBuffer: register(b1) {
+    row_major float4x4 _Model;
+    
+    float3 _DiffuseColor;
+    float3 _SpecularColor0;
+    float _Shininess0;
+    float3 _SpecularColor1;
+    float _Shininess1;
+};
+
 
 float3 StandardLambertBlinnPhong(
     float3 normal,
@@ -31,14 +41,16 @@ float3 StandardLambertBlinnPhong(
     float diffuseValue = saturate(dot(normal, lightDir));
     float specularValue0 = 0.0;
     float specularValue1 = 0.0;
-    if (shininess0 > 0 || shininess1 > 0) {
-        float3 reflectDir = normalize(reflect(-lightDir, normal));
+    float3 reflectDir = normalize(reflect(-lightDir, normal));
+    
+    if (shininess0 > 0)
         specularValue0 = pow(saturate(dot(viewDir, reflectDir)), shininess0);
+    if (shininess1 > 0)
         specularValue1 = pow(saturate(dot(viewDir, reflectDir)), shininess1);
-        
-        //float3 halfVector = normalize(lightDir + viewDir);
-        //specularValue = pow(saturate(dot(normal, halfVector)), shininess);
-    }
+    
+    //float3 halfVector = normalize(lightDir + viewDir);
+    //specularValue = pow(saturate(dot(normal, halfVector)), shininess);
+    
     
     float3 light = lightColor * lightPower;
     float3 colorLinear =

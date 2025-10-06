@@ -9,15 +9,6 @@
 #include <filesystem>
 using Microsoft::WRL::ComPtr;
 
-struct BeFullVertex {
-    glm::vec3 Position; // 0
-    glm::vec3 Normal;   // 12
-    glm::vec4 Color;    // 24
-    glm::vec2 UV0;      // 40
-    glm::vec2 UV1;      // 48
-    glm::vec2 UV2;      // 56
-};
-
 struct BeVertexElementDescriptor {
     enum class BeVertexSemantic : uint8_t {
         Position,
