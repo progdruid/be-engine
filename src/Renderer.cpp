@@ -119,6 +119,8 @@ auto Renderer::LaunchDevice() -> void {
     samplerDesc.MinLOD = 0;
     samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
     Utils::Check << _device->CreateSamplerState(&samplerDesc, &_pointSampler);
+
+    _whiteFallbackTexture.CreateSRV(_device);
 }
 
 auto Renderer::PushObjects(const std::vector<ObjectEntry>& objects) -> void {
@@ -221,8 +223,8 @@ auto Renderer::Render() -> void {
             _context->PSSetConstantBuffers(1, 1, _materialBuffer.GetAddressOf());
             
             ID3D11ShaderResourceView* srvs[2] = {
-                slice.Material.DiffuseTexture ? slice.Material.DiffuseTexture->SRV.Get() : nullptr,
-                slice.Material.SpecularTexture ? slice.Material.SpecularTexture->SRV.Get() : nullptr,
+                slice.Material.DiffuseTexture ? slice.Material.DiffuseTexture->SRV.Get() : _whiteFallbackTexture.SRV.Get(),
+                slice.Material.SpecularTexture ? slice.Material.SpecularTexture->SRV.Get() : _whiteFallbackTexture.SRV.Get(),
             };
             _context->PSSetShaderResources(0, 2, srvs);
 

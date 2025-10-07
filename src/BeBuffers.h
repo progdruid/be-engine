@@ -46,6 +46,6 @@ struct alignas(16) MaterialBufferDataGPU {
         SpecularColor = material.SpecularColor;
         Shininess = material.Shininess;
         SuperSpecularColor = material.SuperSpecularColor;
-        SuperSpecularPower = material.SuperSpecularPower;
+        SuperSpecularPower = material.SuperShininess;
     }
 };
