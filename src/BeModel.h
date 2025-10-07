@@ -21,9 +21,9 @@ struct BeMaterial {
     
     glm::vec3 DiffuseColor  {1, 1, 1};
     glm::vec3 SpecularColor {1, 1, 1};
-    float Shininess = 32.f; 
+    float Shininess = -1.f; 
     glm::vec3 SuperSpecularColor {1, 1, 1};
-    float SuperSpecularPower = -1.f; 
+    float SuperShininess = -1.f; 
 };
 
 struct BeModel {

@@ -3,6 +3,18 @@
 #include "Utils.h"
 
 
+BeTexture::BeTexture(const glm::vec4& color) {
+    Width = 1;
+    Height = 1;
+    Pixels = static_cast<uint8_t*>(malloc(4));
+    if (!Pixels) throw std::runtime_error("Failed to allocate texture");
+    Pixels[0] = static_cast<uint8_t>(glm::clamp(color.r, 0.0f, 1.0f) * 255.0f);
+    Pixels[1] = static_cast<uint8_t>(glm::clamp(color.g, 0.0f, 1.0f) * 255.0f);
+    Pixels[2] = static_cast<uint8_t>(glm::clamp(color.b, 0.0f, 1.0f) * 255.0f);
+    Pixels[3] = static_cast<uint8_t>(glm::clamp(color.a, 0.0f, 1.0f) * 255.0f);
+}
+
+
 // ReSharper disable once CppMemberFunctionMayBeConst
 auto BeTexture::FlipVertically() -> void {
     const uint32_t rowSize = Width * 4; // 4 bytes per pixel (RGBA8)

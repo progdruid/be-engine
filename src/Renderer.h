@@ -68,6 +68,8 @@ private:
     // scene objects
     std::vector<ObjectEntry> _objects;
 
+    BeTexture _whiteFallbackTexture {glm::vec4(1.0f)};
+
 public:
     [[nodiscard]] auto GetDevice() const -> ComPtr<ID3D11Device> { return _device; }
 

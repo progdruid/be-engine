@@ -90,7 +90,10 @@ auto BeAssetImporter::LoadModel(const std::filesystem::path& modelPath) -> std::
         if (meshMaterial->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {;
             material.SpecularColor = {color.r, color.g, color.b};
         }
-        meshMaterial->Get(AI_MATKEY_SHININESS, material.Shininess);
+        float shininess = 0.f;
+        if (meshMaterial->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {;
+            material.Shininess = shininess;
+        }
         
         
         model->DrawSlices.push_back({
@@ -138,7 +141,18 @@ auto BeAssetImporter::LoadTextureFromAssimpPath(
 const -> std::shared_ptr<BeTexture> {
     
     if (texPath.C_Str()[0] != '*') {
-        return LoadTextureFromFile(parentPath / texPath.C_Str());
+        const auto filename = std::filesystem::path (texPath.C_Str()).filename();
+        std::filesystem::path path = parentPath / filename;
+        if (std::filesystem::exists(path)) 
+            return LoadTextureFromFile(path);
+        path = parentPath / "textures" / filename;
+        if (std::filesystem::exists(path)) 
+            return LoadTextureFromFile(path);
+        path = parentPath / "images" / filename;
+        if (std::filesystem::exists(path)) 
+            return LoadTextureFromFile(path);
+        throw std::runtime_error("Texture file not found: " + filename.string());
+        
     } // use stb_image
             
     char* endPtr;

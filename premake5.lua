@@ -19,11 +19,12 @@ end
 
 
 -- workspace and project definitions
-workspace "DXSandbox"
+workspace "Be"
     configurations { "Debug", "Release" }
     system "windows"
     architecture "x86_64"  
-    location "."     
+    location "."
+    startproject "Engine"
 
 project "Engine"
     kind "ConsoleApp"

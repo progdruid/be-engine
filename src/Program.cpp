@@ -112,29 +112,35 @@ auto Program::run() -> int {
     // engine
     Renderer renderer(hwnd, width, height);
     renderer.LaunchDevice();
-    
     const auto device = renderer.GetDevice();
-    BeAssetImporter importer(device);
 
     
-    // load assets
-    BeShader colorShader(device.Get(), "assets/shaders/default", {
-        {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
-        {.Name = "Normal", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Normal},
-        {.Name = "Color", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Color3}
-    });
-    BeShader texturedShader(device.Get(), "assets/shaders/textured", {
+    renderer.ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
+    //renderer.ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
+    //renderer.ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
+    renderer.UniformData.AmbientColor = glm::vec3(0.1f);
+    renderer.UniformData.DirectionalLightVector = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
+    renderer.UniformData.DirectionalLightColor = glm::vec3(0.99f, 0.89f, 0.7); 
+    renderer.UniformData.DirectionalLightPower = (1.0f / 0.7f) * 1.2f;
+
+    
+
+    
+    BeShader standardShader(device.Get(), "assets/shaders/standard", {
         {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
         {.Name = "Normal", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Normal},
         {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
     });
 
+    BeAssetImporter importer(device);
     auto macintosh = importer.LoadModel("assets/model.fbx");
     auto disks = importer.LoadModel("assets/floppy-disks.glb");
     auto pagoda = importer.LoadModel("assets/pagoda.glb");
     auto witchItems = importer.LoadModel("assets/witch_items.glb");
-    auto anvil = importer.LoadModel("assets/lowpoly_pixelart_anvil.glb");
-    auto rock = importer.LoadModel("assets/lowpoly_rock_1/scene.gltf");
+    auto anvil = importer.LoadModel("assets/anvil/anvil.fbx");
+    anvil->DrawSlices[0].Material.SpecularColor = glm::vec4(1.0f);
+    anvil->DrawSlices[0].Material.SuperSpecularColor = glm::vec4(1.0f) * 3.f;
+    anvil->DrawSlices[0].Material.SuperShininess = 512.f;
     
 
     const std::vector<Renderer::ObjectEntry> objects = {
@@ -142,28 +148,28 @@ auto Program::run() -> int {
             .Name = "Macintosh",
             .Position = {0, 0, -7},
             .Model = macintosh.get(),
-            .Shader = &colorShader,
+            .Shader = &standardShader,
         },
         {
             .Name = "Disks",
             .Position = {7.5f, 1, -4},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(150.f), 0)),
             .Model = disks.get(),
-            .Shader = &colorShader,
+            .Shader = &standardShader,
         },
         {
             .Name = "Pagoda",
             .Position = {0, 0, 8},
             .Scale = glm::vec3(0.2f),
             .Model = pagoda.get(),
-            .Shader = &texturedShader,
+            .Shader = &standardShader,
         },
         {
             .Name = "Witch Items",
             .Position = {-3, 0, 5},
             .Scale = glm::vec3(3.f),
             .Model = witchItems.get(),
-            .Shader = &texturedShader,
+            .Shader = &standardShader,
         },
         {
             .Name = "Anvil",
@@ -171,26 +177,11 @@ auto Program::run() -> int {
             .Rotation = glm::quat(glm::vec3(0, glm::radians(90.f), 0)),
             .Scale = glm::vec3(0.2f),
             .Model = anvil.get(),
-            .Shader = &texturedShader,
+            .Shader = &standardShader,
         },
-        {
-            .Name = "Rock",
-            .Position = {0, 0, 0},
-            .Rotation = glm::quat(glm::vec3(glm::radians(-90.f), 0, 0)),
-            .Scale = glm::vec3(1.5f),
-            .Model = rock.get(),
-            .Shader = &texturedShader,
-        }
     };
 
     renderer.PushObjects(objects);
-    renderer.ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
-    //renderer.ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
-    //renderer.ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
-    renderer.UniformData.AmbientColor = glm::vec3(0.1f);
-    renderer.UniformData.DirectionalLightVector = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
-    renderer.UniformData.DirectionalLightColor = glm::vec3(1.0f, 1.0, 1.0);
-    renderer.UniformData.DirectionalLightPower = 1.0f;
     
 
     FlyCamera cam;

@@ -2,10 +2,13 @@
 #include <cstdint>
 #include <wrl/client.h>
 #include <d3d11.h>
+#include <glm.hpp>
 
 using Microsoft::WRL::ComPtr;
 
 struct BeTexture {
+    BeTexture () = default;
+    explicit BeTexture (const glm::vec4& color);
     inline ~BeTexture() { free (Pixels); }
 
     uint8_t* Pixels = nullptr; // RGBA8

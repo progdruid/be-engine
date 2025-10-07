@@ -21,6 +21,10 @@ cbuffer MaterialBuffer: register(b1) {
     float _Shininess1;
 };
 
+SamplerState DefaultSampler : register(s0);
+Texture2D DiffuseTexture : register(t0);
+Texture2D Specular : register(t1);
+
 
 float3 StandardLambertBlinnPhong(
     float3 normal,
