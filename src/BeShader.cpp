@@ -61,7 +61,10 @@ BeShader::BeShader(
     Utils::Check << device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &VertexShader);
     Utils::Check << device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &PixelShader);
 
-
+    if (vertexLayout.empty()) {
+        return;
+    }
+    
     //input layout
     std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout;
     inputLayout.reserve(vertexLayout.size());

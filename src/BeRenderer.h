@@ -11,11 +11,10 @@
 #include "BeBuffers.h"
 
 class BeShader;
-class ModelAsset;
 using Microsoft::WRL::ComPtr;
 
 
-class Renderer {
+class BeRenderer {
 public:
     struct ObjectEntry {
         std::string Name;
@@ -28,8 +27,8 @@ public:
     };
 
 public:
-    explicit Renderer(HWND windowHandle, uint32_t width, uint32_t height);
-    ~Renderer() = default;
+    explicit BeRenderer(HWND windowHandle, uint32_t width, uint32_t height);
+    ~BeRenderer() = default;
 
 public:
     glm::vec3 ClearColor;
@@ -52,16 +51,21 @@ private:
     ComPtr<IDXGISwapChain1> _swapchain;
 
     // targets
-    ComPtr<ID3D11RenderTargetView> _renderTarget;
+    ComPtr<ID3D11RenderTargetView> _backbufferTarget;
+    ID3D11RenderTargetView* _gbufferTargets[3];
+    ID3D11ShaderResourceView* _gbufferResources[3];
     ComPtr<ID3D11DepthStencilView> _depthStencilView;
     ComPtr<ID3D11DepthStencilState> _depthStencilState;
-
+    
     // constant buffers
     ComPtr<ID3D11Buffer> _uniformBuffer;
     ComPtr<ID3D11Buffer> _materialBuffer;
     ComPtr<ID3D11SamplerState> _pointSampler;
+    
+    // backbuffer pass
+    std::unique_ptr<BeShader> _fullscreenShader = nullptr;
 
-    // geometry buffers
+    // geometry pass
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
     
