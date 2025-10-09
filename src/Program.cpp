@@ -13,7 +13,7 @@
 #include <gtc/matrix_transform.hpp>
 
 #include "BeAssetImporter.h"
-#include "Renderer.h"
+#include "BeRenderer.h"
 
 
 // <AI> 
@@ -110,7 +110,7 @@ auto Program::run() -> int {
 
     
     // engine
-    Renderer renderer(hwnd, width, height);
+    BeRenderer renderer(hwnd, width, height);
     renderer.LaunchDevice();
     const auto device = renderer.GetDevice();
 
@@ -143,7 +143,7 @@ auto Program::run() -> int {
     anvil->DrawSlices[0].Material.SuperShininess = 512.f;
     
 
-    const std::vector<Renderer::ObjectEntry> objects = {
+    const std::vector<BeRenderer::ObjectEntry> objects = {
         {
             .Name = "Macintosh",
             .Position = {0, 0, -7},

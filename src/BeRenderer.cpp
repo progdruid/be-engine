@@ -1,4 +1,4 @@
-﻿#include "Renderer.h"
+﻿#include "BeRenderer.h"
 
 #include <d3dcompiler.h>
 #include <glm.hpp>
@@ -8,13 +8,13 @@
 #include "BeShader.h"
 #include "Utils.h"
 
-Renderer::Renderer(const HWND windowHandle, const uint32_t width, const uint32_t height) {
+BeRenderer::BeRenderer(const HWND windowHandle, const uint32_t width, const uint32_t height) {
     _windowHandle = windowHandle;
     _width = width;
     _height = height;
 }
 
-auto Renderer::LaunchDevice() -> void {
+auto BeRenderer::LaunchDevice() -> void {
 
     UINT deviceFlags = 0;
 #if defined(_DEBUG)
@@ -65,7 +65,7 @@ auto Renderer::LaunchDevice() -> void {
         ComPtr<ID3D11Texture2D> backBuffer;
         Utils::Check
         << _swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))
-        << _device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_renderTarget);
+        << _device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_backbufferTarget);
     
         D3D11_TEXTURE2D_DESC depthStencilDescriptor = {
             .Width = _width,
@@ -93,6 +93,40 @@ auto Renderer::LaunchDevice() -> void {
         
         Utils::Check << _device->CreateDepthStencilState(&depthStencilStateDescriptor, _depthStencilState.GetAddressOf());
         _context->OMSetDepthStencilState(_depthStencilState.Get(), 1);
+
+
+        constexpr DXGI_FORMAT formats[3] = {
+            DXGI_FORMAT_R8G8B8A8_UNORM,     // rgb: diffuse, a: unused
+            DXGI_FORMAT_R16G16B16A16_FLOAT, // rgb: normal, a: unused
+            DXGI_FORMAT_R8G8B8A8_UNORM,     // rgb: specular, a: shininess
+        };
+        ComPtr<ID3D11Texture2D> textures[3] = { nullptr, nullptr, nullptr };
+        
+        D3D11_TEXTURE2D_DESC textureDesc = {};
+        textureDesc.Width = _width;
+        textureDesc.Height = _height;
+        textureDesc.MipLevels = 1;
+        textureDesc.ArraySize = 1;
+        textureDesc.SampleDesc.Count = 1;
+        textureDesc.SampleDesc.Quality = 0;
+        textureDesc.Usage = D3D11_USAGE_DEFAULT;
+        textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+        textureDesc.CPUAccessFlags = 0;
+        textureDesc.MiscFlags = 0;
+        
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MipLevels = 1;
+
+        for (int i = 0; i < 3; ++i) {
+            textureDesc.Format = formats[i];
+            srvDesc.Format = formats[i];
+            Utils::Check
+            << _device->CreateTexture2D(&textureDesc, nullptr, textures[i].GetAddressOf())
+            << _device->CreateShaderResourceView(textures[i].Get(), &srvDesc, &_gbufferResources[i])
+            << _device->CreateRenderTargetView(textures[i].Get(), nullptr, &_gbufferTargets[i]);
+        }
+        
     }
     
     D3D11_BUFFER_DESC uniformBufferDescriptor = {};
@@ -120,10 +154,16 @@ auto Renderer::LaunchDevice() -> void {
     samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
     Utils::Check << _device->CreateSamplerState(&samplerDesc, &_pointSampler);
 
+    _fullscreenShader = std::make_unique<BeShader>(
+        _device.Get(),
+        "assets/shaders/fullscreen",
+        std::vector<BeVertexElementDescriptor>{}
+    );
+    
     _whiteFallbackTexture.CreateSRV(_device);
 }
 
-auto Renderer::PushObjects(const std::vector<ObjectEntry>& objects) -> void {
+auto BeRenderer::PushObjects(const std::vector<ObjectEntry>& objects) -> void {
     _objects = objects;
     
     size_t totalVerticesNumber = 0;
@@ -166,14 +206,7 @@ auto Renderer::PushObjects(const std::vector<ObjectEntry>& objects) -> void {
     Utils::Check << _device->CreateBuffer(&indexBufferDescriptor, &indexData, &_sharedIndexBuffer);
 }
 
-auto Renderer::Render() -> void {
-    
-    // Clear the back buffer
-    auto fullClearColor = glm::vec4(ClearColor, 1.0f);
-    _context->ClearRenderTargetView(_renderTarget.Get(), reinterpret_cast<FLOAT*>(&fullClearColor));
-    _context->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-    _context->OMSetRenderTargets(1, _renderTarget.GetAddressOf(), _depthStencilView.Get());
-
+auto BeRenderer::Render() -> void {
 
     // Set viewport
     D3D11_VIEWPORT viewport;
@@ -185,7 +218,7 @@ auto Renderer::Render() -> void {
     viewport.MaxDepth = 1.0f;
     _context->RSSetViewports(1, &viewport);
 
-
+    
     // Update uniform constant buffer
     UniformBufferDataGPU uniformDataGpu(UniformData);
     D3D11_MAPPED_SUBRESOURCE uniformMappedResource;
@@ -194,17 +227,26 @@ auto Renderer::Render() -> void {
     _context->Unmap(_uniformBuffer.Get(), 0);
     _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
     _context->PSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
+
     
-    // Draw call
+    // Geometry pass
+    for (const auto& _gbufferRTV : _gbufferTargets) {
+        _context->ClearRenderTargetView(_gbufferRTV, glm::value_ptr(glm::vec4(0.0f)));
+    }
+    _context->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    _context->OMSetRenderTargets(3, _gbufferTargets, _depthStencilView.Get());
+    
+    // Set vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
     uint32_t offset = 0;
     _context->IASetVertexBuffers(0, 1, _sharedVertexBuffer.GetAddressOf(), &stride, &offset);
     _context->IASetIndexBuffer(_sharedIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
     _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    //here write and send a point sampler
+    // Set default sampler - temporary,  should be overridden by materials if needed
     _context->PSSetSamplers(0, 1, _pointSampler.GetAddressOf());
-    
+
+    // Draw all objects
     for (const auto& object : _objects) {
         object.Shader->Bind(_context.Get());
         
@@ -222,24 +264,41 @@ auto Renderer::Render() -> void {
             _context->VSSetConstantBuffers(1, 1, _materialBuffer.GetAddressOf());
             _context->PSSetConstantBuffers(1, 1, _materialBuffer.GetAddressOf());
             
-            ID3D11ShaderResourceView* srvs[2] = {
+            ID3D11ShaderResourceView* materialResources[2] = {
                 slice.Material.DiffuseTexture ? slice.Material.DiffuseTexture->SRV.Get() : _whiteFallbackTexture.SRV.Get(),
                 slice.Material.SpecularTexture ? slice.Material.SpecularTexture->SRV.Get() : _whiteFallbackTexture.SRV.Get(),
             };
-            _context->PSSetShaderResources(0, 2, srvs);
+            _context->PSSetShaderResources(0, 2, materialResources);
 
             _context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
             
-            ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
-            _context->PSSetShaderResources(0, 2, nullSRVs);
+            ID3D11ShaderResourceView* emptyResources[2] = { nullptr, nullptr };
+            _context->PSSetShaderResources(0, 2, emptyResources);
         }
     }
+
+    
+    // --- Backbuffer pass ---
+    auto fullClearColor = glm::vec4(ClearColor, 1.0f);
+    _context->ClearRenderTargetView(_backbufferTarget.Get(), reinterpret_cast<FLOAT*>(&fullClearColor));
+    _context->OMSetRenderTargets(1, _backbufferTarget.GetAddressOf(), _depthStencilView.Get());
+    
+    _context->VSSetShader(_fullscreenShader->VertexShader.Get(), nullptr, 0);
+    _context->PSSetShader(_fullscreenShader->PixelShader.Get(), nullptr, 0);
+
+    _context->PSSetSamplers(0, 1, _pointSampler.GetAddressOf());
+    _context->PSSetShaderResources(0, 1, _gbufferResources); //should be 3
+
+    _context->IASetInputLayout(nullptr);
+    _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+    _context->Draw(4, 0);
+    // --- End of pass ---
     
     _swapchain->Present(1, 0);
 }
 
-auto Renderer::TerminateRenderer() -> void {
-    _renderTarget.Reset();
+auto BeRenderer::TerminateRenderer() -> void {
+    _backbufferTarget.Reset();
     _swapchain.Reset();
     _factory.Reset();
     _adapter.Reset();
