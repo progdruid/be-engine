@@ -122,6 +122,7 @@ auto Program::run() -> int {
     renderer.UniformData.DirectionalLightVector = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
     renderer.UniformData.DirectionalLightColor = glm::vec3(0.99f, 0.89f, 0.7); 
     renderer.UniformData.DirectionalLightPower = (1.0f / 0.7f) * 1.2f;
+    renderer.UniformData.NearFarPlane = {0.1f, 100.0f};
 
     
 
@@ -213,8 +214,8 @@ auto Program::run() -> int {
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) cam.pos -= cam.front * speed;
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) cam.pos -= cam.right * speed;
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) cam.pos += cam.right * speed;
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cam.pos += cam.up * speed;
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cam.pos -= cam.up * speed;
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cam.pos += glm::vec3(0, 1, 0) * speed;
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cam.pos -= glm::vec3(0, 1, 0) * speed;
 
         // Build view/projection
         glm::mat4 view = glm::lookAtLH(cam.pos, cam.pos + cam.front, cam.up);

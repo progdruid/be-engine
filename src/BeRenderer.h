@@ -54,6 +54,7 @@ private:
     ComPtr<ID3D11RenderTargetView> _backbufferTarget;
     ID3D11RenderTargetView* _gbufferTargets[3];
     ID3D11ShaderResourceView* _gbufferResources[3];
+    ComPtr<ID3D11ShaderResourceView> _depthStencilResource;
     ComPtr<ID3D11DepthStencilView> _depthStencilView;
     ComPtr<ID3D11DepthStencilState> _depthStencilState;
     

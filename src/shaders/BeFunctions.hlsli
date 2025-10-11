@@ -1,31 +1,6 @@
 
 #define PI 3.14159265359
 
-cbuffer UniformBuffer: register(b0) {
-    row_major float4x4 _ViewProjection;
-    float3 _CameraPosition;
-    
-    float3 _AmbientColor;
-    float3 _DirectionalLightVector;
-    float3 _DirectionalLightColor;
-    float _DirectionalLightPower;
-};
-
-cbuffer MaterialBuffer: register(b1) {
-    row_major float4x4 _Model;
-    
-    float3 _DiffuseColor;
-    float3 _SpecularColor0;
-    float _Shininess0;
-    float3 _SpecularColor1;
-    float _Shininess1;
-};
-
-SamplerState DefaultSampler : register(s0);
-Texture2D DiffuseTexture : register(t0);
-Texture2D Specular : register(t1);
-
-
 float3 StandardLambertBlinnPhong(
     float3 normal,
     float3 viewDir,
@@ -64,4 +39,24 @@ float3 StandardLambertBlinnPhong(
         specularColor1 * specularValue1 * light;
 
     return colorLinear;
+}
+
+float3 ReconstructWorldPosition(float2 uv, float depth01, float4x4 invProjectionView)
+{
+    float4 clipSpacePosition;
+    uv.y = 1.0 - uv.y; // Flip Y for UV coordinates 
+    clipSpacePosition.xy = uv * 2.0 - 1.0;
+    clipSpacePosition.z = depth01;
+    clipSpacePosition.w = 1.0;
+
+    float4 worldSpacePosition = mul(clipSpacePosition, invProjectionView);
+    worldSpacePosition /= worldSpacePosition.w;
+
+    return worldSpacePosition.xyz;
+}
+
+float LinearizeDepth(float depth01, float nearZ, float farZ)
+{
+    float ndc = depth01 * 2.0 - 1.0;
+    return (2.0 * nearZ * farZ) / (farZ + nearZ - ndc * (farZ - nearZ));
 }
