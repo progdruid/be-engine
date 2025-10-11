@@ -1,4 +1,5 @@
-#include <BeInclude.hlsli>
+
+#include <BeMaterialBuffer.hlsli>
 
 struct PixelInput {
     float4 Position : SV_POSITION;
@@ -8,25 +9,24 @@ struct PixelInput {
     float3 ViewDirection : TEXCOORD1;
 };
 
-float4 main(PixelInput input) : SV_Target {
+struct PixelOutput {
+    float4 DiffuseRGBA : SV_Target0;
+    float4 WorldNormalXYZ_UnusedA : SV_Target1;
+    float4 SpecularRGB_ShininessA : SV_Target2;
+};
+
+PixelOutput main(PixelInput input) {
     float4 diffuseColor = DiffuseTexture.Sample(DefaultSampler, input.UV);
     float4 specularColor = Specular.Sample(DefaultSampler, input.UV);
     if (diffuseColor.a < 0.5) discard;
+
+    PixelOutput output;
+    output.DiffuseRGBA.rgb = diffuseColor.rgb * _DiffuseColor;
+    output.DiffuseRGBA.a = 1.0;
+    output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
+    output.WorldNormalXYZ_UnusedA.w = 1.0;
+    output.SpecularRGB_ShininessA.rgb = specularColor.rgb * _SpecularColor0;
+    output.SpecularRGB_ShininessA.a = _Shininess0;
     
-    float3 color =
-        StandardLambertBlinnPhong(
-            input.Normal,
-            input.ViewDirection,
-            -_DirectionalLightVector,
-            _AmbientColor,
-            _DirectionalLightColor,
-            _DirectionalLightPower,
-            diffuseColor.rgb * _DiffuseColor,
-            specularColor.rgb * _SpecularColor0,
-            specularColor.rgb * _SpecularColor1,
-            _Shininess0,
-            _Shininess1
-        );
-    
-    return float4(color, 1.0);
+    return output;
 };

@@ -4,6 +4,7 @@
 
 struct UniformBufferData {
     glm::mat4 ProjectionView {1.0f};
+    glm::vec2 NearFarPlane {0.1f, 100.0f};
     glm::vec3 CameraPosition {0.0f, 0.0f, 0.0f};
     
     glm::vec3 AmbientColor {0.0f, 0.0f, 0.0f};
@@ -14,14 +15,18 @@ struct UniformBufferData {
 
 struct alignas(16) UniformBufferDataGPU {
     glm::mat4x4 ProjectionView;         // 0-3 regs
-    glm::vec4 CameraPosition;           // 4 reg:   xyz = position, w unused
-    glm::vec4 AmbientColor;             // 5 reg:   xyz = color, w unused
-    glm::vec4 DirectionalLightVector;   // 6 reg:   xyz = direction, w unused
-    glm::vec3 DirectionalLightColor;    // 7 reg:   xyz = color
+    glm::mat4x4 InverseProjectionView;  // 4-7 regs
+    glm::vec4 NearFarPlane;             // 8  reg:  x = near, y = far, z = 1/near, w = 1/far
+    glm::vec4 CameraPosition;           // 9  reg:  xyz = position, w unused
+    glm::vec4 AmbientColor;             // 10 reg:  xyz = color, w unused
+    glm::vec4 DirectionalLightVector;   // 11 reg:  xyz = direction, w unused
+    glm::vec3 DirectionalLightColor;    // 12 reg:  xyz = color
     float DirectionalLightPower;        //          w = power
     
     explicit UniformBufferDataGPU(const UniformBufferData& data) {
         ProjectionView = data.ProjectionView;
+        InverseProjectionView = glm::inverse(data.ProjectionView);
+        NearFarPlane = glm::vec4(data.NearFarPlane, 1.0f / data.NearFarPlane.x, 1.0f / data.NearFarPlane.y);
         CameraPosition = glm::vec4(data.CameraPosition, 0.0f);
         AmbientColor = glm::vec4(data.AmbientColor, 1.f);
         DirectionalLightVector = glm::vec4(data.DirectionalLightVector, 0.0f);
@@ -36,7 +41,7 @@ struct alignas(16) MaterialBufferDataGPU {
 
     glm::vec4 DiffuseColor  {1, 1, 1, 1};
     glm::vec3 SpecularColor {1, 1, 1};
-    float Shininess = 32.f; 
+    float Shininess = 32.f / 2048.f; // Scale down to [0, 1] range
     glm::vec3 SuperSpecularColor {1, 1, 1};
     float SuperSpecularPower = -1.f;
 
@@ -44,7 +49,7 @@ struct alignas(16) MaterialBufferDataGPU {
         Model = model;
         DiffuseColor = glm::vec4(material.DiffuseColor, 1.f);
         SpecularColor = material.SpecularColor;
-        Shininess = material.Shininess;
+        Shininess = material.Shininess / 2048.f;
         SuperSpecularColor = material.SuperSpecularColor;
         SuperSpecularPower = material.SuperShininess;
     }
