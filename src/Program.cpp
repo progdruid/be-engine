@@ -115,16 +115,18 @@ auto Program::run() -> int {
     const auto device = renderer.GetDevice();
 
     
+    renderer.UniformData.NearFarPlane = {0.1f, 100.0f};
     renderer.ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
     //renderer.ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
     //renderer.ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
     renderer.UniformData.AmbientColor = glm::vec3(0.1f);
-    renderer.UniformData.DirectionalLightVector = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
-    renderer.UniformData.DirectionalLightColor = glm::vec3(0.99f, 0.89f, 0.7); 
-    renderer.UniformData.DirectionalLightPower = (1.0f / 0.7f) * 1.2f;
-    renderer.UniformData.NearFarPlane = {0.1f, 100.0f};
-
-    
+    renderer.DirectionalLightData.Direction = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
+    renderer.DirectionalLightData.Color = glm::vec3(0.7f, 0.7f, 0.99); 
+    renderer.DirectionalLightData.Power = (1.0f / 0.7f) * 1.2f;
+    renderer.PointLightData.Position = glm::vec3(2.0f, 2.0f, 4.0f);
+    renderer.PointLightData.Radius = 20.0f;
+    renderer.PointLightData.Color = glm::vec3(0.99f, 0.99f, 0.6); 
+    renderer.PointLightData.Power = (1.0f / 0.7f) * 2.2f;
 
     
     BeShader standardShader(device.Get(), "assets/shaders/standard", {
@@ -134,6 +136,7 @@ auto Program::run() -> int {
     });
 
     BeAssetImporter importer(device);
+    auto cube = importer.LoadModel("assets/cube.glb");
     auto macintosh = importer.LoadModel("assets/model.fbx");
     auto disks = importer.LoadModel("assets/floppy-disks.glb");
     auto pagoda = importer.LoadModel("assets/pagoda.glb");
@@ -145,6 +148,13 @@ auto Program::run() -> int {
     
 
     const std::vector<BeRenderer::ObjectEntry> objects = {
+        {
+            .Name = "Plane",
+            .Position = {15, -2, -15},
+            .Scale = glm::vec3(30.f, 0.1f, 30.f),
+            .Model = cube.get(),
+            .Shader = &standardShader,
+        },
         {
             .Name = "Macintosh",
             .Position = {0, 0, -7},
@@ -223,6 +233,15 @@ auto Program::run() -> int {
         renderer.UniformData.ProjectionView = proj * view;
         renderer.UniformData.CameraPosition = cam.pos;
 
+        // here make a little animation for the point light to move in circles. make it in a nice self-contained {} scope
+        {
+            static float angle = 0.0f;
+            angle += dt * glm::radians(15.0f); // 15 degrees per second
+            if (angle > glm::two_pi<float>()) angle -= glm::two_pi<float>();
+            const float radius = 10.0f;
+            renderer.PointLightData.Position = glm::vec3(cos(angle) * radius, 4.0f, sin(angle) * radius);
+        }
+        
         renderer.Render();
     }
     

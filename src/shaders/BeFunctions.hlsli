@@ -5,7 +5,7 @@ float3 StandardLambertBlinnPhong(
     float3 normal,
     float3 viewDir,
     float3 lightDir,
-    float3 ambientColor,
+    //float3 ambientColor,
     float3 lightColor,
     float lightPower,
     float3 diffuseColor,
@@ -33,7 +33,7 @@ float3 StandardLambertBlinnPhong(
     
     float3 light = lightColor * lightPower;
     float3 colorLinear =
-        ambientColor +
+        //ambientColor +
         diffuseColor * diffuseValue * light +
         specularColor0 * specularValue0 * light +
         specularColor1 * specularValue1 * light;
