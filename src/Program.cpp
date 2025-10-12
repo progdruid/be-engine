@@ -122,12 +122,18 @@ auto Program::run() -> int {
     renderer.UniformData.AmbientColor = glm::vec3(0.1f);
     renderer.DirectionalLightData.Direction = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
     renderer.DirectionalLightData.Color = glm::vec3(0.7f, 0.7f, 0.99); 
-    renderer.DirectionalLightData.Power = (1.0f / 0.7f) * 1.2f;
-    renderer.PointLightData.Position = glm::vec3(2.0f, 2.0f, 4.0f);
-    renderer.PointLightData.Radius = 20.0f;
-    renderer.PointLightData.Color = glm::vec3(0.99f, 0.99f, 0.6); 
-    renderer.PointLightData.Power = (1.0f / 0.7f) * 2.2f;
-
+    renderer.DirectionalLightData.Power = (1.0f / 0.7f) * 0.7f;
+    PointLightData pl;
+    pl.Radius = 20.0f;
+    pl.Color = glm::vec3(0.99f, 0.99f, 0.6);
+    pl.Power = (1.0f / 0.7f) * 2.2f;
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    
     
     BeShader standardShader(device.Get(), "assets/shaders/standard", {
         {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
@@ -150,8 +156,8 @@ auto Program::run() -> int {
     const std::vector<BeRenderer::ObjectEntry> objects = {
         {
             .Name = "Plane",
-            .Position = {15, -2, -15},
-            .Scale = glm::vec3(30.f, 0.1f, 30.f),
+            .Position = {50, -2, -50},
+            .Scale = glm::vec3(100.f, 0.1f, 100.f),
             .Model = cube.get(),
             .Shader = &standardShader,
         },
@@ -187,6 +193,22 @@ auto Program::run() -> int {
             .Position = {7, 0, 5},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(90.f), 0)),
             .Scale = glm::vec3(0.2f),
+            .Model = anvil.get(),
+            .Shader = &standardShader,
+        },
+        {
+            .Name = "Anvil1",
+            .Position = {-7, -2, -3},
+            .Rotation = glm::quat(glm::vec3(0, glm::radians(-90.f), 0)),
+            .Scale = glm::vec3(0.2f),
+            .Model = anvil.get(),
+            .Shader = &standardShader,
+        },
+        {
+            .Name = "Anvil2",
+            .Position = {-17, -10, -3},
+            .Rotation = glm::quat(glm::vec3(0, glm::radians(-90.f), 0)),
+            .Scale = glm::vec3(1.0f),
             .Model = anvil.get(),
             .Shader = &standardShader,
         },
@@ -233,13 +255,17 @@ auto Program::run() -> int {
         renderer.UniformData.ProjectionView = proj * view;
         renderer.UniformData.CameraPosition = cam.pos;
 
-        // here make a little animation for the point light to move in circles. make it in a nice self-contained {} scope
         {
             static float angle = 0.0f;
             angle += dt * glm::radians(15.0f); // 15 degrees per second
             if (angle > glm::two_pi<float>()) angle -= glm::two_pi<float>();
-            const float radius = 10.0f;
-            renderer.PointLightData.Position = glm::vec3(cos(angle) * radius, 4.0f, sin(angle) * radius);
+            constexpr float radius = 13.0f;
+            for (int i = 0; i < renderer.PointLights.size(); ++i) {
+                float add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(renderer.PointLights.size()));
+                float rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
+                auto& light = renderer.PointLights[i];
+                light.Position = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
+            }
         }
         
         renderer.Render();

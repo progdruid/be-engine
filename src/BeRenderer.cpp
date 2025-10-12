@@ -390,8 +390,8 @@ auto BeRenderer::Render() -> void {
         _context->Draw(4, 0);
     }
 
-    {
-        PointLightBufferGPU pointLightBuffer(PointLightData);
+    for (const auto& pointLightData : PointLights) {
+        PointLightBufferGPU pointLightBuffer(pointLightData);
         D3D11_MAPPED_SUBRESOURCE pointLightMappedResource;
         Utils::Check << _context->Map(_pointLightBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &pointLightMappedResource);
         memcpy(pointLightMappedResource.pData, &pointLightBuffer, sizeof(PointLightBufferGPU));

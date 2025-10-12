@@ -35,7 +35,7 @@ public:
     
     UniformData UniformData;
     DirectionalLightData DirectionalLightData;
-    PointLightData PointLightData;
+    std::vector<PointLightData> PointLights;
 
 private:
 
