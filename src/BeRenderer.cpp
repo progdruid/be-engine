@@ -140,22 +140,65 @@ auto BeRenderer::LaunchDevice() -> void {
             << _device->CreateRenderTargetView(texture, nullptr, &_gbufferTargets[i])
             << _device->CreateShaderResourceView(texture, &srvDesc, &_gbufferResources[i]);
         }
+
+        D3D11_TEXTURE2D_DESC lightingTextureDesc = {};
+        lightingTextureDesc.Width = _width;
+        lightingTextureDesc.Height = _height;
+        lightingTextureDesc.MipLevels = 1;
+        lightingTextureDesc.ArraySize = 1;
+        lightingTextureDesc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+        lightingTextureDesc.SampleDesc.Count = 1;
+        lightingTextureDesc.SampleDesc.Quality = 0;
+        lightingTextureDesc.Usage = D3D11_USAGE_DEFAULT;
+        lightingTextureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+        ID3D11Texture2D* lightingTexture = nullptr;
+        Utils::Check
+        << _device->CreateTexture2D(&lightingTextureDesc, nullptr, &lightingTexture)
+        << _device->CreateRenderTargetView(lightingTexture, nullptr, &_lightingTarget)
+        << _device->CreateShaderResourceView(lightingTexture, nullptr, &_lightingResource);
+
+        // Additive blending for lights
+        D3D11_BLEND_DESC lightingBlendDesc = {};
+        lightingBlendDesc.RenderTarget[0].BlendEnable = TRUE;
+        lightingBlendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+        lightingBlendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
+        lightingBlendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+        lightingBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+        lightingBlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+        lightingBlendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+        lightingBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
         
+        Utils::Check << _device->CreateBlendState(&lightingBlendDesc, _lightingBlendState.GetAddressOf());
     }
     
     D3D11_BUFFER_DESC uniformBufferDescriptor = {};
     uniformBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     uniformBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     uniformBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    uniformBufferDescriptor.ByteWidth = sizeof(UniformBufferDataGPU);
+    uniformBufferDescriptor.ByteWidth = sizeof(UniformBufferGPU);
     Utils::Check << _device->CreateBuffer(&uniformBufferDescriptor, nullptr, &_uniformBuffer);
     
-    D3D11_BUFFER_DESC objectBufferDescriptor = {};
-    objectBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    objectBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
-    objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    objectBufferDescriptor.ByteWidth = sizeof(MaterialBufferDataGPU);
-    Utils::Check << _device->CreateBuffer(&objectBufferDescriptor, nullptr, &_materialBuffer);
+    D3D11_BUFFER_DESC materialBufferDescriptor = {};
+    materialBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    materialBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
+    materialBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    materialBufferDescriptor.ByteWidth = sizeof(MaterialBufferGPU);
+    Utils::Check << _device->CreateBuffer(&materialBufferDescriptor, nullptr, &_materialBuffer);
+
+    D3D11_BUFFER_DESC directionalLightBufferDescriptor = {};
+    directionalLightBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    directionalLightBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
+    directionalLightBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    directionalLightBufferDescriptor.ByteWidth = sizeof(DirectionalLightBufferGPU);
+    Utils::Check << _device->CreateBuffer(&directionalLightBufferDescriptor, nullptr, &_directionalLightBuffer);
+    
+    D3D11_BUFFER_DESC pointLightBufferDescriptor = {};
+    pointLightBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    pointLightBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
+    pointLightBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    pointLightBufferDescriptor.ByteWidth = sizeof(PointLightBufferGPU);
+    Utils::Check << _device->CreateBuffer(&pointLightBufferDescriptor, nullptr, &_pointLightBuffer);
     
     // Create point sampler state
     D3D11_SAMPLER_DESC samplerDesc = {};
@@ -171,6 +214,18 @@ auto BeRenderer::LaunchDevice() -> void {
     _fullscreenShader = std::make_unique<BeShader>(
         _device.Get(),
         "assets/shaders/fullscreen",
+        std::vector<BeVertexElementDescriptor>{}
+    );
+
+    _directionalLightShader = std::make_unique<BeShader>(
+        _device.Get(),
+        "assets/shaders/directionalLight",
+        std::vector<BeVertexElementDescriptor>{}
+    );
+
+    _pointLightShader = std::make_unique<BeShader>(
+        _device.Get(),
+        "assets/shaders/pointLight",
         std::vector<BeVertexElementDescriptor>{}
     );
     
@@ -236,15 +291,15 @@ auto BeRenderer::Render() -> void {
 
     
     // Update uniform constant buffer
-    UniformBufferDataGPU uniformDataGpu(UniformData);
+    UniformBufferGPU uniformDataGpu(UniformData);
     D3D11_MAPPED_SUBRESOURCE uniformMappedResource;
     Utils::Check << _context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &uniformMappedResource);
-    memcpy(uniformMappedResource.pData, &uniformDataGpu, sizeof(UniformBufferDataGPU));
+    memcpy(uniformMappedResource.pData, &uniformDataGpu, sizeof(UniformBufferGPU));
     _context->Unmap(_uniformBuffer.Get(), 0);
     _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
     _context->PSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
 
-
+    
     
     // ---------- Geometry pass ----------
     
@@ -275,10 +330,10 @@ auto BeRenderer::Render() -> void {
                 glm::translate(glm::mat4(1.0f), object.Position) *
                 glm::mat4_cast(object.Rotation) *
                 glm::scale(glm::mat4(1.0f), object.Scale);
-            MaterialBufferDataGPU materialData(modelMatrix, slice.Material);
+            MaterialBufferGPU materialData(modelMatrix, slice.Material);
             D3D11_MAPPED_SUBRESOURCE materialMappedResource;
             Utils::Check << _context->Map(_materialBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &materialMappedResource);
-            memcpy(materialMappedResource.pData, &materialData, sizeof(MaterialBufferDataGPU));
+            memcpy(materialMappedResource.pData, &materialData, sizeof(MaterialBufferGPU));
             _context->Unmap(_materialBuffer.Get(), 0);
             _context->VSSetConstantBuffers(1, 1, _materialBuffer.GetAddressOf());
             _context->PSSetConstantBuffers(1, 1, _materialBuffer.GetAddressOf());
@@ -297,11 +352,69 @@ auto BeRenderer::Render() -> void {
     }
     { 
         ID3D11ShaderResourceView* emptyResources[2] = { nullptr, nullptr };
-        _context->PSSetShaderResources(0, 2, emptyResources);
+        _context->PSSetShaderResources(0, 2, emptyResources); // clean material textures
+        ID3D11Buffer* emptyBuffers[1] = { nullptr };
+        _context->VSSetConstantBuffers(1, 1, emptyBuffers); // clean material buffer
+        ID3D11SamplerState* emptySamplers[1] = { nullptr };
+        _context->PSSetSamplers(0, 1, emptySamplers); // clean samplers
+        ID3D11RenderTargetView* emptyTargets[3] = { nullptr, nullptr, nullptr };
+        _context->OMSetRenderTargets(3, emptyTargets, nullptr); // clean render targets
+    }
+    // --------- End of pass ---------
+    
+    
+    // --------- Lighting pass ---------
+    _context->ClearRenderTargetView(_lightingTarget.Get(), glm::value_ptr(glm::vec4(0.0f)));
+    _context->OMSetRenderTargets(1, _lightingTarget.GetAddressOf(), nullptr);
+    _context->OMSetBlendState(_lightingBlendState.Get(), nullptr, 0xFFFFFFFF);
+    
+    _context->VSSetShader(_fullscreenShader->VertexShader.Get(), nullptr, 0);
+    
+    _context->PSSetShaderResources(0, 1, _depthStencilResource.GetAddressOf());
+    _context->PSSetShaderResources(1, 3, _gbufferResources);
+    
+    _context->PSSetSamplers(0, 1, _pointSampler.GetAddressOf());
+
+    {
+        DirectionalLightBufferGPU directionalLightBuffer(DirectionalLightData);
+        D3D11_MAPPED_SUBRESOURCE directionalLightMappedResource;
+        Utils::Check << _context->Map(_directionalLightBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &directionalLightMappedResource);
+        memcpy(directionalLightMappedResource.pData, &directionalLightBuffer, sizeof(DirectionalLightBufferGPU));
+        _context->Unmap(_directionalLightBuffer.Get(), 0);
+        _context->PSSetConstantBuffers(1, 1, _directionalLightBuffer.GetAddressOf());
+    
+        _context->PSSetShader(_directionalLightShader->PixelShader.Get(), nullptr, 0);
+    
+        _context->IASetInputLayout(nullptr);
+        _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        _context->Draw(4, 0);
+    }
+
+    {
+        PointLightBufferGPU pointLightBuffer(PointLightData);
+        D3D11_MAPPED_SUBRESOURCE pointLightMappedResource;
+        Utils::Check << _context->Map(_pointLightBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &pointLightMappedResource);
+        memcpy(pointLightMappedResource.pData, &pointLightBuffer, sizeof(PointLightBufferGPU));
+        _context->Unmap(_pointLightBuffer.Get(), 0);
+        _context->PSSetConstantBuffers(1, 1, _pointLightBuffer.GetAddressOf());
+    
+        _context->PSSetShader(_pointLightShader->PixelShader.Get(), nullptr, 0);
+    
+        _context->IASetInputLayout(nullptr);
+        _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        _context->Draw(4, 0);
+    }
+    
+    {
+        ID3D11ShaderResourceView* emptyResources[4] = { nullptr, nullptr, nullptr, nullptr };
+        _context->PSSetShaderResources(0, 4, emptyResources);
+        ID3D11Buffer* emptyBuffers[1] = { nullptr };
+        _context->PSSetConstantBuffers(1, 1, emptyBuffers);
         ID3D11SamplerState* emptySamplers[1] = { nullptr };
         _context->PSSetSamplers(0, 1, emptySamplers);
-        ID3D11RenderTargetView* emptyTargets[3] = { nullptr, nullptr, nullptr };
-        _context->OMSetRenderTargets(3, emptyTargets, nullptr);
+        ID3D11RenderTargetView* emptyTargets[1] = { nullptr };
+        _context->OMSetRenderTargets(1, emptyTargets, nullptr);
+        _context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     }
     // --------- End of pass ---------
 
@@ -311,13 +424,14 @@ auto BeRenderer::Render() -> void {
     _context->ClearRenderTargetView(_backbufferTarget.Get(), reinterpret_cast<FLOAT*>(&fullClearColor));
     _context->OMSetRenderTargets(1, _backbufferTarget.GetAddressOf(), nullptr);
 
+    _context->PSSetShaderResources(0, 1, _depthStencilResource.GetAddressOf());
+    _context->PSSetShaderResources(1, 3, _gbufferResources);
+    _context->PSSetShaderResources(4, 1, _lightingResource.GetAddressOf());
+
+    _context->PSSetSamplers(0, 1, _pointSampler.GetAddressOf());
+    
     _context->VSSetShader(_fullscreenShader->VertexShader.Get(), nullptr, 0);
     _context->PSSetShader(_fullscreenShader->PixelShader.Get(), nullptr, 0);
-    
-    _context->PSSetSamplers(0, 1, _pointSampler.GetAddressOf());
-
-    _context->PSSetShaderResources(0, 1, _depthStencilResource.GetAddressOf());
-    _context->PSSetShaderResources(1, 3, _gbufferResources); 
 
     _context->IASetInputLayout(nullptr);
     _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);

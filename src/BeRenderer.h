@@ -33,7 +33,9 @@ public:
 public:
     glm::vec3 ClearColor;
     
-    UniformBufferData UniformData;
+    UniformData UniformData;
+    DirectionalLightData DirectionalLightData;
+    PointLightData PointLightData;
 
 private:
 
@@ -52,18 +54,26 @@ private:
 
     // targets
     ComPtr<ID3D11RenderTargetView> _backbufferTarget;
-    ID3D11RenderTargetView* _gbufferTargets[3];
-    ID3D11ShaderResourceView* _gbufferResources[3];
     ComPtr<ID3D11ShaderResourceView> _depthStencilResource;
     ComPtr<ID3D11DepthStencilView> _depthStencilView;
     ComPtr<ID3D11DepthStencilState> _depthStencilState;
+    ID3D11RenderTargetView* _gbufferTargets[3];
+    ID3D11ShaderResourceView* _gbufferResources[3];
+    ComPtr<ID3D11RenderTargetView> _lightingTarget;
+    ComPtr<ID3D11BlendState> _lightingBlendState;
+    ComPtr<ID3D11ShaderResourceView> _lightingResource;
     
     // constant buffers
     ComPtr<ID3D11Buffer> _uniformBuffer;
     ComPtr<ID3D11Buffer> _materialBuffer;
+    ComPtr<ID3D11Buffer> _directionalLightBuffer;
+    ComPtr<ID3D11Buffer> _pointLightBuffer;
+    //ComPtr<ID3D11Buffer> _spotLightBuffer;
     ComPtr<ID3D11SamplerState> _pointSampler;
     
-    // backbuffer pass
+    // shaders
+    std::unique_ptr<BeShader> _directionalLightShader;
+    std::unique_ptr<BeShader> _pointLightShader;
     std::unique_ptr<BeShader> _fullscreenShader = nullptr;
 
     // geometry pass
