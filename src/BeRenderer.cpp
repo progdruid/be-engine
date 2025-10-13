@@ -389,7 +389,8 @@ auto BeRenderer::Render() -> void {
         _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
         _context->Draw(4, 0);
     }
-
+    
+    _context->PSSetShader(_pointLightShader->PixelShader.Get(), nullptr, 0);
     for (const auto& pointLightData : PointLights) {
         PointLightBufferGPU pointLightBuffer(pointLightData);
         D3D11_MAPPED_SUBRESOURCE pointLightMappedResource;
@@ -397,9 +398,7 @@ auto BeRenderer::Render() -> void {
         memcpy(pointLightMappedResource.pData, &pointLightBuffer, sizeof(PointLightBufferGPU));
         _context->Unmap(_pointLightBuffer.Get(), 0);
         _context->PSSetConstantBuffers(1, 1, _pointLightBuffer.GetAddressOf());
-    
-        _context->PSSetShader(_pointLightShader->PixelShader.Get(), nullptr, 0);
-    
+        
         _context->IASetInputLayout(nullptr);
         _context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
         _context->Draw(4, 0);

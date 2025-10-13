@@ -133,6 +133,14 @@ auto Program::run() -> int {
     renderer.PointLights.push_back(pl);
     renderer.PointLights.push_back(pl);
     renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
+    renderer.PointLights.push_back(pl);
     
     
     BeShader standardShader(device.Get(), "assets/shaders/standard", {
