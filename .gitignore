@@ -1,6 +1,7 @@
 # IDEs
 .idea/
 .vs/
+.claude/
 *.DotSettings.user
 
 # Build outputs

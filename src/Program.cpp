@@ -13,75 +13,9 @@
 #include <gtc/matrix_transform.hpp>
 
 #include "BeAssetImporter.h"
+#include "BeInput.h"
 #include "BeRenderer.h"
-
-
-// <AI> 
-struct FlyCamera {
-    glm::vec3 pos{0.0f, 2.0f, 6.0f};
-    float yaw{-90.0f};   // degrees, -Z forward
-    float pitch{0.0f};   // degrees
-    float fov{90.0f};
-    float moveSpeed{5.0f};   // units/sec
-    float mouseSens{0.1f};   // deg per pixel
-    glm::vec3 front{0,0,-1};
-    glm::vec3 up{0,1,0};
-    glm::vec3 right{1,0,0};
-    void updateVectors() {
-        const float cy = cos(glm::radians(yaw));
-        const float sy = sin(glm::radians(yaw));
-        const float cp = cos(glm::radians(pitch));
-        const float sp = sin(glm::radians(pitch));
-        front = glm::normalize(glm::vec3(cy*cp, sp, sy*cp));
-        right = glm::normalize(glm::cross(front, glm::vec3(0,1,0)));
-        up    = glm::normalize(glm::cross(right, front));
-    }
-    void applyZoom(float yoff) {
-        // scroll up (positive yoff) -> zoom in (smaller fov)
-        fov -= yoff;                           // 1:1 steps feel good; scale if needed
-        fov = glm::clamp(fov, 20.0f, 90.0f);   // clamp range
-    }
-};
-
-static bool GMouseCaptured = false;
-static double GLastX = 0.0, GLastY = 0.0;
-static bool GFirstMouse = true;
-
-// Optional: toggle capture with RMB
-static void MouseButtonCb(GLFWwindow* w, int button, int action, int mods) {
-    if (action == GLFW_PRESS) {
-        GMouseCaptured = true;
-        glfwSetInputMode(w, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        GFirstMouse = true;
-    }
-    else if (action == GLFW_RELEASE) {
-        GMouseCaptured = false;
-        glfwSetInputMode(w, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    }
-}
-
-// Cursor callback to accumulate yaw/pitch when captured
-static void CursorPosCb(GLFWwindow* w, double xpos, double ypos) {
-    if (!GMouseCaptured) { GFirstMouse = true; return; }
-    if (GFirstMouse) { GLastX = xpos; GLastY = ypos; GFirstMouse = false; return; }
-    double xoffset = GLastX - xpos; // invert X so moving right is +yaw;
-    double yoffset = GLastY - ypos; // invert Y so moving up is +pitch
-    GLastX = xpos; GLastY = ypos;
-
-    FlyCamera* cam = static_cast<FlyCamera*>(glfwGetWindowUserPointer(w));
-    cam->yaw   += static_cast<float>(xoffset) * cam->mouseSens;
-    cam->pitch += static_cast<float>(yoffset) * cam->mouseSens;
-    cam->pitch = glm::clamp(cam->pitch, -89.0f, 89.0f);
-    cam->updateVectors();
-}
-
-static void scrollCB(GLFWwindow* w, double xoffset, double yoffset) {
-    FlyCamera* cam = static_cast<FlyCamera*>(glfwGetWindowUserPointer(w));
-    if (!cam) return;
-    cam->applyZoom(static_cast<float>(yoffset));
-}
-
-// </AI>
+#include "BeCamera.h"
 
 
 static auto errorCallback(int code, const char* desc) -> void {
@@ -127,20 +61,8 @@ auto Program::run() -> int {
     pl.Radius = 20.0f;
     pl.Color = glm::vec3(0.99f, 0.99f, 0.6);
     pl.Power = (1.0f / 0.7f) * 2.2f;
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
-    renderer.PointLights.push_back(pl);
+    for (auto i = 0; i < 6; i++)
+        renderer.PointLights.push_back(pl);
     
     
     BeShader standardShader(device.Get(), "assets/shaders/standard", {
@@ -225,43 +147,62 @@ auto Program::run() -> int {
     renderer.PushObjects(objects);
     
 
-    FlyCamera cam;
-    glfwSetWindowUserPointer(window, &cam);
-    glfwSetMouseButtonCallback(window, MouseButtonCb);
-    glfwSetCursorPosCallback(window, CursorPosCb);
-    glfwSetScrollCallback(window, scrollCB); 
+    BeInput input(window);
+    BeCamera cam;
+    cam.Width = static_cast<float>(width);
+    cam.Height = static_cast<float>(height);
+    cam.NearPlane = 0.1f;
+    cam.FarPlane = 100.0f;
 
-    // Enable raw mouse motion when available and cursor disabled
-    if (glfwRawMouseMotionSupported()) {
-        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-    }
+    constexpr float moveSpeed = 5.0f;
+    constexpr float mouseSens = 0.1f;
 
     double lastTime = glfwGetTime();
     
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+        input.update();
 
         // Delta time
         double now = glfwGetTime();
         float dt = static_cast<float>(now - lastTime);
         lastTime = now;
 
-        // Keyboard movement (WASD + Space/Ctrl)
-        float speed = cam.moveSpeed * dt;
-        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 2.0f;
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) cam.pos += cam.front * speed;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) cam.pos -= cam.front * speed;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) cam.pos -= cam.right * speed;
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) cam.pos += cam.right * speed;
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cam.pos += glm::vec3(0, 1, 0) * speed;
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cam.pos -= glm::vec3(0, 1, 0) * speed;
+        // Keyboard movement
+        float speed = moveSpeed * dt;
+        if (input.getKey(GLFW_KEY_LEFT_SHIFT)) speed *= 2.0f;
+        if (input.getKey(GLFW_KEY_W)) cam.Position += cam.getFront() * speed;
+        if (input.getKey(GLFW_KEY_S)) cam.Position -= cam.getFront() * speed;
+        if (input.getKey(GLFW_KEY_D)) cam.Position -= cam.getRight() * speed;
+        if (input.getKey(GLFW_KEY_A)) cam.Position += cam.getRight() * speed;
+        if (input.getKey(GLFW_KEY_E)) cam.Position += glm::vec3(0, 1, 0) * speed;
+        if (input.getKey(GLFW_KEY_Q)) cam.Position -= glm::vec3(0, 1, 0) * speed;
 
-        // Build view/projection
-        glm::mat4 view = glm::lookAtLH(cam.pos, cam.pos + cam.front, cam.up);
-        glm::mat4 proj = glm::perspectiveFovLH(glm::radians(cam.fov), static_cast<float>(width), static_cast<float>(height), 0.1f, 100.0f);
-        renderer.UniformData.ProjectionView = proj * view;
-        renderer.UniformData.CameraPosition = cam.pos;
+        // Mouse look (right mouse button)
+        bool captureMouse = false;
+        if (input.getMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
+            captureMouse = true;
+            const glm::vec2 mouseDelta = input.getMouseDelta();
+            cam.Yaw   -= mouseDelta.x * mouseSens;
+            cam.Pitch -= mouseDelta.y * mouseSens;
+            cam.Pitch = glm::clamp(cam.Pitch, -89.0f, 89.0f);
+        }
+        input.setMouseCapture(captureMouse);
+
+        // Mouse scroll (zoom)
+        const glm::vec2 scrollDelta = input.getScrollDelta();
+        if (scrollDelta.y != 0.0f) {
+            cam.Fov -= scrollDelta.y;
+            cam.Fov = glm::clamp(cam.Fov, 20.0f, 90.0f);
+        }
+
+        // Update camera matrices
+        cam.updateMatrices();
+
+        // Apply camera to renderer
+        renderer.UniformData.ProjectionView = cam.getProjectionMatrix() * cam.getViewMatrix();
+        renderer.UniformData.CameraPosition = cam.Position;
 
         {
             static float angle = 0.0f;
