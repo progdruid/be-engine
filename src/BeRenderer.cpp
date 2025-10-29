@@ -59,37 +59,6 @@ auto BeRenderer::LaunchDevice() -> void {
     Utils::Check
     << _swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))
     << _device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_backbufferTarget);
-
-    CreateRenderResource("DepthStencil", BeRenderResource::BeResourceDescriptor {
-        .Format = DXGI_FORMAT_R24G8_TYPELESS,
-        .Width = _width,
-        .Height = _height,
-        .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
-    });
-    CreateRenderResource("GBuffer0", BeRenderResource::BeResourceDescriptor {
-        .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
-        .Width = _width,
-        .Height = _height,
-        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-    });
-    CreateRenderResource("GBuffer1", BeRenderResource::BeResourceDescriptor {
-        .Format = DXGI_FORMAT_R16G16B16A16_FLOAT,
-        .Width = _width,
-        .Height = _height,
-        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-    });
-    CreateRenderResource("GBuffer2", BeRenderResource::BeResourceDescriptor {
-        .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
-        .Width = _width,
-        .Height = _height,
-        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-    });
-    CreateRenderResource("Lighting", BeRenderResource::BeResourceDescriptor {
-        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
-        .Width = _width,
-        .Height = _height,
-        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-    });
     
     D3D11_BUFFER_DESC uniformBufferDescriptor = {};
     uniformBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -97,8 +66,7 @@ auto BeRenderer::LaunchDevice() -> void {
     uniformBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     uniformBufferDescriptor.ByteWidth = sizeof(UniformBufferGPU);
     Utils::Check << _device->CreateBuffer(&uniformBufferDescriptor, nullptr, &_uniformBuffer);
-
-
+    
     // Create point sampler state
     D3D11_SAMPLER_DESC samplerDesc = {};
     samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
@@ -160,8 +128,16 @@ auto BeRenderer::Render() -> void {
 
 auto BeRenderer::CreateRenderResource(
     const std::string& name,
+    const bool useWindowSize,
     const BeRenderResource::BeResourceDescriptor& desc)
 -> BeRenderResource* {
+
+    BeRenderResource::BeResourceDescriptor descCopy = desc;
+    if (useWindowSize) {
+        descCopy.Width = _width;
+        descCopy.Height = _height;
+    }
+    
     const auto resource = std::make_unique<BeRenderResource>(name, desc);
     resource->CreateGPUResources(_device);
     BeRenderResource* resourcePtr = resource.get();

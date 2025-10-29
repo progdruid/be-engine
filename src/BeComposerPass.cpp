@@ -4,13 +4,8 @@
 #include "BeRenderResource.h"
 #include "BeShader.h"
 
-auto BeComposerPass::GetInputResources() const -> std::vector<std::string> {
-    return { "DepthStencil", "GBuffer0", "GBuffer1", "GBuffer2", "Lighting" };
-}
-
-auto BeComposerPass::GetOutputResources() const -> std::vector<std::string> {
-    return {};
-}
+BeComposerPass::BeComposerPass() = default;
+BeComposerPass::~BeComposerPass() = default;
 
 auto BeComposerPass::Initialise() -> void {
     const auto device = _renderer->GetDevice();

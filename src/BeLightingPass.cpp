@@ -5,13 +5,9 @@
 #include "BeRenderer.h"
 #include "Utils.h"
 
-auto BeLightingPass::GetInputResources() const -> std::vector<std::string> {
-    return { "DepthStencil", "GBuffer0", "GBuffer1", "GBuffer2" };
-}
 
-auto BeLightingPass::GetOutputResources() const -> std::vector<std::string> {
-    return { "Lighting" };
-}
+BeLightingPass::BeLightingPass() = default;
+BeLightingPass::~BeLightingPass() = default;
 
 auto BeLightingPass::Initialise() -> void {
     const auto device = _renderer->GetDevice();
@@ -60,11 +56,11 @@ auto BeLightingPass::Initialise() -> void {
 auto BeLightingPass::Render() -> void {
     const auto context = _renderer->GetContext();
     
-    BeRenderResource* depthResource    = _renderer->GetRenderResource("DepthStencil");
-    BeRenderResource* gbufferResource0 = _renderer->GetRenderResource("GBuffer0");
-    BeRenderResource* gbufferResource1 = _renderer->GetRenderResource("GBuffer1");
-    BeRenderResource* gbufferResource2 = _renderer->GetRenderResource("GBuffer2");
-    BeRenderResource* lightingResource = _renderer->GetRenderResource("Lighting");
+    BeRenderResource* depthResource    = _renderer->GetRenderResource(InputDepthTextureName);
+    BeRenderResource* gbufferResource0 = _renderer->GetRenderResource(InputTexture0Name);
+    BeRenderResource* gbufferResource1 = _renderer->GetRenderResource(InputTexture1Name);
+    BeRenderResource* gbufferResource2 = _renderer->GetRenderResource(InputTexture2Name);
+    BeRenderResource* lightingResource = _renderer->GetRenderResource(OutputTextureName);
     
     context->ClearRenderTargetView(lightingResource->RTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->OMSetRenderTargets(1, lightingResource->RTV.GetAddressOf(), nullptr);

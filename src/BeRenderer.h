@@ -60,6 +60,7 @@ public:
 
     auto CreateRenderResource(
         const std::string& name,
+        const bool useWindowSize,
         const BeRenderResource::BeResourceDescriptor& desc
     ) -> BeRenderResource*;
     auto GetRenderResource(const std::string& name) -> BeRenderResource*;

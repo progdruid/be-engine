@@ -6,20 +6,24 @@
 
 class BeShader;
 
-class BeComposerPass : public BeRenderPass {
+class BeComposerPass final : public BeRenderPass {
 
 public:
     glm::vec3 ClearColor;
+
+    std::string InputDepthTextureName;
+    std::string InputTexture0Name;
+    std::string InputTexture1Name;
+    std::string InputTexture2Name;
+    std::string InputLightTextureName;
     
 private:
     std::unique_ptr<BeShader> _fullscreenShader = nullptr;
     
 public:
-    explicit BeComposerPass() = default;
-    ~BeComposerPass() override = default;
+    explicit BeComposerPass();
+    ~BeComposerPass() override;
 
-    [[nodiscard]] auto GetInputResources() const -> std::vector<std::string> override;
-    [[nodiscard]] auto GetOutputResources() const -> std::vector<std::string> override;
     auto Initialise() -> void override;
     auto Render() -> void override;
 };

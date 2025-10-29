@@ -133,15 +133,45 @@ auto Program::run() -> int {
 
     renderer.UniformData.NearFarPlane = {0.1f, 100.0f};
     renderer.UniformData.AmbientColor = glm::vec3(0.1f);
+
+    renderer.CreateRenderResource("DepthStencil", true, BeRenderResource::BeResourceDescriptor {
+        .Format = DXGI_FORMAT_R24G8_TYPELESS,
+        .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
+    });
+    renderer.CreateRenderResource("GBuffer0", true, BeRenderResource::BeResourceDescriptor {
+        .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+    });
+    renderer.CreateRenderResource("GBuffer1", true, BeRenderResource::BeResourceDescriptor {
+        .Format = DXGI_FORMAT_R16G16B16A16_FLOAT,
+        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+    });
+    renderer.CreateRenderResource("GBuffer2", true, BeRenderResource::BeResourceDescriptor {
+        .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+    });
+    renderer.CreateRenderResource("Lighting", true, BeRenderResource::BeResourceDescriptor {
+        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
+        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+    });
     
     // geometry pass
     auto geometryPass = new BeGeometryPass();
     renderer.AddRenderPass(geometryPass);
     geometryPass->SetObjects(objects);
+    geometryPass->OutputDepthTextureName = "DepthStencil";
+    geometryPass->OutputTexture0Name = "GBuffer0";
+    geometryPass->OutputTexture1Name = "GBuffer1";
+    geometryPass->OutputTexture2Name = "GBuffer2";
 
     // lighting pass
     auto lightingPass = new BeLightingPass();
     renderer.AddRenderPass(lightingPass);
+    lightingPass->InputDepthTextureName = "DepthStencil";
+    lightingPass->InputTexture0Name = "GBuffer0";
+    lightingPass->InputTexture1Name = "GBuffer1";
+    lightingPass->InputTexture2Name = "GBuffer2";
+    lightingPass->OutputTextureName = "Lighting";
     lightingPass->DirectionalLightData.Direction = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
     lightingPass->DirectionalLightData.Color = glm::vec3(0.7f, 0.7f, 0.99); 
     lightingPass->DirectionalLightData.Power = (1.0f / 0.7f) * 0.7f;
@@ -154,12 +184,16 @@ auto Program::run() -> int {
 
     // composer pass
     auto composerPass = new BeComposerPass();
+    composerPass->InputDepthTextureName = "DepthStencil";
+    composerPass->InputTexture0Name = "GBuffer0";
+    composerPass->InputTexture1Name = "GBuffer1";
+    composerPass->InputTexture2Name = "GBuffer2";
+    composerPass->InputLightTextureName = "Lighting";
     composerPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
     //composerPass->ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
     //composerPass->ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
     renderer.AddRenderPass(composerPass);
 
-    
     
     renderer.InitialisePasses();
     
@@ -169,9 +203,6 @@ auto Program::run() -> int {
     cam.Height = static_cast<float>(height);
     cam.NearPlane = 0.1f;
     cam.FarPlane = 100.0f;
-
-    constexpr float moveSpeed = 5.0f;
-    constexpr float mouseSens = 0.1f;
 
     double lastTime = glfwGetTime();
     
@@ -186,6 +217,7 @@ auto Program::run() -> int {
         lastTime = now;
 
         // Keyboard movement
+        constexpr float moveSpeed = 5.0f;
         float speed = moveSpeed * dt;
         if (input.getKey(GLFW_KEY_LEFT_SHIFT)) speed *= 2.0f;
         if (input.getKey(GLFW_KEY_W)) cam.Position += cam.getFront() * speed;
@@ -198,6 +230,8 @@ auto Program::run() -> int {
         // Mouse look (right mouse button)
         bool captureMouse = false;
         if (input.getMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
+            constexpr float mouseSens = 0.1f;
+            
             captureMouse = true;
             const glm::vec2 mouseDelta = input.getMouseDelta();
             cam.Yaw   -= mouseDelta.x * mouseSens;

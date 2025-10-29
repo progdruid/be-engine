@@ -9,6 +9,11 @@ public:
     DirectionalLightData DirectionalLightData;
     std::vector<PointLightData> PointLights;
 
+    std::string InputTexture0Name;
+    std::string InputTexture1Name;
+    std::string InputTexture2Name;
+    std::string InputDepthTextureName;
+    std::string OutputTextureName;
 private:
     
     ComPtr<ID3D11BlendState> _lightingBlendState;
@@ -22,11 +27,9 @@ private:
     
     
 public:
-    explicit BeLightingPass() = default;
-    ~BeLightingPass() override = default;
+    explicit BeLightingPass();
+    ~BeLightingPass() override;
 
-    [[nodiscard]] auto GetInputResources() const -> std::vector<std::string> override;
-    [[nodiscard]] auto GetOutputResources() const -> std::vector<std::string> override;
     auto Initialise() -> void override;
     auto Render() -> void override;
 };

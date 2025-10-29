@@ -5,16 +5,8 @@
 #include "BeRenderer.h"
 #include "Utils.h"
 
+BeGeometryPass::BeGeometryPass() = default;
 BeGeometryPass::~BeGeometryPass() = default;
-
-auto BeGeometryPass::GetInputResources() const -> std::vector<std::string> {
-    return {};
-}
-
-auto BeGeometryPass::GetOutputResources() const -> std::vector<std::string> {
-    return { "GBuffer0", "GBuffer1", "GBuffer2", "DepthStencil" };
-}
-
 
 auto BeGeometryPass::Initialise() -> void {
     //material buffer
@@ -82,10 +74,10 @@ auto BeGeometryPass::Initialise() -> void {
 auto BeGeometryPass::Render() -> void {
     const auto context = _renderer->GetContext();
 
-    const BeRenderResource* depthResource = _renderer->GetRenderResource("DepthStencil");
-    const BeRenderResource* gbufferResource0 = _renderer->GetRenderResource("GBuffer0");
-    const BeRenderResource* gbufferResource1 = _renderer->GetRenderResource("GBuffer1");
-    const BeRenderResource* gbufferResource2 = _renderer->GetRenderResource("GBuffer2");
+    const BeRenderResource* depthResource = _renderer->GetRenderResource(OutputDepthTextureName);
+    const BeRenderResource* gbufferResource0 = _renderer->GetRenderResource(OutputTexture0Name);
+    const BeRenderResource* gbufferResource1 = _renderer->GetRenderResource(OutputTexture1Name);
+    const BeRenderResource* gbufferResource2 = _renderer->GetRenderResource(OutputTexture2Name);
     
     // Clear and set render targets
     context->ClearDepthStencilView(depthResource->DSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
