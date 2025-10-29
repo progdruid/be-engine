@@ -1,7 +1,10 @@
 ﻿#pragma once
+#include <d3d11.h>
+
 #include "BeBuffers.h"
 #include "BeRenderPass.h"
 
+class BeShader;
 class BeRenderer;
 
 class BeLightingPass final : public BeRenderPass {
@@ -14,8 +17,8 @@ public:
     std::string InputTexture2Name;
     std::string InputDepthTextureName;
     std::string OutputTextureName;
-private:
     
+private:
     ComPtr<ID3D11BlendState> _lightingBlendState;
 
     ComPtr<ID3D11Buffer> _directionalLightBuffer;

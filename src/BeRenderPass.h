@@ -1,6 +1,4 @@
 ﻿#pragma once
-#include <string>
-#include <vector>
 #include <wrl/client.h>
 
 using Microsoft::WRL::ComPtr;

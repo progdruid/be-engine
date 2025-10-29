@@ -19,6 +19,7 @@
 #include "BeComposerPass.h"
 #include "BeGeometryPass.h"
 #include "BeLightingPass.h"
+#include "BeShader.h"
 
 
 static auto errorCallback(int code, const char* desc) -> void {
@@ -154,7 +155,7 @@ auto Program::run() -> int {
         .Format = DXGI_FORMAT_R11G11B10_FLOAT,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
-    
+
     // geometry pass
     auto geometryPass = new BeGeometryPass();
     renderer.AddRenderPass(geometryPass);
@@ -184,6 +185,7 @@ auto Program::run() -> int {
 
     // composer pass
     auto composerPass = new BeComposerPass();
+    renderer.AddRenderPass(composerPass);
     composerPass->InputDepthTextureName = "DepthStencil";
     composerPass->InputTexture0Name = "GBuffer0";
     composerPass->InputTexture1Name = "GBuffer1";
@@ -192,7 +194,6 @@ auto Program::run() -> int {
     composerPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
     //composerPass->ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
     //composerPass->ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
-    renderer.AddRenderPass(composerPass);
 
     
     renderer.InitialisePasses();

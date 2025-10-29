@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include <d3d11.h>
-#include <glm.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
