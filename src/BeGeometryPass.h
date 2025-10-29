@@ -16,6 +16,12 @@ public:
         std::vector<BeModel::BeDrawSlice> DrawSlices;
         BeShader* Shader;
     };
+
+public:
+    std::string OutputTexture0Name;
+    std::string OutputTexture1Name;
+    std::string OutputTexture2Name;
+    std::string OutputDepthTextureName;
     
 private:
     ComPtr<ID3D11Buffer> _materialBuffer;
@@ -28,11 +34,9 @@ private:
     BeTexture _whiteFallbackTexture {glm::vec4(1.0f)};
     
 public:
-    explicit BeGeometryPass() = default;
+    explicit BeGeometryPass();
     ~BeGeometryPass() override;
     
-    [[nodiscard]] auto GetInputResources() const -> std::vector<std::string> override;
-    [[nodiscard]] auto GetOutputResources() const -> std::vector<std::string> override;
     auto Initialise() -> void override;
     auto Render() -> void override;
 

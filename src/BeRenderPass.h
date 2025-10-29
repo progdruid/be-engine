@@ -17,9 +17,6 @@ public:
     auto InjectRenderer (BeRenderer* renderer) -> void {
         _renderer = renderer;
     }
-    
-    [[nodiscard]] virtual auto GetInputResources() const -> std::vector<std::string> = 0;
-    [[nodiscard]] virtual auto GetOutputResources() const -> std::vector<std::string> = 0;
 
     virtual auto Initialise() -> void = 0;
     virtual auto Render() -> void = 0;
