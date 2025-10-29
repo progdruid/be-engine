@@ -14,8 +14,9 @@ struct PSInput {
 };
 
 float4 main(PSInput input) : SV_TARGET {
+    float depth = Depth.Sample(InputSampler, input.UV).r;
     float3 lightmapColor = Lightmap.Sample(InputSampler, input.UV).rgb;
-
+    
     float3 finalColor = _AmbientColor + lightmapColor;
     
     finalColor = Tonemap_ReinhardWhite(finalColor, 2.0);
