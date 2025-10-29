@@ -16,6 +16,9 @@
 #include "BeInput.h"
 #include "BeRenderer.h"
 #include "BeCamera.h"
+#include "BeComposerPass.h"
+#include "BeGeometryPass.h"
+#include "BeLightingPass.h"
 
 
 static auto errorCallback(int code, const char* desc) -> void {
@@ -48,23 +51,6 @@ auto Program::run() -> int {
     renderer.LaunchDevice();
     const auto device = renderer.GetDevice();
 
-    
-    renderer.UniformData.NearFarPlane = {0.1f, 100.0f};
-    renderer.ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
-    //renderer.ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
-    //renderer.ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
-    renderer.UniformData.AmbientColor = glm::vec3(0.1f);
-    renderer.DirectionalLightData.Direction = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
-    renderer.DirectionalLightData.Color = glm::vec3(0.7f, 0.7f, 0.99); 
-    renderer.DirectionalLightData.Power = (1.0f / 0.7f) * 0.7f;
-    PointLightData pl;
-    pl.Radius = 20.0f;
-    pl.Color = glm::vec3(0.99f, 0.99f, 0.6);
-    pl.Power = (1.0f / 0.7f) * 2.2f;
-    for (auto i = 0; i < 6; i++)
-        renderer.PointLights.push_back(pl);
-    
-    
     BeShader standardShader(device.Get(), "assets/shaders/standard", {
         {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
         {.Name = "Normal", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Normal},
@@ -72,25 +58,18 @@ auto Program::run() -> int {
     });
 
     BeAssetImporter importer(device);
+    auto witchItems = importer.LoadModel("assets/witch_items.glb");
     auto cube = importer.LoadModel("assets/cube.glb");
     auto macintosh = importer.LoadModel("assets/model.fbx");
-    auto disks = importer.LoadModel("assets/floppy-disks.glb");
     auto pagoda = importer.LoadModel("assets/pagoda.glb");
-    auto witchItems = importer.LoadModel("assets/witch_items.glb");
+    auto disks = importer.LoadModel("assets/floppy-disks.glb");
     auto anvil = importer.LoadModel("assets/anvil/anvil.fbx");
     anvil->DrawSlices[0].Material.SpecularColor = glm::vec4(1.0f);
     anvil->DrawSlices[0].Material.SuperSpecularColor = glm::vec4(1.0f) * 3.f;
     anvil->DrawSlices[0].Material.SuperShininess = 512.f;
     
 
-    const std::vector<BeRenderer::ObjectEntry> objects = {
-        {
-            .Name = "Plane",
-            .Position = {50, -2, -50},
-            .Scale = glm::vec3(100.f, 0.1f, 100.f),
-            .Model = cube.get(),
-            .Shader = &standardShader,
-        },
+    const std::vector<BeGeometryPass::ObjectEntry> objects = {
         {
             .Name = "Macintosh",
             .Position = {0, 0, -7},
@@ -98,10 +77,10 @@ auto Program::run() -> int {
             .Shader = &standardShader,
         },
         {
-            .Name = "Disks",
-            .Position = {7.5f, 1, -4},
-            .Rotation = glm::quat(glm::vec3(0, glm::radians(150.f), 0)),
-            .Model = disks.get(),
+            .Name = "Plane",
+            .Position = {50, -2, -50},
+            .Scale = glm::vec3(100.f, 0.1f, 100.f),
+            .Model = cube.get(),
             .Shader = &standardShader,
         },
         {
@@ -142,11 +121,48 @@ auto Program::run() -> int {
             .Model = anvil.get(),
             .Shader = &standardShader,
         },
+        {
+            .Name = "Disks",
+            .Position = {7.5f, 1, -4},
+            .Rotation = glm::quat(glm::vec3(0, glm::radians(150.f), 0)),
+            .Model = disks.get(),
+            .Shader = &standardShader,
+        },
     };
 
-    renderer.PushObjects(objects);
-    
 
+    renderer.UniformData.NearFarPlane = {0.1f, 100.0f};
+    renderer.UniformData.AmbientColor = glm::vec3(0.1f);
+    
+    // geometry pass
+    auto geometryPass = new BeGeometryPass();
+    renderer.AddRenderPass(geometryPass);
+    geometryPass->SetObjects(objects);
+
+    // lighting pass
+    auto lightingPass = new BeLightingPass();
+    renderer.AddRenderPass(lightingPass);
+    lightingPass->DirectionalLightData.Direction = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
+    lightingPass->DirectionalLightData.Color = glm::vec3(0.7f, 0.7f, 0.99); 
+    lightingPass->DirectionalLightData.Power = (1.0f / 0.7f) * 0.7f;
+    PointLightData pl;
+    pl.Radius = 20.0f;
+    pl.Color = glm::vec3(0.99f, 0.99f, 0.6);
+    pl.Power = (1.0f / 0.7f) * 2.2f;
+    for (auto i = 0; i < 6; i++)
+        lightingPass->PointLights.push_back(pl);
+
+    // composer pass
+    auto composerPass = new BeComposerPass();
+    composerPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
+    //composerPass->ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
+    //composerPass->ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
+    renderer.AddRenderPass(composerPass);
+
+    
+    
+    renderer.InitialisePasses();
+    
     BeInput input(window);
     BeCamera cam;
     cam.Width = static_cast<float>(width);
@@ -209,10 +225,10 @@ auto Program::run() -> int {
             angle += dt * glm::radians(15.0f); // 15 degrees per second
             if (angle > glm::two_pi<float>()) angle -= glm::two_pi<float>();
             constexpr float radius = 13.0f;
-            for (int i = 0; i < renderer.PointLights.size(); ++i) {
-                float add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(renderer.PointLights.size()));
+            for (int i = 0; i < lightingPass->PointLights.size(); ++i) {
+                float add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(lightingPass->PointLights.size()));
                 float rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
-                auto& light = renderer.PointLights[i];
+                auto& light = lightingPass->PointLights[i];
                 light.Position = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
             }
         }
