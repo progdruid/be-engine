@@ -1,10 +1,9 @@
 #pragma once
 #include <filesystem>
+#include <glm.hpp>
 #include <assimp/scene.h>
 
-#include "BeShader.h"
-#include "BeTexture.h"
-
+class BeTexture;
 
 struct BeFullVertex {
     glm::vec3 Position;                 // 0

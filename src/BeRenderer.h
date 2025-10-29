@@ -5,10 +5,12 @@
 #include <vector>
 #include <wrl/client.h>
 #include <memory>
+#include <unordered_map>
 
 #include "BeModel.h"
 #include "BeBuffers.h"
 #include "BeRenderResource.h"
+#include "BeShader.h"
 
 class BeRenderPass;
 class BeShader;

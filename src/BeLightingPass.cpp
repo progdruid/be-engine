@@ -3,6 +3,7 @@
 #include <gtc/type_ptr.inl>
 
 #include "BeRenderer.h"
+#include "BeShader.h"
 #include "Utils.h"
 
 

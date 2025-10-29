@@ -138,7 +138,7 @@ auto BeRenderer::CreateRenderResource(
         descCopy.Height = _height;
     }
     
-    const auto resource = std::make_unique<BeRenderResource>(name, desc);
+    const auto resource = std::make_unique<BeRenderResource>(name, descCopy);
     resource->CreateGPUResources(_device);
     BeRenderResource* resourcePtr = resource.get();
     _renderResources.emplace(name, std::move(*resource));
