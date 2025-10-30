@@ -10,9 +10,10 @@ BeComposerPass::~BeComposerPass() = default;
 auto BeComposerPass::Initialise() -> void {
     const auto device = _renderer->GetDevice();
 
-    _fullscreenShader = std::make_unique<BeShader>(
+    _composerShader = std::make_unique<BeShader>(
         device.Get(),
-        "assets/shaders/fullscreen",
+        "assets/shaders/composer",
+        BeShaderType::Pixel,
         std::vector<BeVertexElementDescriptor>{}
     );
 }
@@ -20,11 +21,11 @@ auto BeComposerPass::Initialise() -> void {
 auto BeComposerPass::Render() -> void {
     const auto context = _renderer->GetContext();
 
-    BeRenderResource* depthResource    = _renderer->GetRenderResource("DepthStencil");
-    BeRenderResource* gbufferResource0 = _renderer->GetRenderResource("GBuffer0");
-    BeRenderResource* gbufferResource1 = _renderer->GetRenderResource("GBuffer1");
-    BeRenderResource* gbufferResource2 = _renderer->GetRenderResource("GBuffer2");
-    BeRenderResource* lightingResource = _renderer->GetRenderResource("Lighting");
+    BeRenderResource* depthResource    = _renderer->GetRenderResource(InputDepthTextureName);
+    BeRenderResource* gbufferResource0 = _renderer->GetRenderResource(InputTexture0Name);
+    BeRenderResource* gbufferResource1 = _renderer->GetRenderResource(InputTexture1Name);
+    BeRenderResource* gbufferResource2 = _renderer->GetRenderResource(InputTexture2Name);
+    BeRenderResource* lightingResource = _renderer->GetRenderResource(InputLightTextureName);
 
     auto backbufferTarget = _renderer->GetBackbufferTarget();
     auto fullClearColor = glm::vec4(ClearColor, 1.0f);
@@ -39,8 +40,8 @@ auto BeComposerPass::Render() -> void {
     
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     
-    context->VSSetShader(_fullscreenShader->VertexShader.Get(), nullptr, 0);
-    context->PSSetShader(_fullscreenShader->PixelShader.Get(), nullptr, 0);
+    context->VSSetShader(_renderer->GetFullscreenVertexShader().Get(), nullptr, 0);
+    context->PSSetShader(_composerShader->PixelShader.Get(), nullptr, 0);
 
     context->IASetInputLayout(nullptr);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);

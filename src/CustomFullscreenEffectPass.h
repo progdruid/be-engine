@@ -12,9 +12,6 @@ public:
     std::vector<std::string> InputTextureNames;
     std::vector<std::string> OutputTextureNames;
     BeShader* Shader;
-
-private:
-    std::unique_ptr<BeShader> _fullscreenShader = nullptr;
     
 public:
     explicit CustomFullscreenEffectPass();

@@ -5,6 +5,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <windows.h>
+#include <type_traits>
 
 namespace Utils {
   
@@ -117,4 +118,64 @@ namespace Utils {
     };
 
     inline ErrorStream Check;
+
+}
+
+
+template<typename E>
+struct EnableBitmaskOperators : std::false_type {};
+
+#define ENABLE_BITMASK(E) \
+template<> struct EnableBitmaskOperators<E> : std::true_type {}
+
+template<class BitmaskEnumType>
+constexpr auto operator|(BitmaskEnumType a, BitmaskEnumType b) -> BitmaskEnumType requires EnableBitmaskOperators<BitmaskEnumType>::value {
+    using UnderlyingUIntType = std::underlying_type_t<BitmaskEnumType>;
+    return static_cast<BitmaskEnumType>(static_cast<UnderlyingUIntType>(a) | static_cast<UnderlyingUIntType>(b));
+}
+
+template<class BitmaskEnumType>
+constexpr auto operator&(BitmaskEnumType a, BitmaskEnumType b) -> BitmaskEnumType requires EnableBitmaskOperators<BitmaskEnumType>::value {
+    using UnderlyingUIntType = std::underlying_type_t<BitmaskEnumType>;
+    return static_cast<BitmaskEnumType>(static_cast<UnderlyingUIntType>(a) & static_cast<UnderlyingUIntType>(b));
+}
+
+template<class BitmaskEnumType>
+constexpr auto operator^(BitmaskEnumType a, BitmaskEnumType b) -> BitmaskEnumType requires EnableBitmaskOperators<BitmaskEnumType>::value {
+    using UnderlyingUIntType = std::underlying_type_t<BitmaskEnumType>;
+    return static_cast<BitmaskEnumType>(static_cast<UnderlyingUIntType>(a) ^ static_cast<UnderlyingUIntType>(b));
+}
+
+template<class BitmaskEnumType>
+constexpr auto operator~(BitmaskEnumType a) -> BitmaskEnumType requires EnableBitmaskOperators<BitmaskEnumType>::value {
+    using UnderlyingUIntType = std::underlying_type_t<BitmaskEnumType>;
+    return static_cast<BitmaskEnumType>(~static_cast<UnderlyingUIntType>(a));
+}
+
+template<class BitmaskEnumType>
+constexpr auto operator|=(BitmaskEnumType a, BitmaskEnumType b) -> BitmaskEnumType requires EnableBitmaskOperators<BitmaskEnumType>::value {
+    return a = (a | b);
+}
+
+template<class BitmaskEnumType>
+constexpr auto operator&=(BitmaskEnumType a, BitmaskEnumType b) -> BitmaskEnumType requires EnableBitmaskOperators<BitmaskEnumType>::value {
+    return a = (a & b);
+}
+
+template<class BitmaskEnumType>
+constexpr auto operator^=(BitmaskEnumType a, BitmaskEnumType b) -> BitmaskEnumType requires EnableBitmaskOperators<BitmaskEnumType>::value {
+    return a = (a ^ b);
+}
+
+// Helpers
+template<class BitmaskEnumType>
+constexpr auto HasAny(BitmaskEnumType value, BitmaskEnumType mask) -> bool requires EnableBitmaskOperators<BitmaskEnumType>::value {
+    using UnderlyingUIntType = std::underlying_type_t<BitmaskEnumType>;
+    return (static_cast<UnderlyingUIntType>(value) & static_cast<UnderlyingUIntType>(mask)) != 0;
+}
+
+template<class BitmaskEnumType>
+constexpr auto HasAll(BitmaskEnumType value, BitmaskEnumType mask) -> bool requires EnableBitmaskOperators<BitmaskEnumType>::value {
+    using UnderlyingUIntType = std::underlying_type_t<BitmaskEnumType>;
+    return (static_cast<UnderlyingUIntType>(value) & static_cast<UnderlyingUIntType>(mask)) == static_cast<UnderlyingUIntType>(mask);
 }

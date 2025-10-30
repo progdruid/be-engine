@@ -81,6 +81,7 @@ auto BeRenderer::LaunchDevice() -> void {
     _fullscreenShader = std::make_unique<BeShader>(
         _device.Get(),
         "assets/shaders/fullscreen",
+        BeShaderType::Vertex,
         std::vector<BeVertexElementDescriptor>{}
     );
 }
