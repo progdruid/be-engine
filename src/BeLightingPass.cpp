@@ -44,12 +44,14 @@ auto BeLightingPass::Initialise() -> void {
     _directionalLightShader = std::make_unique<BeShader>(
         device.Get(),
         "assets/shaders/directionalLight",
+        BeShaderType::Pixel,
         std::vector<BeVertexElementDescriptor>{}
     );
 
     _pointLightShader = std::make_unique<BeShader>(
         device.Get(),
         "assets/shaders/pointLight",
+        BeShaderType::Pixel,
         std::vector<BeVertexElementDescriptor>{}
     );
 }

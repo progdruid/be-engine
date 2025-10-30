@@ -6,7 +6,19 @@
 #include <vector>
 #include <wrl/client.h>
 #include <filesystem>
+
+#include "BeShaderIncludeHandler.hpp"
+#include "Utils.h"
 using Microsoft::WRL::ComPtr;
+
+
+
+enum class BeShaderType : uint8_t {
+    None = 0,
+    Vertex = 1 << 0,
+    Pixel = 1 << 1,
+};
+ENABLE_BITMASK(BeShaderType);
 
 struct BeVertexElementDescriptor {
     enum class BeVertexSemantic : uint8_t {
@@ -70,13 +82,20 @@ public:
     ComPtr<ID3D11PixelShader> PixelShader;
     ComPtr<ID3D11InputLayout> ComputedInputLayout;
 
+    BeShaderType ShaderType = BeShaderType::None;
+
 public:
-    BeShader(ID3D11Device* device, 
+    BeShader(
+        ID3D11Device* device, 
         const std::filesystem::path& filePathWithoutExtension,
+        const BeShaderType shaderType,
         const std::vector<BeVertexElementDescriptor>& vertexLayout);
     ~BeShader() = default;
     
     auto Bind (ID3D11DeviceContext* context) const -> void;
 
+private:
+    auto LoadVertexShader (const std::filesystem::path& filePath, const std::vector<BeVertexElementDescriptor>& vertexLayout, ID3D11Device* device, BeShaderIncludeHandler* includeHandler) -> void;
+    auto LoadPixelShader (const std::filesystem::path& filePath, ID3D11Device* device, BeShaderIncludeHandler* includeHandler) -> void;
 };
 

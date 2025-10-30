@@ -6,15 +6,7 @@
 CustomFullscreenEffectPass::CustomFullscreenEffectPass() = default;
 CustomFullscreenEffectPass::~CustomFullscreenEffectPass() = default;
 
-auto CustomFullscreenEffectPass::Initialise() -> void {
-    const auto device = _renderer->GetDevice();
-
-    _fullscreenShader = std::make_unique<BeShader>(
-        device.Get(),
-        "assets/shaders/fullscreen",
-        std::vector<BeVertexElementDescriptor>{}
-    );
-}
+auto CustomFullscreenEffectPass::Initialise() -> void {}
 
 auto CustomFullscreenEffectPass::Render() -> void {
     const auto context = _renderer->GetContext();
@@ -38,7 +30,7 @@ auto CustomFullscreenEffectPass::Render() -> void {
     
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     
-    context->VSSetShader(_fullscreenShader->VertexShader.Get(), nullptr, 0);
+    context->VSSetShader(_renderer->GetFullscreenVertexShader().Get(), nullptr, 0);
     context->PSSetShader(Shader->PixelShader.Get(), nullptr, 0);
 
     context->IASetInputLayout(nullptr);

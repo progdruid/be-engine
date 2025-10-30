@@ -20,6 +20,7 @@
 #include "BeGeometryPass.h"
 #include "BeLightingPass.h"
 #include "BeShader.h"
+#include "CustomFullscreenEffectPass.h"
 
 
 static auto errorCallback(int code, const char* desc) -> void {
@@ -52,11 +53,16 @@ auto Program::run() -> int {
     renderer.LaunchDevice();
     const auto device = renderer.GetDevice();
 
-    BeShader standardShader(device.Get(), "assets/shaders/standard", {
-        {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
-        {.Name = "Normal", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Normal},
-        {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
-    });
+    BeShader standardShader(
+        device.Get(),
+        "assets/shaders/standard",
+        BeShaderType::Vertex | BeShaderType::Pixel,
+        {
+            {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
+            {.Name = "Normal", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Normal},
+            {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
+        }
+    );
 
     BeAssetImporter importer(device);
     auto witchItems = importer.LoadModel("assets/witch_items.glb");
@@ -156,6 +162,12 @@ auto Program::run() -> int {
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
 
+    // Blur effect resource
+    renderer.CreateRenderResource("Blurred", true, BeRenderResource::BeResourceDescriptor {
+        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
+        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+    });
+
     // geometry pass
     auto geometryPass = new BeGeometryPass();
     renderer.AddRenderPass(geometryPass);
@@ -183,6 +195,19 @@ auto Program::run() -> int {
     for (auto i = 0; i < 6; i++)
         lightingPass->PointLights.push_back(pl);
 
+    // Cel shader pass
+    auto celShader = std::make_unique<BeShader>(
+        device.Get(),
+        "assets/shaders/celPass",
+        BeShaderType::Pixel,
+        std::vector<BeVertexElementDescriptor>{}
+    );
+    auto celPass = new CustomFullscreenEffectPass();
+    renderer.AddRenderPass(celPass);
+    celPass->InputTextureNames = {"DepthStencil", "Lighting", "GBuffer1"};
+    celPass->OutputTextureNames = {"Blurred"};
+    celPass->Shader = celShader.get();
+
     // composer pass
     auto composerPass = new BeComposerPass();
     renderer.AddRenderPass(composerPass);
@@ -190,7 +215,7 @@ auto Program::run() -> int {
     composerPass->InputTexture0Name = "GBuffer0";
     composerPass->InputTexture1Name = "GBuffer1";
     composerPass->InputTexture2Name = "GBuffer2";
-    composerPass->InputLightTextureName = "Lighting";
+    composerPass->InputLightTextureName = "Blurred";
     composerPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
     //composerPass->ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
     //composerPass->ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
