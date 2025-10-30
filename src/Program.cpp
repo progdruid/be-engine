@@ -163,7 +163,7 @@ auto Program::run() -> int {
     });
 
     // Blur effect resource
-    renderer.CreateRenderResource("Blurred", true, BeRenderResource::BeResourceDescriptor {
+    renderer.CreateRenderResource("PPOutput", true, BeRenderResource::BeResourceDescriptor {
         .Format = DXGI_FORMAT_R11G11B10_FLOAT,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
@@ -196,17 +196,18 @@ auto Program::run() -> int {
         lightingPass->PointLights.push_back(pl);
 
     // Cel shader pass
-    auto celShader = std::make_unique<BeShader>(
+    auto effectShader = std::make_unique<BeShader>(
         device.Get(),
-        "assets/shaders/celPass",
+        "assets/shaders/poorBloom",
         BeShaderType::Pixel,
         std::vector<BeVertexElementDescriptor>{}
     );
-    auto celPass = new CustomFullscreenEffectPass();
-    renderer.AddRenderPass(celPass);
-    celPass->InputTextureNames = {"DepthStencil", "Lighting", "GBuffer1"};
-    celPass->OutputTextureNames = {"Blurred"};
-    celPass->Shader = celShader.get();
+    auto effectPass = new CustomFullscreenEffectPass();
+    renderer.AddRenderPass(effectPass);
+    //effectPass->InputTextureNames = {"DepthStencil", "Lighting", "GBuffer1"};
+    effectPass->InputTextureNames = {"Lighting"};
+    effectPass->OutputTextureNames = {"PPOutput"};
+    effectPass->Shader = effectShader.get();
 
     // composer pass
     auto composerPass = new BeComposerPass();
@@ -215,7 +216,7 @@ auto Program::run() -> int {
     composerPass->InputTexture0Name = "GBuffer0";
     composerPass->InputTexture1Name = "GBuffer1";
     composerPass->InputTexture2Name = "GBuffer2";
-    composerPass->InputLightTextureName = "Blurred";
+    composerPass->InputLightTextureName = "PPOutput";
     composerPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
     //composerPass->ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
     //composerPass->ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
