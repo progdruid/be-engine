@@ -13,8 +13,8 @@ BeRenderResource::~BeRenderResource() = default;
 
 auto BeRenderResource::CreateGPUResources(const ComPtr<ID3D11Device>& device) -> void {
     D3D11_TEXTURE2D_DESC textureDesc = {};
-    textureDesc.Width = Descriptor.Width;
-    textureDesc.Height = Descriptor.Height;
+    textureDesc.Width = Descriptor.CustomWidth;
+    textureDesc.Height = Descriptor.CustomHeight;
     textureDesc.MipLevels = 1;
     textureDesc.ArraySize = 1;
     textureDesc.Format = Descriptor.Format;

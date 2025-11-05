@@ -6,6 +6,7 @@
 #include <wrl/client.h>
 #include <memory>
 #include <unordered_map>
+#include <gtc/quaternion.hpp>
 
 #include "BeModel.h"
 #include "BeBuffers.h"
@@ -18,7 +19,17 @@ using Microsoft::WRL::ComPtr;
 
 
 class BeRenderer {
-
+public:
+    struct ObjectEntry {
+        std::string Name;
+        glm::vec3 Position = {0.f, 0.f, 0.f};
+        glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
+        glm::vec3 Scale = {1.f, 1.f, 1.f};
+        BeModel* Model;
+        std::vector<BeModel::BeDrawSlice> DrawSlices;
+        BeShader* Shader;
+    };
+    
 public:
     explicit BeRenderer(HWND windowHandle, uint32_t width, uint32_t height);
     ~BeRenderer() = default;
@@ -44,6 +55,10 @@ private:
     ComPtr<ID3D11Buffer> _uniformBuffer;
     ComPtr<ID3D11SamplerState> _pointSampler;
     std::unique_ptr<BeShader> _fullscreenShader = nullptr;
+
+    ComPtr<ID3D11Buffer> _sharedVertexBuffer;
+    ComPtr<ID3D11Buffer> _sharedIndexBuffer;
+    std::vector<ObjectEntry> _objects;
     
     std::unordered_map<std::string, BeRenderResource> _renderResources;
     std::vector<BeRenderPass*> _passes;
@@ -59,6 +74,11 @@ public:
     auto AddRenderPass(BeRenderPass* renderPass) -> void;
     auto InitialisePasses() -> void;
     auto Render() -> void;
+
+    auto SetObjects(const std::vector<ObjectEntry>& objects) -> void;
+    auto GetObjects() -> const std::vector<ObjectEntry>& { return _objects; }
+    auto GetShaderVertexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedVertexBuffer; }
+    auto GetShaderIndexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedIndexBuffer; }
 
     auto CreateRenderResource(
         const std::string& name,

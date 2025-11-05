@@ -127,6 +127,50 @@ auto BeRenderer::Render() -> void {
     _swapchain->Present(1, 0);
 }
 
+auto BeRenderer::SetObjects(const std::vector<ObjectEntry>& objects) -> void {
+    _objects = objects;
+    
+    //vbo + ibo
+    size_t totalVerticesNumber = 0;
+    size_t totalIndicesNumber = 0;
+    size_t totalDrawSlices = 0;
+    for (const auto& object : _objects) {
+        totalVerticesNumber += object.Model->FullVertices.size();
+        totalIndicesNumber += object.Model->Indices.size();
+        totalDrawSlices += object.Model->DrawSlices.size();
+    }
+    
+    std::vector<BeFullVertex> fullVertices;
+    std::vector<uint32_t> indices;
+    fullVertices.reserve(totalVerticesNumber);
+    indices.reserve(totalIndicesNumber);
+    for (auto& object : _objects) {
+        fullVertices.insert(fullVertices.end(), object.Model->FullVertices.begin(), object.Model->FullVertices.end());
+        indices.insert(indices.end(), object.Model->Indices.begin(), object.Model->Indices.end());
+        for (BeModel::BeDrawSlice slice : object.Model->DrawSlices) {
+            slice.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - object.Model->FullVertices.size());
+            slice.StartIndexLocation += static_cast<uint32_t>(indices.size() - object.Model->Indices.size());
+            object.DrawSlices.push_back(slice);
+        }
+    }
+    
+    D3D11_BUFFER_DESC vertexBufferDescriptor = {};
+    vertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    vertexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
+    vertexBufferDescriptor.ByteWidth = static_cast<UINT>(fullVertices.size() * sizeof(BeFullVertex));
+    D3D11_SUBRESOURCE_DATA vertexData = {};
+    vertexData.pSysMem = fullVertices.data();
+    Utils::Check << _device->CreateBuffer(&vertexBufferDescriptor, &vertexData, &_sharedVertexBuffer);
+    
+    D3D11_BUFFER_DESC indexBufferDescriptor = {};
+    indexBufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    indexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
+    indexBufferDescriptor.ByteWidth = static_cast<UINT>(indices.size() * sizeof(uint32_t));
+    D3D11_SUBRESOURCE_DATA indexData = {};
+    indexData.pSysMem = indices.data();
+    Utils::Check << _device->CreateBuffer(&indexBufferDescriptor, &indexData, &_sharedIndexBuffer);
+}
+
 auto BeRenderer::CreateRenderResource(
     const std::string& name,
     const bool useWindowSize,
@@ -135,8 +179,8 @@ auto BeRenderer::CreateRenderResource(
 
     BeRenderResource::BeResourceDescriptor descCopy = desc;
     if (useWindowSize) {
-        descCopy.Width = _width;
-        descCopy.Height = _height;
+        descCopy.CustomWidth = _width;
+        descCopy.CustomHeight = _height;
     }
     
     const auto resource = std::make_unique<BeRenderResource>(name, descCopy);
