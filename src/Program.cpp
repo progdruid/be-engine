@@ -76,7 +76,7 @@ auto Program::run() -> int {
     anvil->DrawSlices[0].Material.SuperShininess = 512.f;
     
 
-    const std::vector<BeGeometryPass::ObjectEntry> objects = {
+    const std::vector<BeRenderer::ObjectEntry> objects = {
         {
             .Name = "Macintosh",
             .Position = {0, 0, -7},
@@ -137,6 +137,7 @@ auto Program::run() -> int {
         },
     };
 
+    renderer.SetObjects(objects);
 
     renderer.UniformData.NearFarPlane = {0.1f, 100.0f};
     renderer.UniformData.AmbientColor = glm::vec3(0.1f);
@@ -171,7 +172,6 @@ auto Program::run() -> int {
     // geometry pass
     auto geometryPass = new BeGeometryPass();
     renderer.AddRenderPass(geometryPass);
-    geometryPass->SetObjects(objects);
     geometryPass->OutputDepthTextureName = "DepthStencil";
     geometryPass->OutputTexture0Name = "GBuffer0";
     geometryPass->OutputTexture1Name = "GBuffer1";

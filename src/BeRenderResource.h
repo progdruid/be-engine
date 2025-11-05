@@ -11,9 +11,9 @@ public:
 
     struct BeResourceDescriptor {
         DXGI_FORMAT Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        uint32_t Width = 0;
-        uint32_t Height = 0;
         uint32_t BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+        uint32_t CustomWidth = 0;
+        uint32_t CustomHeight = 0;
     };
     
     //fields////////////////////////////////////////////////////////////////////////////////////////////////////////////
