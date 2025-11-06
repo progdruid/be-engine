@@ -1,5 +1,6 @@
 ﻿#include "BeGeometryPass.h"
 
+#include <scope_guard.hpp>
 #include <gtc/type_ptr.inl>
 
 #include "BeRenderer.h"
@@ -14,7 +15,7 @@ auto BeGeometryPass::Initialise() -> void {
     materialBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     materialBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     materialBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    materialBufferDescriptor.ByteWidth = sizeof(MaterialBufferGPU);
+    materialBufferDescriptor.ByteWidth = sizeof(BeMaterialBufferGPU);
     Utils::Check << _renderer->GetDevice()->CreateBuffer(&materialBufferDescriptor, nullptr, &_materialBuffer);
 
     //depth stencil state
@@ -51,6 +52,10 @@ auto BeGeometryPass::Render() -> void {
         gbufferResource2->RTV.Get()
     };
     context->OMSetRenderTargets(3, gbufferRTVs, depthResource->DSV.Get());
+    SCOPE_EXIT {
+        ID3D11RenderTargetView* emptyTargets[3] = { nullptr, nullptr, nullptr };
+        context->OMSetRenderTargets(3, emptyTargets, nullptr);
+    };
 
     // Set vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
@@ -58,25 +63,35 @@ auto BeGeometryPass::Render() -> void {
     context->IASetVertexBuffers(0, 1, _renderer->GetShaderVertexBuffer().GetAddressOf(), &stride, &offset);
     context->IASetIndexBuffer(_renderer->GetShaderIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    SCOPE_EXIT {
+        ID3D11Buffer* emptyBuffers[1] = { nullptr };
+        context->IASetVertexBuffers(0, 1, emptyBuffers, &stride, &offset);
+        context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
+    };
 
     // Set default sampler - temporary,  should be overridden by materials if needed
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
+    SCOPE_EXIT {
+        ID3D11SamplerState* emptySamplers[1] = { nullptr };
+        context->PSSetSamplers(0, 1, emptySamplers);
+    };
 
     // Draw all objects
     const auto& objects = _renderer->GetObjects();
     for (const auto& object : objects) {
         object.Shader->Bind(context.Get());
-    
-        for (const auto& slice : object.DrawSlices) {
+
+        glm::mat4x4 modelMatrix =
+            glm::translate(glm::mat4(1.0f), object.Position) *
+            glm::mat4_cast(object.Rotation) *
+            glm::scale(glm::mat4(1.0f), object.Scale);
         
-            glm::mat4x4 modelMatrix =
-                glm::translate(glm::mat4(1.0f), object.Position) *
-                glm::mat4_cast(object.Rotation) *
-                glm::scale(glm::mat4(1.0f), object.Scale);
-            MaterialBufferGPU materialData(modelMatrix, slice.Material);
+        for (const auto& slice : object.DrawSlices) {
+            
+            BeMaterialBufferGPU materialData(modelMatrix, slice.Material);
             D3D11_MAPPED_SUBRESOURCE materialMappedResource;
             Utils::Check << context->Map(_materialBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &materialMappedResource);
-            memcpy(materialMappedResource.pData, &materialData, sizeof(MaterialBufferGPU));
+            memcpy(materialMappedResource.pData, &materialData, sizeof(BeMaterialBufferGPU));
             context->Unmap(_materialBuffer.Get(), 0);
             context->VSSetConstantBuffers(1, 1, _materialBuffer.GetAddressOf());
             context->PSSetConstantBuffers(1, 1, _materialBuffer.GetAddressOf());
@@ -93,14 +108,8 @@ auto BeGeometryPass::Render() -> void {
             context->PSSetShaderResources(0, 2, emptyResources);
         }
     }
-    { 
-        ID3D11ShaderResourceView* emptyResources[2] = { nullptr, nullptr };
-        context->PSSetShaderResources(0, 2, emptyResources); // clean material textures
-        ID3D11Buffer* emptyBuffers[1] = { nullptr };
-        context->VSSetConstantBuffers(1, 1, emptyBuffers); // clean material buffer
-        ID3D11SamplerState* emptySamplers[1] = { nullptr };
-        context->PSSetSamplers(0, 1, emptySamplers); // clean samplers
-        ID3D11RenderTargetView* emptyTargets[3] = { nullptr, nullptr, nullptr };
-        context->OMSetRenderTargets(3, emptyTargets, nullptr); // clean render targets
-    }
+    ID3D11ShaderResourceView* emptyResources[2] = { nullptr, nullptr };
+    context->PSSetShaderResources(0, 2, emptyResources); // clean material textures
+    ID3D11Buffer* emptyBuffers[1] = { nullptr };
+    context->VSSetConstantBuffers(1, 1, emptyBuffers); // clean material buffer
 }
