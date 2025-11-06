@@ -37,9 +37,13 @@ BeShader::BeShader(
 }
 
 auto BeShader::Bind(ID3D11DeviceContext* context) const -> void {
-    context->IASetInputLayout(ComputedInputLayout.Get());
-    context->VSSetShader(VertexShader.Get(), nullptr, 0);
-    context->PSSetShader(PixelShader.Get(), nullptr, 0);
+    if (HasAny(ShaderType, BeShaderType::Vertex)) {
+        context->IASetInputLayout(ComputedInputLayout.Get());
+        context->VSSetShader(VertexShader.Get(), nullptr, 0);
+    }
+    if (HasAny(ShaderType, BeShaderType::Pixel)) {
+        context->PSSetShader(PixelShader.Get(), nullptr, 0);
+    }
 }
 
 auto BeShader::LoadVertexShader(

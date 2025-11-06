@@ -35,7 +35,7 @@ public:
     ~BeRenderer() = default;
 
 public:
-    UniformData UniformData;
+    BeUniformData UniformData;
 
 private:
     // window
@@ -61,6 +61,7 @@ private:
     std::vector<ObjectEntry> _objects;
     
     std::unordered_map<std::string, BeRenderResource> _renderResources;
+    std::unordered_map<std::string, void*> _contextDataPointers;
     std::vector<BeRenderPass*> _passes;
 
 public:
@@ -86,6 +87,15 @@ public:
         const BeRenderResource::BeResourceDescriptor& desc
     ) -> BeRenderResource*;
     auto GetRenderResource(const std::string& name) -> BeRenderResource*;
+    
+    template<typename T>
+    auto GetContextDataPointer(const std::string& name) const -> T* {
+        return static_cast<T*>(_contextDataPointers.at(name));
+    }
+    template<typename T>
+    auto SetContextDataPointer(const std::string& name, T* data) -> void{
+        _contextDataPointers[name] = static_cast<void*>(data);
+    }
     
 private:
     void TerminateRenderer();

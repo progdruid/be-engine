@@ -13,5 +13,5 @@ void BeCamera::updateMatrices() {
 
     // Update view and projection matrices
     _viewMatrix = glm::lookAtLH(Position, Position + _front, _up);
-    _projectionMatrix = glm::perspectiveFovLH(glm::radians(Fov), Width, Height, NearPlane, FarPlane);
+    _projectionMatrix = glm::perspectiveFovLH_ZO(glm::radians(Fov), Width, Height, NearPlane, FarPlane);
 }

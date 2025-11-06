@@ -78,7 +78,7 @@ float3 main(VSOutput input) : SV_TARGET
     float isEdge = max(positionIsEdge, normalIsEdge);
 
     // Output black for edges, posterized color otherwise
-    float3 finalColor = lerp(posterizedColor, float3(1.0, 0.0, 0.0), isEdge * EdgeWidth);
+    float3 finalColor = lerp(posterizedColor, float3(0.0, 0.0, 0.0), isEdge * EdgeWidth);
 
     return finalColor;
 }

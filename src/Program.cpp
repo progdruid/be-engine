@@ -10,6 +10,8 @@
 #include <cstdio>
 #include <cassert>
 
+#define GLM_FORCE_LEFT_HANDED
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <gtc/matrix_transform.hpp>
 
 #include "BeAssetImporter.h"
@@ -21,6 +23,7 @@
 #include "BeLightingPass.h"
 #include "BeShader.h"
 #include "CustomFullscreenEffectPass.h"
+#include "ShadowPass.h"
 
 
 static auto errorCallback(int code, const char* desc) -> void {
@@ -85,7 +88,7 @@ auto Program::run() -> int {
         },
         {
             .Name = "Plane",
-            .Position = {50, -2, -50},
+            .Position = {50, 0, -50},
             .Scale = glm::vec3(100.f, 0.1f, 100.f),
             .Model = cube.get(),
             .Shader = &standardShader,
@@ -99,7 +102,7 @@ auto Program::run() -> int {
         },
         {
             .Name = "Witch Items",
-            .Position = {-3, 0, 5},
+            .Position = {-3, 2, 5},
             .Scale = glm::vec3(3.f),
             .Model = witchItems.get(),
             .Shader = &standardShader,
@@ -114,7 +117,7 @@ auto Program::run() -> int {
         },
         {
             .Name = "Anvil1",
-            .Position = {-7, -2, -3},
+            .Position = {-7, 0, -3},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(-90.f), 0)),
             .Scale = glm::vec3(0.2f),
             .Model = anvil.get(),
@@ -142,19 +145,25 @@ auto Program::run() -> int {
     renderer.UniformData.NearFarPlane = {0.1f, 100.0f};
     renderer.UniformData.AmbientColor = glm::vec3(0.1f);
 
+    renderer.CreateRenderResource("DirectionalLightShadowMap", false, BeRenderResource::BeResourceDescriptor {
+        .Format = DXGI_FORMAT_R32_TYPELESS,
+        .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
+        .CustomWidth = 4096,
+        .CustomHeight = 4096,
+    });
     renderer.CreateRenderResource("DepthStencil", true, BeRenderResource::BeResourceDescriptor {
         .Format = DXGI_FORMAT_R24G8_TYPELESS,
         .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
     });
-    renderer.CreateRenderResource("GBuffer0", true, BeRenderResource::BeResourceDescriptor {
+    renderer.CreateRenderResource("BaseColor", true, BeRenderResource::BeResourceDescriptor {
         .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
-    renderer.CreateRenderResource("GBuffer1", true, BeRenderResource::BeResourceDescriptor {
+    renderer.CreateRenderResource("WorldNormal", true, BeRenderResource::BeResourceDescriptor {
         .Format = DXGI_FORMAT_R16G16B16A16_FLOAT,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
-    renderer.CreateRenderResource("GBuffer2", true, BeRenderResource::BeResourceDescriptor {
+    renderer.CreateRenderResource("Specular-Shininess", true, BeRenderResource::BeResourceDescriptor {
         .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
@@ -162,33 +171,47 @@ auto Program::run() -> int {
         .Format = DXGI_FORMAT_R11G11B10_FLOAT,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
-
-    // Blur effect resource
     renderer.CreateRenderResource("PPOutput", true, BeRenderResource::BeResourceDescriptor {
         .Format = DXGI_FORMAT_R11G11B10_FLOAT,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
 
+    BeDirectionalLight directionalLight;
+    directionalLight.Direction = glm::normalize(glm::vec3(-0.8f, -1.0f, -0.8f));
+    directionalLight.Color = glm::vec3(0.7f, 0.7f, 0.99); 
+    directionalLight.Power = (1.0f / 0.7f) * 0.7f;
+    directionalLight.ShadowMapResolution = 4096.0f;
+    directionalLight.ShadowCameraDistance = 100.0f;
+    directionalLight.ShadowMapWorldSize = 60.0f;
+    directionalLight.ShadowNearPlane = 0.1f;
+    directionalLight.ShadowFarPlane = 200.0f;
+    directionalLight.ShadowMapTextureName = "DirectionalLightShadowMap";
+    directionalLight.CalculateMatrix();
+    renderer.SetContextDataPointer("DirectionalLight", &directionalLight);
+    
+    // shadow pass
+    auto shadowPass = new ShadowPass();
+    renderer.AddRenderPass(shadowPass);
+    shadowPass->InputDirectionalLightName = "DirectionalLight";
+    
     // geometry pass
     auto geometryPass = new BeGeometryPass();
     renderer.AddRenderPass(geometryPass);
     geometryPass->OutputDepthTextureName = "DepthStencil";
-    geometryPass->OutputTexture0Name = "GBuffer0";
-    geometryPass->OutputTexture1Name = "GBuffer1";
-    geometryPass->OutputTexture2Name = "GBuffer2";
+    geometryPass->OutputTexture0Name = "BaseColor";
+    geometryPass->OutputTexture1Name = "WorldNormal";
+    geometryPass->OutputTexture2Name = "Specular-Shininess";
 
     // lighting pass
     auto lightingPass = new BeLightingPass();
     renderer.AddRenderPass(lightingPass);
+    lightingPass->DirectionalLightName = "DirectionalLight";
     lightingPass->InputDepthTextureName = "DepthStencil";
-    lightingPass->InputTexture0Name = "GBuffer0";
-    lightingPass->InputTexture1Name = "GBuffer1";
-    lightingPass->InputTexture2Name = "GBuffer2";
+    lightingPass->InputTexture0Name = "BaseColor";
+    lightingPass->InputTexture1Name = "WorldNormal";
+    lightingPass->InputTexture2Name = "Specular-Shininess";
     lightingPass->OutputTextureName = "Lighting";
-    lightingPass->DirectionalLightData.Direction = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
-    lightingPass->DirectionalLightData.Color = glm::vec3(0.7f, 0.7f, 0.99); 
-    lightingPass->DirectionalLightData.Power = (1.0f / 0.7f) * 0.7f;
-    PointLightData pl;
+    BePointLightData pl;
     pl.Radius = 20.0f;
     pl.Color = glm::vec3(0.99f, 0.99f, 0.6);
     pl.Power = (1.0f / 0.7f) * 2.2f;
@@ -198,14 +221,14 @@ auto Program::run() -> int {
     // Cel shader pass
     auto effectShader = std::make_unique<BeShader>(
         device.Get(),
-        "assets/shaders/poorBloom",
+        "assets/shaders/celPass",
         BeShaderType::Pixel,
         std::vector<BeVertexElementDescriptor>{}
     );
     auto effectPass = new CustomFullscreenEffectPass();
     renderer.AddRenderPass(effectPass);
-    //effectPass->InputTextureNames = {"DepthStencil", "Lighting", "GBuffer1"};
-    effectPass->InputTextureNames = {"Lighting"};
+    effectPass->InputTextureNames = {"DepthStencil", "Lighting", "WorldNormal"};
+    //effectPass->InputTextureNames = {"Lighting"};
     effectPass->OutputTextureNames = {"PPOutput"};
     effectPass->Shader = effectShader.get();
 
@@ -213,9 +236,9 @@ auto Program::run() -> int {
     auto composerPass = new BeComposerPass();
     renderer.AddRenderPass(composerPass);
     composerPass->InputDepthTextureName = "DepthStencil";
-    composerPass->InputTexture0Name = "GBuffer0";
-    composerPass->InputTexture1Name = "GBuffer1";
-    composerPass->InputTexture2Name = "GBuffer2";
+    composerPass->InputTexture0Name = "BaseColor";
+    composerPass->InputTexture1Name = "WorldNormal";
+    composerPass->InputTexture2Name = "Specular-Shininess";
     composerPass->InputLightTextureName = "PPOutput";
     composerPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
     //composerPass->ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
