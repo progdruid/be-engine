@@ -1,8 +1,9 @@
 ﻿#pragma once
-#include <glm.hpp>
 #include "BeModel.h"
+#include <glm.hpp>
+#include <gtc/matrix_transform.hpp>
 
-struct UniformData {
+struct BeUniformData {
     glm::mat4 ProjectionView {1.0f};
     glm::vec2 NearFarPlane {0.1f, 100.0f};
     glm::vec3 CameraPosition {0.0f, 0.0f, 0.0f};
@@ -13,7 +14,7 @@ struct UniformData {
     //float DirectionalLightPower = 1.0f;
 };
 
-struct alignas(16) UniformBufferGPU {
+struct alignas(16) BeUniformBufferGPU {
     glm::mat4x4 ProjectionView;         // 0-3 regs
     glm::mat4x4 InverseProjectionView;  // 4-7 regs
     glm::vec4 NearFarPlane;             // 8  reg:  x = near, y = far, z = 1/near, w = 1/far
@@ -23,7 +24,7 @@ struct alignas(16) UniformBufferGPU {
     //glm::vec3 DirectionalLightColor;    // 12 reg:  xyz = color
     //float DirectionalLightPower;        //          w = power
     
-    explicit UniformBufferGPU(const UniformData& data) {
+    explicit BeUniformBufferGPU(const BeUniformData& data) {
         ProjectionView = data.ProjectionView;
         InverseProjectionView = glm::inverse(data.ProjectionView);
         NearFarPlane = glm::vec4(data.NearFarPlane, 1.0f / data.NearFarPlane.x, 1.0f / data.NearFarPlane.y);
@@ -36,7 +37,7 @@ struct alignas(16) UniformBufferGPU {
 };
 
 
-struct alignas(16) MaterialBufferGPU {
+struct alignas(16) BeMaterialBufferGPU {
     glm::mat4x4 Model;
 
     glm::vec4 DiffuseColor  {1, 1, 1, 1};
@@ -45,7 +46,7 @@ struct alignas(16) MaterialBufferGPU {
     glm::vec3 SuperSpecularColor {1, 1, 1};
     float SuperSpecularPower = -1.f;
 
-    explicit MaterialBufferGPU(const glm::mat4x4& model, const BeMaterial& material) {
+    explicit BeMaterialBufferGPU(const glm::mat4x4& model, const BeMaterial& material) {
         Model = model;
         DiffuseColor = glm::vec4(material.DiffuseColor, 1.f);
         SpecularColor = material.SpecularColor;
@@ -55,36 +56,71 @@ struct alignas(16) MaterialBufferGPU {
     }
 };
 
-struct DirectionalLightData {
+struct BeDirectionalLight {
+    // Light properties (for lighting pass)
     glm::vec3 Direction;
     glm::vec3 Color;
     float Power;
-};
 
-struct alignas(16) DirectionalLightBufferGPU {
-    glm::vec4 Direction;
-    glm::vec3 Color;
-    float Power;
-    explicit DirectionalLightBufferGPU(const DirectionalLightData& light) {
-        Direction = glm::vec4(light.Direction, 0.0f);
-        Color = light.Color;
-        Power = light.Power;
+    // Shadow map properties (for shadow pass)
+    float ShadowMapResolution;
+    float ShadowCameraDistance;
+    float ShadowMapWorldSize;
+    float ShadowNearPlane;
+    float ShadowFarPlane;
+    std::string ShadowMapTextureName;
+
+    // Calculated once per frame (both passes use this)
+    glm::mat4 ViewProjection;
+
+    inline auto CalculateMatrix() -> void {
+        const float halfSize = ShadowMapWorldSize * 0.5f;
+        const glm::mat4 lightOrtho = glm::orthoLH_ZO(-halfSize, halfSize, -halfSize, halfSize, ShadowNearPlane, ShadowFarPlane);
+        const glm::vec3 lightPos = -Direction * ShadowCameraDistance;
+        const glm::mat4 lightView = glm::lookAtLH(lightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        ViewProjection = lightOrtho * lightView;
     }
 };
 
-struct PointLightData {
+struct alignas(16) BeDirectionalLightLightingBufferGPU {
+    glm::vec4 Direction;
+    glm::vec3 Color;
+    float Power;
+    glm::mat4x4 ViewProjection;
+    float TexelSize;
+    explicit BeDirectionalLightLightingBufferGPU(const BeDirectionalLight& light) {
+        Direction = glm::vec4(light.Direction, 0.0f);
+        Color = light.Color;
+        Power = light.Power;
+        ViewProjection = light.ViewProjection;
+        TexelSize = 1.0f / light.ShadowMapResolution;
+    }
+};
+
+struct alignas(16) BeDirectionalLightShadowBufferGPU {
+    glm::mat4x4 LightProjectionView;
+    glm::mat4x4 Model;
+
+    explicit BeDirectionalLightShadowBufferGPU(const BeDirectionalLight& directionalLight, const glm::mat4& modelMatrix) {
+        LightProjectionView = directionalLight.ViewProjection;
+        Model = modelMatrix;
+    }
+};
+
+
+struct BePointLightData {
     glm::vec3 Position;
     float Radius;
     glm::vec3 Color;
     float Power;
 };
 
-struct alignas(16) PointLightBufferGPU {
+struct alignas(16) BePointLightBufferGPU {
     glm::vec3 Position;
     float Radius;
     glm::vec3 Color;
     float Power;
-    explicit PointLightBufferGPU(const PointLightData& light) {
+    explicit BePointLightBufferGPU(const BePointLightData& light) {
         Position = light.Position;
         Radius = light.Radius;
         Color = light.Color;

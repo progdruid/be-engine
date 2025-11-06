@@ -64,7 +64,7 @@ auto BeRenderer::LaunchDevice() -> void {
     uniformBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     uniformBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     uniformBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    uniformBufferDescriptor.ByteWidth = sizeof(UniformBufferGPU);
+    uniformBufferDescriptor.ByteWidth = sizeof(BeUniformBufferGPU);
     Utils::Check << _device->CreateBuffer(&uniformBufferDescriptor, nullptr, &_uniformBuffer);
     
     // Create point sampler state
@@ -109,10 +109,10 @@ auto BeRenderer::Render() -> void {
 
     
     // Update uniform constant buffer
-    const UniformBufferGPU uniformDataGpu(UniformData);
+    const BeUniformBufferGPU uniformDataGpu(UniformData);
     D3D11_MAPPED_SUBRESOURCE uniformMappedResource;
     Utils::Check << _context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &uniformMappedResource);
-    memcpy(uniformMappedResource.pData, &uniformDataGpu, sizeof(UniformBufferGPU));
+    memcpy(uniformMappedResource.pData, &uniformDataGpu, sizeof(BeUniformBufferGPU));
     _context->Unmap(_uniformBuffer.Get(), 0);
     _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
     _context->PSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
@@ -193,7 +193,7 @@ auto BeRenderer::CreateRenderResource(
 auto BeRenderer::GetRenderResource(const std::string& name) -> BeRenderResource* {
     return &_renderResources.at(name);
 }
-
+    
 auto BeRenderer::TerminateRenderer() -> void {
     _backbufferTarget.Reset();
     _swapchain.Reset();

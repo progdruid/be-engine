@@ -46,7 +46,15 @@ project "Engine"
     }
     
 
-    includedirs { "src", "src/shaders", "vendor/glfw/include", "vendor/glm", "vendor/Assimp/include", "vendor/stb_image" }
+    includedirs { 
+        "src", 
+        "src/shaders", 
+        "vendor/glfw/include", 
+        "vendor/glm", 
+        "vendor/Assimp/include", 
+        "vendor/stb_image",
+        "vendor/scope_guard/" 
+    }
     libdirs { "vendor/glfw/lib-vc2022", "vendor/Assimp/lib/x64" }
     links { "glfw3", "d3d11", "dxgi", "d3dcompiler", "assimp-vc143-mt" }
 
