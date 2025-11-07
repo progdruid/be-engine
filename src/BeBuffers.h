@@ -135,4 +135,5 @@ struct alignas(16) BePointLightLightingBufferGPU {
 struct alignas(16) BeShadowpassBufferGPU {
     glm::mat4x4 LightProjectionView;
     glm::mat4x4 ObjectModel;
+    glm::vec3 LightPosition;
 };

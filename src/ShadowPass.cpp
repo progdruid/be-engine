@@ -1,5 +1,7 @@
 ﻿#include "ShadowPass.h"
 
+#include <gtc/type_ptr.inl>
+
 #include "BeRenderer.h"
 #include "scope_guard.hpp"
 
@@ -11,10 +13,19 @@ auto ShadowPass::Initialise() -> void {
     shadowBufferDescriptor.ByteWidth = sizeof(BeShadowpassBufferGPU);
     Utils::Check << _renderer->GetDevice()->CreateBuffer(&shadowBufferDescriptor, nullptr, &_shadowConstantBuffer);
     
-    _shadowShader = std::make_unique<BeShader>(
+    _directionalShadowShader = std::make_unique<BeShader>(
         _renderer->GetDevice().Get(),
-        "assets/shaders/shadow",
-        BeShaderType::Vertex,
+        "assets/shaders/directionalShadow",
+        BeShaderType::Vertex | BeShaderType::Pixel,
+        std::vector<BeVertexElementDescriptor> {
+            {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
+        }
+    );
+
+    _pointShadowShader = std::make_unique<BeShader>(
+        _renderer->GetDevice().Get(),
+        "assets/shaders/pointShadow",
+        BeShaderType::Vertex | BeShaderType::Pixel,
         std::vector<BeVertexElementDescriptor> {
             {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
         }
@@ -55,13 +66,13 @@ auto ShadowPass::RenderDirectionalShadows() -> void {
     context->RSSetViewports(1, &viewport);
 
     // sort out render target
-    context->OMSetRenderTargets(1, Utils::NullRTVs, directionalShadowMap->DSV.Get());
-    context->ClearDepthStencilView(directionalShadowMap->DSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+    context->OMSetRenderTargets(1, directionalShadowMap->RTV.GetAddressOf(), nullptr);
+    context->ClearRenderTargetView(directionalShadowMap->RTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
     SCOPE_EXIT { context->OMSetRenderTargets(0, nullptr, nullptr); };
 
     // sort out shader
-    _shadowShader->Bind(context.Get());
-    SCOPE_EXIT { context->VSSetShader(nullptr, nullptr, 0); };
+    _directionalShadowShader->Bind(context.Get());
+    SCOPE_EXIT { context->VSSetShader(nullptr, nullptr, 0); context->PSSetShader(nullptr, nullptr, 0); };
 
     // Set vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
@@ -84,18 +95,21 @@ auto ShadowPass::RenderDirectionalShadows() -> void {
         BeShadowpassBufferGPU shadowpassBufferGPU;
         shadowpassBufferGPU.LightProjectionView = directionalLight.ViewProjection;
         shadowpassBufferGPU.ObjectModel = modelMatrix;
+        shadowpassBufferGPU.LightPosition = glm::vec3(0.0f);
         D3D11_MAPPED_SUBRESOURCE mappedResource;
         Utils::Check << context->Map(_shadowConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
         memcpy(mappedResource.pData, &shadowpassBufferGPU, sizeof(BeShadowpassBufferGPU));
         context->Unmap(_shadowConstantBuffer.Get(), 0);
         context->VSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
-        
+        context->PSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
+
         for (const auto& slice : object.DrawSlices) {
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
         }
     }
     ID3D11Buffer* nullBuffer = nullptr;
     context->VSSetConstantBuffers(1, 1, &nullBuffer);
+    context->PSSetConstantBuffers(1, 1, &nullBuffer);
 }
 
 auto ShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void {
@@ -105,8 +119,8 @@ auto ShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void
     const auto pointShadowMap = _renderer->GetRenderResource(pointLight.ShadowMapTextureName);
     
     // sort out shader
-    _shadowShader->Bind(context.Get());
-    SCOPE_EXIT { context->VSSetShader(nullptr, nullptr, 0); };
+    _pointShadowShader->Bind(context.Get());
+    SCOPE_EXIT { context->VSSetShader(nullptr, nullptr, 0); context->PSSetShader(nullptr, nullptr, 0); };
     
     // sort out vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
@@ -130,9 +144,9 @@ auto ShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void
     // render each face
     for (int face = 0; face < 6; face++) {
         // sort out render target
-        auto cubemapDSV = pointShadowMap->GetCubemapDSV(face);
-        context->ClearDepthStencilView(cubemapDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-        context->OMSetRenderTargets(1, Utils::NullRTVs, cubemapDSV.Get());
+        auto cubemapRTV = pointShadowMap->GetCubemapRTV(face);
+        context->ClearRenderTargetView(cubemapRTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
+        context->OMSetRenderTargets(1, cubemapRTV.GetAddressOf(), nullptr);
 
         const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
@@ -150,21 +164,24 @@ auto ShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void
             BeShadowpassBufferGPU shadowpassBufferGPU;
             shadowpassBufferGPU.LightProjectionView = faceViewProj;
             shadowpassBufferGPU.ObjectModel = modelMatrix;
+            shadowpassBufferGPU.LightPosition = pointLight.Position;
             D3D11_MAPPED_SUBRESOURCE mappedResource;
             Utils::Check << context->Map(_shadowConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
             memcpy(mappedResource.pData, &shadowpassBufferGPU, sizeof(BeShadowpassBufferGPU));
             context->Unmap(_shadowConstantBuffer.Get(), 0);
             context->VSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
+            context->PSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
 
             // draw
             for (const auto& slice : object.DrawSlices) {
                 context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
             }
-        }        
+        }
     }
     // clean up
     context->OMSetRenderTargets(0, nullptr, nullptr);
     context->VSSetConstantBuffers(1, 1, Utils::NullBuffers);
+    context->PSSetConstantBuffers(1, 1, Utils::NullBuffers);
 }
 
 auto ShadowPass::CalculatePointLightFaceViewProjection(const BePointLight& pointLight, const int faceIndex) -> glm::mat4 {

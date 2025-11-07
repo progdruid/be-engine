@@ -28,8 +28,8 @@ float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float t
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
             float2 sampleUV = uv + float2(x, y) * texelSize;
-            float sampleDepth = shadowMap.Sample(pcfSampler, sampleUV).r;
-            shadow += (currentDepth - 0.001 < sampleDepth) ? 1.0 : 0.0;
+            float sampleLinearDepth = shadowMap.Sample(pcfSampler, sampleUV).r;
+            shadow += (currentDepth < sampleLinearDepth + 0.001) ? 1.0 : 0.0;
         }
     }
 
