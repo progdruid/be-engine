@@ -146,8 +146,8 @@ auto Program::run() -> int {
     renderer.UniformData.AmbientColor = glm::vec3(0.1f);
 
     renderer.CreateRenderResource("DirectionalLightShadowMap", false, BeRenderResource::BeResourceDescriptor {
-        .Format = DXGI_FORMAT_R32_TYPELESS,
-        .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
+        .Format = DXGI_FORMAT_R32_FLOAT,
+        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
         .CustomWidth = 4096,
         .CustomHeight = 4096,
     });
@@ -178,7 +178,7 @@ auto Program::run() -> int {
 
     BeDirectionalLight directionalLight;
     directionalLight.Direction = glm::normalize(glm::vec3(-0.8f, -1.0f, -0.8f));
-    directionalLight.Color = glm::vec3(0, 0, 0);// glm::vec3(0.7f, 0.7f, 0.99); 
+    directionalLight.Color = glm::vec3(0.7f, 0.7f, 0.99); 
     directionalLight.Power = (1.0f / 0.7f) * 0.7f;
     directionalLight.ShadowMapResolution = 4096.0f;
     directionalLight.ShadowCameraDistance = 100.0f;
@@ -190,21 +190,21 @@ auto Program::run() -> int {
     renderer.SetContextDataPointer("DirectionalLight", &directionalLight);
 
     std::vector<BePointLight> pointLights;
-    for (auto i = 0; i < 1; i++) {
+    for (auto i = 0; i < 6; i++) {
         BePointLight pointLight = {};
         pointLight.Radius = 20.0f;
         pointLight.Color = glm::vec3(0.99f, 0.99f, 0.6);
         pointLight.Power = (1.0f / 0.7f) * 2.2f;
         pointLight.CastsShadows = true;
-        pointLight.ShadowMapResolution = 1024.0f;
+        pointLight.ShadowMapResolution = 2048.0f;
         pointLight.ShadowNearPlane = 0.1f;
         pointLight.ShadowMapTextureName = "PointLight" + std::to_string(i) + "_ShadowMap";
         renderer.CreateRenderResource(pointLight.ShadowMapTextureName, false, {
             .IsCubemap = true,
-            .Format = DXGI_FORMAT_R32_TYPELESS,
-            .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
-            .CustomWidth = 1024,
-            .CustomHeight = 1024,
+            .Format = DXGI_FORMAT_R32_FLOAT,
+            .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+            .CustomWidth = 2048,
+            .CustomHeight = 2048,
         });
         pointLights.push_back(pointLight);
     }

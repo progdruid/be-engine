@@ -27,17 +27,13 @@ struct PSInput {
 float SamplePointLightShadow(float3 worldPos) {
     float3 lightDir = worldPos - _PointLightPosition;
     float distanceToLight = length(lightDir);
-    
+
     // Sample cubemap using direction
     float3 sampleDir = normalize(lightDir);
-    float shadowDepth = PointLightShadowMap.Sample(InputSampler, sampleDir).r;      
-    //return shadowDepth < 0.99f ? 1.0 : 0.0;
-    float linearDistance = (_PointLightShadowNearPlane * _PointLightRadius) / (_PointLightRadius - shadowDepth * (_PointLightRadius - _PointLightShadowNearPlane));
-    //return frac(linearDistance);
-    //return distanceToLight / _PointLightRadius; 
-    
-    // Depth comparison with small bias
-    float shadow = (distanceToLight - 0.02) < linearDistance ? 1.0 : 0.0;
+    float shadowmapDistance = PointLightShadowMap.Sample(InputSampler, sampleDir).r;
+
+    // Distance comparison with small bias
+    float shadow = (distanceToLight - 0.02) < shadowmapDistance ? 1.0 : 0.0;
     return shadow;
 }
 
@@ -78,5 +74,5 @@ float3 main(PSInput input) : SV_TARGET {
         0.f
     );
 
-    return shadowAbsenceFactor.xxx;
+    return lit * shadowAbsenceFactor;
 }
