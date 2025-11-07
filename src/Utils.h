@@ -119,6 +119,12 @@ namespace Utils {
 
     inline ErrorStream Check;
 
+
+    inline ID3D11Buffer* NullBuffers            [D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT] = {};
+    inline ID3D11SamplerState* NullSamplers     [D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT] = {};
+    inline ID3D11ShaderResourceView* NullSRVs   [D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
+    inline ID3D11RenderTargetView* NullRTVs     [D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+    
 }
 
 

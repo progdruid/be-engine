@@ -11,11 +11,12 @@ class ShadowPass final : public BeRenderPass {
 
 public:
     std::string InputDirectionalLightName;
+    std::string InputPointLightsName;
 
 private:
     std::unique_ptr<BeShader> _shadowShader;
     
-    ComPtr<ID3D11Buffer> _shadowPassConstantBuffer;
+    ComPtr<ID3D11Buffer> _shadowConstantBuffer;
     
 public:
     explicit ShadowPass() = default;
@@ -23,4 +24,10 @@ public:
     
     auto Initialise() -> void override;
     auto Render() -> void override;
+
+private:
+    auto RenderDirectionalShadows() -> void;
+    auto RenderPointLightShadows(const BePointLight& pointLight) -> void;
+
+    auto CalculatePointLightFaceViewProjection(const BePointLight& pointLight, int faceIndex) -> glm::mat4;
 };

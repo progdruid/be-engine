@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include <d3d11.h>
-#include <dxgi1_2.h>
+#include <dxgi1_6.h>
 #include <vector>
 #include <wrl/client.h>
 #include <memory>
@@ -29,6 +29,9 @@ public:
         std::vector<BeModel::BeDrawSlice> DrawSlices;
         BeShader* Shader;
     };
+
+private:
+    auto GetBestAdapter() -> ComPtr<IDXGIAdapter1>;
     
 public:
     explicit BeRenderer(HWND windowHandle, uint32_t width, uint32_t height);
