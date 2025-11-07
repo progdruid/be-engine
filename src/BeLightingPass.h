@@ -9,9 +9,8 @@ class BeRenderer;
 
 class BeLightingPass final : public BeRenderPass {
 public:
-    std::vector<BePointLightData> PointLights;
-
-    std::string DirectionalLightName;
+    std::string InputDirectionalLightName;
+    std::string InputPointLightsName;
     std::string InputTexture0Name;
     std::string InputTexture1Name;
     std::string InputTexture2Name;

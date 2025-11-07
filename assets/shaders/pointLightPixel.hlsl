@@ -1,17 +1,46 @@
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
-#include <BePointLightBuffer.hlsli>
 
 Texture2D Depth : register(t0);
 Texture2D DiffuseRGBA : register(t1);
 Texture2D WorldNormalXYZ_UnusedA : register(t2);
 Texture2D SpecularRGB_ShininessA : register(t3);
+TextureCube PointLightShadowMap : register(t4);
 SamplerState InputSampler : register(s0);
+
+cbuffer PointLightBuffer: register(b1) {
+    float3 _PointLightPosition;
+    float _PointLightRadius;
+    float3 _PointLightColor;
+    float _PointLightPower;
+    
+    float _PointLightHasShadowMap;
+    float _PointLightShadowMapResolution;
+    float _PointLightShadowNearPlane;
+};
 
 struct PSInput {
     float4 Position : SV_POSITION;
     float2 UV : TEXCOORD0;
 };
+
+float SamplePointLightShadow(float3 worldPos) {
+    float3 lightDir = worldPos - _PointLightPosition;
+    float distanceToLight = length(lightDir);
+    
+    // Sample cubemap using direction
+    float3 sampleDir = normalize(lightDir);
+    float shadowDepth = PointLightShadowMap.Sample(InputSampler, sampleDir).r;      
+    //return shadowDepth < 0.99f ? 1.0 : 0.0;
+    float linearDistance = (_PointLightShadowNearPlane * _PointLightRadius) / (_PointLightRadius - shadowDepth * (_PointLightRadius - _PointLightShadowNearPlane));
+    //return frac(linearDistance);
+    //return distanceToLight / _PointLightRadius; 
+    
+    // Depth comparison with small bias
+    float shadow = (distanceToLight - 0.02) < linearDistance ? 1.0 : 0.0;
+    return shadow;
+}
+
 
 float3 main(PSInput input) : SV_TARGET {
     float depth = Depth.Sample(InputSampler, input.UV).r;
@@ -26,6 +55,11 @@ float3 main(PSInput input) : SV_TARGET {
         discard;
     }
 
+    float shadowAbsenceFactor = 1.0;
+    if (_PointLightHasShadowMap > 0.5) {
+        shadowAbsenceFactor = SamplePointLightShadow(worldPos);
+    }
+    
     float attenuation = saturate(1.0 - (distanceToLight / _PointLightRadius));
     attenuation *= attenuation;
     
@@ -44,5 +78,5 @@ float3 main(PSInput input) : SV_TARGET {
         0.f
     );
 
-    return lit;
+    return shadowAbsenceFactor.xxx;
 }
