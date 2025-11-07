@@ -190,7 +190,7 @@ auto Program::run() -> int {
     renderer.SetContextDataPointer("DirectionalLight", &directionalLight);
 
     std::vector<BePointLight> pointLights;
-    for (auto i = 0; i < 6; i++) {
+    for (auto i = 0; i < 3; i++) {
         BePointLight pointLight = {};
         pointLight.Radius = 20.0f;
         pointLight.Color = glm::vec3(0.99f, 0.99f, 0.6);
@@ -238,7 +238,7 @@ auto Program::run() -> int {
     // Cel shader pass
     auto effectShader = std::make_unique<BeShader>(
         device.Get(),
-        "assets/shaders/celPass",
+        "assets/shaders/glitchPass",
         BeShaderType::Pixel,
         std::vector<BeVertexElementDescriptor>{}
     );
@@ -256,7 +256,7 @@ auto Program::run() -> int {
     composerPass->InputTexture0Name = "BaseColor";
     composerPass->InputTexture1Name = "WorldNormal";
     composerPass->InputTexture2Name = "Specular-Shininess";
-    composerPass->InputLightTextureName = "Lighting";
+    composerPass->InputLightTextureName = "PPOutput";
     composerPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
     //composerPass->ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
     //composerPass->ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
