@@ -1,7 +1,42 @@
 ﻿#include "BeRenderer.h"
+
+#include <scope_guard.hpp>
+
 #include "BeRenderPass.h"
 #include "BeShader.h"
 #include "Utils.h"
+
+auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
+    ComPtr<IDXGIFactory6> f6;
+    Utils::Check << CreateDXGIFactory1(IID_PPV_ARGS(&f6));
+
+    uint32_t adapterIndex = 0;
+    bool outOfAdapters = false;
+    while (!outOfAdapters)
+    {
+        SCOPE_EXIT { adapterIndex++; };
+        
+        ComPtr<IDXGIAdapter1> adapter;
+        HRESULT hr = f6->EnumAdapterByGpuPreference(
+            adapterIndex,
+            DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+            IID_PPV_ARGS(&adapter)
+        );
+        if (FAILED(hr)) {
+            outOfAdapters = true;
+            continue;
+        }
+        
+        DXGI_ADAPTER_DESC1 desc{};
+        Utils::Check << adapter->GetDesc1(&desc);
+
+        // Skip software adapters
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) continue;
+
+        return adapter; // first high-perf adapter
+    }
+    return nullptr;
+}
 
 BeRenderer::BeRenderer(const HWND windowHandle, const uint32_t width, const uint32_t height) {
     _windowHandle = windowHandle;
@@ -17,14 +52,21 @@ auto BeRenderer::LaunchDevice() -> void {
 #endif
 
     
+    D3D_FEATURE_LEVEL featureLevelOut{};
+    static constexpr D3D_FEATURE_LEVEL featureLevels[] = {
+        D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0
+    };
+    
+    const ComPtr<IDXGIAdapter1> adapter = GetBestAdapter();
+    
     // Device and context
     Utils::Check << D3D11CreateDevice(
-        nullptr,
-        D3D_DRIVER_TYPE_HARDWARE,
+        adapter.Get(),
+        D3D_DRIVER_TYPE_UNKNOWN,
         nullptr,
         deviceFlags,
-        nullptr,
-        0,
+        featureLevels,
+        std::size(featureLevels),
         D3D11_SDK_VERSION,
         &_device,
         nullptr,

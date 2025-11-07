@@ -39,7 +39,7 @@ auto BeLightingPass::Initialise() -> void {
     pointLightBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     pointLightBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
     pointLightBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    pointLightBufferDescriptor.ByteWidth = sizeof(BePointLightBufferGPU);
+    pointLightBufferDescriptor.ByteWidth = sizeof(BePointLightLightingBufferGPU);
     Utils::Check << device->CreateBuffer(&pointLightBufferDescriptor, nullptr, &_pointLightBuffer);
 
     _directionalLightShader = std::make_unique<BeShader>(
@@ -59,22 +59,21 @@ auto BeLightingPass::Initialise() -> void {
 
 auto BeLightingPass::Render() -> void {
     const auto context = _renderer->GetContext();
-
-    const BeDirectionalLight* directionalLight = _renderer->GetContextDataPointer<BeDirectionalLight>(DirectionalLightName);
+    const BeDirectionalLight& directionalLight = *_renderer->GetContextDataPointer<BeDirectionalLight>(InputDirectionalLightName);
+    const std::vector<BePointLight>& pointLights = *_renderer->GetContextDataPointer<std::vector<BePointLight>>(InputPointLightsName);
     
     BeRenderResource* depthResource     = _renderer->GetRenderResource(InputDepthTextureName);
     BeRenderResource* gbufferResource0  = _renderer->GetRenderResource(InputTexture0Name);
     BeRenderResource* gbufferResource1  = _renderer->GetRenderResource(InputTexture1Name);
     BeRenderResource* gbufferResource2  = _renderer->GetRenderResource(InputTexture2Name);
     BeRenderResource* lightingResource  = _renderer->GetRenderResource(OutputTextureName);
-    BeRenderResource* directionalLightShadowMapResource  = _renderer->GetRenderResource(directionalLight->ShadowMapTextureName);
+    BeRenderResource* directionalLightShadowMapResource  = _renderer->GetRenderResource(directionalLight.ShadowMapTextureName);
     
     context->ClearRenderTargetView(lightingResource->RTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->OMSetRenderTargets(1, lightingResource->RTV.GetAddressOf(), nullptr);
     context->OMSetBlendState(_lightingBlendState.Get(), nullptr, 0xFFFFFFFF);
     SCOPE_EXIT {
-        ID3D11RenderTargetView* emptyTargets[1] = { nullptr };
-        context->OMSetRenderTargets(1, emptyTargets, nullptr);
+        context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
         context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     };
 
@@ -85,49 +84,49 @@ auto BeLightingPass::Render() -> void {
     context->PSSetShaderResources(1, 1, gbufferResource0->SRV.GetAddressOf());
     context->PSSetShaderResources(2, 1, gbufferResource1->SRV.GetAddressOf());
     context->PSSetShaderResources(3, 1, gbufferResource2->SRV.GetAddressOf());
-    context->PSSetShaderResources(4, 1, directionalLightShadowMapResource->SRV.GetAddressOf());
-    SCOPE_EXIT {
-        ID3D11ShaderResourceView* emptyResources[5] = { nullptr, nullptr, nullptr, nullptr, nullptr };
-        context->PSSetShaderResources(0, 5, emptyResources);
-    };
+    SCOPE_EXIT { context->PSSetShaderResources(0, 4, Utils::NullSRVs); };
     
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
-    SCOPE_EXIT {
-        ID3D11SamplerState* emptySamplers[1] = { nullptr };
-        context->PSSetSamplers(0, 1, emptySamplers);
-    };
+    SCOPE_EXIT { context->PSSetSamplers(0, 1, Utils::NullSamplers); };
 
     {
-        BeDirectionalLightLightingBufferGPU directionalLightBuffer(*directionalLight);
+        context->PSSetShaderResources(4, 1, directionalLightShadowMapResource->SRV.GetAddressOf());
+        SCOPE_EXIT { context->PSSetShaderResources(4, 1, Utils::NullSRVs); };
+        context->PSSetShader(_directionalLightShader->PixelShader.Get(), nullptr, 0);
+
+        BeDirectionalLightLightingBufferGPU directionalLightBuffer(directionalLight);
         D3D11_MAPPED_SUBRESOURCE directionalLightMappedResource;
         Utils::Check << context->Map(_directionalLightBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &directionalLightMappedResource);
         memcpy(directionalLightMappedResource.pData, &directionalLightBuffer, sizeof(BeDirectionalLightLightingBufferGPU));
         context->Unmap(_directionalLightBuffer.Get(), 0);
         context->PSSetConstantBuffers(1, 1, _directionalLightBuffer.GetAddressOf());
 
-        context->PSSetShader(_directionalLightShader->PixelShader.Get(), nullptr, 0);
-
         context->IASetInputLayout(nullptr);
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
         context->Draw(4, 0);
     }
 
-    context->PSSetShader(_pointLightShader->PixelShader.Get(), nullptr, 0);
-    for (const auto& pointLightData : PointLights) {
-        BePointLightBufferGPU pointLightBuffer(pointLightData);
-        D3D11_MAPPED_SUBRESOURCE pointLightMappedResource;
-        Utils::Check << context->Map(_pointLightBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &pointLightMappedResource);
-        memcpy(pointLightMappedResource.pData, &pointLightBuffer, sizeof(BePointLightBufferGPU));
-        context->Unmap(_pointLightBuffer.Get(), 0);
-        context->PSSetConstantBuffers(1, 1, _pointLightBuffer.GetAddressOf());
+    {
+        context->PSSetShader(_pointLightShader->PixelShader.Get(), nullptr, 0);
+        for (const auto& pointLightData : pointLights) {
+            const auto& shadowCubemap = *_renderer->GetRenderResource(pointLightData.ShadowMapTextureName);
+            context->PSSetShaderResources(4, 1, shadowCubemap.SRV.GetAddressOf());
+
+            BePointLightLightingBufferGPU pointLightBuffer(pointLightData);
+            D3D11_MAPPED_SUBRESOURCE pointLightMappedResource;
+            Utils::Check << context->Map(_pointLightBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &pointLightMappedResource);
+            memcpy(pointLightMappedResource.pData, &pointLightBuffer, sizeof(BePointLightLightingBufferGPU));
+            context->Unmap(_pointLightBuffer.Get(), 0);
+            context->PSSetConstantBuffers(1, 1, _pointLightBuffer.GetAddressOf());
     
-        context->IASetInputLayout(nullptr);
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-        context->Draw(4, 0);
+            context->IASetInputLayout(nullptr);
+            context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+            context->Draw(4, 0);
+        }
+        context->PSSetShaderResources(4, 1, Utils::NullSRVs);
     }
 
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED);
     context->PSSetShader(nullptr, nullptr, 0);
-    ID3D11Buffer* emptyBuffers[1] = { nullptr };
-    context->PSSetConstantBuffers(1, 1, emptyBuffers);
+    context->PSSetConstantBuffers(1, 1, Utils::NullBuffers);
 }

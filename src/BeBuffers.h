@@ -97,33 +97,42 @@ struct alignas(16) BeDirectionalLightLightingBufferGPU {
     }
 };
 
-struct alignas(16) BeDirectionalLightShadowBufferGPU {
-    glm::mat4x4 LightProjectionView;
-    glm::mat4x4 Model;
-
-    explicit BeDirectionalLightShadowBufferGPU(const BeDirectionalLight& directionalLight, const glm::mat4& modelMatrix) {
-        LightProjectionView = directionalLight.ViewProjection;
-        Model = modelMatrix;
-    }
-};
-
-
-struct BePointLightData {
+struct BePointLight {
     glm::vec3 Position;
     float Radius;
     glm::vec3 Color;
     float Power;
+
+    bool CastsShadows = false;
+    float ShadowMapResolution = 1024.0f;
+    float ShadowNearPlane = 0.1f; // far plane is radius
+    std::string ShadowMapTextureName;
 };
 
-struct alignas(16) BePointLightBufferGPU {
+struct alignas(16) BePointLightLightingBufferGPU {
     glm::vec3 Position;
     float Radius;
     glm::vec3 Color;
     float Power;
-    explicit BePointLightBufferGPU(const BePointLightData& light) {
+
+    float HasShadowMap;
+    float ShadowMapResolution;
+    float ShadowNearPlane;
+    float Padding;
+    
+    explicit BePointLightLightingBufferGPU(const BePointLight& light) {
         Position = light.Position;
         Radius = light.Radius;
         Color = light.Color;
         Power = light.Power;
+        HasShadowMap = light.CastsShadows ? 1.0f : 0.0f;
+        ShadowMapResolution = light.ShadowMapResolution;
+        ShadowNearPlane = light.ShadowNearPlane;
+        Padding = 0.0f;
     }
+};
+
+struct alignas(16) BeShadowpassBufferGPU {
+    glm::mat4x4 LightProjectionView;
+    glm::mat4x4 ObjectModel;
 };

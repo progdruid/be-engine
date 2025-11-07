@@ -178,7 +178,7 @@ auto Program::run() -> int {
 
     BeDirectionalLight directionalLight;
     directionalLight.Direction = glm::normalize(glm::vec3(-0.8f, -1.0f, -0.8f));
-    directionalLight.Color = glm::vec3(0.7f, 0.7f, 0.99); 
+    directionalLight.Color = glm::vec3(0, 0, 0);// glm::vec3(0.7f, 0.7f, 0.99); 
     directionalLight.Power = (1.0f / 0.7f) * 0.7f;
     directionalLight.ShadowMapResolution = 4096.0f;
     directionalLight.ShadowCameraDistance = 100.0f;
@@ -188,11 +188,33 @@ auto Program::run() -> int {
     directionalLight.ShadowMapTextureName = "DirectionalLightShadowMap";
     directionalLight.CalculateMatrix();
     renderer.SetContextDataPointer("DirectionalLight", &directionalLight);
+
+    std::vector<BePointLight> pointLights;
+    for (auto i = 0; i < 1; i++) {
+        BePointLight pointLight = {};
+        pointLight.Radius = 20.0f;
+        pointLight.Color = glm::vec3(0.99f, 0.99f, 0.6);
+        pointLight.Power = (1.0f / 0.7f) * 2.2f;
+        pointLight.CastsShadows = true;
+        pointLight.ShadowMapResolution = 1024.0f;
+        pointLight.ShadowNearPlane = 0.1f;
+        pointLight.ShadowMapTextureName = "PointLight" + std::to_string(i) + "_ShadowMap";
+        renderer.CreateRenderResource(pointLight.ShadowMapTextureName, false, {
+            .IsCubemap = true,
+            .Format = DXGI_FORMAT_R32_TYPELESS,
+            .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
+            .CustomWidth = 1024,
+            .CustomHeight = 1024,
+        });
+        pointLights.push_back(pointLight);
+    }
+    renderer.SetContextDataPointer("PointLights", &pointLights);
     
     // shadow pass
     auto shadowPass = new ShadowPass();
     renderer.AddRenderPass(shadowPass);
     shadowPass->InputDirectionalLightName = "DirectionalLight";
+    shadowPass->InputPointLightsName = "PointLights";
     
     // geometry pass
     auto geometryPass = new BeGeometryPass();
@@ -205,18 +227,13 @@ auto Program::run() -> int {
     // lighting pass
     auto lightingPass = new BeLightingPass();
     renderer.AddRenderPass(lightingPass);
-    lightingPass->DirectionalLightName = "DirectionalLight";
+    lightingPass->InputDirectionalLightName = "DirectionalLight";
+    lightingPass->InputPointLightsName = "PointLights";
     lightingPass->InputDepthTextureName = "DepthStencil";
     lightingPass->InputTexture0Name = "BaseColor";
     lightingPass->InputTexture1Name = "WorldNormal";
     lightingPass->InputTexture2Name = "Specular-Shininess";
     lightingPass->OutputTextureName = "Lighting";
-    BePointLightData pl;
-    pl.Radius = 20.0f;
-    pl.Color = glm::vec3(0.99f, 0.99f, 0.6);
-    pl.Power = (1.0f / 0.7f) * 2.2f;
-    for (auto i = 0; i < 6; i++)
-        lightingPass->PointLights.push_back(pl);
 
     // Cel shader pass
     auto effectShader = std::make_unique<BeShader>(
@@ -239,7 +256,7 @@ auto Program::run() -> int {
     composerPass->InputTexture0Name = "BaseColor";
     composerPass->InputTexture1Name = "WorldNormal";
     composerPass->InputTexture2Name = "Specular-Shininess";
-    composerPass->InputLightTextureName = "PPOutput";
+    composerPass->InputLightTextureName = "Lighting";
     composerPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
     //composerPass->ClearColor = {53.f / 255.f, 144.f / 255.f, 243.f / 255.f}; // blue
     //composerPass->ClearColor = {255.f / 255.f, 205.f / 255.f, 27.f / 255.f}; // gold
@@ -309,10 +326,10 @@ auto Program::run() -> int {
             angle += dt * glm::radians(15.0f); // 15 degrees per second
             if (angle > glm::two_pi<float>()) angle -= glm::two_pi<float>();
             constexpr float radius = 13.0f;
-            for (int i = 0; i < lightingPass->PointLights.size(); ++i) {
-                float add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(lightingPass->PointLights.size()));
+            for (int i = 0; i < pointLights.size(); ++i) {
+                float add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(pointLights.size()));
                 float rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
-                auto& light = lightingPass->PointLights[i];
+                auto& light = pointLights[i];
                 light.Position = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
             }
         }
