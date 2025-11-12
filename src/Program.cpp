@@ -190,7 +190,7 @@ auto Program::run() -> int {
     renderer.SetContextDataPointer("DirectionalLight", &directionalLight);
 
     std::vector<BePointLight> pointLights;
-    for (auto i = 0; i < 3; i++) {
+    for (auto i = 0; i < 4; i++) {
         BePointLight pointLight = {};
         pointLight.Radius = 20.0f;
         pointLight.Color = glm::vec3(0.99f, 0.99f, 0.6);
@@ -238,13 +238,13 @@ auto Program::run() -> int {
     // Cel shader pass
     auto effectShader = std::make_unique<BeShader>(
         device.Get(),
-        "assets/shaders/glitchPass",
+        "assets/shaders/effects/usedEffect",
         BeShaderType::Pixel,
         std::vector<BeVertexElementDescriptor>{}
     );
     auto effectPass = new CustomFullscreenEffectPass();
     renderer.AddRenderPass(effectPass);
-    effectPass->InputTextureNames = {"DepthStencil", "Lighting", "WorldNormal"};
+    effectPass->InputTextureNames = {"Lighting", "DepthStencil", "WorldNormal"};
     //effectPass->InputTextureNames = {"Lighting"};
     effectPass->OutputTextureNames = {"PPOutput"};
     effectPass->Shader = effectShader.get();

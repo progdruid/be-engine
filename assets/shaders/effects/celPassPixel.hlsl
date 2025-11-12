@@ -10,8 +10,8 @@ struct VSOutput {
     float2 UV : TEXCOORD0;
 };
 
-Texture2D depthTexture : register(t0);
-Texture2D colorTexture : register(t1);
+Texture2D colorTexture : register(t0);
+Texture2D depthTexture : register(t1);
 Texture2D normalTexture : register(t2);
 SamplerState inputSampler : register(s0);
 
