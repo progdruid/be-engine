@@ -120,12 +120,7 @@ auto BeRenderer::LaunchDevice() -> void {
     samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
     Utils::Check << _device->CreateSamplerState(&samplerDesc, &_pointSampler);
 
-    _fullscreenShader = std::make_unique<BeShader>(
-        _device.Get(),
-        "assets/shaders/fullscreen",
-        BeShaderType::Vertex,
-        std::vector<BeVertexElementDescriptor>{}
-    );
+    _fullscreenShader = std::make_unique<BeShader>(_device.Get(),"assets/shaders/fullscreen");
 }
 
 auto BeRenderer::AddRenderPass(BeRenderPass* renderPass) -> void {

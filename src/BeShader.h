@@ -6,11 +6,12 @@
 #include <vector>
 #include <wrl/client.h>
 #include <filesystem>
+#include <nlohmann/json.hpp>
 
 #include "BeShaderIncludeHandler.hpp"
 #include "Utils.h"
 using Microsoft::WRL::ComPtr;
-
+using Json = nlohmann::json;
 
 
 enum class BeShaderType : uint8_t {
@@ -32,6 +33,15 @@ struct BeVertexElementDescriptor {
         _Count
     };
 
+    static inline const std::unordered_map<std::string, BeVertexSemantic> SemanticMap = {
+        {"position", BeVertexSemantic::Position},
+        {"normal", BeVertexSemantic::Normal},
+        {"color3", BeVertexSemantic::Color3},
+        {"color4", BeVertexSemantic::Color4},
+        {"uv0", BeVertexSemantic::TexCoord0},
+        {"uv1", BeVertexSemantic::TexCoord1},
+        {"uv2", BeVertexSemantic::TexCoord2},
+    };
     static inline const std::unordered_map<BeVertexSemantic, const char*> SemanticNames = {
         {BeVertexSemantic::Position, "POSITION"},
         {BeVertexSemantic::Normal, "NORMAL"},
@@ -77,25 +87,32 @@ struct BeVertexElementDescriptor {
 class BeShader {
 public:
     //get
-    const std::vector<BeVertexElementDescriptor> VertexLayout;
     ComPtr<ID3D11VertexShader> VertexShader;
     ComPtr<ID3D11PixelShader> PixelShader;
     ComPtr<ID3D11InputLayout> ComputedInputLayout;
 
-    BeShaderType ShaderType = BeShaderType::None;
+private:
+    BeShaderType _shaderType = BeShaderType::None;
 
 public:
-    BeShader(
-        ID3D11Device* device, 
-        const std::filesystem::path& filePathWithoutExtension,
-        const BeShaderType shaderType,
-        const std::vector<BeVertexElementDescriptor>& vertexLayout);
+    BeShader(ID3D11Device* device, const std::filesystem::path& filePath);
     ~BeShader() = default;
     
     auto Bind (ID3D11DeviceContext* context) const -> void;
 
+    inline auto GetShaderType () const -> BeShaderType  { return _shaderType; }
+
 private:
     auto LoadVertexShader (const std::filesystem::path& filePath, const std::vector<BeVertexElementDescriptor>& vertexLayout, ID3D11Device* device, BeShaderIncludeHandler* includeHandler) -> void;
     auto LoadPixelShader (const std::filesystem::path& filePath, ID3D11Device* device, BeShaderIncludeHandler* includeHandler) -> void;
+
+    auto CompileBlob (
+        const std::filesystem::path& filePath,
+        const char* entrypointName,
+        const char* target,
+        BeShaderIncludeHandler* includeHandler
+    ) -> ComPtr<ID3DBlob>;
+    
+    auto ParseHeader (const std::string& src) -> Json;
 };
 

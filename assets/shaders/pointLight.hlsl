@@ -1,3 +1,11 @@
+/*
+@be-shader-header
+{
+    "pixel": "PixelFunction"
+}
+@be-shader-header-end
+*/
+
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
 
@@ -38,7 +46,7 @@ float SamplePointLightShadow(float3 worldPos) {
 }
 
 
-float3 main(PSInput input) : SV_TARGET {
+float3 PixelFunction(PSInput input) : SV_TARGET {
     float depth = Depth.Sample(InputSampler, input.UV).r;
     float4 diffuse = DiffuseRGBA.Sample(InputSampler, input.UV);
     float3 worldNormal = WorldNormalXYZ_UnusedA.Sample(InputSampler, input.UV).xyz;

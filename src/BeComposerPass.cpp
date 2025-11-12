@@ -10,12 +10,7 @@ BeComposerPass::~BeComposerPass() = default;
 auto BeComposerPass::Initialise() -> void {
     const auto device = _renderer->GetDevice();
 
-    _composerShader = std::make_unique<BeShader>(
-        device.Get(),
-        "assets/shaders/composer",
-        BeShaderType::Pixel,
-        std::vector<BeVertexElementDescriptor>{}
-    );
+    _composerShader = std::make_unique<BeShader>(device.Get(), "assets/shaders/composer");
 }
 
 auto BeComposerPass::Render() -> void {

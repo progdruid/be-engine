@@ -1,3 +1,10 @@
+/*
+@be-shader-header
+{
+    "pixel": "main"
+}
+@be-shader-header-end
+*/
 
 struct VSOutput {
     float4 Position : SV_POSITION;

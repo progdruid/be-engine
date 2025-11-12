@@ -1,3 +1,11 @@
+/*
+@be-shader-header
+{
+    "pixel": "PixelFunction"
+}
+@be-shader-header-end
+*/
+
 #include <BeTonemappers.hlsli>
 #include <BeUniformBuffer.hlsli>
 
@@ -13,7 +21,7 @@ struct PSInput {
     float2 UV : TEXCOORD0;
 };
 
-float4 main(PSInput input) : SV_TARGET {
+float4 PixelFunction(PSInput input) : SV_TARGET {
     float depth = Depth.Sample(InputSampler, input.UV).r;
     float3 lightmapColor = Lightmap.Sample(InputSampler, input.UV).rgb;
     
