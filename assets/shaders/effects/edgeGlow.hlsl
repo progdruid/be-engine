@@ -1,6 +1,14 @@
 // Edge glow post-processing shader
 // Sobel edge detection on luminance + colored glow where edges are strong
 
+/*
+@be-shader-header
+{
+    "pixel": "main"
+}
+@be-shader-header-end
+*/
+
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
 

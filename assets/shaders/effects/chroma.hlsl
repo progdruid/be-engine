@@ -1,6 +1,14 @@
 // Chromatic aberration post-processing shader
 // Simulates lens chromatic aberration by separating RGB channels with spatial offsets
 
+/*
+@be-shader-header
+{
+    "pixel": "main"
+}
+@be-shader-header-end
+*/
+
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
 

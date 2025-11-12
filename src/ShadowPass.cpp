@@ -13,23 +13,8 @@ auto ShadowPass::Initialise() -> void {
     shadowBufferDescriptor.ByteWidth = sizeof(BeShadowpassBufferGPU);
     Utils::Check << _renderer->GetDevice()->CreateBuffer(&shadowBufferDescriptor, nullptr, &_shadowConstantBuffer);
     
-    _directionalShadowShader = std::make_unique<BeShader>(
-        _renderer->GetDevice().Get(),
-        "assets/shaders/directionalShadow",
-        BeShaderType::Vertex | BeShaderType::Pixel,
-        std::vector<BeVertexElementDescriptor> {
-            {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
-        }
-    );
-
-    _pointShadowShader = std::make_unique<BeShader>(
-        _renderer->GetDevice().Get(),
-        "assets/shaders/pointShadow",
-        BeShaderType::Vertex | BeShaderType::Pixel,
-        std::vector<BeVertexElementDescriptor> {
-            {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
-        }
-    );
+    _directionalShadowShader = std::make_unique<BeShader>(_renderer->GetDevice().Get(), "assets/shaders/directionalShadow");
+    _pointShadowShader = std::make_unique<BeShader>(_renderer->GetDevice().Get(), "assets/shaders/pointShadow");
 }
 
 auto ShadowPass::Render() -> void {

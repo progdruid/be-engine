@@ -1,6 +1,14 @@
 // Full-screen digital glitch post-processing effect
 // Creates chromatic aberration, scan line artifacts, and displacement glitches
 
+/*
+@be-shader-header
+{
+    "pixel": "main"
+}
+@be-shader-header-end
+*/
+
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
 

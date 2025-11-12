@@ -1,8 +1,13 @@
 // Retro low-res upsample post-processing shader
 // Downsample via quantized UVs, apply posterization, upsample for PS1/CRT pixelated vibes
 
-#include <BeUniformBuffer.hlsli>
-#include <BeFunctions.hlsli>
+/*
+@be-shader-header
+{
+    "pixel": "main"
+}
+@be-shader-header-end
+*/
 
 struct VSOutput {
     float4 Position : SV_POSITION;
@@ -13,7 +18,7 @@ Texture2D inputTexture : register(t0);
 SamplerState inputSampler : register(s0);
 
 // Retro effect parameters
-static const float PixelSize = 128.0f;            // Size of pixelated blocks (higher = more pixelated)
+static const float PixelSize = 128.0f;          // Size of pixelated blocks (higher = more pixelated)
 static const int PosterizeLevels = 4;           // Number of color levels (lower = crunchier)
 static const bool EnablePosterization = true;   // Toggle color posterization
 
