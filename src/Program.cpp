@@ -56,16 +56,7 @@ auto Program::run() -> int {
     renderer.LaunchDevice();
     const auto device = renderer.GetDevice();
 
-    BeShader standardShader(
-        device.Get(),
-        "assets/shaders/standard",
-        BeShaderType::Vertex | BeShaderType::Pixel,
-        {
-            {.Name = "Position", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Position},
-            {.Name = "Normal", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::Normal},
-            {.Name = "UV", .Attribute = BeVertexElementDescriptor::BeVertexSemantic::TexCoord0},
-        }
-    );
+    BeShader standardShader(device.Get(), "assets/shaders/standard" );
 
     BeAssetImporter importer(device);
     auto witchItems = importer.LoadModel("assets/witch_items.glb");
@@ -184,7 +175,7 @@ auto Program::run() -> int {
     directionalLight.ShadowCameraDistance = 100.0f;
     directionalLight.ShadowMapWorldSize = 60.0f;
     directionalLight.ShadowNearPlane = 0.1f;
-    directionalLight.ShadowFarPlane = 200.0f;
+    directionalLight.ShadowFarPlane = 300.0f;
     directionalLight.ShadowMapTextureName = "DirectionalLightShadowMap";
     directionalLight.CalculateMatrix();
     renderer.SetContextDataPointer("DirectionalLight", &directionalLight);
@@ -236,12 +227,7 @@ auto Program::run() -> int {
     lightingPass->OutputTextureName = "Lighting";
 
     // Cel shader pass
-    auto effectShader = std::make_unique<BeShader>(
-        device.Get(),
-        "assets/shaders/effects/usedEffect",
-        BeShaderType::Pixel,
-        std::vector<BeVertexElementDescriptor>{}
-    );
+    auto effectShader = std::make_unique<BeShader>(device.Get(), "assets/shaders/effects/usedEffect");
     auto effectPass = new CustomFullscreenEffectPass();
     renderer.AddRenderPass(effectPass);
     effectPass->InputTextureNames = {"Lighting", "DepthStencil", "WorldNormal"};

@@ -1,6 +1,14 @@
 // Poor man's bloom post-processing shader
 // Single-pass fake bloom: threshold luma, minimal blur via offset taps, add back for highlight glow
 
+/*
+@be-shader-header
+{
+    "pixel": "main"
+}
+@be-shader-header-end
+*/
+
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
 

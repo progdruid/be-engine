@@ -1,6 +1,14 @@
 // Film grain + dithering post-processing shader
 // Hash-based per-pixel grain in log space + ordered dithering for smooth banding reduction
 
+/*
+@be-shader-header
+{
+    "pixel": "main"
+}
+@be-shader-header-end
+*/
+
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
 

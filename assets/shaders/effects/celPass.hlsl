@@ -2,6 +2,15 @@
 // Single-pass cel shader with world-position based edge detection
 // Creates cartoon-like posterized effect with white edges from geometry discontinuities
 
+/*
+@be-shader-header
+{
+  "pixel": "main",
+  "resources": ["BaseColor", "Depth", "WorldNormal", "#Shadow"]
+}
+@be-shader-header-end
+*/
+
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
 
@@ -48,26 +57,25 @@ float3 main(VSOutput input) : SV_TARGET
     float maxNormalEdge = 0.0;
 
     for (int x = -1; x <= 1; ++x) {
-        for (int y = -1; y <= 1; ++y) {
-            if (x == 0 && y == 0) continue;
+    for (int y = -1; y <= 1; ++y) {
+        if (x == 0 && y == 0) continue;
 
-            float2 offset = float2(x, y) * texelSize;
-            float2 sampleUV = uv + offset;
-            float sampledDepth = depthTexture.Sample(inputSampler, sampleUV).r;
-            float3 sampledWorldPos = ReconstructWorldPosition(sampleUV, sampledDepth, _InverseProjectionView);
-            float3 sampledNormal = normalTexture.Sample(inputSampler, sampleUV).rgb;
+        float2 offset = float2(x, y) * texelSize;
+        float2 sampleUV = uv + offset;
+        float sampledDepth = depthTexture.Sample(inputSampler, sampleUV).r;
+        float3 sampledWorldPos = ReconstructWorldPosition(sampleUV, sampledDepth, _InverseProjectionView);
+        float3 sampledNormal = normalTexture.Sample(inputSampler, sampleUV).rgb;
 
-            // World position edge detection
-            float3 positionDelta = sampledWorldPos - originalWorldPos;
-            float positionEdge = length(positionDelta);
-            maxPositionEdge = max(maxPositionEdge, positionEdge);
+        // World position edge detection
+        float3 positionDelta = sampledWorldPos - originalWorldPos;
+        float positionEdge = length(positionDelta);
+        maxPositionEdge = max(maxPositionEdge, positionEdge);
 
-            // Normal edge detection (surface orientation difference)
-            float normalDot = dot(sampledNormal, originalNormal);
-            float normalEdge = 1.0 - normalDot;
-            maxNormalEdge = max(maxNormalEdge, normalEdge);
-        }
-    }
+        // Normal edge detection (surface orientation difference)
+        float normalDot = dot(sampledNormal, originalNormal);
+        float normalEdge = 1.0 - normalDot;
+        maxNormalEdge = max(maxNormalEdge, normalEdge);
+    }}
 
     // Posterize the color
     float3 posterizedColor = PosterizeColor(originalColor, ColorLevels);

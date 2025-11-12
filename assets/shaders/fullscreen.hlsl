@@ -1,10 +1,18 @@
+/*
+@be-shader-header
+{
+    "vertex": "VertexFunction"
+}
+@be-shader-header-end
+*/
+
 
 struct VSOutput {
     float4 Position : SV_POSITION;
     float2 UV : TEXCOORD0;
 };
 
-VSOutput main(uint vertexID : SV_VertexID) {
+VSOutput VertexFunction(uint vertexID : SV_VertexID) {
     VSOutput output;
 
     float2 positions[4] = {

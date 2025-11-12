@@ -53,7 +53,8 @@ project "Engine"
         "vendor/glm", 
         "vendor/Assimp/include", 
         "vendor/stb_image",
-        "vendor/scope_guard/" 
+        "vendor/scope_guard/",
+        "vendor" 
     }
     libdirs { "vendor/glfw/lib-vc2022", "vendor/Assimp/lib/x64" }
     links { "glfw3", "d3d11", "dxgi", "d3dcompiler", "assimp-vc143-mt" }
