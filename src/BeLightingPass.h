@@ -34,4 +34,5 @@ public:
 
     auto Initialise() -> void override;
     auto Render() -> void override;
+    auto GetPassName() const -> const std::string override { return "Lighting Pass"; }
 };

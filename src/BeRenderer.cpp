@@ -134,6 +134,8 @@ auto BeRenderer::InitialisePasses() -> void {
 }
 
 auto BeRenderer::Render() -> void {
+    Utils::BeDebugAnnotation frameAnnotation(_context, "Frame");
+
     // Set viewport
     D3D11_VIEWPORT viewport;
     viewport.TopLeftX = 0;
@@ -144,7 +146,7 @@ auto BeRenderer::Render() -> void {
     viewport.MaxDepth = 1.0f;
     _context->RSSetViewports(1, &viewport);
 
-    
+
     // Update uniform constant buffer
     const BeUniformBufferGPU uniformDataGpu(UniformData);
     D3D11_MAPPED_SUBRESOURCE uniformMappedResource;
@@ -154,13 +156,16 @@ auto BeRenderer::Render() -> void {
     _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
     _context->PSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
 
-    for (const auto& pass : _passes)
+    // Execute all passes with debug annotations
+    for (const auto& pass : _passes) {
+        Utils::BeDebugAnnotation passAnnotation(_context, std::string(pass->GetPassName()));
         pass->Render();
-    
+    }
+
     ID3D11Buffer* emptyBuffers[1] = { nullptr };
     _context->VSSetConstantBuffers(1, 1, emptyBuffers);
     _context->PSSetConstantBuffers(1, 1, emptyBuffers);
-    
+
     _swapchain->Present(1, 0);
 }
 

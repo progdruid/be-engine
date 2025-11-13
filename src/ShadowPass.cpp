@@ -25,15 +25,19 @@ auto ShadowPass::Render() -> void {
     context->RSGetViewports(&numViewports,  &previousViewport);
     SCOPE_EXIT { context->RSSetViewports(1, &previousViewport); };
 
-    RenderDirectionalShadows();
+    {
+        Utils::BeDebugAnnotation directionalLightAnnotation(context, "Directional Light Shadows");
+        RenderDirectionalShadows();
+    }
 
     const std::vector<BePointLight>& pointLights = *_renderer->GetContextDataPointer<std::vector<BePointLight>>(InputPointLightsName);
-    
-    for (const auto& pointLight : pointLights) {
-        if (!pointLight.CastsShadows)
+
+    for (size_t i = 0; i < pointLights.size(); i++) {
+        if (!pointLights[i].CastsShadows)
             continue;
-        
-        RenderPointLightShadows(pointLight);
+
+        Utils::BeDebugAnnotation pointLightAnnotation(context, "Point Light Shadows " + std::to_string(i));
+        RenderPointLightShadows(pointLights[i]);
     }
 }
 
