@@ -22,9 +22,10 @@ private:
 public:
     explicit ShadowPass() = default;
     ~ShadowPass() override = default;
-    
+
     auto Initialise() -> void override;
     auto Render() -> void override;
+    auto GetPassName() const -> const std::string override { return "Shadow Pass"; }
 
 private:
     auto RenderDirectionalShadows() -> void;

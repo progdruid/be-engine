@@ -2,10 +2,14 @@
 #include <exception>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <windows.h>
 #include <type_traits>
+#include <d3d11.h>
+#include <d3d11_1.h>
+#include <wrl/client.h>
 
 namespace Utils {
   
@@ -124,7 +128,51 @@ namespace Utils {
     inline ID3D11SamplerState* NullSamplers     [D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT] = {};
     inline ID3D11ShaderResourceView* NullSRVs   [D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
     inline ID3D11RenderTargetView* NullRTVs     [D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
-    
+
+    // ========== Debug Annotation Helpers for RenderDoc/PIX ==========
+
+    /**
+     * BeDebugAnnotation provides RenderDoc/PIX debug marker support
+     * Usage:
+     *   {
+     *       BeDebugAnnotation marker(context, "Pass Name");
+     *       // ... rendering code ...
+     *   } // marker automatically ends on scope exit
+     */
+    class BeDebugAnnotation {
+    public:
+        explicit BeDebugAnnotation(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, const std::string& label)
+            : _context(context) {
+            if (!_context) return;
+
+            // Query for user-defined annotation interface
+            _context->QueryInterface(IID_PPV_ARGS(&_annotation));
+
+            if (_annotation) {
+                // Convert string to wide string for DirectX API
+                std::wstring wideLabel(label.begin(), label.end());
+                _annotation->BeginEvent(wideLabel.c_str());
+            }
+        }
+
+        ~BeDebugAnnotation() {
+            if (_annotation) {
+                _annotation->EndEvent();
+                // ComPtr automatically releases on destruction
+            }
+        }
+
+        // Deleted copy/move operations - markers should be scoped
+        BeDebugAnnotation(const BeDebugAnnotation&) = delete;
+        BeDebugAnnotation& operator=(const BeDebugAnnotation&) = delete;
+        BeDebugAnnotation(BeDebugAnnotation&&) = delete;
+        BeDebugAnnotation& operator=(BeDebugAnnotation&&) = delete;
+
+    private:
+        Microsoft::WRL::ComPtr<ID3D11DeviceContext> _context;
+        Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> _annotation;
+    };
+
 }
 
 

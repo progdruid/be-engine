@@ -25,7 +25,8 @@ private:
 public:
     explicit BeGeometryPass();
     ~BeGeometryPass() override;
-    
+
     auto Initialise() -> void override;
     auto Render() -> void override;
+    auto GetPassName() const -> const std::string override { return "Geometry Pass"; }
 };
