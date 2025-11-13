@@ -142,6 +142,12 @@ auto Program::run() -> int {
         .CustomWidth = 4096,
         .CustomHeight = 4096,
     });
+    renderer.CreateRenderResource("DirectionalLightShadowMapDS", false, BeRenderResource::BeResourceDescriptor {
+        .Format = DXGI_FORMAT_R32_TYPELESS,
+        .BindFlags = D3D11_BIND_DEPTH_STENCIL,
+        .CustomWidth = 4096,
+        .CustomHeight = 4096,
+    });
     renderer.CreateRenderResource("DepthStencil", true, BeRenderResource::BeResourceDescriptor {
         .Format = DXGI_FORMAT_R24G8_TYPELESS,
         .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
@@ -197,6 +203,14 @@ auto Program::run() -> int {
             .CustomWidth = 2048,
             .CustomHeight = 2048,
         });
+        renderer.CreateRenderResource(pointLight.ShadowMapTextureName+"DS", false, {
+            .IsCubemap = true,
+            .Format = DXGI_FORMAT_R32_TYPELESS,
+            .BindFlags = D3D11_BIND_DEPTH_STENCIL,
+            .CustomWidth = 2048,
+            .CustomHeight = 2048,
+        });
+        
         pointLights.push_back(pointLight);
     }
     renderer.SetContextDataPointer("PointLights", &pointLights);

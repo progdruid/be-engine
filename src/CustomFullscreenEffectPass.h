@@ -16,7 +16,8 @@ public:
 public:
     explicit CustomFullscreenEffectPass();
     ~CustomFullscreenEffectPass() override;
-    
+
     auto Initialise() -> void override;
     auto Render() -> void override;
+    auto GetPassName() const -> const std::string override { return "Effect Pass"; }
 };
