@@ -4,13 +4,37 @@
 {
     "vertex": "VertexFunction",
     "pixel": "PixelFunction",
-    "vertexLayout": ["position", "normal", "uv0"]
+    "vertexLayout": ["position", "normal", "uv0"],
+    "material": {
+        "DiffuseColor": { "type": "float3", "default": [1.0, 1.0, 1.0] },
+        "SpecularColor0": { "type": "float3", "default": [1.0, 1.0, 1.0] },
+        "Shininess0": { "type": "float", "default": -1.0 },
+        "SpecularColor1": { "type": "float3", "default": [1.0, 1.0, 1.0] },
+        "Shininess1": { "type": "float", "default": -1.0 },
+        "DiffuseTexture": { "type": "texture2d", "default": "white" },
+        "SpecularTexture": { "type": "texture2d", "default": "black" }
+    }
 }
 @be-shader-header-end
 */
 
 #include <BeUniformBuffer.hlsli>
-#include <BeMaterialBuffer.hlsli>
+
+cbuffer ModelBuffer: register(b1) {
+    row_major float4x4 _Model;
+}
+
+cbuffer MaterialBuffer: register(b2) {
+    float3 _DiffuseColor;
+    float3 _SpecularColor0;
+    float _Shininess0;
+    float3 _SpecularColor1;
+    float _Shininess1;
+};
+
+SamplerState DefaultSampler : register(s0);
+Texture2D DiffuseTexture : register(t0);
+Texture2D Specular : register(t1);
 
 struct VertexInput {
     float3 Position : POSITION;

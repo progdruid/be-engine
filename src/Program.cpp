@@ -21,6 +21,7 @@
 #include "BeComposerPass.h"
 #include "BeGeometryPass.h"
 #include "BeLightingPass.h"
+#include "BeMaterial.h"
 #include "BeShader.h"
 #include "CustomFullscreenEffectPass.h"
 #include "ShadowPass.h"
@@ -57,17 +58,17 @@ auto Program::run() -> int {
     const auto device = renderer.GetDevice();
 
     BeShader standardShader(device.Get(), "assets/shaders/standard" );
-
+    
     BeAssetImporter importer(device);
-    auto witchItems = importer.LoadModel("assets/witch_items.glb");
-    auto cube = importer.LoadModel("assets/cube.glb");
-    auto macintosh = importer.LoadModel("assets/model.fbx");
-    auto pagoda = importer.LoadModel("assets/pagoda.glb");
-    auto disks = importer.LoadModel("assets/floppy-disks.glb");
-    auto anvil = importer.LoadModel("assets/anvil/anvil.fbx");
-    anvil->DrawSlices[0].Material.SpecularColor = glm::vec4(1.0f);
-    anvil->DrawSlices[0].Material.SuperSpecularColor = glm::vec4(1.0f) * 3.f;
-    anvil->DrawSlices[0].Material.SuperShininess = 512.f;
+    auto witchItems = importer.LoadModel("assets/witch_items.glb", &standardShader);
+    auto cube = importer.LoadModel("assets/cube.glb", &standardShader);
+    auto macintosh = importer.LoadModel("assets/model.fbx", &standardShader);
+    auto pagoda = importer.LoadModel("assets/pagoda.glb", &standardShader);
+    auto disks = importer.LoadModel("assets/floppy-disks.glb", &standardShader);
+    auto anvil = importer.LoadModel("assets/anvil/anvil.fbx", &standardShader);
+    anvil->DrawSlices[0].Material->SetFloat3("SpecularColor0", glm::vec3(1.0f));
+    anvil->DrawSlices[0].Material->SetFloat3("SpecularColor1", glm::vec3(1.0f) * 3.f);
+    anvil->DrawSlices[0].Material->SetFloat("Shininess1", 512.f/2048.f);
     
 
     const std::vector<BeRenderer::ObjectEntry> objects = {
