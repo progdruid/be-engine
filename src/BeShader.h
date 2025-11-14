@@ -10,8 +10,9 @@
 
 #include "BeShaderIncludeHandler.hpp"
 #include "Utils.h"
+
 using Microsoft::WRL::ComPtr;
-using Json = nlohmann::json;
+using Json = nlohmann::ordered_json;
 
 
 enum class BeShaderType : uint8_t {
@@ -84,12 +85,41 @@ struct BeVertexElementDescriptor {
     BeVertexSemantic Attribute;
 };
 
+struct BeMaterialPropertyDescriptor {
+    enum class Type : uint8_t {
+        Float,
+        Float2,
+        Float3,
+        Float4
+    };
+
+    static inline const std::unordered_map<Type, uint32_t> SizeMap = {
+        {Type::Float,  1 * sizeof(float)},
+        {Type::Float2, 2 * sizeof(float)},
+        {Type::Float3, 3 * sizeof(float)},
+        {Type::Float4, 4 * sizeof(float)},
+    };
+
+    std::string Name;
+    Type PropertyType;
+    std::vector<float> DefaultValue;
+};
+
+struct BeMaterialTexturePropertyDescriptor {
+    std::string Name;
+    std::string DefaultTexturePath;
+};
+
 class BeShader {
 public:
     //get
     ComPtr<ID3D11VertexShader> VertexShader;
     ComPtr<ID3D11PixelShader> PixelShader;
     ComPtr<ID3D11InputLayout> ComputedInputLayout;
+
+    bool HasMaterial = false;
+    std::vector<BeMaterialPropertyDescriptor> MaterialProperties;
+    std::vector<BeMaterialTexturePropertyDescriptor> MaterialTextureProperties;
 
 private:
     BeShaderType _shaderType = BeShaderType::None;
@@ -103,16 +133,18 @@ public:
     inline auto GetShaderType () const -> BeShaderType  { return _shaderType; }
 
 private:
-    auto LoadVertexShader (const std::filesystem::path& filePath, const std::vector<BeVertexElementDescriptor>& vertexLayout, ID3D11Device* device, BeShaderIncludeHandler* includeHandler) -> void;
-    auto LoadPixelShader (const std::filesystem::path& filePath, ID3D11Device* device, BeShaderIncludeHandler* includeHandler) -> void;
-
     auto CompileBlob (
         const std::filesystem::path& filePath,
         const char* entrypointName,
         const char* target,
         BeShaderIncludeHandler* includeHandler
     ) -> ComPtr<ID3DBlob>;
+
     
-    auto ParseHeader (const std::string& src) -> Json;
+    static auto ParseHeader (const std::string& src) -> Json;
+
+    static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
+    static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;
+    static auto Split (std::string_view str, const char* delimiters) -> std::vector<std::string_view>;
 };
 

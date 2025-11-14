@@ -11,12 +11,12 @@ BeGeometryPass::~BeGeometryPass() = default;
 
 auto BeGeometryPass::Initialise() -> void {
     //material buffer
-    D3D11_BUFFER_DESC materialBufferDescriptor = {};
-    materialBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    materialBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
-    materialBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    materialBufferDescriptor.ByteWidth = sizeof(BeMaterialBufferGPU);
-    Utils::Check << _renderer->GetDevice()->CreateBuffer(&materialBufferDescriptor, nullptr, &_materialBuffer);
+    D3D11_BUFFER_DESC objectBufferDescriptor = {};
+    objectBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    objectBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
+    objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    objectBufferDescriptor.ByteWidth = sizeof(BeObjectBufferGPU);
+    Utils::Check << _renderer->GetDevice()->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer);
 
     //depth stencil state
     constexpr D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {
@@ -86,19 +86,23 @@ auto BeGeometryPass::Render() -> void {
             glm::mat4_cast(object.Rotation) *
             glm::scale(glm::mat4(1.0f), object.Scale);
         
-        for (const auto& slice : object.DrawSlices) {
-            
-            BeMaterialBufferGPU materialData(modelMatrix, slice.Material);
-            D3D11_MAPPED_SUBRESOURCE materialMappedResource;
-            Utils::Check << context->Map(_materialBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &materialMappedResource);
-            memcpy(materialMappedResource.pData, &materialData, sizeof(BeMaterialBufferGPU));
-            context->Unmap(_materialBuffer.Get(), 0);
-            context->VSSetConstantBuffers(1, 1, _materialBuffer.GetAddressOf());
-            context->PSSetConstantBuffers(1, 1, _materialBuffer.GetAddressOf());
+        BeObjectBufferGPU objectData(modelMatrix);
+        D3D11_MAPPED_SUBRESOURCE objectMappedResource;
+        Utils::Check << context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &objectMappedResource);
+        memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
+        context->Unmap(_objectBuffer.Get(), 0);
+        context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+        context->PSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         
+        for (const auto& slice : object.DrawSlices) {
+            slice.Material->UpdateGPUBuffers(context);
+            const auto& materialBuffer = slice.Material->GetBuffer();
+            context->VSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
+            context->PSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
+            
             ID3D11ShaderResourceView* materialResources[2] = {
-                slice.Material.DiffuseTexture ? slice.Material.DiffuseTexture->SRV.Get() : _whiteFallbackTexture.SRV.Get(),
-                slice.Material.SpecularTexture ? slice.Material.SpecularTexture->SRV.Get() : _whiteFallbackTexture.SRV.Get(),
+                slice.DiffuseTexture ? slice.DiffuseTexture->SRV.Get() : _whiteFallbackTexture.SRV.Get(),
+                slice.SpecularTexture ? slice.SpecularTexture->SRV.Get() : _whiteFallbackTexture.SRV.Get(),
             };
             context->PSSetShaderResources(0, 2, materialResources);
 
@@ -108,8 +112,6 @@ auto BeGeometryPass::Render() -> void {
             context->PSSetShaderResources(0, 2, emptyResources);
         }
     }
-    ID3D11ShaderResourceView* emptyResources[2] = { nullptr, nullptr };
-    context->PSSetShaderResources(0, 2, emptyResources); // clean material textures
-    ID3D11Buffer* emptyBuffers[1] = { nullptr };
-    context->VSSetConstantBuffers(1, 1, emptyBuffers); // clean material buffer
+    context->PSSetShaderResources(0, 2, Utils::NullSRVs); // clean material textures
+    context->VSSetConstantBuffers(1, 2, Utils::NullBuffers); // clean object and material buffers
 }

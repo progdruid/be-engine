@@ -22,7 +22,7 @@ private:
     Assimp::Importer _importer;
 
 public:
-    [[nodiscard]] auto LoadModel (const std::filesystem::path& modelPath) -> std::shared_ptr<BeModel>;
+    [[nodiscard]] auto LoadModel (const std::filesystem::path& modelPath, BeShader* usedShaderForMaterials) -> std::shared_ptr<BeModel>;
     [[nodiscard]] auto LoadTextureFromFile (const std::filesystem::path& texturePath) const -> std::shared_ptr<BeTexture>;
     
 private:

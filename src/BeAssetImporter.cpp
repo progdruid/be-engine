@@ -3,13 +3,15 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include "BeMaterial.h"
+#include "BeShader.h"
 #include "Utils.h"
 
 BeAssetImporter::BeAssetImporter(const ComPtr<ID3D11Device>& device) {
     _device = device;
 }
 
-auto BeAssetImporter::LoadModel(const std::filesystem::path& modelPath) -> std::shared_ptr<BeModel> {
+auto BeAssetImporter::LoadModel(const std::filesystem::path& modelPath, BeShader* usedShaderForMaterials) -> std::shared_ptr<BeModel> {
     constexpr auto flags = (
         aiProcess_Triangulate |
         aiProcess_GenNormals |
@@ -72,27 +74,29 @@ auto BeAssetImporter::LoadModel(const std::filesystem::path& modelPath) -> std::
         }
 
         auto meshMaterial = scene->mMaterials[mesh->mMaterialIndex];
-        BeMaterial material;
+        std::shared_ptr<BeMaterial> material = std::make_shared<BeMaterial>("mat" + std::to_string(i), usedShaderForMaterials, _device);
+        std::shared_ptr<BeTexture> diffuseTexture;
+        std::shared_ptr<BeTexture> specularTexture;
         aiString texPath;
         constexpr int diffuseTexIndex = 0;
         if (meshMaterial->GetTexture(aiTextureType_DIFFUSE, diffuseTexIndex, &texPath) == AI_SUCCESS) {
-            material.DiffuseTexture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path());
+            diffuseTexture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path());
         }
         constexpr int specularTexIndex = 0;
         if (meshMaterial->GetTexture(aiTextureType_SPECULAR, specularTexIndex, &texPath) == AI_SUCCESS) {
-            material.SpecularTexture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path());
+            specularTexture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path());
         }
 
         aiColor4D color{};
         if (meshMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {;
-            material.DiffuseColor = {color.r, color.g, color.b};
+            material->SetFloat3("DiffuseColor", {color.r, color.g, color.b});
         }
         if (meshMaterial->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {;
-            material.SpecularColor = {color.r, color.g, color.b};
+            material->SetFloat3("SpecularColor0", {color.r, color.g, color.b});
         }
         float shininess = 0.f;
         if (meshMaterial->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {;
-            material.Shininess = shininess;
+            material->SetFloat("Shininess0", shininess/2048.f);
         }
         
         
@@ -100,7 +104,9 @@ auto BeAssetImporter::LoadModel(const std::filesystem::path& modelPath) -> std::
             .IndexCount = mesh->mNumFaces * 3,
             .StartIndexLocation = indexOffset,
             .BaseVertexLocation = vertexOffset,
-            .Material = material
+            .DiffuseTexture = diffuseTexture,
+            .SpecularTexture = specularTexture,
+            .Material = material,
         });
         
         vertexOffset += mesh->mNumVertices;

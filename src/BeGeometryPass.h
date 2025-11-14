@@ -17,7 +17,7 @@ public:
     std::string OutputDepthTextureName;
     
 private:
-    ComPtr<ID3D11Buffer> _materialBuffer;
+    ComPtr<ID3D11Buffer> _objectBuffer;
     ComPtr<ID3D11DepthStencilState> _depthStencilState;
     
     BeTexture _whiteFallbackTexture {glm::vec4(1.0f)};
