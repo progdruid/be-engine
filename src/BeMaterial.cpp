@@ -1,11 +1,11 @@
 #include "BeMaterial.h"
 
 #include <cassert>
-#include <cstring>
 #include <sstream>
 #include <iomanip>
 
 #include "BeShader.h"
+#include "BeTexture.h"
 
 BeMaterial::BeMaterial(std::string name, BeShader* shader, const ComPtr<ID3D11Device>& device)
 : Name(std::move(name))
@@ -14,9 +14,16 @@ BeMaterial::BeMaterial(std::string name, BeShader* shader, const ComPtr<ID3D11De
 
     CalculateLayout();
 
-    for (const auto& property : shader->MaterialTextureProperties)
-        _textureValues[property.Name] = property.DefaultTexturePath;
-
+    for (const auto& property : shader->MaterialTextureProperties) {
+        std::shared_ptr<BeTexture> texture = nullptr;
+        if (property.DefaultTexturePath == "white")
+            texture = std::make_shared<BeTexture>(glm::vec4(1.f));
+        else if (property.DefaultTexturePath == "black")
+            texture = std::make_shared<BeTexture>(glm::vec4(0.f));
+        texture->CreateSRV(device);
+        _textures[property.Name] = {texture, property.SlotIndex};
+    }
+    
     D3D11_BUFFER_DESC bufferDesc = {};
     bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
@@ -61,9 +68,9 @@ auto BeMaterial::SetFloat4(const std::string& propertyName, glm::vec4 value) -> 
     _cbufferDirty = true;
 }
 
-auto BeMaterial::SetTexture(const std::string& propertyName, const std::string& texturePath) -> void {
-    assert(_textureValues.contains(propertyName));
-    _textureValues.at(propertyName) = texturePath;
+auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void {
+    assert(_textures.contains(propertyName));
+    _textures.at(propertyName).first = texture;
 }
 
 auto BeMaterial::GetFloat(const std::string& propertyName) const -> float {
@@ -98,9 +105,9 @@ auto BeMaterial::GetFloat4(const std::string& propertyName) const -> glm::vec4 {
     return value;
 }
 
-auto BeMaterial::GetTexture(const std::string& propertyName) -> std::string {
-    assert(_textureValues.contains(propertyName));
-    return _textureValues.at(propertyName);
+auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture> {
+    assert(_textures.contains(propertyName));
+    return _textures.at(propertyName).first;
 }
 
 auto BeMaterial::UpdateGPUBuffers(const ComPtr<ID3D11DeviceContext>& context) -> void {
@@ -127,7 +134,7 @@ auto BeMaterial::CalculateLayout() -> void {
             offsetBytes = ((offsetBytes / registerSizeBytes) + 1) * registerSizeBytes;
         }
 
-        _propertyOffsets[property.Name] = offsetBytes / 4;//todo: sizeof float
+        _propertyOffsets[property.Name] = offsetBytes / sizeof(float);
         offsetBytes += elementSizeBytes;
     }
 

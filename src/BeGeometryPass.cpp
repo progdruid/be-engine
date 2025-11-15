@@ -99,12 +99,11 @@ auto BeGeometryPass::Render() -> void {
             const auto& materialBuffer = slice.Material->GetBuffer();
             context->VSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
             context->PSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-            
-            ID3D11ShaderResourceView* materialResources[2] = {
-                slice.DiffuseTexture ? slice.DiffuseTexture->SRV.Get() : _whiteFallbackTexture.SRV.Get(),
-                slice.SpecularTexture ? slice.SpecularTexture->SRV.Get() : _whiteFallbackTexture.SRV.Get(),
-            };
-            context->PSSetShaderResources(0, 2, materialResources);
+
+            const auto& textureSlots = slice.Material->GetTexturePairs();
+            for (const auto& [texture, slot] : textureSlots | std::views::values) {
+                context->PSSetShaderResources(slot, 1, texture->SRV.GetAddressOf());
+            } 
 
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
         

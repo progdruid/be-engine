@@ -11,8 +11,8 @@
         "Shininess0": { "type": "float", "default": -1.0 },
         "SpecularColor1": { "type": "float3", "default": [1.0, 1.0, 1.0] },
         "Shininess1": { "type": "float", "default": -1.0 },
-        "DiffuseTexture": { "type": "texture2d", "default": "white" },
-        "SpecularTexture": { "type": "texture2d", "default": "black" }
+        "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
+        "SpecularTexture": { "type": "texture2d", "slot": 1, "default": "black" }
     }
 }
 @be-shader-header-end

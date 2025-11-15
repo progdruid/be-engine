@@ -107,6 +107,7 @@ struct BeMaterialPropertyDescriptor {
 
 struct BeMaterialTexturePropertyDescriptor {
     std::string Name;
+    uint8_t SlotIndex;
     std::string DefaultTexturePath;
 };
 
