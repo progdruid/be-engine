@@ -113,27 +113,29 @@ struct BeMaterialTexturePropertyDescriptor {
 
 class BeShader {
 public:
-    //get
+    // Static
+    static auto Create(ID3D11Device* device, const std::filesystem::path& filePath) -> std::shared_ptr<BeShader>;
+
+    // Data
     ComPtr<ID3D11VertexShader> VertexShader;
     ComPtr<ID3D11PixelShader> PixelShader;
     ComPtr<ID3D11InputLayout> ComputedInputLayout;
-
     bool HasMaterial = false;
     std::vector<BeMaterialPropertyDescriptor> MaterialProperties;
     std::vector<BeMaterialTexturePropertyDescriptor> MaterialTextureProperties;
 
-private:
-    BeShaderType _shaderType = BeShaderType::None;
 
-public:
-    BeShader(ID3D11Device* device, const std::filesystem::path& filePath);
+    // Lifecycle
+    BeShader() = default;
     ~BeShader() = default;
-    
-    auto Bind (ID3D11DeviceContext* context) const -> void;
 
+    // Public methods
+    auto Bind (ID3D11DeviceContext* context) const -> void;
     inline auto GetShaderType () const -> BeShaderType  { return _shaderType; }
 
 private:
+    BeShaderType _shaderType = BeShaderType::None;
+
     auto CompileBlob (
         const std::filesystem::path& filePath,
         const char* entrypointName,
@@ -141,9 +143,7 @@ private:
         BeShaderIncludeHandler* includeHandler
     ) -> ComPtr<ID3DBlob>;
 
-    
     static auto ParseHeader (const std::string& src) -> Json;
-
     static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
     static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;
     static auto Split (std::string_view str, const char* delimiters) -> std::vector<std::string_view>;

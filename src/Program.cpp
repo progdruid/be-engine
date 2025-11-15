@@ -14,7 +14,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <gtc/matrix_transform.hpp>
 
-#include "BeAssetCore.h"
+#include "BeAssetRegistry.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
 #include "BeCamera.h"
@@ -23,6 +23,8 @@
 #include "BeLightingPass.h"
 #include "BeMaterial.h"
 #include "BeShader.h"
+#include "BeTexture.h"
+#include "BeModel.h"
 #include "CustomFullscreenEffectPass.h"
 #include "ShadowPass.h"
 
@@ -57,15 +59,27 @@ auto Program::run() -> int {
     renderer.LaunchDevice();
     const auto device = renderer.GetDevice();
 
-    BeShader standardShader(device.Get(), "assets/shaders/standard" );
-    
-    BeAssetCore assetCore(device);
-    auto witchItems = assetCore.LoadModel("assets/witch_items.glb", &standardShader);
-    auto cube = assetCore.LoadModel("assets/cube.glb", &standardShader);
-    auto macintosh = assetCore.LoadModel("assets/model.fbx", &standardShader);
-    auto pagoda = assetCore.LoadModel("assets/pagoda.glb", &standardShader);
-    auto disks = assetCore.LoadModel("assets/floppy-disks.glb", &standardShader);
-    auto anvil = assetCore.LoadModel("assets/anvil/anvil.fbx", &standardShader);
+    // Asset system setup
+    BeAssetRegistry registry;
+
+    // Create builtin textures
+    auto whiteTexture = BeTexture::CreateFromColor(glm::vec4(1.f), device);
+    registry.AddTexture("white", whiteTexture);
+    auto blackTexture = BeTexture::CreateFromColor(glm::vec4(0.f), device);
+    registry.AddTexture("black", blackTexture);
+
+    // Create shader
+    auto standardShader = BeShader::Create(device.Get(), "assets/shaders/standard");
+    registry.AddShader("standard", standardShader);
+
+    // Create models
+    auto witchItems = BeModel::Create("assets/witch_items.glb", standardShader, registry, device);
+    auto cube = BeModel::Create("assets/cube.glb", standardShader, registry, device);
+    auto macintosh = BeModel::Create("assets/model.fbx", standardShader, registry, device);
+    auto pagoda = BeModel::Create("assets/pagoda.glb", standardShader, registry, device);
+    auto disks = BeModel::Create("assets/floppy-disks.glb", standardShader, registry, device);
+    auto anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, registry, device);
+
     anvil->DrawSlices[0].Material->SetFloat3("SpecularColor0", glm::vec3(1.0f));
     anvil->DrawSlices[0].Material->SetFloat3("SpecularColor1", glm::vec3(1.0f) * 3.f);
     anvil->DrawSlices[0].Material->SetFloat("Shininess1", 512.f/2048.f);
@@ -75,60 +89,60 @@ auto Program::run() -> int {
         {
             .Name = "Macintosh",
             .Position = {0, 0, -7},
-            .Model = macintosh.get(),
-            .Shader = &standardShader,
+            .Model = macintosh,
+            .Shader = standardShader,
         },
         {
             .Name = "Plane",
             .Position = {50, 0, -50},
             .Scale = glm::vec3(100.f, 0.1f, 100.f),
-            .Model = cube.get(),
-            .Shader = &standardShader,
+            .Model = cube,
+            .Shader = standardShader,
         },
         {
             .Name = "Pagoda",
             .Position = {0, 0, 8},
             .Scale = glm::vec3(0.2f),
-            .Model = pagoda.get(),
-            .Shader = &standardShader,
+            .Model = pagoda,
+            .Shader = standardShader,
         },
         {
             .Name = "Witch Items",
             .Position = {-3, 2, 5},
             .Scale = glm::vec3(3.f),
-            .Model = witchItems.get(),
-            .Shader = &standardShader,
+            .Model = witchItems,
+            .Shader = standardShader,
         },
         {
             .Name = "Anvil",
             .Position = {7, 0, 5},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(90.f), 0)),
             .Scale = glm::vec3(0.2f),
-            .Model = anvil.get(),
-            .Shader = &standardShader,
+            .Model = anvil,
+            .Shader = standardShader,
         },
         {
             .Name = "Anvil1",
             .Position = {-7, 0, -3},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(-90.f), 0)),
             .Scale = glm::vec3(0.2f),
-            .Model = anvil.get(),
-            .Shader = &standardShader,
+            .Model = anvil,
+            .Shader = standardShader,
         },
         {
             .Name = "Anvil2",
             .Position = {-17, -10, -3},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(-90.f), 0)),
             .Scale = glm::vec3(1.0f),
-            .Model = anvil.get(),
-            .Shader = &standardShader,
+            .Model = anvil,
+            .Shader = standardShader,
         },
         {
             .Name = "Disks",
             .Position = {7.5f, 1, -4},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(150.f), 0)),
-            .Model = disks.get(),
-            .Shader = &standardShader,
+            .Model = disks,
+            .Shader = standardShader,
         },
     };
 
@@ -242,7 +256,7 @@ auto Program::run() -> int {
     lightingPass->OutputTextureName = "Lighting";
 
     // Cel shader pass
-    auto effectShader = std::make_unique<BeShader>(device.Get(), "assets/shaders/effects/usedEffect");
+    auto effectShader = BeShader::Create(device.Get(), "assets/shaders/effects/usedEffect");
     auto effectPass = new CustomFullscreenEffectPass();
     renderer.AddRenderPass(effectPass);
     effectPass->InputTextureNames = {"Lighting", "DepthStencil", "WorldNormal"};

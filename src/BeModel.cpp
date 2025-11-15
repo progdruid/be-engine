@@ -1,1 +1,158 @@
 #include "BeModel.h"
+
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+#include "BeShader.h"
+#include "BeTexture.h"
+#include "BeAssetRegistry.h"
+#include "Utils.h"
+
+auto BeModel::Create(const std::filesystem::path& modelPath, std::weak_ptr<BeShader> usedShaderForMaterials, BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeModel> {
+    constexpr auto flags = (
+        aiProcess_Triangulate |
+        aiProcess_GenNormals |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_ImproveCacheLocality |
+        aiProcess_CalcTangentSpace |
+        aiProcess_ValidateDataStructure |
+        aiProcess_OptimizeMeshes |
+        aiProcess_OptimizeGraph);
+
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(modelPath.string().c_str(), flags);
+    if (!scene || !scene->mRootNode)
+        throw std::runtime_error("Failed to load model: " + modelPath.string());
+
+    auto model = std::make_shared<BeModel>();
+    model->DrawSlices.reserve(scene->mNumMeshes);
+
+    size_t numVertices = 0;
+    size_t numIndices = 0;
+    for (unsigned i = 0; i < scene->mNumMeshes; ++i) {
+        const auto mesh = scene->mMeshes[i];
+        numVertices += mesh->mNumVertices;
+        numIndices += 3 * mesh->mNumFaces;
+    }
+
+    model->FullVertices.reserve(numVertices);
+    model->Indices.reserve(numIndices);
+
+    int32_t vertexOffset = 0;
+    uint32_t indexOffset = 0;
+    for (size_t i = 0; i < scene->mNumMeshes; ++i) {
+        const auto mesh = scene->mMeshes[i];
+
+        for (size_t v = 0; v < mesh->mNumVertices; ++v) {
+            BeFullVertex vertex{};
+            aiVector3D position = mesh->mVertices[v];
+            aiVector3D normal = mesh->HasNormals() ? mesh->mNormals[v] : aiVector3D(0.f, 1.f, 0.f);
+            aiColor4D color = mesh->HasVertexColors(0) ? mesh->mColors[0][v] : aiColor4D(1, 1, 1, 1);
+            aiVector3D texCoord0 = mesh->HasTextureCoords(0) ? mesh->mTextureCoords[0][v] : aiVector3D(0.f, 0.f, 0.f);
+            aiVector3D texCoord1 = mesh->HasTextureCoords(1) ? mesh->mTextureCoords[1][v] : aiVector3D(0.f, 0.f, 0.f);
+            aiVector3D texCoord2 = mesh->HasTextureCoords(2) ? mesh->mTextureCoords[2][v] : aiVector3D(0.f, 0.f, 0.f);
+            vertex.Position = {-position.x, position.y, position.z};
+            vertex.Normal = {-normal.x, normal.y, normal.z};
+            vertex.Color = {color.r, color.g, color.b, color.a};
+            vertex.UV0 = {texCoord0.x, texCoord0.y};
+            vertex.UV1 = {texCoord1.x, texCoord1.y};
+            vertex.UV2 = {texCoord2.x, texCoord2.y};
+            model->FullVertices.push_back(vertex);
+        }
+
+        for (size_t f = 0; f < mesh->mNumFaces; ++f) {
+            const aiFace& face = mesh->mFaces[f];
+            if (face.mNumIndices != 3) continue;
+            model->Indices.push_back(face.mIndices[0]);
+            model->Indices.push_back(face.mIndices[2]);
+            model->Indices.push_back(face.mIndices[1]);
+        }
+
+        auto material = BeMaterial::Create("mat" + std::to_string(i), usedShaderForMaterials, registry, device);
+
+        auto meshMaterial = scene->mMaterials[mesh->mMaterialIndex];
+        aiString texPath;
+        constexpr int diffuseTexIndex = 0;
+        if (meshMaterial->GetTexture(aiTextureType_DIFFUSE, diffuseTexIndex, &texPath) == AI_SUCCESS) {
+            auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), registry, device);
+            material->SetTexture("DiffuseTexture", texture);
+        }
+        constexpr int specularTexIndex = 0;
+        if (meshMaterial->GetTexture(aiTextureType_SPECULAR, specularTexIndex, &texPath) == AI_SUCCESS) {
+            auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), registry, device);
+            material->SetTexture("SpecularTexture", texture);
+        }
+
+        aiColor4D color{};
+        if (meshMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
+            material->SetFloat3("DiffuseColor", {color.r, color.g, color.b});
+        }
+        if (meshMaterial->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {
+            material->SetFloat3("SpecularColor0", {color.r, color.g, color.b});
+        }
+        float shininess = 0.f;
+        if (meshMaterial->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
+            material->SetFloat("Shininess0", shininess / 2048.f);
+        }
+
+        model->DrawSlices.push_back({
+            .IndexCount = mesh->mNumFaces * 3,
+            .StartIndexLocation = indexOffset,
+            .BaseVertexLocation = vertexOffset,
+            .Material = material,
+        });
+
+        vertexOffset += mesh->mNumVertices;
+        indexOffset += mesh->mNumFaces * 3;
+    }
+
+    return model;
+}
+
+auto BeModel::LoadTextureFromAssimpPath(const aiString& texPath, const aiScene* scene, const std::filesystem::path& parentPath, BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeTexture> {
+    if (texPath.C_Str()[0] != '*') {
+        const auto filename = std::filesystem::path(texPath.C_Str()).filename();
+        std::filesystem::path path = parentPath / filename;
+        if (std::filesystem::exists(path))
+            return BeTexture::CreateFromFile(path, device);
+        path = parentPath / "textures" / filename;
+        if (std::filesystem::exists(path))
+            return BeTexture::CreateFromFile(path, device);
+        path = parentPath / "images" / filename;
+        if (std::filesystem::exists(path))
+            return BeTexture::CreateFromFile(path, device);
+        throw std::runtime_error("Texture file not found: " + filename.string());
+    }
+
+    char* endPtr;
+    const long texIndex = std::strtol(texPath.C_Str() + 1, &endPtr, 10);
+    const aiTexture* aiTex = scene->mTextures[texIndex];
+
+    // handle compressed texture
+    if (aiTex->mHeight == 0) {
+        int w = 0, h = 0, channelsInFile = 0;
+        uint8_t* decoded = stbi_load_from_memory(reinterpret_cast<const uint8_t*>(aiTex->pcData), aiTex->mWidth, &w, &h, &channelsInFile, 4);
+        if (!decoded) throw std::runtime_error("Failed to decode embedded texture");
+
+        auto texture = BeTexture::CreateFromMemory(decoded, w, h, device);
+        stbi_image_free(decoded);
+        return texture;
+    }
+
+    // decoded texture
+    const size_t pixelCount = aiTex->mWidth * aiTex->mHeight;
+    uint8_t* converted = static_cast<uint8_t*>(malloc(pixelCount * 4));
+    const uint8_t* srcData = reinterpret_cast<const uint8_t*>(aiTex->pcData);
+    for (size_t i = 0; i < pixelCount; ++i) {
+        converted[i * 4 + 0] = srcData[i * 4 + 2]; // B -> R
+        converted[i * 4 + 1] = srcData[i * 4 + 1]; // G
+        converted[i * 4 + 2] = srcData[i * 4 + 0]; // R -> B
+        converted[i * 4 + 3] = srcData[i * 4 + 3]; // A
+    }
+    auto texture = BeTexture::CreateFromMemory(converted, aiTex->mWidth, aiTex->mHeight, device);
+    free(converted);
+    return texture;
+}

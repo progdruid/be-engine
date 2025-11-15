@@ -1,5 +1,6 @@
 ﻿#include "BeRenderer.h"
 
+#include <cassert>
 #include <scope_guard.hpp>
 
 #include "BeRenderPass.h"
@@ -120,7 +121,7 @@ auto BeRenderer::LaunchDevice() -> void {
     samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
     Utils::Check << _device->CreateSamplerState(&samplerDesc, &_pointSampler);
 
-    _fullscreenShader = std::make_unique<BeShader>(_device.Get(),"assets/shaders/fullscreen");
+    _fullscreenShader = BeShader::Create(_device.Get(),"assets/shaders/fullscreen");
 }
 
 auto BeRenderer::AddRenderPass(BeRenderPass* renderPass) -> void {
@@ -171,27 +172,31 @@ auto BeRenderer::Render() -> void {
 
 auto BeRenderer::SetObjects(const std::vector<ObjectEntry>& objects) -> void {
     _objects = objects;
-    
+
     //vbo + ibo
     size_t totalVerticesNumber = 0;
     size_t totalIndicesNumber = 0;
     size_t totalDrawSlices = 0;
     for (const auto& object : _objects) {
-        totalVerticesNumber += object.Model->FullVertices.size();
-        totalIndicesNumber += object.Model->Indices.size();
-        totalDrawSlices += object.Model->DrawSlices.size();
+        auto model = object.Model.lock();
+        assert(model);
+        totalVerticesNumber += model->FullVertices.size();
+        totalIndicesNumber += model->Indices.size();
+        totalDrawSlices += model->DrawSlices.size();
     }
-    
+
     std::vector<BeFullVertex> fullVertices;
     std::vector<uint32_t> indices;
     fullVertices.reserve(totalVerticesNumber);
     indices.reserve(totalIndicesNumber);
     for (auto& object : _objects) {
-        fullVertices.insert(fullVertices.end(), object.Model->FullVertices.begin(), object.Model->FullVertices.end());
-        indices.insert(indices.end(), object.Model->Indices.begin(), object.Model->Indices.end());
-        for (BeModel::BeDrawSlice slice : object.Model->DrawSlices) {
-            slice.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - object.Model->FullVertices.size());
-            slice.StartIndexLocation += static_cast<uint32_t>(indices.size() - object.Model->Indices.size());
+        auto model = object.Model.lock();
+        assert(model);
+        fullVertices.insert(fullVertices.end(), model->FullVertices.begin(), model->FullVertices.end());
+        indices.insert(indices.end(), model->Indices.begin(), model->Indices.end());
+        for (BeModel::BeDrawSlice slice : model->DrawSlices) {
+            slice.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - model->FullVertices.size());
+            slice.StartIndexLocation += static_cast<uint32_t>(indices.size() - model->Indices.size());
             object.DrawSlices.push_back(slice);
         }
     }
