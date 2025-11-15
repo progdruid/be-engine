@@ -14,8 +14,8 @@ public:
     std::string InputPointLightsName;
 
 private:
-    std::unique_ptr<BeShader> _directionalShadowShader;
-    std::unique_ptr<BeShader> _pointShadowShader;
+    std::shared_ptr<BeShader> _directionalShadowShader;
+    std::shared_ptr<BeShader> _pointShadowShader;
 
     ComPtr<ID3D11Buffer> _shadowConstantBuffer;
     

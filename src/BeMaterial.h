@@ -12,10 +12,15 @@ class BeShader;
 
 using Microsoft::WRL::ComPtr;
 
+class BeAssetRegistry;
+
 class BeMaterial {
 public:
+    // Static
+    static auto Create(std::string_view name, std::weak_ptr<BeShader> shader, BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeMaterial>;
+
     std::string Name;
-    BeShader* Shader;
+    std::weak_ptr<BeShader> Shader;
 
 private:
     std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>> _textures;
@@ -23,9 +28,9 @@ private:
     std::vector<float> _bufferData;
     ComPtr<ID3D11Buffer> _cbuffer = nullptr;
     bool _cbufferDirty;
-    
+
 public:
-    explicit BeMaterial(std::string name, BeShader* shader, const ComPtr<ID3D11Device>& device);
+    BeMaterial() = default;
     ~BeMaterial();
 
     BeMaterial(const BeMaterial& other) = default;
@@ -33,6 +38,12 @@ public:
     BeMaterial& operator=(const BeMaterial& other) = default;
     BeMaterial& operator=(BeMaterial&& other) noexcept = default;
 
+    explicit BeMaterial(std::string name, std::weak_ptr<BeShader> shader, const ComPtr<ID3D11Device>& device);
+
+private:
+    auto InitializeTextures(BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> void;
+
+public:
     auto SetFloat  (const std::string& propertyName, float value) -> void;
     auto SetFloat2 (const std::string& propertyName, glm::vec2 value) -> void;
     auto SetFloat3 (const std::string& propertyName, glm::vec3 value) -> void;

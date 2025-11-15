@@ -1,9 +1,14 @@
 #pragma once
 #include <filesystem>
+#include <memory>
+#include <d3d11.h>
+#include <wrl/client.h>
 #include <glm.hpp>
 #include <assimp/scene.h>
 
 #include "BeMaterial.h"
+
+using Microsoft::WRL::ComPtr;
 
 class BeTexture;
 
@@ -24,10 +29,14 @@ struct BeModel {
         std::shared_ptr<BeMaterial> Material = nullptr;
     };
 
-    BeModel() = default;
-    ~BeModel() = default;
+    // Static
+    static auto Create(const std::filesystem::path& modelPath, std::weak_ptr<BeShader> usedShaderForMaterials, class BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeModel>;
+    static auto LoadTextureFromAssimpPath(const struct aiString& texPath, const struct aiScene* scene, const std::filesystem::path& parentPath, class BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeTexture>;
 
     std::vector<BeDrawSlice> DrawSlices;
     std::vector<BeFullVertex> FullVertices;
     std::vector<uint32_t> Indices;
+
+    BeModel() = default;
+    ~BeModel() = default;
 };

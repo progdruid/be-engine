@@ -42,8 +42,8 @@ auto BeLightingPass::Initialise() -> void {
     pointLightBufferDescriptor.ByteWidth = sizeof(BePointLightLightingBufferGPU);
     Utils::Check << device->CreateBuffer(&pointLightBufferDescriptor, nullptr, &_pointLightBuffer);
 
-    _directionalLightShader = std::make_unique<BeShader>( device.Get(), "assets/shaders/directionalLight");
-    _pointLightShader = std::make_unique<BeShader>(device.Get(), "assets/shaders/pointLight" );
+    _directionalLightShader = BeShader::Create( device.Get(), "assets/shaders/directionalLight");
+    _pointLightShader = BeShader::Create(device.Get(), "assets/shaders/pointLight" );
 }
 
 auto BeLightingPass::Render() -> void {
