@@ -21,8 +21,6 @@ struct BeModel {
         uint32_t IndexCount;
         uint32_t StartIndexLocation;
         int32_t BaseVertexLocation;
-        std::shared_ptr<BeTexture> DiffuseTexture = nullptr;
-        std::shared_ptr<BeTexture> SpecularTexture = nullptr;
         std::shared_ptr<BeMaterial> Material = nullptr;
     };
 

@@ -5,7 +5,7 @@
 #include "BeModel.h"
 #include "BeTexture.h"
 
-class BeAssetImporter {
+class BeAssetCore {
 private:
     struct DecodedImage {
         uint8_t* Pixels = nullptr; // RGBA8
@@ -14,16 +14,21 @@ private:
     };
     
 public:
-    explicit BeAssetImporter(const ComPtr<ID3D11Device>& device);
-    ~BeAssetImporter() = default;
+    explicit BeAssetCore(const ComPtr<ID3D11Device>& device);
+    ~BeAssetCore() = default;
     
 private:
     ComPtr<ID3D11Device> _device;
     Assimp::Importer _importer;
 
+    //std::unordered_map<std::string, std::shared_ptr<BeTexture>> _textures;
+    //std::unordered_map<std::string, std::shared_ptr<BeShader>> _shaders;
+    //std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _materials;
+    //std::unordered_map<std::string, std::shared_ptr<BeModel>> _models;
+    
 public:
-    [[nodiscard]] auto LoadModel (const std::filesystem::path& modelPath, BeShader* usedShaderForMaterials) -> std::shared_ptr<BeModel>;
-    [[nodiscard]] auto LoadTextureFromFile (const std::filesystem::path& texturePath) const -> std::shared_ptr<BeTexture>;
+    auto LoadModel (const std::filesystem::path& modelPath, BeShader* usedShaderForMaterials) -> std::shared_ptr<BeModel>;
+    auto LoadTextureFromFile (const std::filesystem::path& texturePath) const -> std::shared_ptr<BeTexture>;
     
 private:
     auto LoadTextureFromAssimpPath (const aiString& texPath, const aiScene* scene, const std::filesystem::path& parentPath) const -> std::shared_ptr<BeTexture>;
