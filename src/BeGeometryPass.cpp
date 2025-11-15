@@ -18,16 +18,6 @@ auto BeGeometryPass::Initialise() -> void {
     objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     objectBufferDescriptor.ByteWidth = sizeof(BeObjectBufferGPU);
     Utils::Check << _renderer->GetDevice()->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer);
-
-    //depth stencil state
-    constexpr D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {
-        .DepthEnable = true,
-        .DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL,
-        .DepthFunc = D3D11_COMPARISON_LESS,
-        .StencilEnable = false,
-    };
-    Utils::Check << _renderer->GetDevice()->CreateDepthStencilState(&depthStencilStateDescriptor, _depthStencilState.GetAddressOf());
-    _renderer->GetContext()->OMSetDepthStencilState(_depthStencilState.Get(), 1);
 }
 
 auto BeGeometryPass::Render() -> void {

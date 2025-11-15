@@ -121,6 +121,15 @@ auto BeRenderer::LaunchDevice() -> void {
     samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
     Utils::Check << _device->CreateSamplerState(&samplerDesc, &_pointSampler);
 
+    // Default depth stencil state
+    D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {};
+    depthStencilStateDescriptor.DepthEnable = true;
+    depthStencilStateDescriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    depthStencilStateDescriptor.DepthFunc = D3D11_COMPARISON_LESS;
+    depthStencilStateDescriptor.StencilEnable = false;
+    Utils::Check << _device->CreateDepthStencilState(&depthStencilStateDescriptor, _defaultDepthStencilState.GetAddressOf());
+    _context->OMSetDepthStencilState(_defaultDepthStencilState.Get(), 1);
+    
     _fullscreenShader = BeShader::Create(_device.Get(),"assets/shaders/fullscreen");
 }
 

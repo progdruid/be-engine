@@ -45,6 +45,7 @@ auto ShadowPass::RenderDirectionalShadows() -> void {
     const auto context = _renderer->GetContext();
     const auto& directionalLight = *_renderer->GetContextDataPointer<BeDirectionalLight>(InputDirectionalLightName);
     const auto directionalShadowMap = _renderer->GetRenderResource(directionalLight.ShadowMapTextureName);
+    const auto directionalShadowMapDS = _renderer->GetRenderResource(directionalLight.ShadowMapTextureName+std::string("DS"));
 
     // sort out viewport
     D3D11_VIEWPORT viewport = {};
@@ -55,8 +56,9 @@ auto ShadowPass::RenderDirectionalShadows() -> void {
     context->RSSetViewports(1, &viewport);
 
     // sort out render target
-    context->OMSetRenderTargets(1, directionalShadowMap->RTV.GetAddressOf(), nullptr);
+    context->OMSetRenderTargets(1, directionalShadowMap->RTV.GetAddressOf(), directionalShadowMapDS->DSV.Get());
     context->ClearRenderTargetView(directionalShadowMap->RTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
+    context->ClearDepthStencilView(directionalShadowMapDS->DSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     SCOPE_EXIT { context->OMSetRenderTargets(0, nullptr, nullptr); };
 
     // sort out shader
@@ -106,6 +108,7 @@ auto ShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void
     // get what we need
     const auto context = _renderer->GetContext();
     const auto pointShadowMap = _renderer->GetRenderResource(pointLight.ShadowMapTextureName);
+    const auto pointShadowMapDS = _renderer->GetRenderResource(pointLight.ShadowMapTextureName+std::string("DS"));
     
     // sort out shader
     _pointShadowShader->Bind(context.Get());
@@ -129,13 +132,15 @@ auto ShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     context->RSSetViewports(1, &viewport);
-    
+
     // render each face
     for (int face = 0; face < 6; face++) {
         // sort out render target
         auto cubemapRTV = pointShadowMap->GetCubemapRTV(face);
+        auto cubemapDSV = pointShadowMapDS->GetCubemapDSV(face);
         context->ClearRenderTargetView(cubemapRTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
-        context->OMSetRenderTargets(1, cubemapRTV.GetAddressOf(), nullptr);
+        context->ClearDepthStencilView(cubemapDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+        context->OMSetRenderTargets(1, cubemapRTV.GetAddressOf(), cubemapDSV.Get());
 
         const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
