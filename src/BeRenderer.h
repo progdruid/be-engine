@@ -57,6 +57,7 @@ private:
 
     ComPtr<ID3D11Buffer> _uniformBuffer;
     ComPtr<ID3D11SamplerState> _pointSampler;
+    ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
     std::shared_ptr<BeShader> _fullscreenShader = nullptr;
 
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
