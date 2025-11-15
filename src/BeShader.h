@@ -114,8 +114,9 @@ struct BeMaterialTexturePropertyDescriptor {
 class BeShader {
 public:
     // Static
+    static inline std::string StandardShaderIncludePath = "src/shaders/";
     static auto Create(ID3D11Device* device, const std::filesystem::path& filePath) -> std::shared_ptr<BeShader>;
-
+    
     // Data
     ComPtr<ID3D11VertexShader> VertexShader;
     ComPtr<ID3D11PixelShader> PixelShader;

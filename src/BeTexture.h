@@ -3,7 +3,7 @@
 #include <wrl/client.h>
 #include <d3d11.h>
 #include <filesystem>
-#include <glm.hpp>
+#include <umbrellas/include-glm.h>
 
 using Microsoft::WRL::ComPtr;
 

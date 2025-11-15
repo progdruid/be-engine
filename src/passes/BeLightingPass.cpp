@@ -1,7 +1,7 @@
 ﻿#include "BeLightingPass.h"
 
-#include <scope_guard.hpp>
-#include <gtc/type_ptr.inl>
+#include <scope_guard/scope_guard.hpp>
+#include <umbrellas/include-glm.h>
 
 #include "BeRenderer.h"
 #include "BeShader.h"
@@ -11,7 +11,7 @@
 BeLightingPass::BeLightingPass() = default;
 BeLightingPass::~BeLightingPass() = default;
 
-auto BeLightingPass::Initialise() -> void {
+void BeLightingPass::Initialise() {
     const auto device = _renderer->GetDevice();
 
     // Additive blending for lights

@@ -1,12 +1,11 @@
 ﻿#pragma once
 
 #include <d3d11.h>
-#include <dxgi1_6.h>
 #include <vector>
 #include <wrl/client.h>
 #include <memory>
 #include <unordered_map>
-#include <gtc/quaternion.hpp>
+#include <umbrellas/include-glm.h>
 
 #include "BeModel.h"
 #include "BeBuffers.h"

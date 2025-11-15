@@ -1,14 +1,14 @@
-﻿#include "CustomFullscreenEffectPass.h"
+﻿#include "BeFullscreenEffectPass.h"
 
 #include "BeRenderer.h"
 #include "BeShader.h"
 
-CustomFullscreenEffectPass::CustomFullscreenEffectPass() = default;
-CustomFullscreenEffectPass::~CustomFullscreenEffectPass() = default;
+BeFullscreenEffectPass::BeFullscreenEffectPass() = default;
+BeFullscreenEffectPass::~BeFullscreenEffectPass() = default;
 
-auto CustomFullscreenEffectPass::Initialise() -> void {}
+auto BeFullscreenEffectPass::Initialise() -> void {}
 
-auto CustomFullscreenEffectPass::Render() -> void {
+auto BeFullscreenEffectPass::Render() -> void {
     const auto context = _renderer->GetContext();
 
     // Set input resources
