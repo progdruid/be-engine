@@ -1,8 +1,5 @@
 ﻿#pragma once
 #include <d3d11.h>
-#include <glm.hpp>
-#include <gtc/quaternion.hpp>
-#include "BeModel.h"
 
 #include "BeRenderPass.h"
 #include "BeTexture.h"

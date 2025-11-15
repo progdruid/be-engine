@@ -1,8 +1,8 @@
 ﻿#include "BeGeometryPass.h"
 
 #include <cassert>
-#include <scope_guard.hpp>
-#include <gtc/type_ptr.inl>
+#include <scope_guard/scope_guard.hpp>
+#include <umbrellas/include-glm.h>
 
 #include "BeRenderer.h"
 #include "Utils.h"
