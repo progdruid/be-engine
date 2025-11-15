@@ -14,7 +14,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <gtc/matrix_transform.hpp>
 
-#include "BeAssetImporter.h"
+#include "BeAssetCore.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
 #include "BeCamera.h"
@@ -59,13 +59,13 @@ auto Program::run() -> int {
 
     BeShader standardShader(device.Get(), "assets/shaders/standard" );
     
-    BeAssetImporter importer(device);
-    auto witchItems = importer.LoadModel("assets/witch_items.glb", &standardShader);
-    auto cube = importer.LoadModel("assets/cube.glb", &standardShader);
-    auto macintosh = importer.LoadModel("assets/model.fbx", &standardShader);
-    auto pagoda = importer.LoadModel("assets/pagoda.glb", &standardShader);
-    auto disks = importer.LoadModel("assets/floppy-disks.glb", &standardShader);
-    auto anvil = importer.LoadModel("assets/anvil/anvil.fbx", &standardShader);
+    BeAssetCore assetCore(device);
+    auto witchItems = assetCore.LoadModel("assets/witch_items.glb", &standardShader);
+    auto cube = assetCore.LoadModel("assets/cube.glb", &standardShader);
+    auto macintosh = assetCore.LoadModel("assets/model.fbx", &standardShader);
+    auto pagoda = assetCore.LoadModel("assets/pagoda.glb", &standardShader);
+    auto disks = assetCore.LoadModel("assets/floppy-disks.glb", &standardShader);
+    auto anvil = assetCore.LoadModel("assets/anvil/anvil.fbx", &standardShader);
     anvil->DrawSlices[0].Material->SetFloat3("SpecularColor0", glm::vec3(1.0f));
     anvil->DrawSlices[0].Material->SetFloat3("SpecularColor1", glm::vec3(1.0f) * 3.f);
     anvil->DrawSlices[0].Material->SetFloat("Shininess1", 512.f/2048.f);

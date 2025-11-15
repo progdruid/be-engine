@@ -35,6 +35,7 @@ BeShader::BeShader(ID3D11Device* device, const std::filesystem::path& filePath) 
             if (value["type"].get<std::string>() == "texture2d") {
                 BeMaterialTexturePropertyDescriptor descriptor;
                 descriptor.Name = key;
+                descriptor.SlotIndex = value.at("slot").get<int>();
                 descriptor.DefaultTexturePath = value.at("default").get<std::string>();
                 MaterialTextureProperties.push_back(descriptor);
                 continue;

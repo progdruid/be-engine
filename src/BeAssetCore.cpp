@@ -1,4 +1,4 @@
-﻿#include "BeAssetImporter.h"
+﻿#include "BeAssetCore.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -7,11 +7,11 @@
 #include "BeShader.h"
 #include "Utils.h"
 
-BeAssetImporter::BeAssetImporter(const ComPtr<ID3D11Device>& device) {
+BeAssetCore::BeAssetCore(const ComPtr<ID3D11Device>& device) {
     _device = device;
 }
 
-auto BeAssetImporter::LoadModel(const std::filesystem::path& modelPath, BeShader* usedShaderForMaterials) -> std::shared_ptr<BeModel> {
+auto BeAssetCore::LoadModel(const std::filesystem::path& modelPath, BeShader* usedShaderForMaterials) -> std::shared_ptr<BeModel> {
     constexpr auto flags = (
         aiProcess_Triangulate |
         aiProcess_GenNormals |
@@ -73,18 +73,17 @@ auto BeAssetImporter::LoadModel(const std::filesystem::path& modelPath, BeShader
             model->Indices.push_back(face.mIndices[1]);
         }
 
-        auto meshMaterial = scene->mMaterials[mesh->mMaterialIndex];
         std::shared_ptr<BeMaterial> material = std::make_shared<BeMaterial>("mat" + std::to_string(i), usedShaderForMaterials, _device);
-        std::shared_ptr<BeTexture> diffuseTexture;
-        std::shared_ptr<BeTexture> specularTexture;
+
+        auto meshMaterial = scene->mMaterials[mesh->mMaterialIndex];
         aiString texPath;
         constexpr int diffuseTexIndex = 0;
         if (meshMaterial->GetTexture(aiTextureType_DIFFUSE, diffuseTexIndex, &texPath) == AI_SUCCESS) {
-            diffuseTexture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path());
+            material->SetTexture("DiffuseTexture", LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path()));
         }
         constexpr int specularTexIndex = 0;
         if (meshMaterial->GetTexture(aiTextureType_SPECULAR, specularTexIndex, &texPath) == AI_SUCCESS) {
-            specularTexture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path());
+            material->SetTexture("SpecularTexture", LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path()));
         }
 
         aiColor4D color{};
@@ -104,8 +103,6 @@ auto BeAssetImporter::LoadModel(const std::filesystem::path& modelPath, BeShader
             .IndexCount = mesh->mNumFaces * 3,
             .StartIndexLocation = indexOffset,
             .BaseVertexLocation = vertexOffset,
-            .DiffuseTexture = diffuseTexture,
-            .SpecularTexture = specularTexture,
             .Material = material,
         });
         
@@ -116,7 +113,7 @@ auto BeAssetImporter::LoadModel(const std::filesystem::path& modelPath, BeShader
     return model;
 }
 
-auto BeAssetImporter::LoadTextureFromFile(const std::filesystem::path& texturePath) const -> std::shared_ptr<BeTexture> {
+auto BeAssetCore::LoadTextureFromFile(const std::filesystem::path& texturePath) const -> std::shared_ptr<BeTexture> {
     int w = 0, h = 0, channelsInFile = 0;
     // Force 4 channels to standardize output layout as RGBA8.
     uint8_t* decoded = stbi_load(texturePath.string().c_str(), &w, &h, &channelsInFile, 4);
@@ -140,7 +137,8 @@ auto BeAssetImporter::LoadTextureFromFile(const std::filesystem::path& texturePa
     return texture;
 }
 
-auto BeAssetImporter::LoadTextureFromAssimpPath(
+
+auto BeAssetCore::LoadTextureFromAssimpPath(
     const aiString& texPath,
     const aiScene* scene,
     const std::filesystem::path& parentPath)
@@ -173,7 +171,7 @@ const -> std::shared_ptr<BeTexture> {
     return LoadTextureFromMemoryDecoded(reinterpret_cast<const uint8_t*>(aiTex->pcData), aiTex->mWidth, aiTex->mHeight);
 }
 
-auto BeAssetImporter::LoadTextureFromMemoryEncoded(const uint8_t* data, uint32_t length) const -> std::shared_ptr<BeTexture> {
+auto BeAssetCore::LoadTextureFromMemoryEncoded(const uint8_t* data, uint32_t length) const -> std::shared_ptr<BeTexture> {
     int w = 0, h = 0, channelsInFile = 0;
 
     // Force 4 channels to standardize output layout as RGBA8.
@@ -199,7 +197,7 @@ auto BeAssetImporter::LoadTextureFromMemoryEncoded(const uint8_t* data, uint32_t
     return texture;
 }
 
-auto BeAssetImporter::LoadTextureFromMemoryDecoded(const uint8_t* data, uint32_t width, uint32_t height) const -> std::shared_ptr<BeTexture> {
+auto BeAssetCore::LoadTextureFromMemoryDecoded(const uint8_t* data, uint32_t width, uint32_t height) const -> std::shared_ptr<BeTexture> {
     const size_t count = width * height;
     if (count == 0) throw std::runtime_error("Failed to decode texture");
 
