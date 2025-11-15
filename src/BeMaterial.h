@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <glm/glm.hpp>
+#include <umbrellas/include-glm.h>
 #include <wrl/client.h>
 
 struct BeTexture;

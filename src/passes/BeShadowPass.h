@@ -1,13 +1,12 @@
 ﻿#pragma once
 #include <memory>
 #include <string>
-#include <vec3.hpp>
 
 #include "BeBuffers.h"
 #include "BeRenderPass.h"
 #include "BeShader.h"
 
-class ShadowPass final : public BeRenderPass {
+class BeShadowPass final : public BeRenderPass {
 
 public:
     std::string InputDirectionalLightName;
@@ -20,8 +19,8 @@ private:
     ComPtr<ID3D11Buffer> _shadowConstantBuffer;
     
 public:
-    explicit ShadowPass() = default;
-    ~ShadowPass() override = default;
+    explicit BeShadowPass() = default;
+    ~BeShadowPass() override = default;
 
     auto Initialise() -> void override;
     auto Render() -> void override;

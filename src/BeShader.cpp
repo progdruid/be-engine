@@ -2,7 +2,7 @@
 
 #include <cassert>
 #include <d3dcompiler.h>
-#include <glm/glm.hpp>
+#include <umbrellas/include-glm.h>
 
 #include "BeRenderer.h"
 #include "BeShaderIncludeHandler.hpp"
@@ -13,7 +13,7 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
 
     BeShaderIncludeHandler includeHandler(
         filePath.parent_path().string(),
-        "src/shaders/"
+        StandardShaderIncludePath
     );
 
     std::filesystem::path path = filePath;

@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <memory>
-#include <glm.hpp>
+#include <umbrellas/include-glm.h>
 #include <string>
 
 #include "BeRenderPass.h"

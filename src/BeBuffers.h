@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "BeModel.h"
-#include <glm.hpp>
-#include <gtc/matrix_transform.hpp>
+#include "umbrellas/include-glm.h"
 
 struct BeUniformData {
     glm::mat4 ProjectionView {1.0f};

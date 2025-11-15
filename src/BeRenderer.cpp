@@ -1,9 +1,10 @@
 ﻿#include "BeRenderer.h"
 
 #include <cassert>
-#include <scope_guard.hpp>
+#include <scope_guard/scope_guard.hpp>
+#include <dxgi1_6.h>
 
-#include "BeRenderPass.h"
+#include "passes/BeRenderPass.h"
 #include "BeShader.h"
 #include "Utils.h"
 

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <glm.hpp>
-#include <gtc/matrix_transform.hpp>
+#include <umbrellas/include-glm.h>
 
 class BeCamera {
     //fields///////////////////////////////////////////////////////////////////////////////////////

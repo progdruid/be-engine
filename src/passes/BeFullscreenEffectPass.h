@@ -7,15 +7,15 @@
 
 class BeShader;
 
-class CustomFullscreenEffectPass final : public BeRenderPass {
+class BeFullscreenEffectPass final : public BeRenderPass {
 public:
     std::vector<std::string> InputTextureNames;
     std::vector<std::string> OutputTextureNames;
     BeShader* Shader;
     
 public:
-    explicit CustomFullscreenEffectPass();
-    ~CustomFullscreenEffectPass() override;
+    explicit BeFullscreenEffectPass();
+    ~BeFullscreenEffectPass() override;
 
     auto Initialise() -> void override;
     auto Render() -> void override;

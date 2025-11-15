@@ -1,7 +1,7 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
-#include <glm.hpp>
+#include <glfw/glfw3.h>
+#include <umbrellas/include-glm.h>
 #include <unordered_map>
 
 class BeInput {

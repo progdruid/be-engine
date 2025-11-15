@@ -1,6 +1,6 @@
 ﻿#include "BeTexture.h"
 
-#include <stb_image.h>
+#include "stb_image/stb_image.h"
 #include "Utils.h"
 
 auto BeTexture::CreateFromFile(const std::filesystem::path& path, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeTexture> {

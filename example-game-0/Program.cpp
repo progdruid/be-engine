@@ -4,29 +4,26 @@
 #include <windows.h>
 
 #define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
+#include <glfw/glfw3.h>
+#include <glfw/glfw3native.h>
 
 #include <cstdio>
 #include <cassert>
-
-#define GLM_FORCE_LEFT_HANDED
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <gtc/matrix_transform.hpp>
+#include <umbrellas/include-glm.h>
 
 #include "BeAssetRegistry.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
 #include "BeCamera.h"
-#include "BeComposerPass.h"
-#include "BeGeometryPass.h"
-#include "BeLightingPass.h"
+#include "passes/BeComposerPass.h"
+#include "passes/BeGeometryPass.h"
+#include "passes/BeLightingPass.h"
 #include "BeMaterial.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "BeModel.h"
-#include "CustomFullscreenEffectPass.h"
-#include "ShadowPass.h"
+#include "passes/BeFullscreenEffectPass.h"
+#include "passes/BeShadowPass.h"
 
 
 static auto errorCallback(int code, const char* desc) -> void {
@@ -39,6 +36,11 @@ Program::~Program() = default;
 
 auto Program::run() -> int {
 
+    std::string mdh = std::filesystem::current_path().string();
+    
+    BeShader::StandardShaderIncludePath = "standardShaders/";
+
+    
     // window
     constexpr int width = 1920, height = 1080;
     
@@ -231,7 +233,7 @@ auto Program::run() -> int {
     renderer.SetContextDataPointer("PointLights", &pointLights);
     
     // shadow pass
-    auto shadowPass = new ShadowPass();
+    auto shadowPass = new BeShadowPass();
     renderer.AddRenderPass(shadowPass);
     shadowPass->InputDirectionalLightName = "DirectionalLight";
     shadowPass->InputPointLightsName = "PointLights";
@@ -257,7 +259,7 @@ auto Program::run() -> int {
 
     // Cel shader pass
     auto effectShader = BeShader::Create(device.Get(), "assets/shaders/effects/usedEffect");
-    auto effectPass = new CustomFullscreenEffectPass();
+    auto effectPass = new BeFullscreenEffectPass();
     renderer.AddRenderPass(effectPass);
     effectPass->InputTextureNames = {"Lighting", "DepthStencil", "WorldNormal"};
     //effectPass->InputTextureNames = {"Lighting"};

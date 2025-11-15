@@ -1,11 +1,11 @@
-﻿#include "ShadowPass.h"
+﻿#include "BeShadowPass.h"
 
-#include <gtc/type_ptr.inl>
+#include <umbrellas/include-glm.h>
+#include <scope_guard/scope_guard.hpp>
 
 #include "BeRenderer.h"
-#include "scope_guard.hpp"
 
-auto ShadowPass::Initialise() -> void {
+auto BeShadowPass::Initialise() -> void {
     D3D11_BUFFER_DESC shadowBufferDescriptor = {};
     shadowBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     shadowBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
@@ -17,7 +17,7 @@ auto ShadowPass::Initialise() -> void {
     _pointShadowShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/pointShadow");
 }
 
-auto ShadowPass::Render() -> void {
+auto BeShadowPass::Render() -> void {
     const auto context = _renderer->GetContext();
 
     UINT numViewports = 1;
@@ -41,7 +41,7 @@ auto ShadowPass::Render() -> void {
     }
 }
 
-auto ShadowPass::RenderDirectionalShadows() -> void {
+auto BeShadowPass::RenderDirectionalShadows() -> void {
     const auto context = _renderer->GetContext();
     const auto& directionalLight = *_renderer->GetContextDataPointer<BeDirectionalLight>(InputDirectionalLightName);
     const auto directionalShadowMap = _renderer->GetRenderResource(directionalLight.ShadowMapTextureName);
@@ -103,7 +103,7 @@ auto ShadowPass::RenderDirectionalShadows() -> void {
     context->PSSetConstantBuffers(1, 1, &nullBuffer);
 }
 
-auto ShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void {
+auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void {
 
     // get what we need
     const auto context = _renderer->GetContext();
@@ -178,7 +178,7 @@ auto ShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void
     context->PSSetConstantBuffers(1, 1, Utils::NullBuffers);
 }
 
-auto ShadowPass::CalculatePointLightFaceViewProjection(const BePointLight& pointLight, const int faceIndex) -> glm::mat4 {
+auto BeShadowPass::CalculatePointLightFaceViewProjection(const BePointLight& pointLight, const int faceIndex) -> glm::mat4 {
     static constexpr std::array<glm::vec3, 6> Forwards = {
         glm::vec3(1, 0, 0),
         glm::vec3(-1, 0, 0),

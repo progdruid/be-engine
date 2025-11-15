@@ -3,7 +3,7 @@
 #include <memory>
 #include <d3d11.h>
 #include <wrl/client.h>
-#include <glm.hpp>
+#include <umbrellas/include-glm.h>
 #include <assimp/scene.h>
 
 #include "BeMaterial.h"
