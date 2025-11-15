@@ -19,7 +19,7 @@ public:
     std::string InputLightTextureName;
     
 private:
-    std::unique_ptr<BeShader> _composerShader = nullptr;
+    std::shared_ptr<BeShader> _composerShader = nullptr;
     
 public:
     explicit BeComposerPass();

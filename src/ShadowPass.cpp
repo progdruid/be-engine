@@ -13,8 +13,8 @@ auto ShadowPass::Initialise() -> void {
     shadowBufferDescriptor.ByteWidth = sizeof(BeShadowpassBufferGPU);
     Utils::Check << _renderer->GetDevice()->CreateBuffer(&shadowBufferDescriptor, nullptr, &_shadowConstantBuffer);
     
-    _directionalShadowShader = std::make_unique<BeShader>(_renderer->GetDevice().Get(), "assets/shaders/directionalShadow");
-    _pointShadowShader = std::make_unique<BeShader>(_renderer->GetDevice().Get(), "assets/shaders/pointShadow");
+    _directionalShadowShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/directionalShadow");
+    _pointShadowShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/pointShadow");
 }
 
 auto ShadowPass::Render() -> void {

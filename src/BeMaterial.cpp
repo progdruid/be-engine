@@ -6,24 +6,27 @@
 
 #include "BeShader.h"
 #include "BeTexture.h"
+#include "BeAssetRegistry.h"
+#include "Utils.h"
 
-BeMaterial::BeMaterial(std::string name, BeShader* shader, const ComPtr<ID3D11Device>& device)
-: Name(std::move(name))
-, Shader(shader) {
-    assert(shader->HasMaterial);
+auto BeMaterial::Create(std::string_view name, std::weak_ptr<BeShader> shader, BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeMaterial> {
+    auto shaderLocked = shader.lock();
+    assert(shaderLocked && "Shader must be valid");
+    assert(shaderLocked->HasMaterial && "Shader must have material");
+
+    auto material = std::make_shared<BeMaterial>(std::string(name), shader, device);
+    material->InitializeTextures(registry, device);
+    return material;
+}
+
+BeMaterial::BeMaterial(std::string name, std::weak_ptr<BeShader> shader, const ComPtr<ID3D11Device>& device)
+    : Name(std::move(name))
+    , Shader(shader) {
+    auto shaderLocked = Shader.lock();
+    assert(shaderLocked);
 
     CalculateLayout();
 
-    for (const auto& property : shader->MaterialTextureProperties) {
-        std::shared_ptr<BeTexture> texture = nullptr;
-        if (property.DefaultTexturePath == "white")
-            texture = std::make_shared<BeTexture>(glm::vec4(1.f));
-        else if (property.DefaultTexturePath == "black")
-            texture = std::make_shared<BeTexture>(glm::vec4(0.f));
-        texture->CreateSRV(device);
-        _textures[property.Name] = {texture, property.SlotIndex};
-    }
-    
     D3D11_BUFFER_DESC bufferDesc = {};
     bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
@@ -39,6 +42,19 @@ BeMaterial::BeMaterial(std::string name, BeShader* shader, const ComPtr<ID3D11De
 }
 
 BeMaterial::~BeMaterial() = default;
+
+auto BeMaterial::InitializeTextures(BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> void {
+    auto shader = Shader.lock();
+    assert(shader);
+
+    for (const auto& property : shader->MaterialTextureProperties) {
+        auto texWeak = registry.GetTexture(property.DefaultTexturePath);
+        auto texture = texWeak.lock();
+        assert(texture && ("Texture not found in registry: " + property.DefaultTexturePath).c_str());
+
+        _textures[property.Name] = {texture, property.SlotIndex};
+    }
+}
 
 auto BeMaterial::SetFloat(const std::string& propertyName, float value) -> void {
     assert(_propertyOffsets.contains(propertyName));
@@ -122,11 +138,14 @@ auto BeMaterial::UpdateGPUBuffers(const ComPtr<ID3D11DeviceContext>& context) ->
 }
 
 auto BeMaterial::CalculateLayout() -> void {
+    auto shader = Shader.lock();
+    assert(shader);
+
     uint32_t offsetBytes = 0;
 
-    for (const auto& property : Shader->MaterialProperties) {
+    for (const auto& property : shader->MaterialProperties) {
         constexpr uint32_t registerSizeBytes = 16;
-        
+
         const uint32_t elementSizeBytes = BeMaterialPropertyDescriptor::SizeMap.at(property.PropertyType);
         const uint32_t positionInRegister = offsetBytes % registerSizeBytes;
 
@@ -139,7 +158,7 @@ auto BeMaterial::CalculateLayout() -> void {
     }
 
     _bufferData.resize(offsetBytes / 4);
-    for (const auto& property : Shader->MaterialProperties) {
+    for (const auto& property : shader->MaterialProperties) {
         const uint32_t propertyOffset = _propertyOffsets.at(property.Name);
         const auto& defaultValue = property.DefaultValue;
         memcpy(_bufferData.data() + propertyOffset, defaultValue.data(), defaultValue.size() * sizeof(float));

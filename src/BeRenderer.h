@@ -25,9 +25,9 @@ public:
         glm::vec3 Position = {0.f, 0.f, 0.f};
         glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
         glm::vec3 Scale = {1.f, 1.f, 1.f};
-        BeModel* Model;
+        std::weak_ptr<BeModel> Model;
         std::vector<BeModel::BeDrawSlice> DrawSlices;
-        BeShader* Shader;
+        std::weak_ptr<BeShader> Shader;
     };
 
 private:
@@ -57,7 +57,7 @@ private:
 
     ComPtr<ID3D11Buffer> _uniformBuffer;
     ComPtr<ID3D11SamplerState> _pointSampler;
-    std::unique_ptr<BeShader> _fullscreenShader = nullptr;
+    std::shared_ptr<BeShader> _fullscreenShader = nullptr;
 
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;

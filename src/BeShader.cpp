@@ -8,7 +8,9 @@
 #include "BeShaderIncludeHandler.hpp"
 #include "Utils.h"
 
-BeShader::BeShader(ID3D11Device* device, const std::filesystem::path& filePath) {
+auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePath) -> std::shared_ptr<BeShader> {
+    auto shader = std::make_shared<BeShader>();
+
     BeShaderIncludeHandler includeHandler(
         filePath.parent_path().string(),
         "src/shaders/"
@@ -17,7 +19,7 @@ BeShader::BeShader(ID3D11Device* device, const std::filesystem::path& filePath) 
     std::filesystem::path path = filePath;
     path += ".hlsl";
     assert(std::filesystem::exists(path));
-    
+
     std::ifstream file(path);
     std::stringstream buffer;
     buffer << file.rdbuf();
@@ -26,7 +28,7 @@ BeShader::BeShader(ID3D11Device* device, const std::filesystem::path& filePath) 
 
 
     if (header.contains("material")) {
-        HasMaterial = true;
+        shader->HasMaterial = true;
         const auto& materialJson = header.at("material");
         for (const auto& materialJsonItem : materialJson.items()) {
             const auto& key = materialJsonItem.key();
@@ -37,7 +39,7 @@ BeShader::BeShader(ID3D11Device* device, const std::filesystem::path& filePath) 
                 descriptor.Name = key;
                 descriptor.SlotIndex = value.at("slot").get<int>();
                 descriptor.DefaultTexturePath = value.at("default").get<std::string>();
-                MaterialTextureProperties.push_back(descriptor);
+                shader->MaterialTextureProperties.push_back(descriptor);
                 continue;
             }
 
@@ -47,7 +49,7 @@ BeShader::BeShader(ID3D11Device* device, const std::filesystem::path& filePath) 
                 {"float3", BeMaterialPropertyDescriptor::Type::Float3},
                 {"float4", BeMaterialPropertyDescriptor::Type::Float4},
             };
-            
+
             BeMaterialPropertyDescriptor descriptor;
             descriptor.Name = key;
             descriptor.PropertyType = typeMap.at(value.at("type").get<std::string>());
@@ -68,28 +70,28 @@ BeShader::BeShader(ID3D11Device* device, const std::filesystem::path& filePath) 
                 descriptor.DefaultValue = vec;
             }
 
-            MaterialProperties.push_back(descriptor);
+            shader->MaterialProperties.push_back(descriptor);
         }
     }
 
     if (header.contains("vertex")) {
-        _shaderType = BeShaderType::Vertex;
+        shader->_shaderType = BeShaderType::Vertex;
 
         std::string vertexFunctionName = header["vertex"];
-        ComPtr<ID3DBlob> blob = CompileBlob(path, vertexFunctionName.c_str(), "vs_5_0", &includeHandler);
-        Utils::Check << device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &VertexShader);
-        
+        ComPtr<ID3DBlob> blob = shader->CompileBlob(path, vertexFunctionName.c_str(), "vs_5_0", &includeHandler);
+        Utils::Check << device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->VertexShader);
+
         //input layout
         if (header.contains("vertexLayout")) {
             Json vertexLayoutJson = header["vertexLayout"];
-            
+
             std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout;
             inputLayout.reserve(vertexLayoutJson.size());
 
             for (const auto& descriptorJson : vertexLayoutJson) {
                 BeVertexElementDescriptor descriptor;
                 descriptor.Attribute = BeVertexElementDescriptor::SemanticMap.at(descriptorJson);
-                
+
                 D3D11_INPUT_ELEMENT_DESC elementDesc;
                 elementDesc.SemanticIndex = 0;
                 elementDesc.InputSlot = 0;
@@ -98,7 +100,7 @@ BeShader::BeShader(ID3D11Device* device, const std::filesystem::path& filePath) 
                 elementDesc.InstanceDataStepRate = 0;
                 elementDesc.SemanticName = BeVertexElementDescriptor::SemanticNames.at(descriptor.Attribute);
                 elementDesc.Format = BeVertexElementDescriptor::ElementFormats.at(descriptor.Attribute);
-        
+
                 inputLayout.push_back(elementDesc);
             }
 
@@ -107,18 +109,19 @@ BeShader::BeShader(ID3D11Device* device, const std::filesystem::path& filePath) 
                 static_cast<UINT>(inputLayout.size()),
                 blob->GetBufferPointer(),
                 blob->GetBufferSize(),
-                &ComputedInputLayout);
+                &shader->ComputedInputLayout);
         }
     }
 
     if (header.contains("pixel")) {
-        _shaderType = _shaderType | BeShaderType::Pixel;
+        shader->_shaderType = shader->_shaderType | BeShaderType::Pixel;
 
         std::string pixelFunctionName = header["pixel"];
-        ComPtr<ID3DBlob> blob = CompileBlob(path, pixelFunctionName.c_str(), "ps_5_0", &includeHandler);
-        Utils::Check << device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &PixelShader);
+        ComPtr<ID3DBlob> blob = shader->CompileBlob(path, pixelFunctionName.c_str(), "ps_5_0", &includeHandler);
+        Utils::Check << device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->PixelShader);
     }
-    
+
+    return shader;
 }
 
 auto BeShader::Bind(ID3D11DeviceContext* context) const -> void {

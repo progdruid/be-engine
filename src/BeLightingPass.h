@@ -24,8 +24,8 @@ private:
     ComPtr<ID3D11Buffer> _pointLightBuffer;
     //ComPtr<ID3D11Buffer> _spotLightBuffer;
 
-    std::unique_ptr<BeShader> _directionalLightShader;
-    std::unique_ptr<BeShader> _pointLightShader;
+    std::shared_ptr<BeShader> _directionalLightShader;
+    std::shared_ptr<BeShader> _pointLightShader;
     
     
 public:

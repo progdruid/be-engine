@@ -1,5 +1,6 @@
 ﻿#include "BeGeometryPass.h"
 
+#include <cassert>
 #include <scope_guard.hpp>
 #include <gtc/type_ptr.inl>
 
@@ -27,9 +28,6 @@ auto BeGeometryPass::Initialise() -> void {
     };
     Utils::Check << _renderer->GetDevice()->CreateDepthStencilState(&depthStencilStateDescriptor, _depthStencilState.GetAddressOf());
     _renderer->GetContext()->OMSetDepthStencilState(_depthStencilState.Get(), 1);
-
-    //
-    _whiteFallbackTexture.CreateSRV(_renderer->GetDevice());
 }
 
 auto BeGeometryPass::Render() -> void {
@@ -79,7 +77,9 @@ auto BeGeometryPass::Render() -> void {
     // Draw all objects
     const auto& objects = _renderer->GetObjects();
     for (const auto& object : objects) {
-        object.Shader->Bind(context.Get());
+        auto shader = object.Shader.lock();
+        assert(shader);
+        shader->Bind(context.Get());
 
         glm::mat4x4 modelMatrix =
             glm::translate(glm::mat4(1.0f), object.Position) *
