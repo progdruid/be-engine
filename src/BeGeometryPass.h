@@ -18,7 +18,6 @@ public:
     
 private:
     ComPtr<ID3D11Buffer> _objectBuffer;
-    ComPtr<ID3D11DepthStencilState> _depthStencilState;
     
 public:
     explicit BeGeometryPass();
