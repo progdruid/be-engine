@@ -38,12 +38,23 @@ float SamplePointLightShadow(float3 worldPos) {
 
     // Sample cubemap using direction
     float3 sampleDir = normalize(lightDir);
-    float shadowmapDistance = PointLightShadowMap.Sample(InputSampler, sampleDir).r;
+    float shadowmapDepth = PointLightShadowMap.Sample(InputSampler, sampleDir).r;
+    float near = _PointLightShadowNearPlane;
+    float far = _PointLightRadius;
+    float linearDepth = (near * far) / (far - shadowmapDepth * (far - near));
+    
+    float xCos = abs(dot(sampleDir, float3(1, 0, 0)));
+    float yCos = abs(dot(sampleDir, float3(0, 1, 0)));
+    float zCos = abs(dot(sampleDir, float3(0, 0, 1)));
 
-    // Distance comparison with small bias
+    float cos = max(xCos, max(yCos, zCos));
+
+    float shadowmapDistance = linearDepth / cos; 
+    
     float shadow = (distanceToLight - 0.02) < shadowmapDistance ? 1.0 : 0.0;
     return shadow;
 }
+
 
 
 float3 PixelFunction(PSInput input) : SV_TARGET {

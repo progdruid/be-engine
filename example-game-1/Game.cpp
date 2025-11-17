@@ -170,14 +170,8 @@ auto Game::SetupScene() -> void {
 auto Game::SetupRenderPasses() -> void {
     // Create render resources
     _renderer->CreateRenderResource(_directionalLight->ShadowMapTextureName, false, {
-        .Format = DXGI_FORMAT_R32_FLOAT,
-        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-        .CustomWidth = 4096,
-        .CustomHeight = 4096,
-    });
-    _renderer->CreateRenderResource(_directionalLight->ShadowMapTextureName+std::string("DS"), false, {
         .Format = DXGI_FORMAT_R32_TYPELESS,
-        .BindFlags = D3D11_BIND_DEPTH_STENCIL,
+        .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
         .CustomWidth = 4096,
         .CustomHeight = 4096,
     });
@@ -209,15 +203,8 @@ auto Game::SetupRenderPasses() -> void {
     for (const auto & pointLight : _pointLights) {
         _renderer->CreateRenderResource(pointLight.ShadowMapTextureName, false, {
             .IsCubemap = true,
-            .Format = DXGI_FORMAT_R32_FLOAT,
-            .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-            .CustomWidth = 2048,
-            .CustomHeight = 2048,
-        });
-        _renderer->CreateRenderResource(pointLight.ShadowMapTextureName + "DS", false, {
-            .IsCubemap = true,
             .Format = DXGI_FORMAT_R32_TYPELESS,
-            .BindFlags = D3D11_BIND_DEPTH_STENCIL,
+            .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
             .CustomWidth = 2048,
             .CustomHeight = 2048,
         });
