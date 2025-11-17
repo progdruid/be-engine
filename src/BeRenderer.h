@@ -20,13 +20,12 @@ using Microsoft::WRL::ComPtr;
 class BeRenderer {
 public:
     struct ObjectEntry {
-        std::string Name;
+        std::string Name = "";
         glm::vec3 Position = {0.f, 0.f, 0.f};
         glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
         glm::vec3 Scale = {1.f, 1.f, 1.f};
-        std::weak_ptr<BeModel> Model;
+        std::shared_ptr<BeModel> Model = nullptr;
         std::vector<BeModel::BeDrawSlice> DrawSlices;
-        std::weak_ptr<BeShader> Shader;
     };
 
 private:
