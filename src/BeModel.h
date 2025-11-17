@@ -30,12 +30,14 @@ struct BeModel {
     };
 
     // Static
-    static auto Create(const std::filesystem::path& modelPath, std::weak_ptr<BeShader> usedShaderForMaterials, class BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeModel>;
+    static auto Create(const std::filesystem::path& modelPath, const std::weak_ptr<BeShader>& usedShaderForMaterials, class BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeModel>;
     static auto LoadTextureFromAssimpPath(const struct aiString& texPath, const struct aiScene* scene, const std::filesystem::path& parentPath, class BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeTexture>;
 
     std::vector<BeDrawSlice> DrawSlices;
     std::vector<BeFullVertex> FullVertices;
     std::vector<uint32_t> Indices;
+    std::vector<std::shared_ptr<BeMaterial>> Materials;
+    std::shared_ptr<BeShader> Shader;
 
     BeModel() = default;
     ~BeModel() = default;

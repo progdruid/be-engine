@@ -1,0 +1,11 @@
+Model Information:
+* title:	LowPoly Rock 1
+* source:	https://sketchfab.com/3d-models/lowpoly-rock-1-4c1fa04dd165426687b3ae18d5576a92
+* author:	endrit (https://sketchfab.com/endrit)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "LowPoly Rock 1" (https://sketchfab.com/3d-models/lowpoly-rock-1-4c1fa04dd165426687b3ae18d5576a92) by endrit (https://sketchfab.com/endrit) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

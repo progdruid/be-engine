@@ -4,6 +4,9 @@
 #include <umbrellas/include-glm.h>
 #include <unordered_map>
 
+// Forward declaration
+class BeWindow;
+
 class BeInput {
     // Allow internal scroll callback to access private members
     static auto scrollCallbackInternal(GLFWwindow* window, double xOffset, double yOffset) -> void;

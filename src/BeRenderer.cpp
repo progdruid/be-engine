@@ -181,6 +181,7 @@ auto BeRenderer::Render() -> void {
 }
 
 auto BeRenderer::SetObjects(const std::vector<ObjectEntry>& objects) -> void {
+    _objects.clear();
     _objects = objects;
 
     //vbo + ibo
@@ -188,11 +189,9 @@ auto BeRenderer::SetObjects(const std::vector<ObjectEntry>& objects) -> void {
     size_t totalIndicesNumber = 0;
     size_t totalDrawSlices = 0;
     for (const auto& object : _objects) {
-        auto model = object.Model.lock();
-        assert(model);
-        totalVerticesNumber += model->FullVertices.size();
-        totalIndicesNumber += model->Indices.size();
-        totalDrawSlices += model->DrawSlices.size();
+        totalVerticesNumber += object.Model->FullVertices.size();
+        totalIndicesNumber += object.Model->Indices.size();
+        totalDrawSlices += object.Model->DrawSlices.size();
     }
 
     std::vector<BeFullVertex> fullVertices;
@@ -200,13 +199,11 @@ auto BeRenderer::SetObjects(const std::vector<ObjectEntry>& objects) -> void {
     fullVertices.reserve(totalVerticesNumber);
     indices.reserve(totalIndicesNumber);
     for (auto& object : _objects) {
-        auto model = object.Model.lock();
-        assert(model);
-        fullVertices.insert(fullVertices.end(), model->FullVertices.begin(), model->FullVertices.end());
-        indices.insert(indices.end(), model->Indices.begin(), model->Indices.end());
-        for (BeModel::BeDrawSlice slice : model->DrawSlices) {
-            slice.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - model->FullVertices.size());
-            slice.StartIndexLocation += static_cast<uint32_t>(indices.size() - model->Indices.size());
+        fullVertices.insert(fullVertices.end(), object.Model->FullVertices.begin(), object.Model->FullVertices.end());
+        indices.insert(indices.end(), object.Model->Indices.begin(), object.Model->Indices.end());
+        for (BeModel::BeDrawSlice slice : object.Model->DrawSlices) {
+            slice.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - object.Model->FullVertices.size());
+            slice.StartIndexLocation += static_cast<uint32_t>(indices.size() - object.Model->Indices.size());
             object.DrawSlices.push_back(slice);
         }
     }

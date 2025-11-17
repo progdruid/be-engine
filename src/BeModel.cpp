@@ -10,7 +10,7 @@
 #include "BeAssetRegistry.h"
 #include "Utils.h"
 
-auto BeModel::Create(const std::filesystem::path& modelPath, std::weak_ptr<BeShader> usedShaderForMaterials, BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeModel> {
+auto BeModel::Create(const std::filesystem::path& modelPath, const std::weak_ptr<BeShader>& usedShaderForMaterials, BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeModel> {
     constexpr auto flags = (
         aiProcess_Triangulate |
         aiProcess_GenNormals |
@@ -25,10 +25,54 @@ auto BeModel::Create(const std::filesystem::path& modelPath, std::weak_ptr<BeSha
     const aiScene* scene = importer.ReadFile(modelPath.string().c_str(), flags);
     if (!scene || !scene->mRootNode)
         throw std::runtime_error("Failed to load model: " + modelPath.string());
-
+    
     auto model = std::make_shared<BeModel>();
+    model->Shader = usedShaderForMaterials.lock();
     model->DrawSlices.reserve(scene->mNumMeshes);
+    
+    std::unordered_map<uint32_t, std::shared_ptr<BeMaterial>> assimpIndexToMaterial;
+    for (size_t i = 0; i < scene->mNumMeshes; ++i) {
+        const auto mesh = scene->mMeshes[i];
+        const auto assimpMaterialIndex = mesh->mMaterialIndex;
 
+        const auto it = assimpIndexToMaterial.find(assimpMaterialIndex);
+        if (it != assimpIndexToMaterial.end())
+            continue;
+
+        auto material = BeMaterial::Create("mat" + std::to_string(assimpMaterialIndex), usedShaderForMaterials, registry, device);
+        assimpIndexToMaterial[assimpMaterialIndex] = material;
+
+        const auto meshMaterial = scene->mMaterials[assimpMaterialIndex];
+        
+        aiString texPath;
+        constexpr int diffuseTexIndex = 0;
+        if (meshMaterial->GetTexture(aiTextureType_DIFFUSE, diffuseTexIndex, &texPath) == AI_SUCCESS) {
+            auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), registry, device);
+            material->SetTexture("DiffuseTexture", texture);
+        }
+        constexpr int specularTexIndex = 0;
+        if (meshMaterial->GetTexture(aiTextureType_SPECULAR, specularTexIndex, &texPath) == AI_SUCCESS) {
+            auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), registry, device);
+            material->SetTexture("SpecularTexture", texture);
+        }
+
+        aiColor4D color{};
+        if (meshMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
+            material->SetFloat3("DiffuseColor", {color.r, color.g, color.b});
+        }
+        if (meshMaterial->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {
+            material->SetFloat3("SpecularColor0", {color.r, color.g, color.b});
+        }
+        float shininess = 0.f;
+        if (meshMaterial->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
+            material->SetFloat("Shininess0", shininess / 2048.f);
+        }
+    }
+
+    for (const auto & material : assimpIndexToMaterial | std::views::values) {
+        model->Materials.push_back(material);
+    } 
+    
     size_t numVertices = 0;
     size_t numIndices = 0;
     for (unsigned i = 0; i < scene->mNumMeshes; ++i) {
@@ -39,7 +83,7 @@ auto BeModel::Create(const std::filesystem::path& modelPath, std::weak_ptr<BeSha
 
     model->FullVertices.reserve(numVertices);
     model->Indices.reserve(numIndices);
-
+    
     int32_t vertexOffset = 0;
     uint32_t indexOffset = 0;
     for (size_t i = 0; i < scene->mNumMeshes; ++i) {
@@ -70,38 +114,11 @@ auto BeModel::Create(const std::filesystem::path& modelPath, std::weak_ptr<BeSha
             model->Indices.push_back(face.mIndices[1]);
         }
 
-        auto material = BeMaterial::Create("mat" + std::to_string(i), usedShaderForMaterials, registry, device);
-
-        auto meshMaterial = scene->mMaterials[mesh->mMaterialIndex];
-        aiString texPath;
-        constexpr int diffuseTexIndex = 0;
-        if (meshMaterial->GetTexture(aiTextureType_DIFFUSE, diffuseTexIndex, &texPath) == AI_SUCCESS) {
-            auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), registry, device);
-            material->SetTexture("DiffuseTexture", texture);
-        }
-        constexpr int specularTexIndex = 0;
-        if (meshMaterial->GetTexture(aiTextureType_SPECULAR, specularTexIndex, &texPath) == AI_SUCCESS) {
-            auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), registry, device);
-            material->SetTexture("SpecularTexture", texture);
-        }
-
-        aiColor4D color{};
-        if (meshMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
-            material->SetFloat3("DiffuseColor", {color.r, color.g, color.b});
-        }
-        if (meshMaterial->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {
-            material->SetFloat3("SpecularColor0", {color.r, color.g, color.b});
-        }
-        float shininess = 0.f;
-        if (meshMaterial->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
-            material->SetFloat("Shininess0", shininess / 2048.f);
-        }
-
         model->DrawSlices.push_back({
             .IndexCount = mesh->mNumFaces * 3,
             .StartIndexLocation = indexOffset,
             .BaseVertexLocation = vertexOffset,
-            .Material = material,
+            .Material = assimpIndexToMaterial.at(mesh->mMaterialIndex),
         });
 
         vertexOffset += mesh->mNumVertices;

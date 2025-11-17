@@ -11,7 +11,7 @@ class BeFullscreenEffectPass final : public BeRenderPass {
 public:
     std::vector<std::string> InputTextureNames;
     std::vector<std::string> OutputTextureNames;
-    BeShader* Shader;
+    std::shared_ptr<BeShader> Shader;
     
 public:
     explicit BeFullscreenEffectPass();
