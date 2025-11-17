@@ -45,7 +45,6 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
     const auto context = _renderer->GetContext();
     const auto& directionalLight = *_renderer->GetContextDataPointer<BeDirectionalLight>(InputDirectionalLightName);
     const auto directionalShadowMap = _renderer->GetRenderResource(directionalLight.ShadowMapTextureName);
-    const auto directionalShadowMapDS = _renderer->GetRenderResource(directionalLight.ShadowMapTextureName+std::string("DS"));
 
     // sort out viewport
     D3D11_VIEWPORT viewport = {};
@@ -56,14 +55,13 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
     context->RSSetViewports(1, &viewport);
 
     // sort out render target
-    context->OMSetRenderTargets(1, directionalShadowMap->RTV.GetAddressOf(), directionalShadowMapDS->DSV.Get());
-    context->ClearRenderTargetView(directionalShadowMap->RTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
-    context->ClearDepthStencilView(directionalShadowMapDS->DSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    context->OMSetRenderTargets(0, Utils::NullRTVs, directionalShadowMap->DSV.Get());
+    context->ClearDepthStencilView(directionalShadowMap->DSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     SCOPE_EXIT { context->OMSetRenderTargets(0, nullptr, nullptr); };
 
     // sort out shader
-    _directionalShadowShader->Bind(context.Get());
-    SCOPE_EXIT { context->VSSetShader(nullptr, nullptr, 0); context->PSSetShader(nullptr, nullptr, 0); };
+    context->VSSetShader(_directionalShadowShader->VertexShader.Get(), nullptr, 0);
+    SCOPE_EXIT { context->VSSetShader(nullptr, nullptr, 0); };
 
     // Set vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
@@ -92,15 +90,12 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
         memcpy(mappedResource.pData, &shadowpassBufferGPU, sizeof(BeShadowpassBufferGPU));
         context->Unmap(_shadowConstantBuffer.Get(), 0);
         context->VSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
-        context->PSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
 
         for (const auto& slice : object.DrawSlices) {
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
         }
     }
-    ID3D11Buffer* nullBuffer = nullptr;
-    context->VSSetConstantBuffers(1, 1, &nullBuffer);
-    context->PSSetConstantBuffers(1, 1, &nullBuffer);
+    context->VSSetConstantBuffers(1, 1, Utils::NullBuffers);
 }
 
 auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void {
@@ -108,11 +103,10 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
     // get what we need
     const auto context = _renderer->GetContext();
     const auto pointShadowMap = _renderer->GetRenderResource(pointLight.ShadowMapTextureName);
-    const auto pointShadowMapDS = _renderer->GetRenderResource(pointLight.ShadowMapTextureName+std::string("DS"));
     
     // sort out shader
-    _pointShadowShader->Bind(context.Get());
-    SCOPE_EXIT { context->VSSetShader(nullptr, nullptr, 0); context->PSSetShader(nullptr, nullptr, 0); };
+    context->VSSetShader(_pointShadowShader->VertexShader.Get(), nullptr, 0);
+    SCOPE_EXIT { context->VSSetShader(nullptr, nullptr, 0); };
     
     // sort out vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
@@ -136,11 +130,9 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
     // render each face
     for (int face = 0; face < 6; face++) {
         // sort out render target
-        auto cubemapRTV = pointShadowMap->GetCubemapRTV(face);
-        auto cubemapDSV = pointShadowMapDS->GetCubemapDSV(face);
-        context->ClearRenderTargetView(cubemapRTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
+        auto cubemapDSV = pointShadowMap->GetCubemapDSV(face);
         context->ClearDepthStencilView(cubemapDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-        context->OMSetRenderTargets(1, cubemapRTV.GetAddressOf(), cubemapDSV.Get());
+        context->OMSetRenderTargets(0, nullptr, cubemapDSV.Get());
 
         const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
@@ -164,8 +156,7 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
             memcpy(mappedResource.pData, &shadowpassBufferGPU, sizeof(BeShadowpassBufferGPU));
             context->Unmap(_shadowConstantBuffer.Get(), 0);
             context->VSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
-            context->PSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
-
+            
             // draw
             for (const auto& slice : object.DrawSlices) {
                 context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
@@ -175,7 +166,6 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
     // clean up
     context->OMSetRenderTargets(0, nullptr, nullptr);
     context->VSSetConstantBuffers(1, 1, Utils::NullBuffers);
-    context->PSSetConstantBuffers(1, 1, Utils::NullBuffers);
 }
 
 auto BeShadowPass::CalculatePointLightFaceViewProjection(const BePointLight& pointLight, const int faceIndex) -> glm::mat4 {
