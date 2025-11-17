@@ -2,7 +2,6 @@
 #include <exception>
 #include <iostream>
 #include <string>
-#include <sstream>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <windows.h>

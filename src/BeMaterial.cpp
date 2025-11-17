@@ -31,7 +31,8 @@ BeMaterial::BeMaterial(std::string name, std::weak_ptr<BeShader> shader, const C
     bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
     bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
-    bufferDesc.ByteWidth = _bufferData.size() * sizeof(float);
+    const uint32_t sizeInBytes = static_cast<uint32_t>(_bufferData.size() * sizeof(float));
+    bufferDesc.ByteWidth = ((sizeInBytes + 15) / 16) * 16;
 
     D3D11_SUBRESOURCE_DATA data = {};
     data.pSysMem = _bufferData.data();

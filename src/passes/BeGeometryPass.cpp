@@ -67,7 +67,7 @@ auto BeGeometryPass::Render() -> void {
     // Draw all objects
     const auto& objects = _renderer->GetObjects();
     for (const auto& object : objects) {
-        auto shader = object.Shader.lock();
+        const auto shader = object.Model->Shader;
         assert(shader);
         shader->Bind(context.Get());
 
@@ -97,8 +97,7 @@ auto BeGeometryPass::Render() -> void {
 
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
         
-            ID3D11ShaderResourceView* emptyResources[2] = { nullptr, nullptr };
-            context->PSSetShaderResources(0, 2, emptyResources);
+            context->PSSetShaderResources(0, 2, Utils::NullSRVs);
         }
     }
     context->PSSetShaderResources(0, 2, Utils::NullSRVs); // clean material textures
