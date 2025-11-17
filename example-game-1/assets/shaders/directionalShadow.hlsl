@@ -2,7 +2,6 @@
 @be-shader-header
 {
     "vertex": "VertexFunction",
-    "pixel": "PixelFunction",
     "vertexLayout": ["position"]
 }
 @be-shader-header-end
@@ -20,20 +19,11 @@ struct VertexInput {
 
 struct VertexOutput {
     float4 Position : SV_POSITION;
-    float3 WorldPosition : TEXCOORD0;
 };
 
 VertexOutput VertexFunction(VertexInput input) {
     float4 worldPosition = mul(float4(input.Position, 1.0), _Model);
     VertexOutput output;
     output.Position = mul(worldPosition, _ProjectionView);
-    output.WorldPosition = worldPosition.xyz;
     return output;
-}
-
-float4 PixelFunction(VertexOutput input) : SV_TARGET {
-    // For orthographic projection, linearized depth is simply the z coordinate
-    // normalized to [0, 1] range
-    float linearDepth = input.Position.z;
-    return float4(linearDepth, 0.0, 0.0, 1.0);
 }
