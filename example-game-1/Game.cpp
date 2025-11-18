@@ -81,16 +81,16 @@ auto Game::SetupScene() -> void {
         },
         {
             .Name = "Terrain",
-            .Position = {15, 1, 0},
+            .Position = {0, -50, 0},
             .Scale = glm::vec3(1.f),
             .Model = _plane,
         },
-        {
-            .Name = "Plane",
-            .Position = {50, 0, -50},
-            .Scale = glm::vec3(100.f, 0.1f, 100.f),
-            .Model = _cube,
-        },
+        // {
+        //     .Name = "Plane",
+        //     .Position = {50, 0, -50},
+        //     .Scale = glm::vec3(100.f, 0.1f, 100.f),
+        //     .Model = _cube,
+        // },
         {
             .Name = "Pagoda",
             .Position = {0, 0, 8},
@@ -280,6 +280,8 @@ auto Game::MainLoop() -> void {
         float dt = static_cast<float>(now - lastTime);
         lastTime = now;
 
+        _renderer->UniformData.Time = now;
+
         // Keyboard movement
         constexpr float moveSpeed = 5.0f;
         float speed = moveSpeed * dt;
@@ -339,8 +341,9 @@ auto Game::MainLoop() -> void {
 auto Game::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
     const auto shader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/terrain");
     auto material = BeMaterial::Create("TerrainMat", shader, *_assetRegistry, _renderer->GetDevice());
-    material->SetFloat("TerrainScale", 5.0f);
-    material->SetFloat("HeightScale", 1.0f);
+    material->SetFloat("TerrainScale", 200.0f);
+    material->SetFloat("HeightScale", 100.0f);
+    material->SetFloat("NoiseResolution", 2.0f);
     
     auto model = std::make_shared<BeModel>();
     model->Shader = shader;

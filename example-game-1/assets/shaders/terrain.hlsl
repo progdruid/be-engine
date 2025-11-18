@@ -5,11 +5,12 @@
     "pixel": "PixelFunction",
     "vertexLayout": ["position", "normal", "uv0"],
     "material": {
-        "DiffuseColor": { "type": "float3", "default": [0.2, 0.6, 0.2] },
-        "SpecularColor0": { "type": "float3", "default": [0.1, 0.15, 0.05] },
-        "Shininess0": { "type": "float", "default": 0.01 },
+        "DiffuseColor": { "type": "float3", "default": [0.2, 0.2, 0.2] },
+        "SpecularColor0": { "type": "float3", "default": [0.1, 0.1, 0.05] },
+        "Shininess0":  { "type": "float", "default": -1.0 },
         "TerrainScale": { "type": "float", "default": 1.0 },
         "HeightScale": { "type": "float", "default": 1.0 },
+        "NoiseResolution": { "type": "float", "default": 1.0 },
         "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" }
     }
 }
@@ -28,6 +29,7 @@ cbuffer MaterialBuffer: register(b2) {
     float _Shininess0;
     float _TerrainScale;
     float _HeightScale;
+    float _NoiseResolution;
 };
 
 SamplerState DefaultSampler : register(s0);
@@ -108,26 +110,35 @@ float fbm(float3 p, int octaves) {
     return value / maxValue;
 }
 
-float terrainFunc (float2 uv) {
-    float3 samplePos = float3(uv, 0.0);
-    float terrainHeight = fbm(samplePos, 4) * _HeightScale;
+float quadstep (float x) {
+    return x > 0.5 ? 1 - (-2*x+2)*(-2*x+2)/2 : 2*x*x;
+}
 
+float terrainFunc (float2 uv, float2 noiseUV) {
+    float3 samplePos = float3(noiseUV, 0.0);
+    float noiseValue = fbm(samplePos, 4);
+    
     float2 centre = float2(0.5, 0.5);
     float innerRadius = 0.15;
     float outerRadius = 0.40;
     float dist = distance(uv, centre);
     float t = saturate((dist - innerRadius) / (outerRadius - innerRadius));
-    t = smoothstep(0.0, 1.0, t);
+    //t = smoothstep(0.0, 1.0, t);
+    t = quadstep(t);
 
-
-    float finalHeight = terrainHeight * t;
+    float halfRange = 0.5 * t;
+    float finalHeight = 0.5 - halfRange + halfRange * 2.f * noiseValue;
+    //float finalHeight = lerp(0.5, terrainHeight, t);
 
     return finalHeight;
 }
 
 VertexOutput VertexFunction(VertexInput input) {
     // Sample noise in 0-1 UV space for terrain displacement (sampling unchanged)
-    float terrainHeight = terrainFunc(input.UV);
+    float2 terrainUV = input.UV;
+    terrainUV *= _NoiseResolution;
+    terrainUV += _Time.rr;
+    float terrainHeight = terrainFunc(input.UV, terrainUV);
 
     // Apply scales to vertex positions
     float3 displacedPos = input.Position * float3(_TerrainScale, 1.0, _TerrainScale);
@@ -140,10 +151,10 @@ VertexOutput VertexFunction(VertexInput input) {
     // Account for aspect ratio: when horizontal and vertical scales differ,
     // the slope gradient must account for this ratio
     float epsilon = 0.01;
-    float h_xp = terrainFunc(input.UV + float2(epsilon, 0)) * _HeightScale;
-    float h_xn = terrainFunc(input.UV - float2(epsilon, 0)) * _HeightScale;
-    float h_zp = terrainFunc(input.UV + float2(0, epsilon)) * _HeightScale;
-    float h_zn = terrainFunc(input.UV - float2(0, epsilon)) * _HeightScale;
+    float h_xp = terrainFunc(input.UV, terrainUV + float2(epsilon, 0)) * _HeightScale;
+    float h_xn = terrainFunc(input.UV, terrainUV - float2(epsilon, 0)) * _HeightScale;
+    float h_zp = terrainFunc(input.UV, terrainUV + float2(0, epsilon)) * _HeightScale;
+    float h_zn = terrainFunc(input.UV, terrainUV - float2(0, epsilon)) * _HeightScale;
 
     float3 normal;
     // Gradient accounts for scaling: height difference / horizontal distance
