@@ -1,7 +1,10 @@
 #include "Game.h"
 
+#define NOMINMAX
+
 #include <cstdio>
 #include <cassert>
+#include <numbers>
 #include <umbrellas/include-glm.h>
 
 #include "BeWindow.h"
@@ -58,8 +61,9 @@ auto Game::LoadAssets() -> void {
     _assetRegistry->AddShader("standard", standardShader);
 
     // Create models
-    const auto planeMaterial = BeMaterial::Create("PlaneMaterial", standardShader, *_assetRegistry, device);
-    _plane = CreatePlane(1024);
+    //const auto planeMaterial = BeMaterial::Create("PlaneMaterial", standardShader, *_assetRegistry, device);
+    _plane = CreatePlane(64);
+    //_plane = CreatePlaneHex(32);
     _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, *_assetRegistry, device);
     _cube = BeModel::Create("assets/cube.glb", standardShader, *_assetRegistry, device);
     _macintosh = BeModel::Create("assets/model.fbx", standardShader, *_assetRegistry, device);
@@ -81,7 +85,7 @@ auto Game::SetupScene() -> void {
         },
         {
             .Name = "Terrain",
-            .Position = {0, -50, 0},
+            .Position = {0, 0, 0},
             .Scale = glm::vec3(1.f),
             .Model = _plane,
         },
@@ -396,3 +400,116 @@ auto Game::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
 
     return model;
 }
+
+auto Game::CreatePlaneHex(size_t hexRadius) -> std::shared_ptr<BeModel> {
+    const auto shader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/terrain");
+    auto material = BeMaterial::Create("TerrainMatHex", shader, *_assetRegistry, _renderer->GetDevice());
+    material->SetFloat("TerrainScale", 200.0f);
+    material->SetFloat("HeightScale", 100.0f);
+
+    auto model = std::make_shared<BeModel>();
+    model->Shader = shader;
+    model->Materials.push_back(material);
+
+    // Hex grid parameters
+
+    // Map to store hex center vertices by their axial coordinates
+    std::unordered_map<uint32_t, uint32_t> hexVertexIndices;
+    auto coordHash = [](int q, int r) {
+        return static_cast<uint32_t>((q + 1000) * 2000 + (r + 1000));
+    };
+
+    // First pass: collect all positions to calculate bounds
+    std::vector<std::pair<int, int>> coords;
+    std::vector<glm::vec2> positions;
+    for (int q = -static_cast<int>(hexRadius); q <= static_cast<int>(hexRadius); ++q) {
+        for (int r = -static_cast<int>(hexRadius); r <= static_cast<int>(hexRadius); ++r) {
+            constexpr float hexSize = 1.0f;
+
+            coords.emplace_back(q, r);
+            float x = hexSize * (3.0f / 2.0f * q);
+            float z = hexSize * (std::numbers::sqrt3_v<float> / 2.0f * q + std::numbers::sqrt3_v<float> * r);
+            positions.emplace_back(x, z);
+        }
+    }
+
+    // Calculate bounds
+    float minX = positions[0].x, maxX = positions[0].x;
+    float minZ = positions[0].y, maxZ = positions[0].y;
+    for (const glm::vec2& pos : positions) {
+        minX = glm::min(minX, pos.x);
+        maxX = glm::max(maxX, pos.x);
+        minZ = glm::min(minZ, pos.y);
+        maxZ = glm::max(maxZ, pos.y);
+    }
+    float rangeX = maxX - minX;
+    float rangeZ = maxZ - minZ;
+
+    // Create vertices, normalized to -0.5 to 0.5 range
+    for (size_t i = 0; i < coords.size(); ++i) {
+        const auto& coord = coords[i];
+        const auto& pos = positions[i];
+
+        // Normalize to -0.5 to 0.5
+        float normX = (pos.x - minX) / rangeX - 0.5f;
+        float normZ = (pos.y - minZ) / rangeZ - 0.5f;
+
+        BeFullVertex vertex{};
+        vertex.Position = {normX, 0.0f, normZ};
+        vertex.Normal = {0.0f, 1.0f, 0.0f};
+        vertex.Color = {1.0f, 1.0f, 1.0f, 1.0f};
+        vertex.UV0 = {normX + 0.5f, normZ + 0.5f};  // 0-1 for UV
+
+        hexVertexIndices[coordHash(coord.first, coord.second)] = static_cast<uint32_t>(model->FullVertices.size());
+        model->FullVertices.push_back(vertex);
+    }
+
+    // Create triangles connecting neighboring hex centers
+    for (int q = -static_cast<int>(hexRadius); q <= static_cast<int>(hexRadius); ++q) {
+        for (int r = -static_cast<int>(hexRadius); r <= static_cast<int>(hexRadius); ++r) {
+            uint32_t centerIdx = hexVertexIndices[coordHash(q, r)];
+
+            // Six neighbors in axial coordinates (pointy-top)
+            const int neighbors[6][2] = {
+                {q + 1, r},     // East
+                {q + 1, r - 1}, // Southeast
+                {q, r - 1},     // Southwest
+                {q - 1, r},     // West
+                {q - 1, r + 1}, // Northwest
+                {q, r + 1}      // Northeast
+            };
+
+            // Create triangles to each neighbor pair (triangle fan from center)
+            for (int i = 0; i < 6; ++i) {
+                int nq1 = neighbors[i][0];
+                int nr1 = neighbors[i][1];
+                int nq2 = neighbors[(i + 1) % 6][0];
+                int nr2 = neighbors[(i + 1) % 6][1];
+
+                // Check if neighbors exist
+                auto it1 = hexVertexIndices.find(coordHash(nq1, nr1));
+                auto it2 = hexVertexIndices.find(coordHash(nq2, nr2));
+
+                if (it1 != hexVertexIndices.end() && it2 != hexVertexIndices.end()) {
+                    uint32_t idx1 = it1->second;
+                    uint32_t idx2 = it2->second;
+
+                    // Add triangle (counterclockwise)
+                    model->Indices.push_back(centerIdx);
+                    model->Indices.push_back(idx1);
+                    model->Indices.push_back(idx2);
+                }
+            }
+        }
+    }
+
+    BeModel::BeDrawSlice slice{};
+    slice.IndexCount = static_cast<uint32_t>(model->Indices.size());
+    slice.StartIndexLocation = 0;
+    slice.BaseVertexLocation = 0;
+    slice.Material = material;
+    model->DrawSlices.push_back(slice);
+
+    return model;
+}
+

@@ -45,4 +45,5 @@ class Game {
     pri auto MainLoop() -> void;
 
     pri auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel>;
+    pri auto CreatePlaneHex(size_t hexRadius) -> std::shared_ptr<BeModel>;
 };
