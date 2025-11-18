@@ -26,22 +26,19 @@ auto BeFullscreenEffectPass::Render() -> void {
         renderTargets.push_back(resource->RTV.Get());
     }
     context->OMSetRenderTargets(renderTargets.size(), renderTargets.data(), nullptr);
-
     
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
-    
-    context->VSSetShader(_renderer->GetFullscreenVertexShader().Get(), nullptr, 0);
-    context->PSSetShader(Shader->PixelShader.Get(), nullptr, 0);
+
+    _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
+    Shader->Bind(context.Get(), BeShaderType::Pixel);
 
     context->IASetInputLayout(nullptr);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
     context->Draw(4, 0);
 
 
-    const std::vector<ID3D11ShaderResourceView*> emptyResources(InputTextureNames.size(), nullptr);
-    context->PSSetShaderResources(0, emptyResources.size(), emptyResources.data());
-    const std::vector<ID3D11RenderTargetView*> emptyTargets(OutputTextureNames.size(), nullptr);
-    context->OMSetRenderTargets(emptyTargets.size(), emptyTargets.data(), nullptr);
-    ID3D11SamplerState* emptySamplers[] = { nullptr };
-    context->PSSetSamplers(0, 1, emptySamplers);
+    BeShader::Unbind(context.Get(), BeShaderType::All);
+    context->PSSetShaderResources(0, InputTextureNames.size(), Utils::NullSRVs);
+    context->OMSetRenderTargets(OutputTextureNames.size(), Utils::NullRTVs, nullptr);
+    context->PSSetSamplers(0, 1, Utils::NullSamplers);
 }
