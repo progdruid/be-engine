@@ -7,7 +7,8 @@ cbuffer UniformBuffer: register(b0) {
     float3 _CameraPosition;
     
     float3 _AmbientColor;
-    //float3 _DirectionalLightVector;
-    //float3 _DirectionalLightColor;
-    //float _DirectionalLightPower;
+
+    float __pad;
+    
+    float _Time;
 };
