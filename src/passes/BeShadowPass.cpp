@@ -60,8 +60,8 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
     SCOPE_EXIT { context->OMSetRenderTargets(0, nullptr, nullptr); };
 
     // sort out shader
-    context->VSSetShader(_directionalShadowShader->VertexShader.Get(), nullptr, 0);
-    SCOPE_EXIT { context->VSSetShader(nullptr, nullptr, 0); };
+    _directionalShadowShader->Bind(context.Get(), BeShaderType::Vertex);
+    SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::Vertex); };
 
     // Set vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
@@ -105,8 +105,8 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
     const auto pointShadowMap = _renderer->GetRenderResource(pointLight.ShadowMapTextureName);
     
     // sort out shader
-    context->VSSetShader(_pointShadowShader->VertexShader.Get(), nullptr, 0);
-    SCOPE_EXIT { context->VSSetShader(nullptr, nullptr, 0); };
+    _pointShadowShader->Bind(context.Get(), BeShaderType::Vertex);
+    SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::Vertex); };
     
     // sort out vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);

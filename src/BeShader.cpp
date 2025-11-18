@@ -77,8 +77,8 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
     if (header.contains("vertex")) {
         shader->_shaderType = BeShaderType::Vertex;
 
-        std::string vertexFunctionName = header["vertex"];
-        ComPtr<ID3DBlob> blob = shader->CompileBlob(path, vertexFunctionName.c_str(), "vs_5_0", &includeHandler);
+        std::string vertexFunctionName = header.at("vertex");
+        ComPtr<ID3DBlob> blob = CompileBlob(path, vertexFunctionName.c_str(), "vs_5_0", &includeHandler);
         Utils::Check << device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->VertexShader);
 
         //input layout
@@ -113,25 +113,27 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
         }
     }
 
+    if (header.contains("tesselation")) {
+        shader->_shaderType = shader->_shaderType | BeShaderType::Tesselation;
+
+        const Json& tesselation = header.at("tesselation");
+        std::string hullFunctionName = tesselation.at("hull");
+        std::string domainFunctionName = tesselation.at("domain");
+        ComPtr<ID3DBlob> hullBlob = CompileBlob(path, hullFunctionName.c_str(), "hs_5_0", &includeHandler);
+        ComPtr<ID3DBlob> domainBlob = CompileBlob(path, domainFunctionName.c_str(), "ds_5_0", &includeHandler);
+        Utils::Check << device->CreateHullShader(hullBlob->GetBufferPointer(), hullBlob->GetBufferSize(), nullptr, &shader->HullShader);
+        Utils::Check << device->CreateDomainShader(domainBlob->GetBufferPointer(), domainBlob->GetBufferSize(), nullptr, &shader->DomainShader);
+    }
+    
     if (header.contains("pixel")) {
         shader->_shaderType = shader->_shaderType | BeShaderType::Pixel;
 
-        std::string pixelFunctionName = header["pixel"];
-        ComPtr<ID3DBlob> blob = shader->CompileBlob(path, pixelFunctionName.c_str(), "ps_5_0", &includeHandler);
+        std::string pixelFunctionName = header.at("pixel");
+        ComPtr<ID3DBlob> blob = CompileBlob(path, pixelFunctionName.c_str(), "ps_5_0", &includeHandler);
         Utils::Check << device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->PixelShader);
     }
 
     return shader;
-}
-
-auto BeShader::Bind(ID3D11DeviceContext* context) const -> void {
-    if (HasAny(_shaderType, BeShaderType::Vertex)) {
-        context->IASetInputLayout(ComputedInputLayout.Get());
-        context->VSSetShader(VertexShader.Get(), nullptr, 0);
-    }
-    if (HasAny(_shaderType, BeShaderType::Pixel)) {
-        context->PSSetShader(PixelShader.Get(), nullptr, 0);
-    }
 }
 
 auto BeShader::CompileBlob(
@@ -232,4 +234,38 @@ auto BeShader::Split(std::string_view str, const char* delimiters) -> std::vecto
     result.push_back(Take(str, start, str.size()));
     return result;
 }
+
+
+
+auto BeShader::Bind(ID3D11DeviceContext* context, const BeShaderType type) const -> void {
+    const auto shaderType = _shaderType & type;
+    if (HasAny(shaderType, BeShaderType::Vertex)) {
+        if (ComputedInputLayout)
+            context->IASetInputLayout(ComputedInputLayout.Get());
+        context->VSSetShader(VertexShader.Get(), nullptr, 0);
+    }
+    if (HasAny(shaderType, BeShaderType::Tesselation)) {
+        context->HSSetShader(HullShader.Get(), nullptr, 0);
+        context->DSSetShader(DomainShader.Get(), nullptr, 0);
+    }
+    if (HasAny(shaderType, BeShaderType::Pixel)) {
+        context->PSSetShader(PixelShader.Get(), nullptr, 0);
+    }
+}
+
+auto BeShader::Unbind(ID3D11DeviceContext* context, const BeShaderType type) -> void {
+    if (HasAny(type, BeShaderType::Vertex)) {
+        context->IASetInputLayout(nullptr);
+        context->VSSetShader(nullptr, nullptr, 0);
+    }
+    if (HasAny(type, BeShaderType::Tesselation)) {
+        context->HSSetShader(nullptr, nullptr, 0);
+        context->DSSetShader(nullptr, nullptr, 0);
+    }
+    if (HasAny(type, BeShaderType::Pixel)) {
+        context->PSSetShader(nullptr, nullptr, 0);
+    }
+}
+
+
 

@@ -343,7 +343,6 @@ auto Game::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
     auto material = BeMaterial::Create("TerrainMat", shader, *_assetRegistry, _renderer->GetDevice());
     material->SetFloat("TerrainScale", 200.0f);
     material->SetFloat("HeightScale", 100.0f);
-    material->SetFloat("NoiseResolution", 2.0f);
     
     auto model = std::make_shared<BeModel>();
     model->Shader = shader;

@@ -34,20 +34,17 @@ auto BeComposerPass::Render() -> void {
     context->PSSetShaderResources(4, 1, lightingResource->SRV.GetAddressOf());
     
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
-    
-    context->VSSetShader(_renderer->GetFullscreenVertexShader().Get(), nullptr, 0);
-    context->PSSetShader(_composerShader->PixelShader.Get(), nullptr, 0);
 
+    _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
+    _composerShader->Bind(context.Get(), BeShaderType::Pixel);
+    
     context->IASetInputLayout(nullptr);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
     context->Draw(4, 0);
-    { 
-        ID3D11ShaderResourceView* emptyResources[] = { nullptr, nullptr, nullptr, nullptr };
-        context->PSSetShaderResources(0, 4, emptyResources);
-        ID3D11SamplerState* emptySamplers[] = { nullptr };
-        context->PSSetSamplers(0, 1, emptySamplers);
-        ID3D11RenderTargetView* emptyTargets[] = { nullptr };
-        context->OMSetRenderTargets(1, emptyTargets, nullptr);
-    }
+    
+    BeShader::Unbind(context.Get(), BeShaderType::All);
+    context->PSSetShaderResources(0, 4, Utils::NullSRVs);
+    context->PSSetSamplers(0, 1, Utils::NullSamplers);
+    context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
 }
 
