@@ -2,15 +2,20 @@
 @be-shader-header
 {
     "vertex": "VertexFunction",
-    "pixel": "PixelFunction",
     "vertexLayout": ["position", "normal", "uv0"],
+    "tesselation": {
+        "hull": "HullFunction",
+        "domain": "DomainFunction"
+    },
+    "pixel": "PixelFunction",
     "material": {
         "DiffuseColor": { "type": "float3", "default": [0.2, 0.2, 0.2] },
         "SpecularColor0": { "type": "float3", "default": [0.1, 0.1, 0.05] },
-        "Shininess0":  { "type": "float", "default": -1.0 },
+        "Shininess0":  { "type": "float", "default": 1.0 },
         "TerrainScale": { "type": "float", "default": 1.0 },
         "HeightScale": { "type": "float", "default": 1.0 },
-        "NoiseResolution": { "type": "float", "default": 1.0 },
+        "NoiseResolution": { "type": "float", "default": 2.0 },
+        "Speed": { "type": "float", "default": 0.2 },
         "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" }
     }
 }
@@ -30,6 +35,7 @@ cbuffer MaterialBuffer: register(b2) {
     float _TerrainScale;
     float _HeightScale;
     float _NoiseResolution;
+    float _Speed;
 };
 
 SamplerState DefaultSampler : register(s0);
@@ -119,8 +125,8 @@ float terrainFunc (float2 uv, float2 noiseUV) {
     float noiseValue = fbm(samplePos, 4);
     
     float2 centre = float2(0.5, 0.5);
-    float innerRadius = 0.15;
-    float outerRadius = 0.40;
+    float innerRadius = 0.1;
+    float outerRadius = 0.4;
     float dist = distance(uv, centre);
     float t = saturate((dist - innerRadius) / (outerRadius - innerRadius));
     //t = smoothstep(0.0, 1.0, t);
@@ -137,7 +143,7 @@ VertexOutput VertexFunction(VertexInput input) {
     // Sample noise in 0-1 UV space for terrain displacement (sampling unchanged)
     float2 terrainUV = input.UV;
     terrainUV *= _NoiseResolution;
-    terrainUV += _Time.rr;
+    terrainUV += (_Time * _Speed).rr;
     float terrainHeight = terrainFunc(input.UV, terrainUV);
 
     // Apply scales to vertex positions
@@ -170,6 +176,55 @@ VertexOutput VertexFunction(VertexInput input) {
     output.Normal = normalize(mul(normal, (float3x3)_Model));
     output.UV = input.UV;
     output.WorldPosition = worldPosition.xyz;
+
+    return output;
+}
+
+// Patch constant output structure
+struct PatchConstantOutput {
+    float EdgeTessFactor[3] : SV_TessFactor;
+    float InsideTessFactor : SV_InsideTessFactor;
+};
+
+// Patch constant function for hull shader
+PatchConstantOutput PatchConstantFunction(InputPatch<VertexOutput, 3> patch) {
+    PatchConstantOutput output;
+
+    // Pass-through: no tessellation
+    output.EdgeTessFactor[0] = 1.0f;
+    output.EdgeTessFactor[1] = 1.0f;
+    output.EdgeTessFactor[2] = 1.0f;
+    output.InsideTessFactor = 1.0f;
+
+    return output;
+}
+
+// Hull shader
+[domain("tri")]
+[partitioning("integer")]
+[outputtopology("triangle_cw")]
+[outputcontrolpoints(3)]
+[patchconstantfunc("PatchConstantFunction")]
+VertexOutput HullFunction(InputPatch<VertexOutput, 3> patch, uint pointId : SV_OutputControlPointID) {
+    // Pass-through: output control points unchanged
+    return patch[pointId];
+}
+
+// Domain shader
+[domain("tri")]
+VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : SV_DomainLocation, const OutputPatch<VertexOutput, 3> patch) {
+    VertexOutput output;
+
+    // Interpolate using barycentric coordinates
+    output.Position = barycentric.x * patch[0].Position + barycentric.y * patch[1].Position + barycentric.z * patch[2].Position;
+    output.Normal = barycentric.x * patch[0].Normal + barycentric.y * patch[1].Normal + barycentric.z * patch[2].Normal;
+    output.UV = barycentric.x * patch[0].UV + barycentric.y * patch[1].UV + barycentric.z * patch[2].UV;
+    output.ViewDirection = barycentric.x * patch[0].ViewDirection + barycentric.y * patch[1].ViewDirection + barycentric.z * patch[2].ViewDirection;
+    output.WorldPosition = barycentric.x * patch[0].WorldPosition + barycentric.y * patch[1].WorldPosition + barycentric.z * patch[2].WorldPosition;
+
+    // Normalize interpolated vectors
+    output.Normal = normalize(output.Normal);
+    output.ViewDirection = normalize(output.ViewDirection);
 
     return output;
 }

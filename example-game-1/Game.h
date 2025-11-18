@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+#include "umbrellas/access-modifiers.hpp"
+
 // Forward declarations
 class BeMaterial;
 class BeShader;
@@ -17,30 +19,30 @@ struct BeDirectionalLight;
 struct BePointLight;
 
 class Game {
-private:
-    std::unique_ptr<BeWindow> _window;
-    std::unique_ptr<BeRenderer> _renderer;
-    std::unique_ptr<BeInput> _input;
-    std::unique_ptr<BeCamera> _camera;
-    std::unique_ptr<BeAssetRegistry> _assetRegistry;
+    // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    pri std::unique_ptr<BeWindow> _window;
+    pri std::unique_ptr<BeRenderer> _renderer;
+    pri std::unique_ptr<BeInput> _input;
+    pri std::unique_ptr<BeCamera> _camera;
+    pri std::unique_ptr<BeAssetRegistry> _assetRegistry;
+    
+    pri std::shared_ptr<BeModel> _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil;
+    pri std::unique_ptr<BeDirectionalLight> _directionalLight;
+    pri std::vector<BePointLight> _pointLights;
 
-    std::shared_ptr<BeModel> _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil;
-    std::unique_ptr<BeDirectionalLight> _directionalLight;
-    std::vector<BePointLight> _pointLights;
+    // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
+    pub Game();
+    pub ~Game();
 
-public:
-    Game();
-    ~Game();
+    // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
+    pub auto Run() -> int;
 
-public:
-    auto Run() -> int;
+    // private logic ///////////////////////////////////////////////////////////////////////////////////////////////////
+    pri auto LoadAssets() -> void;
+    pri auto SetupScene() -> void;
+    pri auto SetupRenderPasses() -> void;
+    pri auto SetupCamera(int width, int height) -> void;
+    pri auto MainLoop() -> void;
 
-private:
-    auto LoadAssets() -> void;
-    auto SetupScene() -> void;
-    auto SetupRenderPasses() -> void;
-    auto SetupCamera(int width, int height) -> void;
-    auto MainLoop() -> void;
-
-    auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel>;
+    pri auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel>;
 };

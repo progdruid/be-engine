@@ -40,36 +40,35 @@ auto BeGeometryPass::Render() -> void {
         gbufferResource2->RTV.Get()
     };
     context->OMSetRenderTargets(3, gbufferRTVs, depthResource->DSV.Get());
-    SCOPE_EXIT {
-        ID3D11RenderTargetView* emptyTargets[3] = { nullptr, nullptr, nullptr };
-        context->OMSetRenderTargets(3, emptyTargets, nullptr);
-    };
+    SCOPE_EXIT { context->OMSetRenderTargets(3, Utils::NullRTVs, nullptr); };
 
     // Set vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
     uint32_t offset = 0;
     context->IASetVertexBuffers(0, 1, _renderer->GetShaderVertexBuffer().GetAddressOf(), &stride, &offset);
     context->IASetIndexBuffer(_renderer->GetShaderIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     SCOPE_EXIT {
-        ID3D11Buffer* emptyBuffers[1] = { nullptr };
-        context->IASetVertexBuffers(0, 1, emptyBuffers, &stride, &offset);
+        context->IASetVertexBuffers(0, 1, Utils::NullBuffers, &stride, &offset);
         context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
     };
 
     // Set default sampler - temporary,  should be overridden by materials if needed
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
-    SCOPE_EXIT {
-        ID3D11SamplerState* emptySamplers[1] = { nullptr };
-        context->PSSetSamplers(0, 1, emptySamplers);
-    };
+    SCOPE_EXIT { context->PSSetSamplers(0, 1, Utils::NullSamplers); };
 
     // Draw all objects
     const auto& objects = _renderer->GetObjects();
     for (const auto& object : objects) {
         const auto shader = object.Model->Shader;
         assert(shader);
-        shader->Bind(context.Get());
+        shader->Bind(context.Get(), BeShaderType::All);
+        SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::All); };
+
+        // Set primitive topology based on whether tessellation is enabled
+        const D3D11_PRIMITIVE_TOPOLOGY topology = HasAny(shader->GetShaderType(), BeShaderType::Tesselation)
+            ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST
+            : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        context->IASetPrimitiveTopology(topology);
 
         glm::mat4x4 modelMatrix =
             glm::translate(glm::mat4(1.0f), object.Position) *
@@ -102,4 +101,5 @@ auto BeGeometryPass::Render() -> void {
     }
     context->PSSetShaderResources(0, 2, Utils::NullSRVs); // clean material textures
     context->VSSetConstantBuffers(1, 2, Utils::NullBuffers); // clean object and material buffers
+    context->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_UNDEFINED);
 }

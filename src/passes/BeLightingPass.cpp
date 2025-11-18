@@ -66,8 +66,8 @@ auto BeLightingPass::Render() -> void {
         context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     };
 
-    context->VSSetShader(_renderer->GetFullscreenVertexShader().Get(), nullptr, 0);
-    SCOPE_EXIT { context->VSSetShader(nullptr, nullptr, 0); };
+    _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
+    SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::Vertex); };
 
     context->PSSetShaderResources(0, 1, depthResource->SRV.GetAddressOf());
     context->PSSetShaderResources(1, 1, gbufferResource0->SRV.GetAddressOf());
@@ -81,7 +81,7 @@ auto BeLightingPass::Render() -> void {
     {
         context->PSSetShaderResources(4, 1, directionalLightShadowMapResource->SRV.GetAddressOf());
         SCOPE_EXIT { context->PSSetShaderResources(4, 1, Utils::NullSRVs); };
-        context->PSSetShader(_directionalLightShader->PixelShader.Get(), nullptr, 0);
+        _directionalLightShader->Bind(context.Get(), BeShaderType::Pixel);
 
         BeDirectionalLightLightingBufferGPU directionalLightBuffer(directionalLight);
         D3D11_MAPPED_SUBRESOURCE directionalLightMappedResource;
@@ -96,7 +96,7 @@ auto BeLightingPass::Render() -> void {
     }
 
     {
-        context->PSSetShader(_pointLightShader->PixelShader.Get(), nullptr, 0);
+        _pointLightShader->Bind(context.Get(), BeShaderType::Pixel);
         for (const auto& pointLightData : pointLights) {
             const auto& shadowCubemap = *_renderer->GetRenderResource(pointLightData.ShadowMapTextureName);
             context->PSSetShaderResources(4, 1, shadowCubemap.SRV.GetAddressOf());
@@ -116,6 +116,6 @@ auto BeLightingPass::Render() -> void {
     }
 
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED);
-    context->PSSetShader(nullptr, nullptr, 0);
+    BeShader::Unbind(context.Get(), BeShaderType::Pixel);
     context->PSSetConstantBuffers(1, 1, Utils::NullBuffers);
 }
