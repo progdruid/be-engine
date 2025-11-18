@@ -9,12 +9,12 @@
     },
     "pixel": "PixelFunction",
     "material": {
-        "DiffuseColor": { "type": "float3", "default": [0.2, 0.2, 0.2] },
+        "DiffuseColor": { "type": "float3", "default": [0.9, 0.9, 0.9] },
         "SpecularColor0": { "type": "float3", "default": [0.1, 0.1, 0.05] },
         "Shininess0":  { "type": "float", "default": 1.0 },
         "TerrainScale": { "type": "float", "default": 1.0 },
         "HeightScale": { "type": "float", "default": 1.0 },
-        "NoiseResolution": { "type": "float", "default": 2.0 },
+        "NoiseResolution": { "type": "float", "default": 4.0 },
         "Speed": { "type": "float", "default": 0.2 },
         "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" }
     }
@@ -49,10 +49,9 @@ struct VertexInput {
 
 struct VertexOutput {
     float4 Position : SV_POSITION;
-    float3 Normal : NORMAL;
+    nointerpolation float3 Normal : NORMAL;
     float2 UV : TEXCOORD0;
-    float3 ViewDirection : TEXCOORD1;
-    float3 WorldPosition : TEXCOORD2;
+    float3 WorldPosition : TEXCOORD1;
 };
 
 struct PixelOutput {
@@ -144,7 +143,7 @@ VertexOutput VertexFunction(VertexInput input) {
     float2 terrainUV = input.UV;
     terrainUV *= _NoiseResolution;
     terrainUV += (_Time * _Speed).rr;
-    float terrainHeight = terrainFunc(input.UV, terrainUV);
+    float terrainHeight = terrainFunc(input.UV, terrainUV) - 0.5;
 
     // Apply scales to vertex positions
     float3 displacedPos = input.Position * float3(_TerrainScale, 1.0, _TerrainScale);
@@ -172,7 +171,6 @@ VertexOutput VertexFunction(VertexInput input) {
 
     VertexOutput output;
     output.Position = mul(worldPosition, _ProjectionView);
-    output.ViewDirection = _CameraPosition - worldPosition.xyz;
     output.Normal = normalize(mul(normal, (float3x3)_Model));
     output.UV = input.UV;
     output.WorldPosition = worldPosition.xyz;
@@ -206,8 +204,15 @@ PatchConstantOutput PatchConstantFunction(InputPatch<VertexOutput, 3> patch) {
 [outputcontrolpoints(3)]
 [patchconstantfunc("PatchConstantFunction")]
 VertexOutput HullFunction(InputPatch<VertexOutput, 3> patch, uint pointId : SV_OutputControlPointID) {
-    // Pass-through: output control points unchanged
-    return patch[pointId];
+    VertexOutput output = patch[pointId];
+
+    // Calculate face normal from the three displaced positions
+    float3 v0 = patch[0].WorldPosition;
+    float3 v1 = patch[1].WorldPosition;
+    float3 v2 = patch[2].WorldPosition;
+    output.Normal = normalize(cross(v1 - v0, v2 - v0));
+
+    return output;
 }
 
 // Domain shader
@@ -219,12 +224,10 @@ VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : 
     output.Position = barycentric.x * patch[0].Position + barycentric.y * patch[1].Position + barycentric.z * patch[2].Position;
     output.Normal = barycentric.x * patch[0].Normal + barycentric.y * patch[1].Normal + barycentric.z * patch[2].Normal;
     output.UV = barycentric.x * patch[0].UV + barycentric.y * patch[1].UV + barycentric.z * patch[2].UV;
-    output.ViewDirection = barycentric.x * patch[0].ViewDirection + barycentric.y * patch[1].ViewDirection + barycentric.z * patch[2].ViewDirection;
     output.WorldPosition = barycentric.x * patch[0].WorldPosition + barycentric.y * patch[1].WorldPosition + barycentric.z * patch[2].WorldPosition;
 
     // Normalize interpolated vectors
     output.Normal = normalize(output.Normal);
-    output.ViewDirection = normalize(output.ViewDirection);
 
     return output;
 }
