@@ -4,6 +4,7 @@
 #include <string>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#define NOMINMAX
 #include <windows.h>
 #include <type_traits>
 #include <d3d11.h>
