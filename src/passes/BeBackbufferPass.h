@@ -7,23 +7,19 @@
 
 class BeShader;
 
-class BeComposerPass final : public BeRenderPass {
+class BeBackbufferPass final : public BeRenderPass {
 
 public:
     glm::vec3 ClearColor;
 
-    std::string InputDepthTextureName;
-    std::string InputTexture0Name;
-    std::string InputTexture1Name;
-    std::string InputTexture2Name;
-    std::string InputLightTextureName;
+    std::string InputTextureName;
     
 private:
-    std::shared_ptr<BeShader> _composerShader = nullptr;
+    std::shared_ptr<BeShader> _backbufferShader = nullptr;
     
 public:
-    explicit BeComposerPass();
-    ~BeComposerPass() override;
+    explicit BeBackbufferPass();
+    ~BeBackbufferPass() override;
 
     auto Initialise() -> void override;
     auto Render() -> void override;

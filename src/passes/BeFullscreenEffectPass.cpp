@@ -32,6 +32,11 @@ auto BeFullscreenEffectPass::Render() -> void {
     _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
     Shader->Bind(context.Get(), BeShaderType::Pixel);
 
+    if (Material) {
+        Material->UpdateGPUBuffers(context.Get());
+        context->PSSetConstantBuffers(2, 1, Material->GetBuffer().GetAddressOf());
+    }
+
     context->IASetInputLayout(nullptr);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
     context->Draw(4, 0);
@@ -41,4 +46,5 @@ auto BeFullscreenEffectPass::Render() -> void {
     context->PSSetShaderResources(0, InputTextureNames.size(), Utils::NullSRVs);
     context->OMSetRenderTargets(OutputTextureNames.size(), Utils::NullRTVs, nullptr);
     context->PSSetSamplers(0, 1, Utils::NullSamplers);
+    context->PSSetConstantBuffers(2, 1, Utils::NullBuffers);
 }
