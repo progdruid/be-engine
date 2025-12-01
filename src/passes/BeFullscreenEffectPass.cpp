@@ -15,7 +15,7 @@ auto BeFullscreenEffectPass::Render() -> void {
     std::vector<ID3D11ShaderResourceView*> inputResources;
     for (const auto& inputTextureName : InputTextureNames) {
         const auto resource = _renderer->GetRenderResource(inputTextureName);
-        inputResources.push_back(resource->SRV.Get());
+        inputResources.push_back(resource->GetSRV().Get());
     }
     context->PSSetShaderResources(0, inputResources.size(), inputResources.data());
 
@@ -23,7 +23,7 @@ auto BeFullscreenEffectPass::Render() -> void {
     std::vector<ID3D11RenderTargetView*> renderTargets;
     for (const auto& outputTextureName : OutputTextureNames) {
         const auto resource = _renderer->GetRenderResource(outputTextureName);
-        renderTargets.push_back(resource->RTV.Get());
+        renderTargets.push_back(resource->GetRTV().Get());
     }
     context->OMSetRenderTargets(renderTargets.size(), renderTargets.data(), nullptr);
     

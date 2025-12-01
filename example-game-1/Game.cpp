@@ -19,6 +19,7 @@
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "BeModel.h"
+#include "passes/BeBloomPass.h"
 #include "passes/BeFullscreenEffectPass.h"
 #include "passes/BeShadowPass.h"
 
@@ -27,25 +28,27 @@ Game::~Game() = default;
 
 
 auto Game::Run() -> int {
-    constexpr int width = 1920, height = 1080;
+    _width = 1920;
+    _height = 1080;
 
-    _window = std::make_unique<BeWindow>(width, height, "be: example game 1");
+    _window = std::make_unique<BeWindow>(_width, _height, "be: example game 1");
+
+    _assetRegistry = std::make_shared<BeAssetRegistry>();
 
     const HWND hwnd = _window->getHWND();
-    _renderer = std::make_unique<BeRenderer>(hwnd, width, height);
+    _renderer = std::make_unique<BeRenderer>(hwnd, _width, _height);
     _renderer->LaunchDevice();
 
     LoadAssets();
     SetupScene();
     SetupRenderPasses();
-    SetupCamera(width, height);
+    SetupCamera(_width, _height);
     MainLoop();
     
     return 0;
 }
 
 auto Game::LoadAssets() -> void {
-    _assetRegistry = std::make_unique<BeAssetRegistry>();
     const auto device = _renderer->GetDevice();
 
     BeShader::StandardShaderIncludePath = "standardShaders/";
@@ -195,9 +198,39 @@ auto Game::SetupRenderPasses() -> void {
         .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
-    _renderer->CreateRenderResource("Lighting", true, {
+    _renderer->CreateRenderResource("HDR-Input", true, {
         .Format = DXGI_FORMAT_R11G11B10_FLOAT,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+    });
+    _renderer->CreateRenderResource("Bloom_Mip0", false, {
+        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
+        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+        .CustomWidth = _width,
+        .CustomHeight = _height,
+    });
+    _renderer->CreateRenderResource("Bloom_Mip1", false, {
+        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
+        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+        .CustomWidth = _width / 2,
+        .CustomHeight = _height / 2,
+    });
+    _renderer->CreateRenderResource("Bloom_Mip2", false, {
+        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
+        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+        .CustomWidth = _width / 4,
+        .CustomHeight = _height / 4,
+    });
+    _renderer->CreateRenderResource("Bloom_Mip3", false, {
+        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
+        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+        .CustomWidth = _width / 8,
+        .CustomHeight = _height / 8,
+    });
+    _renderer->CreateRenderResource("Bloom_Mip4", false, {
+        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
+        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+        .CustomWidth = _width / 16,
+        .CustomHeight = _height / 16,
     });
     _renderer->CreateRenderResource("PPOutput", true, {
         .Format = DXGI_FORMAT_R11G11B10_FLOAT,
@@ -237,13 +270,20 @@ auto Game::SetupRenderPasses() -> void {
     lightingPass->InputTexture0Name = "BaseColor";
     lightingPass->InputTexture1Name = "WorldNormal";
     lightingPass->InputTexture2Name = "Specular-Shininess";
-    lightingPass->OutputTextureName = "Lighting";
+    lightingPass->OutputTextureName = "HDR-Input";
 
+    // Bloom Pass
+    const auto bloomPass = new BeBloomPass();
+    _renderer->AddRenderPass(bloomPass);
+    bloomPass->AssetRegistry = _assetRegistry;
+    bloomPass->InputHDRTextureName = "HDR-Input";
+    bloomPass->BloomMipTextureNames = {"Bloom_Mip0", "Bloom_Mip1", "Bloom_Mip2", "Bloom_Mip3", "Bloom_Mip4"};
+    
     // Cel shader pass
     const auto effectShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/effects/usedEffect");
     const auto effectPass = new BeFullscreenEffectPass();
     _renderer->AddRenderPass(effectPass);
-    effectPass->InputTextureNames = {"Lighting", "DepthStencil", "WorldNormal"};
+    effectPass->InputTextureNames = {"HDR-Input", "DepthStencil", "WorldNormal"};
     effectPass->OutputTextureNames = {"PPOutput"};
     effectPass->Shader = effectShader;
 
@@ -344,7 +384,7 @@ auto Game::MainLoop() -> void {
 
 auto Game::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
     const auto shader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/terrain");
-    auto material = BeMaterial::Create("TerrainMat", shader, *_assetRegistry, _renderer->GetDevice());
+    auto material = BeMaterial::Create("TerrainMat", true, shader, *_assetRegistry, _renderer->GetDevice());
     material->SetFloat("TerrainScale", 200.0f);
     material->SetFloat("HeightScale", 100.0f);
     
@@ -403,7 +443,7 @@ auto Game::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
 
 auto Game::CreatePlaneHex(size_t hexRadius) -> std::shared_ptr<BeModel> {
     const auto shader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/terrain");
-    auto material = BeMaterial::Create("TerrainMatHex", shader, *_assetRegistry, _renderer->GetDevice());
+    auto material = BeMaterial::Create("TerrainMatHex", true, shader, *_assetRegistry, _renderer->GetDevice());
     material->SetFloat("TerrainScale", 200.0f);
     material->SetFloat("HeightScale", 100.0f);
 

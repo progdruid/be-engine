@@ -35,6 +35,8 @@ public:
     explicit BeRenderer(HWND windowHandle, uint32_t width, uint32_t height);
     ~BeRenderer() = default;
 
+    
+
 public:
     BeUniformData UniformData;
 
@@ -55,6 +57,7 @@ private:
 
     ComPtr<ID3D11Buffer> _uniformBuffer;
     ComPtr<ID3D11SamplerState> _pointSampler;
+    ComPtr<ID3D11SamplerState> _postProcessLinearClampSampler;
     ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
     std::shared_ptr<BeShader> _fullscreenShader = nullptr;
 
@@ -70,6 +73,7 @@ public:
     [[nodiscard]] auto GetDevice() const -> ComPtr<ID3D11Device> { return _device; }
     [[nodiscard]] auto GetContext() const -> ComPtr<ID3D11DeviceContext> { return _context; }
     [[nodiscard]] auto GetPointSampler() const -> ComPtr<ID3D11SamplerState> { return _pointSampler; }
+    [[nodiscard]] auto GetPostProcessLinearClampSampler() const -> ComPtr<ID3D11SamplerState> { return _postProcessLinearClampSampler; }
     [[nodiscard]] auto GetFullscreenVertexShader() const -> std::shared_ptr<BeShader> { return _fullscreenShader; }
     [[nodiscard]] auto GetBackbufferTarget() const -> ComPtr<ID3D11RenderTargetView> { return _backbufferTarget; }
     

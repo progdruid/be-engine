@@ -116,39 +116,39 @@ struct BeMaterialTexturePropertyDescriptor {
 
 class BeShader {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
-    pub static inline std::string StandardShaderIncludePath = "src/shaders/";
-    pub static auto Create(ID3D11Device* device, const std::filesystem::path& filePath) -> std::shared_ptr<BeShader>;
-    pub static auto Unbind (ID3D11DeviceContext* context, const BeShaderType type = BeShaderType::All) -> void;
+    expose static inline std::string StandardShaderIncludePath = "src/shaders/";
+    expose static auto Create(ID3D11Device* device, const std::filesystem::path& filePath) -> std::shared_ptr<BeShader>;
+    expose static auto Unbind (ID3D11DeviceContext* context, const BeShaderType type = BeShaderType::All) -> void;
     
-    pri static auto CompileBlob (
+    hide static auto CompileBlob (
         const std::filesystem::path& filePath,
         const char* entrypointName,
         const char* target,
         BeShaderIncludeHandler* includeHandler
     ) -> ComPtr<ID3DBlob>;
-    pri static auto ParseHeader (const std::string& src) -> Json;
-    pri static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
-    pri static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;
-    pri static auto Split (std::string_view str, const char* delimiters) -> std::vector<std::string_view>;
+    hide static auto ParseHeader (const std::string& src) -> Json;
+    hide static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
+    hide static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;
+    hide static auto Split (std::string_view str, const char* delimiters) -> std::vector<std::string_view>;
 
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    pub ComPtr<ID3D11InputLayout> ComputedInputLayout;
-    pub ComPtr<ID3D11VertexShader> VertexShader;
-    pub ComPtr<ID3D11HullShader> HullShader;
-    pub ComPtr<ID3D11DomainShader> DomainShader;
-    pub ComPtr<ID3D11PixelShader> PixelShader;
-    pub bool HasMaterial = false;
-    pub std::vector<BeMaterialPropertyDescriptor> MaterialProperties;
-    pub std::vector<BeMaterialTexturePropertyDescriptor> MaterialTextureProperties;
+    expose ComPtr<ID3D11InputLayout> ComputedInputLayout;
+    expose ComPtr<ID3D11VertexShader> VertexShader;
+    expose ComPtr<ID3D11HullShader> HullShader;
+    expose ComPtr<ID3D11DomainShader> DomainShader;
+    expose ComPtr<ID3D11PixelShader> PixelShader;
+    expose bool HasMaterial = false;
+    expose std::vector<BeMaterialPropertyDescriptor> MaterialProperties;
+    expose std::vector<BeMaterialTexturePropertyDescriptor> MaterialTextureProperties;
 
-    pri BeShaderType _shaderType = BeShaderType::None;
+    hide BeShaderType _shaderType = BeShaderType::None;
     
     // lifecycle ///////////////////////////////////////////////////////////////////////////////////////////////////////
-    pub BeShader() = default;
-    pub ~BeShader() = default;
+    expose BeShader() = default;
+    expose ~BeShader() = default;
 
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
-    pub auto Bind (ID3D11DeviceContext* context, BeShaderType type) const -> void;
-    pub inline auto GetShaderType () const -> BeShaderType  { return _shaderType; }
+    expose auto Bind (ID3D11DeviceContext* context, BeShaderType type) const -> void;
+    expose inline auto GetShaderType () const -> BeShaderType  { return _shaderType; }
 };
 

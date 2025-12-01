@@ -5,7 +5,7 @@
 #ifndef BE_ACCESS_MODIFIERS
     #define BE_ACCESS_MODIFIERS
 
-    #define pub     private:public:     [[]]
-    #define pro     private:protected:  [[]]
-    #define pri     public: private:    [[]]
+    #define expose      private:public:   
+    #define protect     private:protected:
+    #define hide        public: private:  
 #endif

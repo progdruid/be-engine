@@ -55,8 +55,8 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
     context->RSSetViewports(1, &viewport);
 
     // sort out render target
-    context->OMSetRenderTargets(0, Utils::NullRTVs, directionalShadowMap->DSV.Get());
-    context->ClearDepthStencilView(directionalShadowMap->DSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    context->OMSetRenderTargets(0, Utils::NullRTVs, directionalShadowMap->GetDSV().Get());
+    context->ClearDepthStencilView(directionalShadowMap->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     SCOPE_EXIT { context->OMSetRenderTargets(0, nullptr, nullptr); };
 
     // sort out shader

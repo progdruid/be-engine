@@ -112,16 +112,27 @@ auto BeRenderer::LaunchDevice() -> void {
     Utils::Check << _device->CreateBuffer(&uniformBufferDescriptor, nullptr, &_uniformBuffer);
     
     // Create point sampler state
-    D3D11_SAMPLER_DESC samplerDesc = {};
-    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-    samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    samplerDesc.MinLOD = 0;
-    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-    Utils::Check << _device->CreateSamplerState(&samplerDesc, &_pointSampler);
+    D3D11_SAMPLER_DESC pointSamplerDesc = {};
+    pointSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    pointSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    pointSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    pointSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    pointSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    pointSamplerDesc.MinLOD = 0;
+    pointSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+    Utils::Check << _device->CreateSamplerState(&pointSamplerDesc, &_pointSampler);
 
+    // Create linear clamp sampler for post-processing
+    D3D11_SAMPLER_DESC linearClampDesc = {};
+    linearClampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    linearClampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    linearClampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    linearClampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    linearClampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    linearClampDesc.MinLOD = 0;
+    linearClampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+    Utils::Check << _device->CreateSamplerState(&linearClampDesc, &_postProcessLinearClampSampler);
+    
     // Default depth stencil state
     D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {};
     depthStencilStateDescriptor.DepthEnable = true;

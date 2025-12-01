@@ -9,30 +9,50 @@
 #include "BeAssetRegistry.h"
 #include "Utils.h"
 
-auto BeMaterial::Create(std::string_view name, std::weak_ptr<BeShader> shader, BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeMaterial> {
+auto BeMaterial::Create(
+    std::string_view name,
+    bool frequentlyUsed,
+    const std::weak_ptr<BeShader>& shader,
+    BeAssetRegistry& registry,
+    const ComPtr<ID3D11Device>& device
+)
+-> std::shared_ptr<BeMaterial> {
     auto shaderLocked = shader.lock();
     assert(shaderLocked && "Shader must be valid");
     assert(shaderLocked->HasMaterial && "Shader must have material");
 
-    auto material = std::make_shared<BeMaterial>(std::string(name), shader, device);
+    auto material = std::make_shared<BeMaterial>(std::string(name), frequentlyUsed, shader, device);
     material->InitializeTextures(registry, device);
     return material;
 }
 
-BeMaterial::BeMaterial(std::string name, std::weak_ptr<BeShader> shader, const ComPtr<ID3D11Device>& device)
+BeMaterial::BeMaterial(
+    std::string name,
+    const bool frequentlyUsed,
+    const std::weak_ptr<BeShader>& shader,
+    const ComPtr<ID3D11Device>& device
+)
     : Name(std::move(name))
-    , Shader(shader) {
-    auto shaderLocked = Shader.lock();
+    , Shader(shader)
+    , _isFrequentlyUsed(frequentlyUsed)
+{
+    const auto shaderLocked = Shader.lock();
     assert(shaderLocked);
 
     CalculateLayout();
 
     D3D11_BUFFER_DESC bufferDesc = {};
     bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-    bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
     const uint32_t sizeInBytes = static_cast<uint32_t>(_bufferData.size() * sizeof(float));
     bufferDesc.ByteWidth = ((sizeInBytes + 15) / 16) * 16;
+    if (_isFrequentlyUsed) {
+        bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+        bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    }
+    else {
+        bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+        bufferDesc.CPUAccessFlags = 0;
+    }
 
     D3D11_SUBRESOURCE_DATA data = {};
     data.pSysMem = _bufferData.data();
@@ -42,6 +62,7 @@ BeMaterial::BeMaterial(std::string name, std::weak_ptr<BeShader> shader, const C
     _cbufferDirty = false;
 }
 
+//BeMaterial::BeMaterial() = default;
 BeMaterial::~BeMaterial() = default;
 
 auto BeMaterial::InitializeTextures(BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> void {
@@ -130,10 +151,15 @@ auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::share
 auto BeMaterial::UpdateGPUBuffers(const ComPtr<ID3D11DeviceContext>& context) -> void {
     if (!_cbufferDirty) return;
 
-    D3D11_MAPPED_SUBRESOURCE mappedResource;
-    Utils::Check << context->Map(_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-    memcpy(mappedResource.pData, _bufferData.data(), _bufferData.size() * sizeof(float));
-    context->Unmap(_cbuffer.Get(), 0);
+    if (_isFrequentlyUsed) {
+        D3D11_MAPPED_SUBRESOURCE mappedResource;
+        Utils::Check << context->Map(_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+        memcpy(mappedResource.pData, _bufferData.data(), _bufferData.size() * sizeof(float));
+        context->Unmap(_cbuffer.Get(), 0);
+    }
+    else {
+        context->UpdateSubresource(_cbuffer.Get(), 0, nullptr, _bufferData.data(), 0, 0);
+    }
 
     _cbufferDirty = false;
 }
