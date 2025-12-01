@@ -26,7 +26,7 @@ struct PSInput {
 float3 PixelFunction(PSInput input) : SV_TARGET {
     float2 offset = TexelSize * PassRadius;
 
-    // kawase 4-tap spiral cone filter
+    // kawase 4-tap spiral cone filter (used for both downsample and upsample)
     static const float2 offsets[4] = {
         float2( 0.0,      1.384),
         float2( 0.0,     -1.384),

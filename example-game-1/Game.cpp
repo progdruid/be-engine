@@ -12,7 +12,7 @@
 #include "BeInput.h"
 #include "BeRenderer.h"
 #include "BeCamera.h"
-#include "passes/BeComposerPass.h"
+#include "passes/BeBackbufferPass.h"
 #include "passes/BeGeometryPass.h"
 #include "passes/BeLightingPass.h"
 #include "BeMaterial.h"
@@ -202,37 +202,25 @@ auto Game::SetupRenderPasses() -> void {
         .Format = DXGI_FORMAT_R11G11B10_FLOAT,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
-    _renderer->CreateRenderResource("Bloom_Mip0", false, {
+
+    for (int mip = 0; mip < 7; ++mip) {
+        const float multiplier = glm::pow(0.5f, mip);
+        const uint32_t width = _width * multiplier;
+        const uint32_t height = _height * multiplier;
+        _renderer->CreateRenderResource("Bloom_Mip" + std::to_string(mip), false, {
+            .Format = DXGI_FORMAT_R11G11B10_FLOAT,
+            .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+            .CustomWidth = width,
+            .CustomHeight = height,
+        });    
+    }
+    
+    _renderer->CreateRenderResource("BloomOutput", true, {
         .Format = DXGI_FORMAT_R11G11B10_FLOAT,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-        .CustomWidth = _width,
-        .CustomHeight = _height,
     });
-    _renderer->CreateRenderResource("Bloom_Mip1", false, {
-        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
-        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-        .CustomWidth = _width / 2,
-        .CustomHeight = _height / 2,
-    });
-    _renderer->CreateRenderResource("Bloom_Mip2", false, {
-        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
-        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-        .CustomWidth = _width / 4,
-        .CustomHeight = _height / 4,
-    });
-    _renderer->CreateRenderResource("Bloom_Mip3", false, {
-        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
-        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-        .CustomWidth = _width / 8,
-        .CustomHeight = _height / 8,
-    });
-    _renderer->CreateRenderResource("Bloom_Mip4", false, {
-        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
-        .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
-        .CustomWidth = _width / 16,
-        .CustomHeight = _height / 16,
-    });
-    _renderer->CreateRenderResource("PPOutput", true, {
+
+    _renderer->CreateRenderResource("TonemapperOutput", true, {
         .Format = DXGI_FORMAT_R11G11B10_FLOAT,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
@@ -277,25 +265,23 @@ auto Game::SetupRenderPasses() -> void {
     _renderer->AddRenderPass(bloomPass);
     bloomPass->AssetRegistry = _assetRegistry;
     bloomPass->InputHDRTextureName = "HDR-Input";
-    bloomPass->BloomMipTextureNames = {"Bloom_Mip0", "Bloom_Mip1", "Bloom_Mip2", "Bloom_Mip3", "Bloom_Mip4"};
+    bloomPass->BloomMipTextureName = "Bloom_Mip";
+    bloomPass->BloomMipCount = 7;
+    bloomPass->OutputTextureName = "BloomOutput";
     
-    // Cel shader pass
-    const auto effectShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/effects/usedEffect");
-    const auto effectPass = new BeFullscreenEffectPass();
-    _renderer->AddRenderPass(effectPass);
-    effectPass->InputTextureNames = {"HDR-Input", "DepthStencil", "WorldNormal"};
-    effectPass->OutputTextureNames = {"PPOutput"};
-    effectPass->Shader = effectShader;
+    // Tonemapper pass
+    const auto tonemapperShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/tonemapper");
+    const auto tonemapperPass = new BeFullscreenEffectPass();
+    _renderer->AddRenderPass(tonemapperPass);
+    tonemapperPass->InputTextureNames = {"BloomOutput"};
+    tonemapperPass->OutputTextureNames = {"TonemapperOutput"};
+    tonemapperPass->Shader = tonemapperShader;
 
-    // Composer pass
-    const auto composerPass = new BeComposerPass();
-    _renderer->AddRenderPass(composerPass);
-    composerPass->InputDepthTextureName = "DepthStencil";
-    composerPass->InputTexture0Name = "BaseColor";
-    composerPass->InputTexture1Name = "WorldNormal";
-    composerPass->InputTexture2Name = "Specular-Shininess";
-    composerPass->InputLightTextureName = "PPOutput";
-    composerPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
+    // Backbuffer pass
+    const auto backbufferPass = new BeBackbufferPass();
+    _renderer->AddRenderPass(backbufferPass);
+    backbufferPass->InputTextureName = "TonemapperOutput";
+    backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
 
     _renderer->InitialisePasses();
 }

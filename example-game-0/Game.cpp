@@ -9,7 +9,7 @@
 #include "BeInput.h"
 #include "BeRenderer.h"
 #include "BeCamera.h"
-#include "passes/BeComposerPass.h"
+#include "passes/BeBackbufferPass.h"
 #include "passes/BeGeometryPass.h"
 #include "passes/BeLightingPass.h"
 #include "BeMaterial.h"
@@ -249,13 +249,9 @@ auto Game::SetupRenderPasses() -> void {
     effectPass->Shader = effectShader;
 
     // Composer pass
-    const auto composerPass = new BeComposerPass();
+    const auto composerPass = new BeBackbufferPass();
     _renderer->AddRenderPass(composerPass);
-    composerPass->InputDepthTextureName = "DepthStencil";
-    composerPass->InputTexture0Name = "BaseColor";
-    composerPass->InputTexture1Name = "WorldNormal";
-    composerPass->InputTexture2Name = "Specular-Shininess";
-    composerPass->InputLightTextureName = "PPOutput";
+    composerPass->InputTextureName = "PPOutput";
     composerPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
 
     _renderer->InitialisePasses();
