@@ -47,7 +47,7 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
                 {"float", BeMaterialPropertyDescriptor::Type::Float},
                 {"float2", BeMaterialPropertyDescriptor::Type::Float2},
                 {"float3", BeMaterialPropertyDescriptor::Type::Float3},
-                {"float4", BeMaterialPropertyDescriptor::Type::Float4},
+                {"float4", BeMaterialPropertyDescriptor::Type::Float4}
             };
 
             BeMaterialPropertyDescriptor descriptor;
@@ -56,15 +56,18 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
 
             if (descriptor.PropertyType == BeMaterialPropertyDescriptor::Type::Float) {
                 descriptor.DefaultValue.push_back(value.at("default").get<float>());
-            } else if (descriptor.PropertyType == BeMaterialPropertyDescriptor::Type::Float2) {
+            }
+            else if (descriptor.PropertyType == BeMaterialPropertyDescriptor::Type::Float2) {
                 const auto vec = value.at("default").get<std::vector<float>>();
                 assert(vec.size() == 2);
                 descriptor.DefaultValue = vec;
-            } else if (descriptor.PropertyType == BeMaterialPropertyDescriptor::Type::Float3) {
+            }
+            else if (descriptor.PropertyType == BeMaterialPropertyDescriptor::Type::Float3) {
                 const auto vec = value.at("default").get<std::vector<float>>();
                 assert(vec.size() == 3);
                 descriptor.DefaultValue = vec;
-            } else if (descriptor.PropertyType == BeMaterialPropertyDescriptor::Type::Float4) {
+            }
+            else if (descriptor.PropertyType == BeMaterialPropertyDescriptor::Type::Float4) {
                 const auto vec = value.at("default").get<std::vector<float>>();
                 assert(vec.size() == 4);
                 descriptor.DefaultValue = vec;

@@ -58,8 +58,8 @@ auto BeLightingPass::Render() -> void {
     BeRenderResource* lightingResource  = _renderer->GetRenderResource(OutputTextureName);
     BeRenderResource* directionalLightShadowMapResource  = _renderer->GetRenderResource(directionalLight.ShadowMapTextureName);
     
-    context->ClearRenderTargetView(lightingResource->RTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
-    context->OMSetRenderTargets(1, lightingResource->RTV.GetAddressOf(), nullptr);
+    context->ClearRenderTargetView(lightingResource->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
+    context->OMSetRenderTargets(1, lightingResource->GetRTV().GetAddressOf(), nullptr);
     context->OMSetBlendState(_lightingBlendState.Get(), nullptr, 0xFFFFFFFF);
     SCOPE_EXIT {
         context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
@@ -69,17 +69,17 @@ auto BeLightingPass::Render() -> void {
     _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
     SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::Vertex); };
 
-    context->PSSetShaderResources(0, 1, depthResource->SRV.GetAddressOf());
-    context->PSSetShaderResources(1, 1, gbufferResource0->SRV.GetAddressOf());
-    context->PSSetShaderResources(2, 1, gbufferResource1->SRV.GetAddressOf());
-    context->PSSetShaderResources(3, 1, gbufferResource2->SRV.GetAddressOf());
+    context->PSSetShaderResources(0, 1, depthResource->GetSRV().GetAddressOf());
+    context->PSSetShaderResources(1, 1, gbufferResource0->GetSRV().GetAddressOf());
+    context->PSSetShaderResources(2, 1, gbufferResource1->GetSRV().GetAddressOf());
+    context->PSSetShaderResources(3, 1, gbufferResource2->GetSRV().GetAddressOf());
     SCOPE_EXIT { context->PSSetShaderResources(0, 4, Utils::NullSRVs); };
     
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     SCOPE_EXIT { context->PSSetSamplers(0, 1, Utils::NullSamplers); };
 
     {
-        context->PSSetShaderResources(4, 1, directionalLightShadowMapResource->SRV.GetAddressOf());
+        context->PSSetShaderResources(4, 1, directionalLightShadowMapResource->GetSRV().GetAddressOf());
         SCOPE_EXIT { context->PSSetShaderResources(4, 1, Utils::NullSRVs); };
         _directionalLightShader->Bind(context.Get(), BeShaderType::Pixel);
 
@@ -99,7 +99,7 @@ auto BeLightingPass::Render() -> void {
         _pointLightShader->Bind(context.Get(), BeShaderType::Pixel);
         for (const auto& pointLightData : pointLights) {
             const auto& shadowCubemap = *_renderer->GetRenderResource(pointLightData.ShadowMapTextureName);
-            context->PSSetShaderResources(4, 1, shadowCubemap.SRV.GetAddressOf());
+            context->PSSetShaderResources(4, 1, shadowCubemap.GetSRV().GetAddressOf());
 
             BePointLightLightingBufferGPU pointLightBuffer(pointLightData);
             D3D11_MAPPED_SUBRESOURCE pointLightMappedResource;

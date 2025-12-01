@@ -2,15 +2,17 @@
 #include <wrl/client.h>
 #include <string>
 
+#include "umbrellas/access-modifiers.hpp"
+
 using Microsoft::WRL::ComPtr;
 
 class BeRenderer;
 
 class BeRenderPass {
-protected:
+    protect
     BeRenderer* _renderer = nullptr;
 
-public:
+    expose
     virtual ~BeRenderPass() = default;
 
     auto InjectRenderer (BeRenderer* renderer) -> void {

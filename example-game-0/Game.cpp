@@ -19,7 +19,7 @@
 #include "passes/BeFullscreenEffectPass.h"
 #include "passes/BeShadowPass.h"
 
-[Game::Game() = default;]
+Game::Game() = default;
 Game::~Game() = default;
 
 

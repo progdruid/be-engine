@@ -26,12 +26,12 @@ auto BeComposerPass::Render() -> void {
     auto fullClearColor = glm::vec4(ClearColor, 1.0f);
     context->ClearRenderTargetView(backbufferTarget.Get(), reinterpret_cast<FLOAT*>(&fullClearColor));
     context->OMSetRenderTargets(1, backbufferTarget.GetAddressOf(), nullptr);
-        
-    context->PSSetShaderResources(0, 1, depthResource->SRV.GetAddressOf());
-    context->PSSetShaderResources(1, 1, gbufferResource0->SRV.GetAddressOf());
-    context->PSSetShaderResources(2, 1, gbufferResource1->SRV.GetAddressOf());
-    context->PSSetShaderResources(3, 1, gbufferResource2->SRV.GetAddressOf());
-    context->PSSetShaderResources(4, 1, lightingResource->SRV.GetAddressOf());
+
+    context->PSSetShaderResources(0, 1, depthResource->GetSRV().GetAddressOf());
+    context->PSSetShaderResources(1, 1, gbufferResource0->GetSRV().GetAddressOf());
+    context->PSSetShaderResources(2, 1, gbufferResource1->GetSRV().GetAddressOf());
+    context->PSSetShaderResources(3, 1, gbufferResource2->GetSRV().GetAddressOf());
+    context->PSSetShaderResources(4, 1, lightingResource->GetSRV().GetAddressOf());
     
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
 

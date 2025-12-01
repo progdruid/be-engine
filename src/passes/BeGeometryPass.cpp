@@ -29,17 +29,17 @@ auto BeGeometryPass::Render() -> void {
     const BeRenderResource* gbufferResource2 = _renderer->GetRenderResource(OutputTexture2Name);
     
     // Clear and set render targets
-    context->ClearDepthStencilView(depthResource->DSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-    context->ClearRenderTargetView(gbufferResource0->RTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
-    context->ClearRenderTargetView(gbufferResource1->RTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
-    context->ClearRenderTargetView(gbufferResource2->RTV.Get(), glm::value_ptr(glm::vec4(0.0f)));
+    context->ClearDepthStencilView(depthResource->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    context->ClearRenderTargetView(gbufferResource0->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
+    context->ClearRenderTargetView(gbufferResource1->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
+    context->ClearRenderTargetView(gbufferResource2->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
 
     ID3D11RenderTargetView* gbufferRTVs[3] = {
-        gbufferResource0->RTV.Get(),
-        gbufferResource1->RTV.Get(),
-        gbufferResource2->RTV.Get()
+        gbufferResource0->GetRTV().Get(),
+        gbufferResource1->GetRTV().Get(),
+        gbufferResource2->GetRTV().Get()
     };
-    context->OMSetRenderTargets(3, gbufferRTVs, depthResource->DSV.Get());
+    context->OMSetRenderTargets(3, gbufferRTVs, depthResource->GetDSV().Get());
     SCOPE_EXIT { context->OMSetRenderTargets(3, Utils::NullRTVs, nullptr); };
 
     // Set vertex and index buffers

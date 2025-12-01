@@ -26,6 +26,12 @@ float4 PixelFunction(PSInput input) : SV_TARGET {
     float3 lightmapColor = Lightmap.Sample(InputSampler, input.UV).rgb;
     
     float3 finalColor = _AmbientColor + lightmapColor;
+
+    // if (finalColor.r > 1 || finalColor.g > 1 || finalColor.b > 1) {
+    //     finalColor = (1.f).rrr;
+    // } else {
+    //     finalColor = (0.f).rrr;
+    // }
     
     finalColor = Tonemap_ReinhardWhite(finalColor, 2.0);
     

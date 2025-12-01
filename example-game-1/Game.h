@@ -20,30 +20,32 @@ struct BePointLight;
 
 class Game {
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    pri std::unique_ptr<BeWindow> _window;
-    pri std::unique_ptr<BeRenderer> _renderer;
-    pri std::unique_ptr<BeInput> _input;
-    pri std::unique_ptr<BeCamera> _camera;
-    pri std::unique_ptr<BeAssetRegistry> _assetRegistry;
+    hide uint32_t _width;
+    hide uint32_t _height;
+    hide std::unique_ptr<BeWindow> _window;
+    hide std::unique_ptr<BeRenderer> _renderer;
+    hide std::unique_ptr<BeInput> _input;
+    hide std::unique_ptr<BeCamera> _camera;
+    hide std::shared_ptr<BeAssetRegistry> _assetRegistry;
     
-    pri std::shared_ptr<BeModel> _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil;
-    pri std::unique_ptr<BeDirectionalLight> _directionalLight;
-    pri std::vector<BePointLight> _pointLights;
+    hide std::shared_ptr<BeModel> _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil;
+    hide std::unique_ptr<BeDirectionalLight> _directionalLight;
+    hide std::vector<BePointLight> _pointLights;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
-    pub Game();
-    pub ~Game();
+    expose Game();
+    expose ~Game();
 
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
-    pub auto Run() -> int;
+    expose auto Run() -> int;
 
     // private logic ///////////////////////////////////////////////////////////////////////////////////////////////////
-    pri auto LoadAssets() -> void;
-    pri auto SetupScene() -> void;
-    pri auto SetupRenderPasses() -> void;
-    pri auto SetupCamera(int width, int height) -> void;
-    pri auto MainLoop() -> void;
+    hide auto LoadAssets() -> void;
+    hide auto SetupScene() -> void;
+    hide auto SetupRenderPasses() -> void;
+    hide auto SetupCamera(int width, int height) -> void;
+    hide auto MainLoop() -> void;
 
-    pri auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel>;
-    pri auto CreatePlaneHex(size_t hexRadius) -> std::shared_ptr<BeModel>;
+    hide auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel>;
+    hide auto CreatePlaneHex(size_t hexRadius) -> std::shared_ptr<BeModel>;
 };
