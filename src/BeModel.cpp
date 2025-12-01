@@ -39,7 +39,7 @@ auto BeModel::Create(const std::filesystem::path& modelPath, const std::weak_ptr
         if (it != assimpIndexToMaterial.end())
             continue;
 
-        auto material = BeMaterial::Create("mat" + std::to_string(assimpMaterialIndex), usedShaderForMaterials, registry, device);
+        auto material = BeMaterial::Create("mat" + std::to_string(assimpMaterialIndex), true, usedShaderForMaterials, registry, device);
         assimpIndexToMaterial[assimpMaterialIndex] = material;
 
         const auto meshMaterial = scene->mMaterials[assimpMaterialIndex];

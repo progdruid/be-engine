@@ -7,22 +7,28 @@
 #include <umbrellas/include-glm.h>
 #include <wrl/client.h>
 
-struct BeTexture;
-class BeShader;
-
 using Microsoft::WRL::ComPtr;
 
+struct BeTexture;
+class BeShader;
 class BeAssetRegistry;
 
 class BeMaterial {
 public:
     // Static
-    static auto Create(std::string_view name, std::weak_ptr<BeShader> shader, BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeMaterial>;
+    static auto Create(
+        std::string_view name,
+        bool frequentlyUsed,
+        const std::weak_ptr<BeShader>& shader,
+        BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device
+    ) -> std::shared_ptr<BeMaterial>;
 
     std::string Name;
     std::weak_ptr<BeShader> Shader;
 
 private:
+    bool _isFrequentlyUsed;
+    
     std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>> _textures;
     std::unordered_map<std::string, uint32_t> _propertyOffsets;
     std::vector<float> _bufferData;
@@ -30,7 +36,7 @@ private:
     bool _cbufferDirty;
 
 public:
-    BeMaterial() = default;
+    //BeMaterial();
     ~BeMaterial();
 
     BeMaterial(const BeMaterial& other) = default;
@@ -38,7 +44,12 @@ public:
     BeMaterial& operator=(const BeMaterial& other) = default;
     BeMaterial& operator=(BeMaterial&& other) noexcept = default;
 
-    explicit BeMaterial(std::string name, std::weak_ptr<BeShader> shader, const ComPtr<ID3D11Device>& device);
+    explicit BeMaterial(
+        std::string name,
+        const bool frequentlyUsed,
+        const std::weak_ptr<BeShader>& shader,
+        const ComPtr<ID3D11Device>& device
+    );
 
 private:
     auto InitializeTextures(BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> void;

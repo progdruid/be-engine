@@ -4,46 +4,59 @@
 #include <wrl/client.h>
 #include <d3d11.h>
 #include <string>
+#include <vector>
+
+#include "umbrellas/access-modifiers.hpp"
 
 using Microsoft::WRL::ComPtr;
 
 class BeRenderResource {
-public:
 
-    struct BeResourceDescriptor {
+    // types ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose struct BeResourceDescriptor {
         bool IsCubemap = false;
         DXGI_FORMAT Format = DXGI_FORMAT_R8G8B8A8_UNORM;
         uint32_t BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+        uint32_t Mips = 1;
         uint32_t CustomWidth = 0;
         uint32_t CustomHeight = 0;
     };
+
+    // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose std::string Name;
+    expose BeResourceDescriptor Descriptor;
     
-    //fields////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    std::string Name;
-    BeResourceDescriptor Descriptor;
+    hide std::vector<D3D11_VIEWPORT> _mipViewports;
     
-    ComPtr<ID3D11Texture2D> Texture;
-    ComPtr<ID3D11RenderTargetView> RTV;
-    ComPtr<ID3D11ShaderResourceView> SRV;
-    ComPtr<ID3D11DepthStencilView> DSV;
+    hide ComPtr<ID3D11Texture2D> _texture;
+    hide ComPtr<ID3D11ShaderResourceView> _srv;
+    hide ComPtr<ID3D11DepthStencilView> _dsv;
+    hide std::vector<ComPtr<ID3D11RenderTargetView>> _mipRTVs;
 
-    std::array<ComPtr<ID3D11DepthStencilView>, 6> CubemapDSVs;
-    std::array<ComPtr<ID3D11RenderTargetView>, 6> CubemapRTVs;
+    hide std::array<ComPtr<ID3D11DepthStencilView>, 6> _cubemapDSVs;
+    hide std::array<std::vector<ComPtr<ID3D11RenderTargetView>>, 6> _cubemapMipRTVs;
 
-public:
-    explicit BeRenderResource(std::string name, const BeResourceDescriptor& descriptor);
-    ~BeRenderResource();
+    // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose explicit BeRenderResource(std::string name, const BeResourceDescriptor& descriptor);
+    expose ~BeRenderResource();
 
-    auto CreateGPUResources(const ComPtr<ID3D11Device>& device) -> void;
+    // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
+    expose
+    auto CreateGPUResources(ComPtr<ID3D11Device> device) -> void;
+    
+    auto GetMipViewport (const uint32_t mip) const              -> const D3D11_VIEWPORT&;
+    auto GetSRV         () const                                -> ComPtr<ID3D11ShaderResourceView>;
+    auto GetDSV         () const                                -> ComPtr<ID3D11DepthStencilView>;
+    auto GetRTV         (const uint32_t mip = 0) const          -> ComPtr<ID3D11RenderTargetView>;
+    auto GetCubemapDSV  (uint32_t faceIndex)                    -> ComPtr<ID3D11DepthStencilView>;
+    auto GetCubemapRTV  (uint32_t faceIndex, uint32_t mip = 0)  -> ComPtr<ID3D11RenderTargetView>;
 
-    auto GetCubemapDSV (uint32_t faceIndex) -> ComPtr<ID3D11DepthStencilView>;
-    auto GetCubemapRTV (uint32_t faceIndex) -> ComPtr<ID3D11RenderTargetView>;
+    // private logic ///////////////////////////////////////////////////////////////////////////////////////////////////
+    hide auto CreateTexture2DResources (ComPtr<ID3D11Device> device) -> void;
+    hide auto CreateCubemapResources   (ComPtr<ID3D11Device> device) -> void;
+    hide auto CreateMipViewports () -> void;
 
-private:
-    auto CreateTexture2DResources (const ComPtr<ID3D11Device>& device) -> void;
-    auto CreateCubemapResources   (const ComPtr<ID3D11Device>& device) -> void;
-
-    auto GetDepthSRVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;
-    auto GetDSVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;
+    hide auto GetDepthSRVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;
+    hide auto GetDSVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;
 };
 

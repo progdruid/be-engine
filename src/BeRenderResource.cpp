@@ -12,7 +12,10 @@ BeRenderResource::BeRenderResource(std::string name, const BeResourceDescriptor&
 
 BeRenderResource::~BeRenderResource() = default;
 
-auto BeRenderResource::CreateGPUResources(const ComPtr<ID3D11Device>& device) -> void {
+auto BeRenderResource::CreateGPUResources(ComPtr<ID3D11Device> device) -> void {
+
+    CreateMipViewports();
+
     if (!Descriptor.IsCubemap) {
         CreateTexture2DResources(device);
     } else {
@@ -20,23 +23,33 @@ auto BeRenderResource::CreateGPUResources(const ComPtr<ID3D11Device>& device) ->
     }
 }
 
+auto BeRenderResource::GetMipViewport(const uint32_t mip) const -> const D3D11_VIEWPORT& { return _mipViewports[mip]; }
+
+auto BeRenderResource::GetSRV() const -> ComPtr<ID3D11ShaderResourceView> { return _srv; }
+auto BeRenderResource::GetDSV() const -> ComPtr<ID3D11DepthStencilView> { return _dsv; }
+auto BeRenderResource::GetRTV(const uint32_t mip) const -> ComPtr<ID3D11RenderTargetView> {
+    assert(mip < _mipRTVs.size(), "Mip out of bounds of mip rtv array");
+    return _mipRTVs[mip];
+}
+
 auto BeRenderResource::GetCubemapDSV(const uint32_t faceIndex) -> ComPtr<ID3D11DepthStencilView> {
     assert(Descriptor.IsCubemap, "Resource is not a cubemap");
     assert(faceIndex < 6, "Face index out of bounds");
-    return CubemapDSVs[faceIndex];
+    return _cubemapDSVs[faceIndex];
 }
 
-auto BeRenderResource::GetCubemapRTV(const uint32_t faceIndex) -> ComPtr<ID3D11RenderTargetView> {
+auto BeRenderResource::GetCubemapRTV(const uint32_t faceIndex, const uint32_t mip) -> ComPtr<ID3D11RenderTargetView> {
     assert(Descriptor.IsCubemap, "Resource is not a cubemap");
     assert(faceIndex < 6, "Face index out of bounds");
-    return CubemapRTVs[faceIndex];
+    assert(mip < _cubemapMipRTVs[faceIndex].size(), "Mip out of bounds of cubemap's mip rtv array");
+    return _cubemapMipRTVs[faceIndex][mip];
 }
 
-auto BeRenderResource::CreateTexture2DResources(const ComPtr<ID3D11Device>& device) -> void {
+auto BeRenderResource::CreateTexture2DResources(ComPtr<ID3D11Device> device) -> void {
     D3D11_TEXTURE2D_DESC textureDesc = {};
     textureDesc.Width = Descriptor.CustomWidth;
     textureDesc.Height = Descriptor.CustomHeight;
-    textureDesc.MipLevels = 1;
+    textureDesc.MipLevels = Descriptor.Mips;
     textureDesc.ArraySize = 1;
     textureDesc.Format = Descriptor.Format;
     textureDesc.SampleDesc.Count = 1;
@@ -47,7 +60,7 @@ auto BeRenderResource::CreateTexture2DResources(const ComPtr<ID3D11Device>& devi
     textureDesc.MiscFlags = 0;
 
     // Create texture
-    Utils::Check << device->CreateTexture2D(&textureDesc, nullptr, Texture.GetAddressOf());
+    Utils::Check << device->CreateTexture2D(&textureDesc, nullptr, _texture.GetAddressOf());
     
     // Create a depth stencil view and its SRV if needed
     if (Descriptor.BindFlags & D3D11_BIND_DEPTH_STENCIL) {
@@ -55,12 +68,21 @@ auto BeRenderResource::CreateTexture2DResources(const ComPtr<ID3D11Device>& devi
         dsvDesc.Format = GetDSVFormat(Descriptor.Format);
         dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
         dsvDesc.Texture2D.MipSlice = 0;
-        Utils::Check << device->CreateDepthStencilView(Texture.Get(), &dsvDesc, DSV.GetAddressOf());
+        Utils::Check << device->CreateDepthStencilView(_texture.Get(), &dsvDesc, _dsv.GetAddressOf());
     }
     
     // Create a render target view if needed
     if (Descriptor.BindFlags & D3D11_BIND_RENDER_TARGET) {
-        Utils::Check << device->CreateRenderTargetView(Texture.Get(), nullptr, RTV.GetAddressOf());
+        _mipRTVs.resize(Descriptor.Mips);
+        
+        D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+        rtvDesc.Format = Descriptor.Format;
+        rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+
+        for (int mip = 0; mip < Descriptor.Mips; ++mip) {
+            rtvDesc.Texture2D.MipSlice = mip;
+            Utils::Check << device->CreateRenderTargetView(_texture.Get(), &rtvDesc, _mipRTVs[mip].GetAddressOf());
+        }
     }
 
     // Create a shader resource view if needed
@@ -72,16 +94,16 @@ auto BeRenderResource::CreateTexture2DResources(const ComPtr<ID3D11Device>& devi
             : Descriptor.Format;
         srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Texture2D.MostDetailedMip = 0;
-        srvDesc.Texture2D.MipLevels = 1;
-        Utils::Check << device->CreateShaderResourceView(Texture.Get(), &srvDesc, SRV.GetAddressOf());
+        srvDesc.Texture2D.MipLevels = Descriptor.Mips;
+        Utils::Check << device->CreateShaderResourceView(_texture.Get(), &srvDesc, _srv.GetAddressOf());
     }
 }
 
-auto BeRenderResource::CreateCubemapResources(const ComPtr<ID3D11Device>& device) -> void {
+auto BeRenderResource::CreateCubemapResources(ComPtr<ID3D11Device> device) -> void {
     D3D11_TEXTURE2D_DESC textureDesc = {};
     textureDesc.Width = Descriptor.CustomWidth;
     textureDesc.Height = Descriptor.CustomHeight;
-    textureDesc.MipLevels = 1;
+    textureDesc.MipLevels = Descriptor.Mips;
     textureDesc.ArraySize = 6;
     textureDesc.Format = Descriptor.Format;
     textureDesc.SampleDesc.Count = 1;
@@ -89,7 +111,7 @@ auto BeRenderResource::CreateCubemapResources(const ComPtr<ID3D11Device>& device
     textureDesc.BindFlags = Descriptor.BindFlags;
     textureDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 
-    Utils::Check << device->CreateTexture2D(&textureDesc, nullptr, Texture.GetAddressOf());
+    Utils::Check << device->CreateTexture2D(&textureDesc, nullptr, _texture.GetAddressOf());
 
     if (Descriptor.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
         D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -99,8 +121,8 @@ auto BeRenderResource::CreateCubemapResources(const ComPtr<ID3D11Device>& device
             : Descriptor.Format;
         srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
         srvDesc.TextureCube.MostDetailedMip = 0;
-        srvDesc.TextureCube.MipLevels = 1;
-        Utils::Check << device->CreateShaderResourceView(Texture.Get(), &srvDesc, SRV.GetAddressOf());
+        srvDesc.TextureCube.MipLevels = Descriptor.Mips;
+        Utils::Check << device->CreateShaderResourceView(_texture.Get(), &srvDesc, _srv.GetAddressOf());
     }
 
     // Create individual face DSVs (for depth cubemaps)
@@ -113,7 +135,7 @@ auto BeRenderResource::CreateCubemapResources(const ComPtr<ID3D11Device>& device
             dsvDesc.Texture2DArray.FirstArraySlice = face;
             dsvDesc.Texture2DArray.ArraySize = 1;
 
-            Utils::Check << device->CreateDepthStencilView(Texture.Get(), &dsvDesc, CubemapDSVs[face].GetAddressOf());
+            Utils::Check << device->CreateDepthStencilView(_texture.Get(), &dsvDesc, _cubemapDSVs[face].GetAddressOf());
         }
     }
 
@@ -123,14 +145,29 @@ auto BeRenderResource::CreateCubemapResources(const ComPtr<ID3D11Device>& device
             D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
             rtvDesc.Format = Descriptor.Format;
             rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-            rtvDesc.Texture2DArray.MipSlice = 0;
             rtvDesc.Texture2DArray.FirstArraySlice = face;
             rtvDesc.Texture2DArray.ArraySize = 1;
 
-            Utils::Check << device->CreateRenderTargetView(Texture.Get(), &rtvDesc, CubemapRTVs[face].GetAddressOf());
+            for (int mip = 0; mip < Descriptor.Mips; ++mip) {
+                rtvDesc.Texture2DArray.MipSlice = mip;
+                Utils::Check << device->CreateRenderTargetView(_texture.Get(), &rtvDesc, _cubemapMipRTVs[face][mip].GetAddressOf());
+            }
         }
     }
 
+}
+
+auto BeRenderResource::CreateMipViewports() -> void {
+    _mipViewports.resize(Descriptor.Mips);
+    for (int i = 0; i < Descriptor.Mips; ++i) {
+        auto& viewport = _mipViewports[i];
+        viewport.Width = static_cast<float>(Descriptor.CustomWidth >> i);
+        viewport.Height = static_cast<float>(Descriptor.CustomHeight >> i);
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
+        viewport.TopLeftX = 0.0f;
+        viewport.TopLeftY = 0.0f;
+    }
 }
 
 auto BeRenderResource::GetDepthSRVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT {
