@@ -14,18 +14,21 @@ class BeBloomPass final : public BeRenderPass {
     
     expose
     std::string InputHDRTextureName;
-    std::vector<std::string> BloomMipTextureNames;
+    std::string BloomMipTextureName;
+    uint32_t BloomMipCount;
+    std::string OutputTextureName;
     std::shared_ptr<BeAssetRegistry> AssetRegistry;
     
     hide
     std::shared_ptr<BeShader> _brightShader;
     std::shared_ptr<BeMaterial> _brightMaterial;
-    
-    std::shared_ptr<BeShader> _downsampleShader;
-    std::vector<std::shared_ptr<BeMaterial>> _downsampleMaterials;
-    
-    std::shared_ptr<BeShader> _upsampleShader;
 
+    std::shared_ptr<BeShader> _kawaseShader;
+    std::vector<std::shared_ptr<BeMaterial>> _downsampleMaterials;
+    std::vector<std::shared_ptr<BeMaterial>> _upsampleMaterials;
+
+    std::shared_ptr<BeShader> _addShader;
+    
     expose
     explicit BeBloomPass();
     ~BeBloomPass() override;
@@ -37,4 +40,6 @@ class BeBloomPass final : public BeRenderPass {
     hide
     auto RenderBrightPass() const -> void;
     auto RenderDownsamplePasses() -> void;
+    auto RenderUpsamplePasses() -> void;
+    auto RenderAddPass() const -> void;
 };

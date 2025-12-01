@@ -5,6 +5,7 @@
 
 #include "BeRenderPass.h"
 
+class BeMaterial;
 class BeShader;
 
 class BeFullscreenEffectPass final : public BeRenderPass {
@@ -12,6 +13,7 @@ public:
     std::vector<std::string> InputTextureNames;
     std::vector<std::string> OutputTextureNames;
     std::shared_ptr<BeShader> Shader;
+    std::shared_ptr<BeMaterial> Material;
     
 public:
     explicit BeFullscreenEffectPass();
