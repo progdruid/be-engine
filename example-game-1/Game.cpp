@@ -72,7 +72,7 @@ auto Game::LoadAssets() -> void {
     _cube = BeModel::Create("assets/cube.glb", standardShader, *_assetRegistry, device);
     _macintosh = BeModel::Create("assets/model.fbx", standardShader, *_assetRegistry, device);
     _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, *_assetRegistry, device);
-    _pagoda->Materials[0]->SetFloat("EmissivePower", 3.0);
+    _pagoda->Materials[0]->SetFloat("EmissivePower", 20.0);
     _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, *_assetRegistry, device);
     _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *_assetRegistry, device);
 
@@ -179,8 +179,8 @@ auto Game::SetupRenderPasses() -> void {
     _renderer->CreateRenderResource(_directionalLight->ShadowMapTextureName, false, {
         .Format = DXGI_FORMAT_R32_TYPELESS,
         .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
-        .CustomWidth = 4096,
-        .CustomHeight = 4096,
+        .CustomWidth = static_cast<uint32_t>(_directionalLight->ShadowMapResolution),
+        .CustomHeight = static_cast<uint32_t>(_directionalLight->ShadowMapResolution),
     });
     _renderer->CreateRenderResource("DepthStencil", true, {
         .Format = DXGI_FORMAT_R24G8_TYPELESS,
@@ -231,8 +231,8 @@ auto Game::SetupRenderPasses() -> void {
             .IsCubemap = true,
             .Format = DXGI_FORMAT_R32_TYPELESS,
             .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
-            .CustomWidth = 2048,
-            .CustomHeight = 2048,
+            .CustomWidth = static_cast<uint32_t>(pointLight.ShadowMapResolution),
+            .CustomHeight = static_cast<uint32_t>(pointLight.ShadowMapResolution),
         });
     }
     
