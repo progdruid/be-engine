@@ -10,7 +10,7 @@
 #include <BeFunctions.hlsli>
 
 Texture2D Depth : register(t0);
-Texture2D DiffuseRGBA : register(t1);
+Texture2D DiffuseRGB : register(t1);
 Texture2D WorldNormalXYZ_UnusedA : register(t2);
 Texture2D SpecularRGB_ShininessA : register(t3);
 Texture2D DirectionalLightShadowMap : register(t4);
@@ -46,7 +46,7 @@ float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float t
 
 float3 PixelFunction(PSInput input) : SV_TARGET {
     float depth = Depth.Sample(InputSampler, input.UV).r;
-    float4 diffuse = DiffuseRGBA.Sample(InputSampler, input.UV);
+    float3 diffuse = DiffuseRGB.Sample(InputSampler, input.UV);
     float3 worldNormal = WorldNormalXYZ_UnusedA.Sample(InputSampler, input.UV).xyz;
     float4 specular_shininess = SpecularRGB_ShininessA.Sample(InputSampler, input.UV);
 
