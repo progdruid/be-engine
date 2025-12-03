@@ -3,8 +3,10 @@
 #include <cstdint>
 #include <wrl/client.h>
 #include <d3d11.h>
+#include <memory>
 #include <string>
 #include <vector>
+#include <glm/vec4.hpp>
 
 #include "umbrellas/access-modifiers.hpp"
 
@@ -20,8 +22,12 @@ class BeRenderResource {
         uint32_t Mips = 1;
         uint32_t CustomWidth = 0;
         uint32_t CustomHeight = 0;
+        glm::vec4 DefaultColor = glm::vec4(0.0f);
     };
 
+    // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose static auto Create (ComPtr<ID3D11Device> device, std::string name, const BeResourceDescriptor& descriptor) -> std::shared_ptr<BeRenderResource>;
+    
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose std::string Name;
     expose BeResourceDescriptor Descriptor;
@@ -41,15 +47,14 @@ class BeRenderResource {
     expose ~BeRenderResource();
 
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
-    expose
-    auto CreateGPUResources(ComPtr<ID3D11Device> device) -> void;
+    expose auto CreateGPUResources(ComPtr<ID3D11Device> device) -> void;
     
-    auto GetMipViewport (const uint32_t mip) const              -> const D3D11_VIEWPORT&;
-    auto GetSRV         () const                                -> ComPtr<ID3D11ShaderResourceView>;
-    auto GetDSV         () const                                -> ComPtr<ID3D11DepthStencilView>;
-    auto GetRTV         (const uint32_t mip = 0) const          -> ComPtr<ID3D11RenderTargetView>;
-    auto GetCubemapDSV  (uint32_t faceIndex)                    -> ComPtr<ID3D11DepthStencilView>;
-    auto GetCubemapRTV  (uint32_t faceIndex, uint32_t mip = 0)  -> ComPtr<ID3D11RenderTargetView>;
+    expose auto GetMipViewport (const uint32_t mip) const              -> const D3D11_VIEWPORT&;
+    expose auto GetSRV         () const                                -> ComPtr<ID3D11ShaderResourceView>;
+    expose auto GetDSV         () const                                -> ComPtr<ID3D11DepthStencilView>;
+    expose auto GetRTV         (const uint32_t mip = 0) const          -> ComPtr<ID3D11RenderTargetView>;
+    expose auto GetCubemapDSV  (uint32_t faceIndex)                    -> ComPtr<ID3D11DepthStencilView>;
+    expose auto GetCubemapRTV  (uint32_t faceIndex, uint32_t mip = 0)  -> ComPtr<ID3D11RenderTargetView>;
 
     // private logic ///////////////////////////////////////////////////////////////////////////////////////////////////
     hide auto CreateTexture2DResources (ComPtr<ID3D11Device> device) -> void;

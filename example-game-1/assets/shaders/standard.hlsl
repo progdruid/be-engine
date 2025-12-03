@@ -7,10 +7,8 @@
     "vertexLayout": ["position", "normal", "uv0"],
     "material": {
         "DiffuseColor": { "type": "float3", "default": [1.0, 1.0, 1.0] },
-        "SpecularColor0": { "type": "float3", "default": [1.0, 1.0, 1.0] },
-        "Shininess0": { "type": "float", "default": -1.0 },
-        "SpecularColor1": { "type": "float3", "default": [1.0, 1.0, 1.0] },
-        "Shininess1": { "type": "float", "default": -1.0 },
+        "SpecularColor": { "type": "float3", "default": [1.0, 1.0, 1.0] },
+        "Shininess": { "type": "float", "default": 0.0 },
         "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
         "SpecularTexture": { "type": "texture2d", "slot": 1, "default": "black" }
     }
@@ -26,10 +24,8 @@ cbuffer ModelBuffer: register(b1) {
 
 cbuffer MaterialBuffer: register(b2) {
     float3 _DiffuseColor;
-    float3 _SpecularColor0;
-    float _Shininess0;
-    float3 _SpecularColor1;
-    float _Shininess1;
+    float3 _SpecularColor;
+    float _Shininess;
 };
 
 SamplerState DefaultSampler : register(s0);
@@ -78,8 +74,8 @@ PixelOutput PixelFunction(VertexOutput input) {
     output.DiffuseRGBA.a = 1.0;
     output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
     output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = specularColor.rgb * _SpecularColor0;
-    output.SpecularRGB_ShininessA.a = _Shininess0;
+    output.SpecularRGB_ShininessA.rgb = specularColor.rgb * _SpecularColor;
+    output.SpecularRGB_ShininessA.a = _Shininess / 2048.0;
     
     return output;
 };

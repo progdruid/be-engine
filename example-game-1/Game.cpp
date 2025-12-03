@@ -74,9 +74,7 @@ auto Game::LoadAssets() -> void {
     _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, *_assetRegistry, device);
     _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *_assetRegistry, device);
 
-    _anvil->DrawSlices[0].Material->SetFloat3("SpecularColor0", glm::vec3(1.0f));
-    _anvil->DrawSlices[0].Material->SetFloat3("SpecularColor1", glm::vec3(1.0f) * 3.f);
-    _anvil->DrawSlices[0].Material->SetFloat("Shininess1", 512.f/2048.f);
+    _anvil->DrawSlices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
 }
 
 auto Game::SetupScene() -> void {
@@ -163,7 +161,7 @@ auto Game::SetupScene() -> void {
         BePointLight pointLight = {};
         pointLight.Radius = 20.0f;
         pointLight.Color = glm::vec3(0.99f, 0.99f, 0.6);
-        pointLight.Power = (1.0f / 0.7f) * 2.2f;
+        pointLight.Power = (1.0f / 0.7f) * 1.7f;
         pointLight.CastsShadows = true;
         pointLight.ShadowMapResolution = 2048.0f;
         pointLight.ShadowNearPlane = 0.1f;

@@ -61,11 +61,11 @@ auto BeModel::Create(const std::filesystem::path& modelPath, const std::weak_ptr
             material->SetFloat3("DiffuseColor", {color.r, color.g, color.b});
         }
         if (meshMaterial->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {
-            material->SetFloat3("SpecularColor0", {color.r, color.g, color.b});
+            material->SetFloat3("SpecularColor", {color.r, color.g, color.b});
         }
         float shininess = 0.f;
         if (meshMaterial->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
-            material->SetFloat("Shininess0", shininess / 2048.f);
+            material->SetFloat("Shininess", shininess);
         }
     }
 
