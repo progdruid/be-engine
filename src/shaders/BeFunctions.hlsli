@@ -9,23 +9,18 @@ float3 StandardLambertBlinnPhong(
     float3 lightColor,
     float lightPower,
     float3 diffuseColor,
-    float3 specularColor0,
-    float3 specularColor1,
-    float shininess0,
-    float shininess1
+    float3 specularColor,
+    float shininess
 ) {
     normal = normalize(normal);
     viewDir = normalize(viewDir);
     lightDir = normalize(lightDir);
     float diffuseValue = saturate(dot(normal, lightDir));
-    float specularValue0 = 0.0;
-    float specularValue1 = 0.0;
+    float specularValue = 0.0;
     float3 reflectDir = normalize(reflect(-lightDir, normal));
     
-    if (shininess0 > 0)
-        specularValue0 = pow(saturate(dot(viewDir, reflectDir)), shininess0);
-    if (shininess1 > 0)
-        specularValue1 = pow(saturate(dot(viewDir, reflectDir)), shininess1);
+    if (shininess > 0.00001)
+        specularValue = pow(saturate(dot(viewDir, reflectDir)), shininess * 2048.f);
     
     //float3 halfVector = normalize(lightDir + viewDir);
     //specularValue = pow(saturate(dot(normal, halfVector)), shininess);
@@ -35,8 +30,7 @@ float3 StandardLambertBlinnPhong(
     float3 colorLinear =
         //ambientColor +
         diffuseColor * diffuseValue * light +
-        specularColor0 * specularValue0 * light +
-        specularColor1 * specularValue1 * light;
+        specularColor * specularValue * light;
 
     return colorLinear;
 }

@@ -10,13 +10,13 @@
     "pixel": "PixelFunction",
     "material": {
         "DiffuseColor": { "type": "float3", "default": [0.9, 0.9, 0.9] },
-        "SpecularColor0": { "type": "float3", "default": [0.1, 0.1, 0.05] },
-        "Shininess0":  { "type": "float", "default": 1.0 },
+        "SpecularColor": { "type": "float3", "default": [-0.2, -0.2, -0.1] }, 
+        "Shininess":  { "type": "float", "default": 0.0 },
+        "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
         "TerrainScale": { "type": "float", "default": 1.0 },
         "HeightScale": { "type": "float", "default": 1.0 },
         "NoiseResolution": { "type": "float", "default": 4.0 },
-        "Speed": { "type": "float", "default": 0.2 },
-        "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" }
+        "Speed": { "type": "float", "default": 0.2 }
     }
 }
 @be-shader-header-end
@@ -30,8 +30,8 @@ cbuffer ModelBuffer: register(b1) {
 
 cbuffer MaterialBuffer: register(b2) {
     float3 _DiffuseColor;
-    float3 _SpecularColor0;
-    float _Shininess0;
+    float3 _SpecularColor;
+    float _Shininess;
     float _TerrainScale;
     float _HeightScale;
     float _NoiseResolution;
@@ -240,8 +240,8 @@ PixelOutput PixelFunction(VertexOutput input) {
     output.DiffuseRGBA.a = 1.0;
     output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
     output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = _SpecularColor0;
-    output.SpecularRGB_ShininessA.a = _Shininess0;
+    output.SpecularRGB_ShininessA.rgb = _SpecularColor;
+    output.SpecularRGB_ShininessA.a = _Shininess / 2048.0;
 
     return output;
 }
