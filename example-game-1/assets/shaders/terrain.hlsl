@@ -9,7 +9,7 @@
     },
     "pixel": "PixelFunction",
     "material": {
-        "DiffuseColor": { "type": "float3", "default": [0.9, 0.9, 0.9] },
+        "DiffuseColor": { "type": "float3", "default": [0.5, 0.5, 0.5] },
         "SpecularColor": { "type": "float3", "default": [-0.2, -0.2, -0.1] }, 
         "Shininess":  { "type": "float", "default": 0.0 },
         "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
