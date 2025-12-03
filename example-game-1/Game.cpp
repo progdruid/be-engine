@@ -72,6 +72,7 @@ auto Game::LoadAssets() -> void {
     _cube = BeModel::Create("assets/cube.glb", standardShader, *_assetRegistry, device);
     _macintosh = BeModel::Create("assets/model.fbx", standardShader, *_assetRegistry, device);
     _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, *_assetRegistry, device);
+    _pagoda->Materials[0]->SetFloat("EmissivePower", 3.0);
     _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, *_assetRegistry, device);
     _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *_assetRegistry, device);
 
@@ -162,7 +163,7 @@ auto Game::SetupScene() -> void {
         BePointLight pointLight = {};
         pointLight.Radius = 20.0f;
         pointLight.Color = glm::vec3(0.99f, 0.99f, 0.6);
-        pointLight.Power = (1.0f / 0.7f) * 1.7f;
+        pointLight.Power = (1.0f / 0.7f) * 2.7f;
         pointLight.CastsShadows = true;
         pointLight.ShadowMapResolution = 2048.0f;
         pointLight.ShadowNearPlane = 0.1f;
@@ -186,7 +187,7 @@ auto Game::SetupRenderPasses() -> void {
         .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
     });
     _renderer->CreateRenderResource("BaseColor", true, {
-        .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
     _renderer->CreateRenderResource("WorldNormal", true, {
@@ -267,6 +268,9 @@ auto Game::SetupRenderPasses() -> void {
     bloomPass->InputHDRTextureName = "HDR-Input";
     bloomPass->BloomMipTextureName = "Bloom_Mip";
     bloomPass->BloomMipCount = 5;
+    const auto dirtTex = BeTexture::CreateFromFile("assets/bloom-dirt-mask.png", _renderer->GetDevice());
+    _assetRegistry->AddTexture("BloomDirtTexture", dirtTex);
+    bloomPass->DirtTextureName = "BloomDirtTexture";
     bloomPass->OutputTextureName = "BloomOutput";
     
     // Tonemapper pass

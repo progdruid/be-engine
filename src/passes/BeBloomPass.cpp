@@ -1,6 +1,8 @@
 #include "BeBloomPass.h"
 
 #include "BeRenderer.h"
+#include "BeAssetRegistry.h"
+#include "BeTexture.h"
 #include "BeShader.h"
 
 BeBloomPass::BeBloomPass() = default;
@@ -228,6 +230,7 @@ auto BeBloomPass::RenderAddPass() const -> void {
     const auto context = _renderer->GetContext();
     const auto hdrTexture = _renderer->GetRenderResource(InputHDRTextureName);
     const auto bloomMip0 = _renderer->GetRenderResource(BloomMipTextureName + "0");
+    const auto dirtTexture = AssetRegistry->GetTexture(DirtTextureName);
     const auto outputTexture = _renderer->GetRenderResource(OutputTextureName);
 
     // targets
@@ -241,6 +244,7 @@ auto BeBloomPass::RenderAddPass() const -> void {
     // resources
     context->PSSetShaderResources(0, 1, hdrTexture->GetSRV().GetAddressOf());
     context->PSSetShaderResources(1, 1, bloomMip0->GetSRV().GetAddressOf());
+    context->PSSetShaderResources(2, 1, dirtTexture.lock()->SRV.GetAddressOf());
     context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
 
     // draw
@@ -250,7 +254,7 @@ auto BeBloomPass::RenderAddPass() const -> void {
 
     // clean
     BeShader::Unbind(context.Get(), BeShaderType::All);
-    context->PSSetShaderResources(0, 2, Utils::NullSRVs);
+    context->PSSetShaderResources(0, 3, Utils::NullSRVs);
     context->PSSetSamplers(0, 1, Utils::NullSamplers);
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);   
 }
