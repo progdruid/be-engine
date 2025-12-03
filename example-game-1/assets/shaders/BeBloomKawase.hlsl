@@ -25,21 +25,22 @@ struct PSInput {
 
 float3 PixelFunction(PSInput input) : SV_TARGET {
     float2 offset = TexelSize * PassRadius;
-
-    // kawase 4-tap spiral cone filter (used for both downsample and upsample)
-    static const float2 offsets[4] = {
+    
+    static const float2 offsets[6] = {
         float2( 0.0,      1.384),
         float2( 0.0,     -1.384),
         float2( 1.120,   -0.492),
-        float2(-1.120,    0.492)
+        float2( 1.120,    0.492),
+        float2(-1.120,    0.492),
+        float2(-1.120,   -0.492)
     };
 
     float3 color = float3(0.0, 0.0, 0.0);
 
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 6; ++i) {
         float2 sampleUV = input.UV + offsets[i] * offset;
         color += Bloom.Sample(sLinear, sampleUV).rgb;
     }
 
-    return color * 0.25;
+    return color * 0.166666;
 }
