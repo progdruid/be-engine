@@ -1,3 +1,4 @@
+
 #include "Game.h"
 
 #define NOMINMAX
@@ -201,7 +202,8 @@ auto Game::SetupRenderPasses() -> void {
         .BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
     });
 
-    for (int mip = 0; mip < 7; ++mip) {
+
+    for (int mip = 0; mip < 5; ++mip) {
         const float multiplier = glm::pow(0.5f, mip);
         const uint32_t width = _width * multiplier;
         const uint32_t height = _height * multiplier;
@@ -264,7 +266,7 @@ auto Game::SetupRenderPasses() -> void {
     bloomPass->AssetRegistry = _assetRegistry;
     bloomPass->InputHDRTextureName = "HDR-Input";
     bloomPass->BloomMipTextureName = "Bloom_Mip";
-    bloomPass->BloomMipCount = 7;
+    bloomPass->BloomMipCount = 5;
     bloomPass->OutputTextureName = "BloomOutput";
     
     // Tonemapper pass
