@@ -18,6 +18,7 @@ class BeBloomPass final : public BeRenderPass {
     uint32_t BloomMipCount;
     std::string OutputTextureName;
     std::shared_ptr<BeAssetRegistry> AssetRegistry;
+    std::string DirtTextureName;
     
     hide
     std::shared_ptr<BeShader> _brightShader;

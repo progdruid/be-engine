@@ -55,7 +55,7 @@ struct VertexOutput {
 };
 
 struct PixelOutput {
-    float4 DiffuseRGBA : SV_Target0;
+    float3 DiffuseRGB : SV_Target0;
     float4 WorldNormalXYZ_UnusedA : SV_Target1;
     float4 SpecularRGB_ShininessA : SV_Target2;
 };
@@ -236,8 +236,7 @@ PixelOutput PixelFunction(VertexOutput input) {
     float4 diffuseColor = DiffuseTexture.Sample(DefaultSampler, input.UV);
 
     PixelOutput output;
-    output.DiffuseRGBA.rgb = diffuseColor.rgb * _DiffuseColor;
-    output.DiffuseRGBA.a = 1.0;
+    output.DiffuseRGB.rgb = diffuseColor.rgb * _DiffuseColor;
     output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
     output.WorldNormalXYZ_UnusedA.w = 1.0;
     output.SpecularRGB_ShininessA.rgb = _SpecularColor;
