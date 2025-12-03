@@ -19,7 +19,7 @@ struct PSInput {
 float3 PixelFunction(PSInput input) : SV_TARGET {
     float3 hdrColor = HDRInput.Sample(InputSampler, input.UV).rgb;
 
-    float3 finalColor = Tonemap_ReinhardWhite(hdrColor, 1.0);
+    float3 finalColor = Tonemap_ReinhardWhite(hdrColor, 1.5);
     
     return finalColor;
 }

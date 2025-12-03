@@ -69,9 +69,7 @@ float3 PixelFunction(PSInput input) : SV_TARGET {
         _DirectionalLightPower,
         diffuse.rgb,
         specular_shininess.rgb,
-        float3(0, 0, 0),
-        specular_shininess.a * 2048.0,
-        0.f
+        specular_shininess.a
     );
 
     return lit * shadowAbsenceFactor;
