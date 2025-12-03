@@ -72,7 +72,6 @@ auto Game::LoadAssets() -> void {
     _cube = BeModel::Create("assets/cube.glb", standardShader, *_assetRegistry, device);
     _macintosh = BeModel::Create("assets/model.fbx", standardShader, *_assetRegistry, device);
     _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, *_assetRegistry, device);
-    _pagoda->Materials[0]->SetFloat("EmissivePower", 20.0);
     _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, *_assetRegistry, device);
     _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *_assetRegistry, device);
 
