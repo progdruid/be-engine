@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <wrl/client.h>
 #include <d3d11.h>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -10,27 +11,61 @@
 
 #include "umbrellas/access-modifiers.hpp"
 
+class BeAssetRegistry;
 using Microsoft::WRL::ComPtr;
 
 class BeRenderResource {
 
     // types ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose struct BeResourceDescriptor {
+        std::string Name;
         bool IsCubemap = false;
         DXGI_FORMAT Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        uint32_t BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+        uint32_t BindFlags = D3D11_BIND_SHADER_RESOURCE;
         uint32_t Mips = 1;
-        uint32_t CustomWidth = 0;
-        uint32_t CustomHeight = 0;
-        glm::vec4 DefaultColor = glm::vec4(0.0f);
+        uint32_t Width = 1;
+        uint32_t Height = 1;
+        uint8_t* Data = nullptr;
     };
 
+    expose class Builder {
+
+        hide BeResourceDescriptor _descriptor;
+        hide std::weak_ptr<BeAssetRegistry> _assetRegistry;
+        
+        hide explicit Builder (std::string name);
+        expose ~Builder () = default;
+        
+        expose auto SetBindFlags(uint32_t bindFlags) -> Builder& ;
+        expose auto SetFormat(DXGI_FORMAT format) -> Builder& ;
+        expose auto SetMips(uint32_t mips) -> Builder& ;
+        expose auto SetSize(uint32_t w, uint32_t h) -> Builder& ;
+        expose auto SetCubemap(bool cubemap) -> Builder& ;
+
+        expose auto FillWithColor (const glm::vec4& color) -> Builder&;
+        expose auto FillFromMemory (const uint8_t* src) -> Builder&;
+        expose auto LoadFromFile (const std::filesystem::path& file) -> Builder&;
+
+        hide static auto FlipVertically (uint32_t w, uint32_t h, uint8_t* data) -> void;
+
+        expose auto AddToRegistry (std::weak_ptr<BeAssetRegistry> registry) -> Builder&;
+        
+        expose auto Build(ComPtr<ID3D11Device> device) const -> std::shared_ptr<BeRenderResource>;
+
+        friend class BeRenderResource;
+    }; 
+
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose static auto Create (ComPtr<ID3D11Device> device, std::string name, const BeResourceDescriptor& descriptor) -> std::shared_ptr<BeRenderResource>;
+    expose static auto Create (std::string name) -> Builder { return Builder (std::move(name)); }
     
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose std::string Name;
-    expose BeResourceDescriptor Descriptor;
+    expose uint32_t Width;
+    expose uint32_t Height;
+    expose bool IsCubemap;
+    expose uint32_t Mips;
+    expose uint32_t BindFlags;
+    expose DXGI_FORMAT Format;
     
     hide std::vector<D3D11_VIEWPORT> _mipViewports;
     
@@ -43,12 +78,10 @@ class BeRenderResource {
     hide std::array<std::vector<ComPtr<ID3D11RenderTargetView>>, 6> _cubemapMipRTVs;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose explicit BeRenderResource(std::string name, const BeResourceDescriptor& descriptor);
+    hide explicit BeRenderResource(ComPtr<ID3D11Device> device, const BeResourceDescriptor& descriptor);
     expose ~BeRenderResource();
 
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
-    expose auto CreateGPUResources(ComPtr<ID3D11Device> device) -> void;
-    
     expose auto GetMipViewport (const uint32_t mip) const              -> const D3D11_VIEWPORT&;
     expose auto GetSRV         () const                                -> ComPtr<ID3D11ShaderResourceView>;
     expose auto GetDSV         () const                                -> ComPtr<ID3D11DepthStencilView>;
