@@ -51,12 +51,12 @@ auto BeLightingPass::Render() -> void {
     const BeDirectionalLight& directionalLight = *_renderer->GetContextDataPointer<BeDirectionalLight>(InputDirectionalLightName);
     const std::vector<BePointLight>& pointLights = *_renderer->GetContextDataPointer<std::vector<BePointLight>>(InputPointLightsName);
     
-    BeRenderResource* depthResource     = _renderer->GetRenderResource(InputDepthTextureName);
-    BeRenderResource* gbufferResource0  = _renderer->GetRenderResource(InputTexture0Name);
-    BeRenderResource* gbufferResource1  = _renderer->GetRenderResource(InputTexture1Name);
-    BeRenderResource* gbufferResource2  = _renderer->GetRenderResource(InputTexture2Name);
-    BeRenderResource* lightingResource  = _renderer->GetRenderResource(OutputTextureName);
-    BeRenderResource* directionalLightShadowMapResource  = _renderer->GetRenderResource(directionalLight.ShadowMapTextureName);
+    const auto depthResource     = _renderer->GetRenderResource(InputDepthTextureName);
+    const auto gbufferResource0  = _renderer->GetRenderResource(InputTexture0Name);
+    const auto gbufferResource1  = _renderer->GetRenderResource(InputTexture1Name);
+    const auto gbufferResource2  = _renderer->GetRenderResource(InputTexture2Name);
+    const auto lightingResource  = _renderer->GetRenderResource(OutputTextureName);
+    const auto directionalLightShadowMapResource  = _renderer->GetRenderResource(directionalLight.ShadowMapTextureName);
     
     context->ClearRenderTargetView(lightingResource->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->OMSetRenderTargets(1, lightingResource->GetRTV().GetAddressOf(), nullptr);

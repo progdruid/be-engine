@@ -63,5 +63,9 @@ class BeRenderResource {
 
     hide auto GetDepthSRVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;
     hide auto GetDSVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;
+
+
+    // befriending shared_ptr for constructor/destructor access because ours are private
+    friend class std::shared_ptr<BeRenderResource>;
 };
 

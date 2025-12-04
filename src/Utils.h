@@ -10,6 +10,7 @@
 #include <d3d11.h>
 #include <d3d11_1.h>
 #include <wrl/client.h>
+#include <comdef.h>
 
 namespace Utils {
   
@@ -114,7 +115,9 @@ namespace Utils {
     struct ErrorStream {
         ErrorStream& operator<<(const HRESULT msg) {
             if (FAILED(msg)) {
-                std::cerr << "Error: HRESULT 0x" << std::hex << msg << std::dec << "\n";
+                _com_error err(msg);
+                std::wstring wstr(err.ErrorMessage());
+                std::wcerr << L"Error: HRESULT 0x" << std::hex << msg << std::dec << L" Message: " << wstr << L"\n";
                 throw com_exception(msg);
             }
             return *this;

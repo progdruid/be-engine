@@ -18,9 +18,10 @@ using Microsoft::WRL::ComPtr;
 
 
 class BeRenderer {
-public:
-    struct ObjectEntry {
-        std::string Name = "";
+
+    // types ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose struct ObjectEntry {
+        std::string Name;
         glm::vec3 Position = {0.f, 0.f, 0.f};
         glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
         glm::vec3 Scale = {1.f, 1.f, 1.f};
@@ -28,24 +29,20 @@ public:
         std::vector<BeModel::BeDrawSlice> DrawSlices;
     };
 
-private:
-    auto GetBestAdapter() -> ComPtr<IDXGIAdapter1>;
     
-public:
-    explicit BeRenderer(HWND windowHandle, uint32_t width, uint32_t height);
-    ~BeRenderer() = default;
-
+    // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
+    hide static auto GetBestAdapter() -> ComPtr<IDXGIAdapter1>;
     
+    
+    // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose BeUniformData UniformData;
 
-public:
-    BeUniformData UniformData;
-
-private:
-    // window
-    HWND _windowHandle;
+    hide
     uint32_t _width;
     uint32_t _height;
-
+    HWND _windowHandle;
+    std::weak_ptr<BeAssetRegistry> _assetRegistry;
+    
     // dx11 core components
     ComPtr<ID3D11Device> _device;
     ComPtr<ID3D11DeviceContext> _context;
@@ -65,34 +62,40 @@ private:
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
     std::vector<ObjectEntry> _objects;
     
-    std::unordered_map<std::string, BeRenderResource> _renderResources;
+    std::unordered_map<std::string, std::shared_ptr<BeRenderResource>> _renderResources;
     std::unordered_map<std::string, void*> _contextDataPointers;
     std::vector<BeRenderPass*> _passes;
 
-public:
+
+    // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose
+    explicit BeRenderer(uint32_t width, uint32_t height, HWND windowHandle, std::weak_ptr<BeAssetRegistry> registry);
+    ~BeRenderer();
+    
+    auto LaunchDevice () -> void;
+
+
+    // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    expose
+    auto AddRenderPass(BeRenderPass* renderPass) -> void;
+    auto InitialisePasses() const -> void;
+    auto Render() -> void;
+    
     [[nodiscard]] auto GetDevice() const -> ComPtr<ID3D11Device> { return _device; }
     [[nodiscard]] auto GetContext() const -> ComPtr<ID3D11DeviceContext> { return _context; }
     [[nodiscard]] auto GetPointSampler() const -> ComPtr<ID3D11SamplerState> { return _pointSampler; }
     [[nodiscard]] auto GetPostProcessLinearClampSampler() const -> ComPtr<ID3D11SamplerState> { return _postProcessLinearClampSampler; }
     [[nodiscard]] auto GetFullscreenVertexShader() const -> std::shared_ptr<BeShader> { return _fullscreenShader; }
     [[nodiscard]] auto GetBackbufferTarget() const -> ComPtr<ID3D11RenderTargetView> { return _backbufferTarget; }
-    
-    auto LaunchDevice () -> void;
-    auto AddRenderPass(BeRenderPass* renderPass) -> void;
-    auto InitialisePasses() -> void;
-    auto Render() -> void;
 
     auto SetObjects(const std::vector<ObjectEntry>& objects) -> void;
     auto GetObjects() -> const std::vector<ObjectEntry>& { return _objects; }
     auto GetShaderVertexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedVertexBuffer; }
     auto GetShaderIndexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedIndexBuffer; }
 
-    auto CreateRenderResource(
-        const std::string& name,
-        const bool useWindowSize,
-        const BeRenderResource::BeResourceDescriptor& desc
-    ) -> BeRenderResource*;
-    auto GetRenderResource(const std::string& name) -> BeRenderResource*;
+    auto AddRenderResource(std::string name, std::shared_ptr<BeRenderResource> resource) -> void { _renderResources.emplace(name, std::move(resource)); }
+    auto GetRenderResource(const std::string& name) -> std::shared_ptr<BeRenderResource> { return _renderResources.at(name); }
     
     template<typename T>
     auto GetContextDataPointer(const std::string& name) const -> T* {
@@ -102,7 +105,4 @@ public:
     auto SetContextDataPointer(const std::string& name, T* data) -> void{
         _contextDataPointers[name] = static_cast<void*>(data);
     }
-    
-private:
-    void TerminateRenderer();
 };

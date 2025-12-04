@@ -90,59 +90,6 @@ project "MiscConfiguration"
         ".claude/*"
     }
 
--- example game 0
-project "example-game-0"
-    kind "ConsoleApp"
-    language "C++"
-    cppdialect "C++20"
-
-    location "example-game-0"
-
-    targetdir ("%{prj.location}/bin/%{cfg.architecture}/%{cfg.buildcfg}")
-    objdir    ("%{prj.location}/obj/%{cfg.architecture}/%{cfg.buildcfg}")
-    debugdir  ("%{prj.location}/bin/%{cfg.architecture}/%{cfg.buildcfg}")
-
-    files {
-        "%{prj.location}/**.cpp",
-        "%{prj.location}/**.h",
-        "%{prj.location}/**.hpp",
-        "%{prj.location}/assets/**.hlsl",
-        "%{prj.location}/assets/**.hlsli",
-    }
-
-    includedirs {
-        "src",
-        "src/shaders",
-        "%{prj.location}",
-        "vendor/Assimp/include",
-        "vendor"
-    }
-
-    links { "Engine" }
-
-    postbuildcommands {
-        "{COPY} %{wks.location}/src/shaders %{cfg.targetdir}/standardShaders",
-        "{COPY} %{prj.location}/assets %{cfg.targetdir}/assets",
-        "{COPY} %{wks.location}/vendor/Assimp/bin/x64/assimp-vc143-mt.dll %{cfg.targetdir}"
-    }
-
-    filter { "files:**.hlsl" }
-        buildaction "None"
-
-    filter "configurations:Debug"
-        symbols "On"
-        defines { "DEBUG" }
-        optimize "Off"
-
-    filter "configurations:Release"
-        symbols "Off"
-        defines { "NDEBUG" }
-        optimize "Full"
-
-    filter { "toolset:msc*", "language:C++" }
-        buildoptions { "/Zc:__cplusplus" }
-
-    filter {}
     
 project "example-game-1"
     kind "ConsoleApp"
