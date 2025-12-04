@@ -176,63 +176,69 @@ auto Game::SetupRenderPasses() -> void {
     const auto device = _renderer->GetDevice();
     
     // Create render resources
-    const auto dirShadowmap = BeRenderResource::Create(device, _directionalLight->ShadowMapTextureName, {
-        .Format = DXGI_FORMAT_R32_TYPELESS,
-        .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
-        .CustomWidth = static_cast<uint32_t>(_directionalLight->ShadowMapResolution),
-        .CustomHeight = static_cast<uint32_t>(_directionalLight->ShadowMapResolution),
-    });
+    const auto dirShadowmap =
+        BeRenderResource::Create(_directionalLight->ShadowMapTextureName)
+        .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
+        .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+        .SetSize(static_cast<uint32_t>(_directionalLight->ShadowMapResolution), static_cast<uint32_t>(_directionalLight->ShadowMapResolution))
+        .AddToRegistry(_assetRegistry)
+        .Build(device);
     _renderer->AddRenderResource(dirShadowmap->Name, dirShadowmap);
-
+    
     for (const auto & pointLight : _pointLights) {
-        const auto pointLightShadowmap = BeRenderResource::Create(device, pointLight.ShadowMapTextureName, {
-            .IsCubemap = true,
-            .Format = DXGI_FORMAT_R32_TYPELESS,
-            .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
-            .CustomWidth = static_cast<uint32_t>(pointLight.ShadowMapResolution),
-            .CustomHeight = static_cast<uint32_t>(pointLight.ShadowMapResolution),
-        });
+        const auto pointLightShadowmap = BeRenderResource::Create(pointLight.ShadowMapTextureName)
+            .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
+            .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+            .SetCubemap(true)
+            .SetSize(static_cast<uint32_t>(pointLight.ShadowMapResolution), static_cast<uint32_t>(pointLight.ShadowMapResolution))
+            .AddToRegistry(_assetRegistry)
+            .Build(device);
         _renderer->AddRenderResource(pointLightShadowmap->Name, pointLightShadowmap);
     }
     
-    const auto depthStencil = BeRenderResource::Create(device, "DepthStencil", {
-        .Format = DXGI_FORMAT_R24G8_TYPELESS,
-        .BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE,
-        .CustomWidth = _width,
-        .CustomHeight = _height,
-    });
+    const auto depthStencil = 
+        BeRenderResource::Create("DepthStencil")
+        .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
+        .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+        .SetSize(_width, _height)
+        .AddToRegistry(_assetRegistry)
+        .Build(device);
     _renderer->AddRenderResource(depthStencil->Name, depthStencil);
 
-    const auto baseColor = BeRenderResource::Create(device, "BaseColor", {
-        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
-        .BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
-        .CustomWidth = _width,
-        .CustomHeight = _height,
-    });
+    const auto baseColor = 
+        BeRenderResource::Create("BaseColor")
+        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+        .SetSize(_width, _height)
+        .AddToRegistry(_assetRegistry)
+        .Build(device);
     _renderer->AddRenderResource(baseColor->Name, baseColor);
 
-    const auto worldNormal = BeRenderResource::Create(device, "WorldNormal", {
-        .Format = DXGI_FORMAT_R16G16B16A16_FLOAT,
-        .BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
-        .CustomWidth = _width,
-        .CustomHeight = _height,
-    });
+    const auto worldNormal = 
+        BeRenderResource::Create("WorldNormal")
+        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+        .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
+        .SetSize(_width, _height)
+        .AddToRegistry(_assetRegistry)
+        .Build(device);
     _renderer->AddRenderResource(worldNormal->Name, worldNormal);
-    
-    const auto specularShininess = BeRenderResource::Create(device, "Specular-Shininess", {
-        .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
-        .BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
-        .CustomWidth = _width,
-        .CustomHeight = _height,
-    });
+
+    const auto specularShininess = 
+        BeRenderResource::Create("Specular-Shininess")
+        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+        .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+        .SetSize(_width, _height)
+        .AddToRegistry(_assetRegistry)
+        .Build(device);
     _renderer->AddRenderResource(specularShininess->Name, specularShininess);
-    
-    const auto hdrInput = BeRenderResource::Create(device, "HDR-Input", {
-        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
-        .BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
-        .CustomWidth = _width,
-        .CustomHeight = _height,
-    });
+
+    const auto hdrInput = 
+        BeRenderResource::Create("HDR-Input")
+        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+        .SetSize(_width, _height)
+        .AddToRegistry(_assetRegistry)
+        .Build(device);
     _renderer->AddRenderResource(hdrInput->Name, hdrInput);
     
     for (int mip = 0; mip < 5; ++mip) {
@@ -240,30 +246,32 @@ auto Game::SetupRenderPasses() -> void {
         const uint32_t mipWidth = _width * multiplier;
         const uint32_t mipHeight = _height * multiplier;
 
-        const auto bloomMip
-        = BeRenderResource::Create(device, "Bloom_Mip" + std::to_string(mip), {
-            .Format = DXGI_FORMAT_R11G11B10_FLOAT,
-            .BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
-            .CustomWidth = mipWidth,
-            .CustomHeight = mipHeight,
-        });
+        const auto bloomMip =
+            BeRenderResource::Create("Bloom_Mip" + std::to_string(mip))
+            .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+            .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+            .SetSize(mipWidth, mipHeight)
+            .AddToRegistry(_assetRegistry)
+            .Build(device);
         _renderer->AddRenderResource(bloomMip->Name, bloomMip);
     }
 
-    const auto bloomOutput = BeRenderResource::Create(device, "BloomOutput", {
-        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
-        .BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
-        .CustomWidth = _width,
-        .CustomHeight = _height,
-    });
+    const auto bloomOutput = 
+        BeRenderResource::Create("BloomOutput")
+        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+        .SetSize(_width, _height)
+        .AddToRegistry(_assetRegistry)
+        .Build(device);
     _renderer->AddRenderResource(bloomOutput->Name, bloomOutput);
     
-    const auto tonemapperOutput = BeRenderResource::Create(device, "TonemapperOutput", {
-        .Format = DXGI_FORMAT_R11G11B10_FLOAT,
-        .BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
-        .CustomWidth = _width,
-        .CustomHeight = _height,
-    });
+    const auto tonemapperOutput = 
+        BeRenderResource::Create("TonemapperOutput")
+        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+        .SetSize(_width, _height)
+        .AddToRegistry(_assetRegistry)
+        .Build(device);
     _renderer->AddRenderResource(tonemapperOutput->Name, tonemapperOutput);
     
     
