@@ -23,10 +23,10 @@ auto BeGeometryPass::Initialise() -> void {
 auto BeGeometryPass::Render() -> void {
     const auto context = _renderer->GetContext();
 
-    const BeRenderResource* depthResource = _renderer->GetRenderResource(OutputDepthTextureName);
-    const BeRenderResource* gbufferResource0 = _renderer->GetRenderResource(OutputTexture0Name);
-    const BeRenderResource* gbufferResource1 = _renderer->GetRenderResource(OutputTexture1Name);
-    const BeRenderResource* gbufferResource2 = _renderer->GetRenderResource(OutputTexture2Name);
+    const auto depthResource = _renderer->GetRenderResource(OutputDepthTextureName);
+    const auto gbufferResource0 = _renderer->GetRenderResource(OutputTexture0Name);
+    const auto gbufferResource1 = _renderer->GetRenderResource(OutputTexture1Name);
+    const auto gbufferResource2 = _renderer->GetRenderResource(OutputTexture2Name);
     
     // Clear and set render targets
     context->ClearDepthStencilView(depthResource->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);

@@ -5,6 +5,14 @@
 
 #include "Utils.h"
 
+
+auto BeRenderResource::Create(ComPtr<ID3D11Device> device, std::string name, const BeResourceDescriptor& descriptor) -> std::shared_ptr<BeRenderResource> {
+    std::shared_ptr<BeRenderResource> resource(new BeRenderResource(std::move(name), descriptor));
+    resource->CreateGPUResources(device);
+    return resource;
+}
+
+
 BeRenderResource::BeRenderResource(std::string name, const BeResourceDescriptor& descriptor)
     : Name(std::move(name))
     , Descriptor(descriptor) {
