@@ -29,8 +29,8 @@ auto BeBloomPass::Initialise() -> void {
 
         const auto sourceMip = _renderer->GetRenderResource(BloomMipTextureName+std::to_string(mipTarget - 1));
 
-        const auto texelSizeX = 1.0f / sourceMip->Descriptor.CustomWidth;
-        const auto texelSizeY = 1.0f / sourceMip->Descriptor.CustomHeight;
+        const auto texelSizeX = 1.0f / sourceMip->Width;
+        const auto texelSizeY = 1.0f / sourceMip->Height;
 
         const auto passRadius = 0.5f * (1 << (mipTarget - 1));
 
@@ -53,8 +53,8 @@ auto BeBloomPass::Initialise() -> void {
 
         const auto targetMip = _renderer->GetRenderResource(BloomMipTextureName + std::to_string(mipTarget));
 
-        const auto texelSizeX = 1.0f / targetMip->Descriptor.CustomWidth;
-        const auto texelSizeY = 1.0f / targetMip->Descriptor.CustomHeight;
+        const auto texelSizeX = 1.0f / targetMip->Width;
+        const auto texelSizeY = 1.0f / targetMip->Height;
 
         const auto upsampleRadius = 0.5f * (1 << mipTarget);
 
@@ -130,8 +130,8 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
 
         // viewport
         D3D11_VIEWPORT viewport = {};
-        viewport.Width = static_cast<float>(targetMip->Descriptor.CustomWidth);
-        viewport.Height = static_cast<float>(targetMip->Descriptor.CustomHeight);
+        viewport.Width = static_cast<float>(targetMip->Width);
+        viewport.Height = static_cast<float>(targetMip->Height);
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
         context->RSSetViewports(1, &viewport);
@@ -195,8 +195,8 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
 
         // Set render target and viewport
         D3D11_VIEWPORT viewport = {};
-        viewport.Width = static_cast<float>(targetMip->Descriptor.CustomWidth);
-        viewport.Height = static_cast<float>(targetMip->Descriptor.CustomHeight);
+        viewport.Width = static_cast<float>(targetMip->Width);
+        viewport.Height = static_cast<float>(targetMip->Height);
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
         context->RSSetViewports(1, &viewport);
