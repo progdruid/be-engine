@@ -16,7 +16,7 @@ auto BeBackbufferPass::Initialise() -> void {
 auto BeBackbufferPass::Render() -> void {
     const auto context = _renderer->GetContext();
 
-    BeRenderResource* inputResource = _renderer->GetRenderResource(InputTextureName);
+    const auto inputResource = _renderer->GetRenderResource(InputTextureName);
 
     auto backbufferTarget = _renderer->GetBackbufferTarget();
     auto fullClearColor = glm::vec4(ClearColor, 1.0f);

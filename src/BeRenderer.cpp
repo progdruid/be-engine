@@ -40,11 +40,14 @@ auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
     return nullptr;
 }
 
-BeRenderer::BeRenderer(const HWND windowHandle, const uint32_t width, const uint32_t height) {
-    _windowHandle = windowHandle;
-    _width = width;
-    _height = height;
-}
+BeRenderer::BeRenderer(uint32_t width, uint32_t height, HWND windowHandle, std::weak_ptr<BeAssetRegistry> registry)
+    : _width(width)
+    , _height(height)
+    , _windowHandle(windowHandle)
+    , _assetRegistry(std::move(registry))
+{}
+
+BeRenderer::~BeRenderer() = default;
 
 auto BeRenderer::LaunchDevice() -> void {
 
@@ -122,7 +125,7 @@ auto BeRenderer::LaunchDevice() -> void {
     pointSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
     Utils::Check << _device->CreateSamplerState(&pointSamplerDesc, &_pointSampler);
 
-    // Create linear clamp sampler for post-processing
+    // Create a linear clamp sampler for post-processing
     D3D11_SAMPLER_DESC linearClampDesc = {};
     linearClampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     linearClampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -150,7 +153,7 @@ auto BeRenderer::AddRenderPass(BeRenderPass* renderPass) -> void {
     renderPass->InjectRenderer(this);
 }
 
-auto BeRenderer::InitialisePasses() -> void {
+auto BeRenderer::InitialisePasses() const -> void {
     for (const auto& pass : _passes)
         pass->Initialise();
 }
@@ -234,37 +237,4 @@ auto BeRenderer::SetObjects(const std::vector<ObjectEntry>& objects) -> void {
     D3D11_SUBRESOURCE_DATA indexData = {};
     indexData.pSysMem = indices.data();
     Utils::Check << _device->CreateBuffer(&indexBufferDescriptor, &indexData, &_sharedIndexBuffer);
-}
-
-auto BeRenderer::CreateRenderResource(
-    const std::string& name,
-    const bool useWindowSize,
-    const BeRenderResource::BeResourceDescriptor& desc)
--> BeRenderResource* {
-
-    BeRenderResource::BeResourceDescriptor descCopy = desc;
-    if (useWindowSize) {
-        descCopy.CustomWidth = _width;
-        descCopy.CustomHeight = _height;
-    }
-    
-    const auto resource = std::make_unique<BeRenderResource>(name, descCopy);
-    resource->CreateGPUResources(_device);
-    BeRenderResource* resourcePtr = resource.get();
-    _renderResources.emplace(name, std::move(*resource));
-    return resourcePtr;
-}
-
-auto BeRenderer::GetRenderResource(const std::string& name) -> BeRenderResource* {
-    return &_renderResources.at(name);
-}
-    
-auto BeRenderer::TerminateRenderer() -> void {
-    _backbufferTarget.Reset();
-    _swapchain.Reset();
-    _factory.Reset();
-    _adapter.Reset();
-    _dxgiDevice.Reset();
-    _context.Reset();
-    _device.Reset();
 }
