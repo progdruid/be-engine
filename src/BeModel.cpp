@@ -8,9 +8,15 @@
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "BeAssetRegistry.h"
+#include "BeRenderResource.h"
 #include "Utils.h"
 
-auto BeModel::Create(const std::filesystem::path& modelPath, const std::weak_ptr<BeShader>& usedShaderForMaterials, BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeModel> {
+auto BeModel::Create(
+    const std::filesystem::path& modelPath,
+    std::weak_ptr<BeShader> usedShaderForMaterials,
+    std::weak_ptr<BeAssetRegistry> registry,
+    ComPtr<ID3D11Device> device
+) -> std::shared_ptr<BeModel> {
     constexpr auto flags = (
         aiProcess_Triangulate |
         aiProcess_GenNormals |
@@ -128,19 +134,33 @@ auto BeModel::Create(const std::filesystem::path& modelPath, const std::weak_ptr
     return model;
 }
 
-auto BeModel::LoadTextureFromAssimpPath(const aiString& texPath, const aiScene* scene, const std::filesystem::path& parentPath, BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeTexture> {
+auto BeModel::LoadTextureFromAssimpPath(
+    const aiString& texPath,
+    const aiScene* scene,
+    const std::filesystem::path& parentPath,
+    std::weak_ptr<BeAssetRegistry> registry,
+    ComPtr<ID3D11Device> device
+) -> std::shared_ptr<BeRenderResource> {
+    static int tempCount = -1;
+    tempCount++;
+    auto builder =
+        BeRenderResource::Create("TODO" + std::to_string(tempCount))
+        .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
+        .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM);
+    
+
     if (texPath.C_Str()[0] != '*') {
         const auto filename = std::filesystem::path(texPath.C_Str()).filename();
-        std::filesystem::path path = parentPath / filename;
-        if (std::filesystem::exists(path))
-            return BeTexture::CreateFromFile(path, device);
-        path = parentPath / "textures" / filename;
-        if (std::filesystem::exists(path))
-            return BeTexture::CreateFromFile(path, device);
-        path = parentPath / "images" / filename;
-        if (std::filesystem::exists(path))
-            return BeTexture::CreateFromFile(path, device);
-        throw std::runtime_error("Texture file not found: " + filename.string());
+        std::filesystem::path path;
+        if (!std::filesystem::exists(path = parentPath / filename) &&
+            !std::filesystem::exists(path = parentPath / "textures" / filename) &&
+            !std::filesystem::exists(path = parentPath / "images" / filename)) {
+            throw std::runtime_error("Texture file not found: " + filename.string());
+        }
+        return builder
+            .LoadFromFile(path)
+            .AddToRegistry(registry)
+            .Build(device);
     }
 
     char* endPtr;
@@ -153,9 +173,10 @@ auto BeModel::LoadTextureFromAssimpPath(const aiString& texPath, const aiScene* 
         uint8_t* decoded = stbi_load_from_memory(reinterpret_cast<const uint8_t*>(aiTex->pcData), aiTex->mWidth, &w, &h, &channelsInFile, 4);
         if (!decoded) throw std::runtime_error("Failed to decode embedded texture");
 
-        auto texture = BeTexture::CreateFromMemory(decoded, w, h, device);
+        const auto & resource = builder
+            .SetSize(w, h).FillFromMemory(decoded).AddToRegistry(registry).Build(device);
         stbi_image_free(decoded);
-        return texture;
+        return resource;
     }
 
     // decoded texture
@@ -168,7 +189,8 @@ auto BeModel::LoadTextureFromAssimpPath(const aiString& texPath, const aiScene* 
         converted[i * 4 + 2] = srcData[i * 4 + 0]; // R -> B
         converted[i * 4 + 3] = srcData[i * 4 + 3]; // A
     }
-    auto texture = BeTexture::CreateFromMemory(converted, aiTex->mWidth, aiTex->mHeight, device);
+    const auto & resource = builder
+        .SetSize(aiTex->mWidth, aiTex->mHeight).FillFromMemory(converted).AddToRegistry(registry).Build(device);
     free(converted);
-    return texture;
+    return resource;
 }

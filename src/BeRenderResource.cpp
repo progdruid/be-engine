@@ -11,28 +11,35 @@
 
 BeRenderResource::Builder::Builder(std::string name) { _descriptor.Name = std::move(name); }
 
-auto BeRenderResource::Builder::SetBindFlags (uint32_t bindFlags)       -> Builder& { _descriptor.BindFlags = bindFlags; return *this; }
-auto BeRenderResource::Builder::SetFormat    (DXGI_FORMAT format)       -> Builder& { _descriptor.Format = format; return *this; }
-auto BeRenderResource::Builder::SetMips      (uint32_t mips)            -> Builder& { _descriptor.Mips = mips; return *this; }
-auto BeRenderResource::Builder::SetSize      (uint32_t w, uint32_t h)   -> Builder& { _descriptor.Width = w; _descriptor.Height = h; return *this; }
-auto BeRenderResource::Builder::SetCubemap   (bool cubemap)             -> Builder& { _descriptor.IsCubemap = cubemap; return *this; }
-
-auto BeRenderResource::Builder::FillWithColor(const glm::vec4& color) -> Builder& {
-    const size_t size = _descriptor.Width * _descriptor.Height;
-    const auto data = static_cast<uint8_t*>(malloc(size * 4 * sizeof(uint8_t)));
-    
-    for (size_t i = 0; i < size; ++i) {
-        data[4 * i + 0] = static_cast<uint8_t>(glm::clamp(color.r, 0.0f, 1.0f) * 255.0f);
-        data[4 * i + 0] = static_cast<uint8_t>(glm::clamp(color.g, 0.0f, 1.0f) * 255.0f);
-        data[4 * i + 0] = static_cast<uint8_t>(glm::clamp(color.b, 0.0f, 1.0f) * 255.0f);
-        data[4 * i + 0] = static_cast<uint8_t>(glm::clamp(color.a, 0.0f, 1.0f) * 255.0f);
+BeRenderResource::Builder::~Builder() {
+    if (_descriptor.Data) {
+        free(_descriptor.Data);
+        _descriptor.Data = nullptr;
     }
-    
-    _descriptor.Data = data;
-    return *this;
 }
 
-auto BeRenderResource::Builder::FillFromMemory(const uint8_t* src) -> Builder& {
+auto BeRenderResource::Builder::SetBindFlags (uint32_t bindFlags)       -> Builder&& { _descriptor.BindFlags = bindFlags; return std::move(*this); }
+auto BeRenderResource::Builder::SetFormat    (DXGI_FORMAT format)       -> Builder&& { _descriptor.Format = format; return std::move(*this); }
+auto BeRenderResource::Builder::SetMips      (uint32_t mips)            -> Builder&& { _descriptor.Mips = mips; return std::move(*this); }
+auto BeRenderResource::Builder::SetSize      (uint32_t w, uint32_t h)   -> Builder&& { _descriptor.Width = w; _descriptor.Height = h; return std::move(*this); }
+auto BeRenderResource::Builder::SetCubemap   (bool cubemap)             -> Builder&& { _descriptor.IsCubemap = cubemap; return std::move(*this); }
+
+auto BeRenderResource::Builder::FillWithColor(const glm::vec4& color) -> Builder&& {
+    const size_t size = _descriptor.Width * _descriptor.Height;
+    const auto data = static_cast<uint8_t*>(malloc(size * 4 * sizeof(uint8_t)));
+
+    for (size_t i = 0; i < size; ++i) {
+        data[4 * i + 0] = static_cast<uint8_t>(glm::clamp(color.r, 0.0f, 1.0f) * 255.0f);
+        data[4 * i + 1] = static_cast<uint8_t>(glm::clamp(color.g, 0.0f, 1.0f) * 255.0f);
+        data[4 * i + 2] = static_cast<uint8_t>(glm::clamp(color.b, 0.0f, 1.0f) * 255.0f);
+        data[4 * i + 3] = static_cast<uint8_t>(glm::clamp(color.a, 0.0f, 1.0f) * 255.0f);
+    }
+
+    _descriptor.Data = data;
+    return std::move(*this);
+}
+
+auto BeRenderResource::Builder::FillFromMemory(const uint8_t* src) -> Builder&& {
     const size_t byteSize = _descriptor.Width * _descriptor.Height * 4 * sizeof(uint8_t);
     const auto data = static_cast<uint8_t*>(malloc(byteSize));
 
@@ -40,10 +47,10 @@ auto BeRenderResource::Builder::FillFromMemory(const uint8_t* src) -> Builder& {
     FlipVertically(_descriptor.Width, _descriptor.Height, data);
 
     _descriptor.Data = data;
-    return *this;
+    return std::move(*this);
 }
 
-auto BeRenderResource::Builder::LoadFromFile(const std::filesystem::path& file) -> Builder& {
+auto BeRenderResource::Builder::LoadFromFile(const std::filesystem::path& file) -> Builder&& {
     int w = 0, h = 0, channelsInFile = 0;
     uint8_t* decoded = stbi_load(file.string().c_str(), &w, &h, &channelsInFile, 4);
     if (!decoded) throw std::runtime_error("Failed to load texture from file: " + file.string());
@@ -61,7 +68,7 @@ auto BeRenderResource::Builder::LoadFromFile(const std::filesystem::path& file) 
     _descriptor.Data = data;
     _descriptor.Width = w;
     _descriptor.Height = h;
-    return *this;
+    return std::move(*this);
 }
 
 auto BeRenderResource::Builder::FlipVertically(const uint32_t w, const uint32_t h, uint8_t* data) -> void {
@@ -81,18 +88,21 @@ auto BeRenderResource::Builder::FlipVertically(const uint32_t w, const uint32_t 
     delete[] tempRow;
 }
 
-auto BeRenderResource::Builder::AddToRegistry(std::weak_ptr<BeAssetRegistry> registry) -> Builder& { _assetRegistry = registry; return *this; }
+auto BeRenderResource::Builder::AddToRegistry(std::weak_ptr<BeAssetRegistry> registry) -> Builder&& { _assetRegistry = registry; return std::move(*this); }
 
 
-auto BeRenderResource::Builder::Build(ComPtr<ID3D11Device> device) const -> std::shared_ptr<BeRenderResource> {
+auto BeRenderResource::Builder::Build(ComPtr<ID3D11Device> device) -> std::shared_ptr<BeRenderResource> {
     std::shared_ptr<BeRenderResource> resource(new BeRenderResource(device, _descriptor));
-    //if (_assetRegistry)
-    //    _assetRegistry->AddTexture(_descriptor.Name, resource);
+    if (!_assetRegistry.expired())
+        _assetRegistry.lock()->AddResource(_descriptor.Name, resource);
     return resource;
 }
 
-
-
+auto BeRenderResource::Builder::BuildNoReturn(ComPtr<ID3D11Device> device) -> void {
+    const std::shared_ptr<BeRenderResource> resource(new BeRenderResource(device, _descriptor));
+    if (!_assetRegistry.expired())
+        _assetRegistry.lock()->AddResource(_descriptor.Name, resource);
+}
 
 
 BeRenderResource::BeRenderResource(ComPtr<ID3D11Device> device, const BeResourceDescriptor& descriptor)
@@ -107,9 +117,9 @@ BeRenderResource::BeRenderResource(ComPtr<ID3D11Device> device, const BeResource
     CreateMipViewports();
 
     if (!descriptor.IsCubemap) {
-        CreateTexture2DResources(device);
+        CreateTexture2DResources(device, descriptor.Data);
     } else {
-        CreateCubemapResources(device);
+        CreateCubemapResources(device, descriptor.Data);
     }
 }
 
@@ -141,7 +151,7 @@ auto BeRenderResource::GetCubemapRTV(const uint32_t faceIndex, const uint32_t mi
 
 
 
-auto BeRenderResource::CreateTexture2DResources(ComPtr<ID3D11Device> device) -> void {
+auto BeRenderResource::CreateTexture2DResources(ComPtr<ID3D11Device> device, const uint8_t* defaultData) -> void {
     D3D11_TEXTURE2D_DESC textureDesc = {};
     textureDesc.Width = Width;
     textureDesc.Height = Height;
@@ -155,8 +165,17 @@ auto BeRenderResource::CreateTexture2DResources(ComPtr<ID3D11Device> device) -> 
     textureDesc.CPUAccessFlags = 0;
     textureDesc.MiscFlags = 0;
 
+    D3D11_SUBRESOURCE_DATA* pInitData = nullptr;
+    if (defaultData) {
+        D3D11_SUBRESOURCE_DATA initData = {};
+        initData.pSysMem = defaultData;
+        initData.SysMemPitch = sizeof(uint8_t) * 4 * Width;
+        initData.SysMemSlicePitch = 0;
+        pInitData = &initData;
+    }
+    
     // Create texture
-    Utils::Check << device->CreateTexture2D(&textureDesc, nullptr, _texture.GetAddressOf());
+    Utils::Check << device->CreateTexture2D(&textureDesc, pInitData, _texture.GetAddressOf());
     
     // Create a depth stencil view and its SRV if needed
     if (BindFlags & D3D11_BIND_DEPTH_STENCIL) {
@@ -195,7 +214,7 @@ auto BeRenderResource::CreateTexture2DResources(ComPtr<ID3D11Device> device) -> 
     }
 }
 
-auto BeRenderResource::CreateCubemapResources(ComPtr<ID3D11Device> device) -> void {
+auto BeRenderResource::CreateCubemapResources(ComPtr<ID3D11Device> device, const uint8_t* defaultData) -> void {
     D3D11_TEXTURE2D_DESC textureDesc = {};
     textureDesc.Width = Width;
     textureDesc.Height = Height;
@@ -207,7 +226,16 @@ auto BeRenderResource::CreateCubemapResources(ComPtr<ID3D11Device> device) -> vo
     textureDesc.BindFlags = BindFlags;
     textureDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 
-    Utils::Check << device->CreateTexture2D(&textureDesc, nullptr, _texture.GetAddressOf());
+    D3D11_SUBRESOURCE_DATA* pInitData = nullptr;
+    if (defaultData) {
+        D3D11_SUBRESOURCE_DATA initData = {};
+        initData.pSysMem = defaultData;
+        initData.SysMemPitch = sizeof(uint8_t) * 4 * Width;
+        initData.SysMemSlicePitch = 0;
+        pInitData = &initData;
+    }
+
+    Utils::Check << device->CreateTexture2D(&textureDesc, pInitData, _texture.GetAddressOf());
 
     if (BindFlags & D3D11_BIND_SHADER_RESOURCE) {
         D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};

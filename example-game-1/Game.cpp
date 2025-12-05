@@ -54,11 +54,25 @@ auto Game::LoadAssets() -> void {
     BeShader::StandardShaderIncludePath = "standardShaders/";
     
     // Create builtin textures
-    const auto whiteTexture = BeTexture::CreateFromColor(glm::vec4(1.f), device);
-    const auto blackTexture = BeTexture::CreateFromColor(glm::vec4(0.f), device);
-    _assetRegistry->AddTexture("white", whiteTexture);
-    _assetRegistry->AddTexture("black", blackTexture);
+    BeRenderResource::Create("white")
+    .SetSize(1, 1)
+    .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
+    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .FillWithColor(glm::vec4(1.f))
+    .AddToRegistry(_assetRegistry)
+    .BuildNoReturn(device);
+    
+    BeRenderResource::Create("black")
+    .SetSize(1, 1)
+    .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
+    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
+    .AddToRegistry(_assetRegistry)
+    .BuildNoReturn(device);
 
+
+
+    
     // Create shader
     const auto standardShader = BeShader::Create(device.Get(), "assets/shaders/standard");
     _assetRegistry->AddShader("standard", standardShader);
@@ -67,12 +81,12 @@ auto Game::LoadAssets() -> void {
     //const auto planeMaterial = BeMaterial::Create("PlaneMaterial", standardShader, *_assetRegistry, device);
     _plane = CreatePlane(64);
     //_plane = CreatePlaneHex(32);
-    _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, *_assetRegistry, device);
-    _cube = BeModel::Create("assets/cube.glb", standardShader, *_assetRegistry, device);
-    _macintosh = BeModel::Create("assets/model.fbx", standardShader, *_assetRegistry, device);
-    _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, *_assetRegistry, device);
-    _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, *_assetRegistry, device);
-    _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *_assetRegistry, device);
+    _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, _assetRegistry, device);
+    _cube = BeModel::Create("assets/cube.glb", standardShader, _assetRegistry, device);
+    _macintosh = BeModel::Create("assets/model.fbx", standardShader, _assetRegistry, device);
+    _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, _assetRegistry, device);
+    _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, _assetRegistry, device);
+    _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, _assetRegistry, device);
 
     _anvil->DrawSlices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
 }
@@ -160,7 +174,7 @@ auto Game::SetupScene() -> void {
     for (auto i = 0; i < 4; i++) {
         BePointLight pointLight = {};
         pointLight.Radius = 20.0f;
-        pointLight.Color = glm::vec3(0.99f, 0.99f, 0.6);
+        pointLight.Color = glm::vec3(0.99f, 0.8f, 0.6f);
         pointLight.Power = (1.0f / 0.7f) * 2.7f;
         pointLight.CastsShadows = true;
         pointLight.ShadowMapResolution = 2048.0f;
@@ -413,7 +427,7 @@ auto Game::MainLoop() -> void {
 
 auto Game::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
     const auto shader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/terrain");
-    auto material = BeMaterial::Create("TerrainMat", true, shader, *_assetRegistry, _renderer->GetDevice());
+    auto material = BeMaterial::Create("TerrainMat", true, shader, _assetRegistry, _renderer->GetDevice());
     material->SetFloat("TerrainScale", 200.0f);
     material->SetFloat("HeightScale", 100.0f);
     
@@ -472,7 +486,7 @@ auto Game::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
 
 auto Game::CreatePlaneHex(size_t hexRadius) -> std::shared_ptr<BeModel> {
     const auto shader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/terrain");
-    auto material = BeMaterial::Create("TerrainMatHex", true, shader, *_assetRegistry, _renderer->GetDevice());
+    auto material = BeMaterial::Create("TerrainMatHex", true, shader, _assetRegistry, _renderer->GetDevice());
     material->SetFloat("TerrainScale", 200.0f);
     material->SetFloat("HeightScale", 100.0f);
 

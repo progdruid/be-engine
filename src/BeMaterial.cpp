@@ -5,18 +5,17 @@
 #include <iomanip>
 
 #include "BeShader.h"
-#include "BeTexture.h"
 #include "BeAssetRegistry.h"
 #include "Utils.h"
 
 auto BeMaterial::Create(
     std::string_view name,
     bool frequentlyUsed,
-    const std::weak_ptr<BeShader>& shader,
-    BeAssetRegistry& registry,
-    const ComPtr<ID3D11Device>& device
+    std::weak_ptr<BeShader> shader,
+    std::weak_ptr<BeAssetRegistry> registry,
+    ComPtr<ID3D11Device> device
 )
--> std::shared_ptr<BeMaterial> {
+    -> std::shared_ptr<BeMaterial> {
     auto shaderLocked = shader.lock();
     assert(shaderLocked && "Shader must be valid");
     assert(shaderLocked->HasMaterial && "Shader must have material");
@@ -65,12 +64,12 @@ BeMaterial::BeMaterial(
 //BeMaterial::BeMaterial() = default;
 BeMaterial::~BeMaterial() = default;
 
-auto BeMaterial::InitializeTextures(BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> void {
+auto BeMaterial::InitializeTextures(std::weak_ptr<BeAssetRegistry> registry, ComPtr<ID3D11Device> device) -> void {
     auto shader = Shader.lock();
     assert(shader);
-
+    
     for (const auto& property : shader->MaterialTextureProperties) {
-        auto texWeak = registry.GetTexture(property.DefaultTexturePath);
+        auto texWeak = registry.lock()->GetResource(property.DefaultTexturePath);
         auto texture = texWeak.lock();
         assert(texture && ("Texture not found in registry: " + property.DefaultTexturePath).c_str());
 
@@ -106,7 +105,7 @@ auto BeMaterial::SetFloat4(const std::string& propertyName, glm::vec4 value) -> 
     _cbufferDirty = true;
 }
 
-auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void {
+auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeRenderResource>& texture) -> void {
     assert(_textures.contains(propertyName));
     _textures.at(propertyName).first = texture;
 }
@@ -143,7 +142,7 @@ auto BeMaterial::GetFloat4(const std::string& propertyName) const -> glm::vec4 {
     return value;
 }
 
-auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture> {
+auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeRenderResource> {
     assert(_textures.contains(propertyName));
     return _textures.at(propertyName).first;
 }

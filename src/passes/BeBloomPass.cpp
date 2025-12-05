@@ -12,7 +12,7 @@ auto BeBloomPass::Initialise() -> void {
     const auto device = _renderer->GetDevice();
 
     _brightShader = BeShader::Create(device.Get(), "assets/shaders/BeBloomBright");
-    _brightMaterial = BeMaterial::Create("Bright Pass Material", false, _brightShader, *AssetRegistry, device);
+    _brightMaterial = BeMaterial::Create("Bright Pass Material", false, _brightShader, AssetRegistry, device);
 
     _kawaseShader = BeShader::Create(device.Get(), "assets/shaders/BeBloomKawase");
 
@@ -23,7 +23,7 @@ auto BeBloomPass::Initialise() -> void {
             "Downsample Mip " + std::to_string(mipTarget),
             false,
             _kawaseShader,
-            *AssetRegistry,
+            AssetRegistry,
             device
         );
 
@@ -47,7 +47,7 @@ auto BeBloomPass::Initialise() -> void {
             "Upsample Mip " + std::to_string(mipTarget),
             false,
             _kawaseShader,
-            *AssetRegistry,
+            AssetRegistry,
             device
         );
 
