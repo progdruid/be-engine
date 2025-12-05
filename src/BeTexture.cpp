@@ -1,4 +1,4 @@
-﻿#include "BeRenderResource.h"
+﻿#include "BeTexture.h"
 
 #include <cassert>
 #include <unordered_map>
@@ -9,22 +9,22 @@
 #include "Utils.h"
 
 
-BeRenderResource::Builder::Builder(std::string name) { _descriptor.Name = std::move(name); }
+BeTexture::Builder::Builder(std::string name) { _descriptor.Name = std::move(name); }
 
-BeRenderResource::Builder::~Builder() {
+BeTexture::Builder::~Builder() {
     if (_descriptor.Data) {
         free(_descriptor.Data);
         _descriptor.Data = nullptr;
     }
 }
 
-auto BeRenderResource::Builder::SetBindFlags (uint32_t bindFlags)       -> Builder&& { _descriptor.BindFlags = bindFlags; return std::move(*this); }
-auto BeRenderResource::Builder::SetFormat    (DXGI_FORMAT format)       -> Builder&& { _descriptor.Format = format; return std::move(*this); }
-auto BeRenderResource::Builder::SetMips      (uint32_t mips)            -> Builder&& { _descriptor.Mips = mips; return std::move(*this); }
-auto BeRenderResource::Builder::SetSize      (uint32_t w, uint32_t h)   -> Builder&& { _descriptor.Width = w; _descriptor.Height = h; return std::move(*this); }
-auto BeRenderResource::Builder::SetCubemap   (bool cubemap)             -> Builder&& { _descriptor.IsCubemap = cubemap; return std::move(*this); }
+auto BeTexture::Builder::SetBindFlags (uint32_t bindFlags)       -> Builder&& { _descriptor.BindFlags = bindFlags; return std::move(*this); }
+auto BeTexture::Builder::SetFormat    (DXGI_FORMAT format)       -> Builder&& { _descriptor.Format = format; return std::move(*this); }
+auto BeTexture::Builder::SetMips      (uint32_t mips)            -> Builder&& { _descriptor.Mips = mips; return std::move(*this); }
+auto BeTexture::Builder::SetSize      (uint32_t w, uint32_t h)   -> Builder&& { _descriptor.Width = w; _descriptor.Height = h; return std::move(*this); }
+auto BeTexture::Builder::SetCubemap   (bool cubemap)             -> Builder&& { _descriptor.IsCubemap = cubemap; return std::move(*this); }
 
-auto BeRenderResource::Builder::FillWithColor(const glm::vec4& color) -> Builder&& {
+auto BeTexture::Builder::FillWithColor(const glm::vec4& color) -> Builder&& {
     const size_t size = _descriptor.Width * _descriptor.Height;
     const auto data = static_cast<uint8_t*>(malloc(size * 4 * sizeof(uint8_t)));
 
@@ -39,7 +39,7 @@ auto BeRenderResource::Builder::FillWithColor(const glm::vec4& color) -> Builder
     return std::move(*this);
 }
 
-auto BeRenderResource::Builder::FillFromMemory(const uint8_t* src) -> Builder&& {
+auto BeTexture::Builder::FillFromMemory(const uint8_t* src) -> Builder&& {
     const size_t byteSize = _descriptor.Width * _descriptor.Height * 4 * sizeof(uint8_t);
     const auto data = static_cast<uint8_t*>(malloc(byteSize));
 
@@ -50,7 +50,7 @@ auto BeRenderResource::Builder::FillFromMemory(const uint8_t* src) -> Builder&& 
     return std::move(*this);
 }
 
-auto BeRenderResource::Builder::LoadFromFile(const std::filesystem::path& file) -> Builder&& {
+auto BeTexture::Builder::LoadFromFile(const std::filesystem::path& file) -> Builder&& {
     int w = 0, h = 0, channelsInFile = 0;
     uint8_t* decoded = stbi_load(file.string().c_str(), &w, &h, &channelsInFile, 4);
     if (!decoded) throw std::runtime_error("Failed to load texture from file: " + file.string());
@@ -71,7 +71,7 @@ auto BeRenderResource::Builder::LoadFromFile(const std::filesystem::path& file) 
     return std::move(*this);
 }
 
-auto BeRenderResource::Builder::FlipVertically(const uint32_t w, const uint32_t h, uint8_t* data) -> void {
+auto BeTexture::Builder::FlipVertically(const uint32_t w, const uint32_t h, uint8_t* data) -> void {
     const uint32_t rowSize = w * 4; 
     const auto tempRow = new uint8_t[rowSize];
 
@@ -88,24 +88,24 @@ auto BeRenderResource::Builder::FlipVertically(const uint32_t w, const uint32_t 
     delete[] tempRow;
 }
 
-auto BeRenderResource::Builder::AddToRegistry(std::weak_ptr<BeAssetRegistry> registry) -> Builder&& { _assetRegistry = registry; return std::move(*this); }
+auto BeTexture::Builder::AddToRegistry(std::weak_ptr<BeAssetRegistry> registry) -> Builder&& { _assetRegistry = registry; return std::move(*this); }
 
 
-auto BeRenderResource::Builder::Build(ComPtr<ID3D11Device> device) -> std::shared_ptr<BeRenderResource> {
-    std::shared_ptr<BeRenderResource> resource(new BeRenderResource(device, _descriptor));
+auto BeTexture::Builder::Build(ComPtr<ID3D11Device> device) -> std::shared_ptr<BeTexture> {
+    std::shared_ptr<BeTexture> resource(new BeTexture(device, _descriptor));
     if (!_assetRegistry.expired())
-        _assetRegistry.lock()->AddResource(_descriptor.Name, resource);
+        _assetRegistry.lock()->AddTexture(_descriptor.Name, resource);
     return resource;
 }
 
-auto BeRenderResource::Builder::BuildNoReturn(ComPtr<ID3D11Device> device) -> void {
-    const std::shared_ptr<BeRenderResource> resource(new BeRenderResource(device, _descriptor));
+auto BeTexture::Builder::BuildNoReturn(ComPtr<ID3D11Device> device) -> void {
+    const std::shared_ptr<BeTexture> resource(new BeTexture(device, _descriptor));
     if (!_assetRegistry.expired())
-        _assetRegistry.lock()->AddResource(_descriptor.Name, resource);
+        _assetRegistry.lock()->AddTexture(_descriptor.Name, resource);
 }
 
 
-BeRenderResource::BeRenderResource(ComPtr<ID3D11Device> device, const BeResourceDescriptor& descriptor)
+BeTexture::BeTexture(ComPtr<ID3D11Device> device, const BeTextureDescriptor& descriptor)
 : Name(descriptor.Name)
 , Width(descriptor.Width)
 , Height(descriptor.Height)
@@ -123,26 +123,26 @@ BeRenderResource::BeRenderResource(ComPtr<ID3D11Device> device, const BeResource
     }
 }
 
-BeRenderResource::~BeRenderResource() = default;
+BeTexture::~BeTexture() = default;
 
 
 
 
-auto BeRenderResource::GetMipViewport(const uint32_t mip) const -> const D3D11_VIEWPORT& { return _mipViewports[mip]; }
-auto BeRenderResource::GetSRV() const -> ComPtr<ID3D11ShaderResourceView> { return _srv; }
-auto BeRenderResource::GetDSV() const -> ComPtr<ID3D11DepthStencilView> { return _dsv; }
-auto BeRenderResource::GetRTV(const uint32_t mip) const -> ComPtr<ID3D11RenderTargetView> {
+auto BeTexture::GetMipViewport(const uint32_t mip) const -> const D3D11_VIEWPORT& { return _mipViewports[mip]; }
+auto BeTexture::GetSRV() const -> ComPtr<ID3D11ShaderResourceView> { return _srv; }
+auto BeTexture::GetDSV() const -> ComPtr<ID3D11DepthStencilView> { return _dsv; }
+auto BeTexture::GetRTV(const uint32_t mip) const -> ComPtr<ID3D11RenderTargetView> {
     assert(mip < _mipRTVs.size(), "Mip out of bounds of mip rtv array");
     return _mipRTVs[mip];
 }
 
-auto BeRenderResource::GetCubemapDSV(const uint32_t faceIndex) -> ComPtr<ID3D11DepthStencilView> {
+auto BeTexture::GetCubemapDSV(const uint32_t faceIndex) -> ComPtr<ID3D11DepthStencilView> {
     assert(IsCubemap, "Resource is not a cubemap");
     assert(faceIndex < 6, "Face index out of bounds");
     return _cubemapDSVs[faceIndex];
 }
 
-auto BeRenderResource::GetCubemapRTV(const uint32_t faceIndex, const uint32_t mip) -> ComPtr<ID3D11RenderTargetView> {
+auto BeTexture::GetCubemapRTV(const uint32_t faceIndex, const uint32_t mip) -> ComPtr<ID3D11RenderTargetView> {
     assert(IsCubemap, "Resource is not a cubemap");
     assert(faceIndex < 6, "Face index out of bounds");
     assert(mip < _cubemapMipRTVs[faceIndex].size(), "Mip out of bounds of cubemap's mip rtv array");
@@ -151,7 +151,7 @@ auto BeRenderResource::GetCubemapRTV(const uint32_t faceIndex, const uint32_t mi
 
 
 
-auto BeRenderResource::CreateTexture2DResources(ComPtr<ID3D11Device> device, const uint8_t* defaultData) -> void {
+auto BeTexture::CreateTexture2DResources(ComPtr<ID3D11Device> device, const uint8_t* defaultData) -> void {
     D3D11_TEXTURE2D_DESC textureDesc = {};
     textureDesc.Width = Width;
     textureDesc.Height = Height;
@@ -214,7 +214,7 @@ auto BeRenderResource::CreateTexture2DResources(ComPtr<ID3D11Device> device, con
     }
 }
 
-auto BeRenderResource::CreateCubemapResources(ComPtr<ID3D11Device> device, const uint8_t* defaultData) -> void {
+auto BeTexture::CreateCubemapResources(ComPtr<ID3D11Device> device, const uint8_t* defaultData) -> void {
     D3D11_TEXTURE2D_DESC textureDesc = {};
     textureDesc.Width = Width;
     textureDesc.Height = Height;
@@ -281,7 +281,7 @@ auto BeRenderResource::CreateCubemapResources(ComPtr<ID3D11Device> device, const
 
 }
 
-auto BeRenderResource::CreateMipViewports() -> void {
+auto BeTexture::CreateMipViewports() -> void {
     _mipViewports.resize(Mips);
     for (int i = 0; i < Mips; ++i) {
         auto& viewport = _mipViewports[i];
@@ -294,7 +294,7 @@ auto BeRenderResource::CreateMipViewports() -> void {
     }
 }
 
-auto BeRenderResource::GetDepthSRVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT {
+auto BeTexture::GetDepthSRVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT {
     static std::unordered_map<DXGI_FORMAT, DXGI_FORMAT> textureToSRV = {
         {DXGI_FORMAT_R32_TYPELESS, DXGI_FORMAT_R32_FLOAT},
         {DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_R24_UNORM_X8_TYPELESS},
@@ -303,7 +303,7 @@ auto BeRenderResource::GetDepthSRVFormat(DXGI_FORMAT textureFormat) const -> DXG
     return textureToSRV.at(textureFormat);
 }
 
-auto BeRenderResource::GetDSVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT {
+auto BeTexture::GetDSVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT {
     static std::unordered_map<DXGI_FORMAT, DXGI_FORMAT> textureToDSV = {
         {DXGI_FORMAT_R32_TYPELESS, DXGI_FORMAT_D32_FLOAT},
         {DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT},

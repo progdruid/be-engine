@@ -47,7 +47,7 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
     const auto registry = _renderer->GetAssetRegistry().lock();
     
     const auto& directionalLight = *_renderer->GetContextDataPointer<BeDirectionalLight>(InputDirectionalLightName);
-    const auto directionalShadowMap = registry->GetResource(directionalLight.ShadowMapTextureName).lock();
+    const auto directionalShadowMap = registry->GetTexture(directionalLight.ShadowMapTextureName).lock();
 
     // sort out viewport
     D3D11_VIEWPORT viewport = {};
@@ -106,7 +106,7 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
     // get what we need
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
-    const auto pointShadowMap = registry->GetResource(pointLight.ShadowMapTextureName).lock();
+    const auto pointShadowMap = registry->GetTexture(pointLight.ShadowMapTextureName).lock();
     
     // sort out shader
     _pointShadowShader->Bind(context.Get(), BeShaderType::Vertex);

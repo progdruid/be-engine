@@ -7,7 +7,7 @@
 #include <umbrellas/include-glm.h>
 #include <wrl/client.h>
 
-class BeRenderResource;
+class BeTexture;
 using Microsoft::WRL::ComPtr;
 
 class BeShader;
@@ -29,7 +29,7 @@ public:
 private:
     bool _isFrequentlyUsed;
     
-    std::unordered_map<std::string, std::pair<std::shared_ptr<BeRenderResource>, uint8_t>> _textures;
+    std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>> _textures;
     std::unordered_map<std::string, uint32_t> _propertyOffsets;
     std::vector<float> _bufferData;
     ComPtr<ID3D11Buffer> _cbuffer = nullptr;
@@ -59,17 +59,17 @@ public:
     auto SetFloat2 (const std::string& propertyName, glm::vec2 value) -> void;
     auto SetFloat3 (const std::string& propertyName, glm::vec3 value) -> void;
     auto SetFloat4 (const std::string& propertyName, glm::vec4 value) -> void;
-    auto SetTexture(const std::string& propertyName, const std::shared_ptr<BeRenderResource>& texture) -> void;
+    auto SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void;
 
     auto GetFloat  (const std::string& propertyName) const -> float;
     auto GetFloat2 (const std::string& propertyName) const -> glm::vec2;
     auto GetFloat3 (const std::string& propertyName) const -> glm::vec3;
     auto GetFloat4 (const std::string& propertyName) const -> glm::vec4;
-    auto GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeRenderResource>;
+    auto GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture>;
 
     auto UpdateGPUBuffers (const ComPtr<ID3D11DeviceContext>& context) -> void;
     auto GetBuffer () const -> const ComPtr<ID3D11Buffer>& { return _cbuffer; }
-    auto GetTexturePairs () const -> const std::unordered_map<std::string, std::pair<std::shared_ptr<BeRenderResource>, uint8_t>>& { return _textures; }
+    auto GetTexturePairs () const -> const std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>>& { return _textures; }
     
     auto Print() const -> std::string;
 

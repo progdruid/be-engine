@@ -27,7 +27,7 @@ auto BeBloomPass::Initialise() -> void {
             device
         );
 
-        const auto sourceMip = registry->GetResource(BloomMipTextureName+std::to_string(mipTarget - 1)).lock();
+        const auto sourceMip = registry->GetTexture(BloomMipTextureName+std::to_string(mipTarget - 1)).lock();
 
         const auto texelSizeX = 1.0f / sourceMip->Width;
         const auto texelSizeY = 1.0f / sourceMip->Height;
@@ -51,7 +51,7 @@ auto BeBloomPass::Initialise() -> void {
             device
         );
 
-        const auto targetMip = registry->GetResource(BloomMipTextureName + std::to_string(mipTarget)).lock();
+        const auto targetMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
 
         const auto texelSizeX = 1.0f / targetMip->Width;
         const auto texelSizeY = 1.0f / targetMip->Height;
@@ -79,8 +79,8 @@ auto BeBloomPass::RenderBrightPass() const -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
 
-    const auto hdrTexture = registry->GetResource(InputHDRTextureName).lock();
-    const auto bloomMip0  = registry->GetResource(BloomMipTextureName + "0").lock();
+    const auto hdrTexture = registry->GetTexture(InputHDRTextureName).lock();
+    const auto bloomMip0  = registry->GetTexture(BloomMipTextureName + "0").lock();
 
     // targets
     context->ClearRenderTargetView(bloomMip0->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
@@ -124,8 +124,8 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
     context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
 
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
-        const auto sourceMip = registry->GetResource(BloomMipTextureName + std::to_string(mipTarget - 1)).lock();
-        const auto targetMip = registry->GetResource(BloomMipTextureName + std::to_string(mipTarget)).lock();
+        const auto sourceMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget - 1)).lock();
+        const auto targetMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
 
         // sampler
         context->PSSetShaderResources(0, 1, sourceMip->GetSRV().GetAddressOf());
@@ -190,8 +190,8 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
     context->OMSetBlendState(additiveBlendState, nullptr, 0xFFFFFFFF);
 
     for (int32_t mipTarget = BloomMipCount - 2; mipTarget >= 0; --mipTarget) {
-        const auto sourceMip = registry->GetResource(BloomMipTextureName + std::to_string(mipTarget + 1)).lock();
-        const auto targetMip = registry->GetResource(BloomMipTextureName + std::to_string(mipTarget)).lock();
+        const auto sourceMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget + 1)).lock();
+        const auto targetMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
 
         // Bind source (larger mip) for sampling
         context->PSSetShaderResources(0, 1, sourceMip->GetSRV().GetAddressOf());
@@ -233,10 +233,10 @@ auto BeBloomPass::RenderAddPass() const -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
     
-    const auto hdrTexture = registry->GetResource(InputHDRTextureName).lock();
-    const auto bloomMip0 = registry->GetResource(BloomMipTextureName + "0").lock();
-    const auto dirtTexture = registry->GetResource(DirtTextureName).lock();
-    const auto outputTexture = registry->GetResource(OutputTextureName).lock();
+    const auto hdrTexture = registry->GetTexture(InputHDRTextureName).lock();
+    const auto bloomMip0 = registry->GetTexture(BloomMipTextureName + "0").lock();
+    const auto dirtTexture = registry->GetTexture(DirtTextureName).lock();
+    const auto outputTexture = registry->GetTexture(OutputTextureName).lock();
 
     // targets
     context->ClearRenderTargetView(outputTexture->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));

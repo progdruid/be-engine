@@ -54,12 +54,12 @@ auto BeLightingPass::Render() -> void {
     const BeDirectionalLight& directionalLight = *_renderer->GetContextDataPointer<BeDirectionalLight>(InputDirectionalLightName);
     const std::vector<BePointLight>& pointLights = *_renderer->GetContextDataPointer<std::vector<BePointLight>>(InputPointLightsName);
     
-    const auto depthResource     = registry->GetResource(InputDepthTextureName).lock();
-    const auto gbufferResource0  = registry->GetResource(InputTexture0Name).lock();
-    const auto gbufferResource1  = registry->GetResource(InputTexture1Name).lock();
-    const auto gbufferResource2  = registry->GetResource(InputTexture2Name).lock();
-    const auto lightingResource  = registry->GetResource(OutputTextureName).lock();
-    const auto directionalLightShadowMapResource  = registry->GetResource(directionalLight.ShadowMapTextureName).lock();
+    const auto depthResource     = registry->GetTexture(InputDepthTextureName).lock();
+    const auto gbufferResource0  = registry->GetTexture(InputTexture0Name).lock();
+    const auto gbufferResource1  = registry->GetTexture(InputTexture1Name).lock();
+    const auto gbufferResource2  = registry->GetTexture(InputTexture2Name).lock();
+    const auto lightingResource  = registry->GetTexture(OutputTextureName).lock();
+    const auto directionalLightShadowMapResource  = registry->GetTexture(directionalLight.ShadowMapTextureName).lock();
     
     context->ClearRenderTargetView(lightingResource->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->OMSetRenderTargets(1, lightingResource->GetRTV().GetAddressOf(), nullptr);
@@ -101,7 +101,7 @@ auto BeLightingPass::Render() -> void {
     {
         _pointLightShader->Bind(context.Get(), BeShaderType::Pixel);
         for (const auto& pointLightData : pointLights) {
-            const auto& shadowCubemap = registry->GetResource(pointLightData.ShadowMapTextureName).lock();
+            const auto& shadowCubemap = registry->GetTexture(pointLightData.ShadowMapTextureName).lock();
             context->PSSetShaderResources(4, 1, shadowCubemap->GetSRV().GetAddressOf());
 
             BePointLightLightingBufferGPU pointLightBuffer(pointLightData);

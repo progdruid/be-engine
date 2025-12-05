@@ -9,7 +9,7 @@
 
 #include "BeModel.h"
 #include "BeBuffers.h"
-#include "BeRenderResource.h"
+#include "BeTexture.h"
 #include "BeShader.h"
 
 class BeRenderPass;
