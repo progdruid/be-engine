@@ -69,7 +69,7 @@ auto BeMaterial::InitializeTextures(std::weak_ptr<BeAssetRegistry> registry, Com
     assert(shader);
     
     for (const auto& property : shader->MaterialTextureProperties) {
-        auto texWeak = registry.lock()->GetResource(property.DefaultTexturePath);
+        auto texWeak = registry.lock()->GetTexture(property.DefaultTexturePath);
         auto texture = texWeak.lock();
         assert(texture && ("Texture not found in registry: " + property.DefaultTexturePath).c_str());
 
@@ -105,7 +105,7 @@ auto BeMaterial::SetFloat4(const std::string& propertyName, glm::vec4 value) -> 
     _cbufferDirty = true;
 }
 
-auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeRenderResource>& texture) -> void {
+auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void {
     assert(_textures.contains(propertyName));
     _textures.at(propertyName).first = texture;
 }
@@ -142,7 +142,7 @@ auto BeMaterial::GetFloat4(const std::string& propertyName) const -> glm::vec4 {
     return value;
 }
 
-auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeRenderResource> {
+auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture> {
     assert(_textures.contains(propertyName));
     return _textures.at(propertyName).first;
 }

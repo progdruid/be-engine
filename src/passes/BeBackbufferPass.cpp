@@ -2,7 +2,7 @@
 
 #include "BeAssetRegistry.h"
 #include "BeRenderer.h"
-#include "BeRenderResource.h"
+#include "BeTexture.h"
 #include "BeShader.h"
 
 BeBackbufferPass::BeBackbufferPass() = default;
@@ -18,7 +18,7 @@ auto BeBackbufferPass::Render() -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
     
-    const auto inputResource = registry->GetResource(InputTextureName).lock();
+    const auto inputResource = registry->GetTexture(InputTextureName).lock();
     auto backbufferTarget = _renderer->GetBackbufferTarget();
 
     auto fullClearColor = glm::vec4(ClearColor, 1.0f);

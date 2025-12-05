@@ -7,7 +7,7 @@
 
 #include "BeShader.h"
 #include "BeAssetRegistry.h"
-#include "BeRenderResource.h"
+#include "BeTexture.h"
 #include "Utils.h"
 
 auto BeModel::Create(
@@ -139,11 +139,11 @@ auto BeModel::LoadTextureFromAssimpPath(
     const std::filesystem::path& parentPath,
     std::weak_ptr<BeAssetRegistry> registry,
     ComPtr<ID3D11Device> device
-) -> std::shared_ptr<BeRenderResource> {
+) -> std::shared_ptr<BeTexture> {
     static int tempCount = -1;
     tempCount++;
     auto builder =
-        BeRenderResource::Create("TODO" + std::to_string(tempCount))
+        BeTexture::Create("TODO" + std::to_string(tempCount))
         .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
         .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM);
     
