@@ -10,7 +10,7 @@
 
 using Microsoft::WRL::ComPtr;
 
-class BeTexture;
+class BeAssetRegistry;
 
 struct BeFullVertex {
     glm::vec3 Position;                 // 0
@@ -30,8 +30,19 @@ struct BeModel {
     };
 
     // Static
-    static auto Create(const std::filesystem::path& modelPath, const std::weak_ptr<BeShader>& usedShaderForMaterials, class BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeModel>;
-    static auto LoadTextureFromAssimpPath(const struct aiString& texPath, const struct aiScene* scene, const std::filesystem::path& parentPath, class BeAssetRegistry& registry, const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeTexture>;
+    static auto Create(
+        const std::filesystem::path& modelPath,
+        std::weak_ptr<BeShader> usedShaderForMaterials,
+        std::weak_ptr<BeAssetRegistry> registry,
+        ComPtr<ID3D11Device> device
+    ) -> std::shared_ptr<BeModel>;
+    static auto LoadTextureFromAssimpPath(
+        const struct aiString& texPath,
+        const struct aiScene* scene,
+        const std::filesystem::path& parentPath,
+        std::weak_ptr<BeAssetRegistry> registry,
+        ComPtr<ID3D11Device> device
+    ) -> std::shared_ptr<BeRenderResource>;
 
     std::vector<BeDrawSlice> DrawSlices;
     std::vector<BeFullVertex> FullVertices;
