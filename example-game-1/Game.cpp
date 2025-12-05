@@ -53,7 +53,7 @@ auto Game::LoadAssets() -> void {
     BeShader::StandardShaderIncludePath = "standardShaders/";
     
     // Create builtin textures
-    BeRenderResource::Create("white")
+    BeTexture::Create("white")
     .SetSize(1, 1)
     .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
@@ -61,7 +61,7 @@ auto Game::LoadAssets() -> void {
     .AddToRegistry(_assetRegistry)
     .BuildNoReturn(device);
     
-    BeRenderResource::Create("black")
+    BeTexture::Create("black")
     .SetSize(1, 1)
     .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
@@ -189,7 +189,7 @@ auto Game::SetupRenderPasses() -> void {
     const auto device = _renderer->GetDevice();
     
     // Create render resources
-    BeRenderResource::Create(_directionalLight->ShadowMapTextureName)
+    BeTexture::Create(_directionalLight->ShadowMapTextureName)
     .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R32_TYPELESS)
     .SetSize(static_cast<uint32_t>(_directionalLight->ShadowMapResolution), static_cast<uint32_t>(_directionalLight->ShadowMapResolution))
@@ -197,7 +197,7 @@ auto Game::SetupRenderPasses() -> void {
     .Build(device);
 
     for (const auto & pointLight : _pointLights) {
-        BeRenderResource::Create(pointLight.ShadowMapTextureName)
+        BeTexture::Create(pointLight.ShadowMapTextureName)
         .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
         .SetFormat(DXGI_FORMAT_R32_TYPELESS)
         .SetCubemap(true)
@@ -206,35 +206,35 @@ auto Game::SetupRenderPasses() -> void {
         .Build(device);
     }
     
-    BeRenderResource::Create("DepthStencil")
+    BeTexture::Create("DepthStencil")
     .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R32_TYPELESS)
     .SetSize(_width, _height)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
-    BeRenderResource::Create("BaseColor")
+    BeTexture::Create("BaseColor")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
     .SetSize(_width, _height)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
-    BeRenderResource::Create("WorldNormal")
+    BeTexture::Create("WorldNormal")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
     .SetSize(_width, _height)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
-    BeRenderResource::Create("Specular-Shininess")
+    BeTexture::Create("Specular-Shininess")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
     .SetSize(_width, _height)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
-    BeRenderResource::Create("HDR-Input")
+    BeTexture::Create("HDR-Input")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
     .SetSize(_width, _height)
@@ -246,7 +246,7 @@ auto Game::SetupRenderPasses() -> void {
         const uint32_t mipWidth = _width * multiplier;
         const uint32_t mipHeight = _height * multiplier;
 
-        BeRenderResource::Create("Bloom_Mip" + std::to_string(mip))
+        BeTexture::Create("Bloom_Mip" + std::to_string(mip))
         .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
         .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
         .SetSize(mipWidth, mipHeight)
@@ -254,14 +254,14 @@ auto Game::SetupRenderPasses() -> void {
         .Build(device);
     }
 
-    BeRenderResource::Create("BloomOutput")
+    BeTexture::Create("BloomOutput")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
     .SetSize(_width, _height)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
-    BeRenderResource::Create("TonemapperOutput")
+    BeTexture::Create("TonemapperOutput")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
     .SetSize(_width, _height)
@@ -301,7 +301,7 @@ auto Game::SetupRenderPasses() -> void {
     bloomPass->InputHDRTextureName = "HDR-Input";
     bloomPass->BloomMipTextureName = "Bloom_Mip";
     bloomPass->BloomMipCount = 5;
-    BeRenderResource::Create("BloomDirtTexture")
+    BeTexture::Create("BloomDirtTexture")
     .LoadFromFile("assets/bloom-dirt-mask.png")
     .AddToRegistry(_assetRegistry)
     .BuildNoReturn(device);

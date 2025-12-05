@@ -14,10 +14,10 @@
 class BeAssetRegistry;
 using Microsoft::WRL::ComPtr;
 
-class BeRenderResource {
+class BeTexture {
 
     // types ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose struct BeResourceDescriptor {
+    expose struct BeTextureDescriptor {
         std::string Name;
         bool IsCubemap = false;
         DXGI_FORMAT Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -30,7 +30,7 @@ class BeRenderResource {
     
     expose class Builder {
 
-        hide BeResourceDescriptor _descriptor;
+        hide BeTextureDescriptor _descriptor;
         hide std::weak_ptr<BeAssetRegistry> _assetRegistry;
 
         hide explicit Builder (std::string name);
@@ -54,10 +54,10 @@ class BeRenderResource {
 
         expose auto AddToRegistry (std::weak_ptr<BeAssetRegistry> registry) -> Builder&&;
 
-        expose auto Build(ComPtr<ID3D11Device> device) -> std::shared_ptr<BeRenderResource>;
+        expose auto Build(ComPtr<ID3D11Device> device) -> std::shared_ptr<BeTexture>;
         expose auto BuildNoReturn(ComPtr<ID3D11Device> device) -> void;
 
-        friend class BeRenderResource;
+        friend class BeTexture;
     }; 
 
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -83,8 +83,8 @@ class BeRenderResource {
     hide std::array<std::vector<ComPtr<ID3D11RenderTargetView>>, 6> _cubemapMipRTVs;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
-    hide explicit BeRenderResource(ComPtr<ID3D11Device> device, const BeResourceDescriptor& descriptor);
-    expose ~BeRenderResource();
+    hide explicit BeTexture(ComPtr<ID3D11Device> device, const BeTextureDescriptor& descriptor);
+    expose ~BeTexture();
 
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
     expose auto GetMipViewport (const uint32_t mip) const              -> const D3D11_VIEWPORT&;
@@ -104,6 +104,6 @@ class BeRenderResource {
 
 
     // befriending shared_ptr for constructor/destructor access because ours are private
-    friend class std::shared_ptr<BeRenderResource>;
+    friend class std::shared_ptr<BeTexture>;
 };
 

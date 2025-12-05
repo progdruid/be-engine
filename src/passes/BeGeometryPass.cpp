@@ -6,7 +6,7 @@
 
 #include "BeAssetRegistry.h"
 #include "BeRenderer.h"
-#include "BeRenderResource.h"
+#include "BeTexture.h"
 #include "Utils.h"
 
 BeGeometryPass::BeGeometryPass() = default;
@@ -26,10 +26,10 @@ auto BeGeometryPass::Render() -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
 
-    const auto depthResource    = registry->GetResource(OutputDepthTextureName).lock();
-    const auto gbufferResource0 = registry->GetResource(OutputTexture0Name).lock();
-    const auto gbufferResource1 = registry->GetResource(OutputTexture1Name).lock();
-    const auto gbufferResource2 = registry->GetResource(OutputTexture2Name).lock();
+    const auto depthResource    = registry->GetTexture(OutputDepthTextureName).lock();
+    const auto gbufferResource0 = registry->GetTexture(OutputTexture0Name).lock();
+    const auto gbufferResource1 = registry->GetTexture(OutputTexture1Name).lock();
+    const auto gbufferResource2 = registry->GetTexture(OutputTexture2Name).lock();
     
     // Clear and set render targets
     context->ClearDepthStencilView(depthResource->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);

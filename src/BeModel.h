@@ -42,7 +42,7 @@ struct BeModel {
         const std::filesystem::path& parentPath,
         std::weak_ptr<BeAssetRegistry> registry,
         ComPtr<ID3D11Device> device
-    ) -> std::shared_ptr<BeRenderResource>;
+    ) -> std::shared_ptr<BeTexture>;
 
     std::vector<BeDrawSlice> DrawSlices;
     std::vector<BeFullVertex> FullVertices;
