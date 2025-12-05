@@ -6,7 +6,6 @@
 #include "stb_image/stb_image.h"
 
 #include "BeShader.h"
-#include "BeTexture.h"
 #include "BeAssetRegistry.h"
 #include "BeRenderResource.h"
 #include "Utils.h"

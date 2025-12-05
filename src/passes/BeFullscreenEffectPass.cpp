@@ -1,5 +1,6 @@
 ﻿#include "BeFullscreenEffectPass.h"
 
+#include "BeAssetRegistry.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 
@@ -10,11 +11,12 @@ auto BeFullscreenEffectPass::Initialise() -> void {}
 
 auto BeFullscreenEffectPass::Render() -> void {
     const auto context = _renderer->GetContext();
+    const auto registry = _renderer->GetAssetRegistry().lock();
 
     // Set input resources
     std::vector<ID3D11ShaderResourceView*> inputResources;
     for (const auto& inputTextureName : InputTextureNames) {
-        const auto resource = _renderer->GetRenderResource(inputTextureName);
+        const auto resource = registry->GetResource(inputTextureName).lock();
         inputResources.push_back(resource->GetSRV().Get());
     }
     context->PSSetShaderResources(0, inputResources.size(), inputResources.data());
@@ -22,7 +24,7 @@ auto BeFullscreenEffectPass::Render() -> void {
     // Set output render targets
     std::vector<ID3D11RenderTargetView*> renderTargets;
     for (const auto& outputTextureName : OutputTextureNames) {
-        const auto resource = _renderer->GetRenderResource(outputTextureName);
+        const auto resource = registry->GetResource(outputTextureName).lock();
         renderTargets.push_back(resource->GetRTV().Get());
     }
     context->OMSetRenderTargets(renderTargets.size(), renderTargets.data(), nullptr);

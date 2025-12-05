@@ -62,7 +62,6 @@ class BeRenderer {
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
     std::vector<ObjectEntry> _objects;
     
-    std::unordered_map<std::string, std::shared_ptr<BeRenderResource>> _renderResources;
     std::unordered_map<std::string, void*> _contextDataPointers;
     std::vector<BeRenderPass*> _passes;
 
@@ -84,6 +83,7 @@ class BeRenderer {
     
     [[nodiscard]] auto GetDevice() const -> ComPtr<ID3D11Device> { return _device; }
     [[nodiscard]] auto GetContext() const -> ComPtr<ID3D11DeviceContext> { return _context; }
+    [[nodiscard]] auto GetAssetRegistry() const -> std::weak_ptr<BeAssetRegistry> { return _assetRegistry; }
     [[nodiscard]] auto GetPointSampler() const -> ComPtr<ID3D11SamplerState> { return _pointSampler; }
     [[nodiscard]] auto GetPostProcessLinearClampSampler() const -> ComPtr<ID3D11SamplerState> { return _postProcessLinearClampSampler; }
     [[nodiscard]] auto GetFullscreenVertexShader() const -> std::shared_ptr<BeShader> { return _fullscreenShader; }
@@ -94,9 +94,6 @@ class BeRenderer {
     auto GetShaderVertexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedVertexBuffer; }
     auto GetShaderIndexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedIndexBuffer; }
 
-    auto AddRenderResource(std::string name, std::shared_ptr<BeRenderResource> resource) -> void { _renderResources.emplace(name, std::move(resource)); }
-    auto GetRenderResource(const std::string& name) -> std::shared_ptr<BeRenderResource> { return _renderResources.at(name); }
-    
     template<typename T>
     auto GetContextDataPointer(const std::string& name) const -> T* {
         return static_cast<T*>(_contextDataPointers.at(name));
