@@ -18,7 +18,6 @@
 #include "passes/BeLightingPass.h"
 #include "BeMaterial.h"
 #include "BeShader.h"
-#include "BeTexture.h"
 #include "BeModel.h"
 #include "passes/BeBloomPass.h"
 #include "passes/BeFullscreenEffectPass.h"
@@ -190,105 +189,86 @@ auto Game::SetupRenderPasses() -> void {
     const auto device = _renderer->GetDevice();
     
     // Create render resources
-    const auto dirShadowmap =
-        BeRenderResource::Create(_directionalLight->ShadowMapTextureName)
+    BeRenderResource::Create(_directionalLight->ShadowMapTextureName)
+    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
+    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+    .SetSize(static_cast<uint32_t>(_directionalLight->ShadowMapResolution), static_cast<uint32_t>(_directionalLight->ShadowMapResolution))
+    .AddToRegistry(_assetRegistry)
+    .Build(device);
+
+    for (const auto & pointLight : _pointLights) {
+        BeRenderResource::Create(pointLight.ShadowMapTextureName)
         .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
         .SetFormat(DXGI_FORMAT_R32_TYPELESS)
-        .SetSize(static_cast<uint32_t>(_directionalLight->ShadowMapResolution), static_cast<uint32_t>(_directionalLight->ShadowMapResolution))
+        .SetCubemap(true)
+        .SetSize(static_cast<uint32_t>(pointLight.ShadowMapResolution), static_cast<uint32_t>(pointLight.ShadowMapResolution))
         .AddToRegistry(_assetRegistry)
         .Build(device);
-    _renderer->AddRenderResource(dirShadowmap->Name, dirShadowmap);
-    
-    for (const auto & pointLight : _pointLights) {
-        const auto pointLightShadowmap = BeRenderResource::Create(pointLight.ShadowMapTextureName)
-            .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-            .SetFormat(DXGI_FORMAT_R32_TYPELESS)
-            .SetCubemap(true)
-            .SetSize(static_cast<uint32_t>(pointLight.ShadowMapResolution), static_cast<uint32_t>(pointLight.ShadowMapResolution))
-            .AddToRegistry(_assetRegistry)
-            .Build(device);
-        _renderer->AddRenderResource(pointLightShadowmap->Name, pointLightShadowmap);
     }
     
-    const auto depthStencil = 
-        BeRenderResource::Create("DepthStencil")
-        .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R32_TYPELESS)
-        .SetSize(_width, _height)
-        .AddToRegistry(_assetRegistry)
-        .Build(device);
-    _renderer->AddRenderResource(depthStencil->Name, depthStencil);
+    BeRenderResource::Create("DepthStencil")
+    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
+    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+    .SetSize(_width, _height)
+    .AddToRegistry(_assetRegistry)
+    .Build(device);
 
-    const auto baseColor = 
-        BeRenderResource::Create("BaseColor")
-        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
-        .SetSize(_width, _height)
-        .AddToRegistry(_assetRegistry)
-        .Build(device);
-    _renderer->AddRenderResource(baseColor->Name, baseColor);
+    BeRenderResource::Create("BaseColor")
+    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetSize(_width, _height)
+    .AddToRegistry(_assetRegistry)
+    .Build(device);
 
-    const auto worldNormal = 
-        BeRenderResource::Create("WorldNormal")
-        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
-        .SetSize(_width, _height)
-        .AddToRegistry(_assetRegistry)
-        .Build(device);
-    _renderer->AddRenderResource(worldNormal->Name, worldNormal);
+    BeRenderResource::Create("WorldNormal")
+    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+    .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
+    .SetSize(_width, _height)
+    .AddToRegistry(_assetRegistry)
+    .Build(device);
 
-    const auto specularShininess = 
-        BeRenderResource::Create("Specular-Shininess")
-        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
-        .SetSize(_width, _height)
-        .AddToRegistry(_assetRegistry)
-        .Build(device);
-    _renderer->AddRenderResource(specularShininess->Name, specularShininess);
+    BeRenderResource::Create("Specular-Shininess")
+    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetSize(_width, _height)
+    .AddToRegistry(_assetRegistry)
+    .Build(device);
 
-    const auto hdrInput = 
-        BeRenderResource::Create("HDR-Input")
-        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
-        .SetSize(_width, _height)
-        .AddToRegistry(_assetRegistry)
-        .Build(device);
-    _renderer->AddRenderResource(hdrInput->Name, hdrInput);
-    
+    BeRenderResource::Create("HDR-Input")
+    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetSize(_width, _height)
+    .AddToRegistry(_assetRegistry)
+    .Build(device);
+
     for (int mip = 0; mip < 5; ++mip) {
         const float multiplier = glm::pow(0.5f, mip);
         const uint32_t mipWidth = _width * multiplier;
         const uint32_t mipHeight = _height * multiplier;
 
-        const auto bloomMip =
-            BeRenderResource::Create("Bloom_Mip" + std::to_string(mip))
-            .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-            .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
-            .SetSize(mipWidth, mipHeight)
-            .AddToRegistry(_assetRegistry)
-            .Build(device);
-        _renderer->AddRenderResource(bloomMip->Name, bloomMip);
+        BeRenderResource::Create("Bloom_Mip" + std::to_string(mip))
+        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+        .SetSize(mipWidth, mipHeight)
+        .AddToRegistry(_assetRegistry)
+        .Build(device);
     }
 
-    const auto bloomOutput = 
-        BeRenderResource::Create("BloomOutput")
-        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
-        .SetSize(_width, _height)
-        .AddToRegistry(_assetRegistry)
-        .Build(device);
-    _renderer->AddRenderResource(bloomOutput->Name, bloomOutput);
-    
-    const auto tonemapperOutput = 
-        BeRenderResource::Create("TonemapperOutput")
-        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
-        .SetSize(_width, _height)
-        .AddToRegistry(_assetRegistry)
-        .Build(device);
-    _renderer->AddRenderResource(tonemapperOutput->Name, tonemapperOutput);
-    
-    
+    BeRenderResource::Create("BloomOutput")
+    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetSize(_width, _height)
+    .AddToRegistry(_assetRegistry)
+    .Build(device);
+
+    BeRenderResource::Create("TonemapperOutput")
+    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetSize(_width, _height)
+    .AddToRegistry(_assetRegistry)
+    .Build(device);
+
+
     // Shadow pass
     const auto shadowPass = new BeShadowPass();
     _renderer->AddRenderPass(shadowPass);
@@ -321,8 +301,10 @@ auto Game::SetupRenderPasses() -> void {
     bloomPass->InputHDRTextureName = "HDR-Input";
     bloomPass->BloomMipTextureName = "Bloom_Mip";
     bloomPass->BloomMipCount = 5;
-    const auto dirtTex = BeTexture::CreateFromFile("assets/bloom-dirt-mask.png", _renderer->GetDevice());
-    _assetRegistry->AddTexture("BloomDirtTexture", dirtTex);
+    BeRenderResource::Create("BloomDirtTexture")
+    .LoadFromFile("assets/bloom-dirt-mask.png")
+    .AddToRegistry(_assetRegistry)
+    .BuildNoReturn(device);
     bloomPass->DirtTextureName = "BloomDirtTexture";
     bloomPass->OutputTextureName = "BloomOutput";
     
