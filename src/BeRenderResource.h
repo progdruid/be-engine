@@ -27,30 +27,35 @@ class BeRenderResource {
         uint32_t Height = 1;
         uint8_t* Data = nullptr;
     };
-
+    
     expose class Builder {
 
         hide BeResourceDescriptor _descriptor;
         hide std::weak_ptr<BeAssetRegistry> _assetRegistry;
-        
-        hide explicit Builder (std::string name);
-        expose ~Builder () = default;
-        
-        expose auto SetBindFlags(uint32_t bindFlags) -> Builder& ;
-        expose auto SetFormat(DXGI_FORMAT format) -> Builder& ;
-        expose auto SetMips(uint32_t mips) -> Builder& ;
-        expose auto SetSize(uint32_t w, uint32_t h) -> Builder& ;
-        expose auto SetCubemap(bool cubemap) -> Builder& ;
 
-        expose auto FillWithColor (const glm::vec4& color) -> Builder&;
-        expose auto FillFromMemory (const uint8_t* src) -> Builder&;
-        expose auto LoadFromFile (const std::filesystem::path& file) -> Builder&;
+        hide explicit Builder (std::string name);
+        expose ~Builder ();
+        expose Builder (const Builder&) = delete;
+        expose auto operator=(const Builder&) -> Builder& = delete;
+        expose Builder (Builder&&) = default;
+        expose auto operator=(Builder&&) -> Builder& = default;
+
+        expose auto SetBindFlags(uint32_t bindFlags) -> Builder&& ;
+        expose auto SetFormat(DXGI_FORMAT format) -> Builder&& ;
+        expose auto SetMips(uint32_t mips) -> Builder&&;
+        expose auto SetSize(uint32_t w, uint32_t h) -> Builder&& ;
+        expose auto SetCubemap(bool cubemap) -> Builder&& ;
+
+        expose auto FillWithColor (const glm::vec4& color) -> Builder&&;
+        expose auto FillFromMemory (const uint8_t* src) -> Builder&&;
+        expose auto LoadFromFile (const std::filesystem::path& file) -> Builder&&;
 
         hide static auto FlipVertically (uint32_t w, uint32_t h, uint8_t* data) -> void;
 
-        expose auto AddToRegistry (std::weak_ptr<BeAssetRegistry> registry) -> Builder&;
-        
-        expose auto Build(ComPtr<ID3D11Device> device) const -> std::shared_ptr<BeRenderResource>;
+        expose auto AddToRegistry (std::weak_ptr<BeAssetRegistry> registry) -> Builder&&;
+
+        expose auto Build(ComPtr<ID3D11Device> device) -> std::shared_ptr<BeRenderResource>;
+        expose auto BuildNoReturn(ComPtr<ID3D11Device> device) -> void;
 
         friend class BeRenderResource;
     }; 
@@ -90,8 +95,8 @@ class BeRenderResource {
     expose auto GetCubemapRTV  (uint32_t faceIndex, uint32_t mip = 0)  -> ComPtr<ID3D11RenderTargetView>;
 
     // private logic ///////////////////////////////////////////////////////////////////////////////////////////////////
-    hide auto CreateTexture2DResources (ComPtr<ID3D11Device> device) -> void;
-    hide auto CreateCubemapResources   (ComPtr<ID3D11Device> device) -> void;
+    hide auto CreateTexture2DResources (ComPtr<ID3D11Device> device, const uint8_t* defaultData = nullptr) -> void;
+    hide auto CreateCubemapResources   (ComPtr<ID3D11Device> device, const uint8_t* defaultData = nullptr) -> void;
     hide auto CreateMipViewports () -> void;
 
     hide auto GetDepthSRVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;

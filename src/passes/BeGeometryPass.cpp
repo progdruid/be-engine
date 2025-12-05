@@ -5,6 +5,7 @@
 #include <umbrellas/include-glm.h>
 
 #include "BeRenderer.h"
+#include "BeRenderResource.h"
 #include "Utils.h"
 
 BeGeometryPass::BeGeometryPass() = default;
@@ -91,7 +92,7 @@ auto BeGeometryPass::Render() -> void {
 
             const auto& textureSlots = slice.Material->GetTexturePairs();
             for (const auto& [texture, slot] : textureSlots | std::views::values) {
-                context->PSSetShaderResources(slot, 1, texture->SRV.GetAddressOf());
+                context->PSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
             } 
 
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
