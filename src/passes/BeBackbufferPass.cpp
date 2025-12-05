@@ -1,5 +1,6 @@
 ﻿#include "BeBackbufferPass.h"
 
+#include "BeAssetRegistry.h"
 #include "BeRenderer.h"
 #include "BeRenderResource.h"
 #include "BeShader.h"
@@ -15,10 +16,11 @@ auto BeBackbufferPass::Initialise() -> void {
 
 auto BeBackbufferPass::Render() -> void {
     const auto context = _renderer->GetContext();
-
-    const auto inputResource = _renderer->GetRenderResource(InputTextureName);
-
+    const auto registry = _renderer->GetAssetRegistry().lock();
+    
+    const auto inputResource = registry->GetResource(InputTextureName).lock();
     auto backbufferTarget = _renderer->GetBackbufferTarget();
+
     auto fullClearColor = glm::vec4(ClearColor, 1.0f);
     context->ClearRenderTargetView(backbufferTarget.Get(), reinterpret_cast<FLOAT*>(&fullClearColor));
     context->OMSetRenderTargets(1, backbufferTarget.GetAddressOf(), nullptr);

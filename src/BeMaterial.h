@@ -10,7 +10,6 @@
 class BeRenderResource;
 using Microsoft::WRL::ComPtr;
 
-struct BeTexture;
 class BeShader;
 class BeAssetRegistry;
 
