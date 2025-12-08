@@ -72,6 +72,9 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
 
     const auto& objects = _renderer->GetObjects();
     for (const auto& object : objects) {
+        if (!object.CastShadows)
+            continue;
+        
         const auto& shader = object.Model->Shader;
 
         shader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Tesselation);
@@ -161,6 +164,9 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
         // for each object
         const auto& objects = _renderer->GetObjects();
         for (const auto& object : objects) {
+            if (!object.CastShadows)
+                continue;
+            
             const auto& shader = object.Model->Shader;
             
             shader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Tesselation);
