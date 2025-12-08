@@ -179,6 +179,8 @@ auto BeRenderer::Render() -> void {
     memcpy(uniformMappedResource.pData, &uniformDataGpu, sizeof(BeUniformBufferGPU));
     _context->Unmap(_uniformBuffer.Get(), 0);
     _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
+    _context->HSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
+    _context->DSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
     _context->PSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
 
     // Execute all passes with debug annotations
@@ -188,8 +190,10 @@ auto BeRenderer::Render() -> void {
     }
 
     ID3D11Buffer* emptyBuffers[1] = { nullptr };
-    _context->VSSetConstantBuffers(1, 1, emptyBuffers);
-    _context->PSSetConstantBuffers(1, 1, emptyBuffers);
+    _context->VSSetConstantBuffers(0, 1, emptyBuffers);
+    _context->HSSetConstantBuffers(0, 1, emptyBuffers);
+    _context->DSSetConstantBuffers(0, 1, emptyBuffers);
+    _context->PSSetConstantBuffers(0, 1, emptyBuffers);
 
     _swapchain->Present(1, 0);
 }

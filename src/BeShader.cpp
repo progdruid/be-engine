@@ -129,15 +129,29 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
     }
     
     if (header.contains("pixel")) {
+        assert(header.contains("targets"));
         shader->_shaderType = shader->_shaderType | BeShaderType::Pixel;
 
         std::string pixelFunctionName = header.at("pixel");
         ComPtr<ID3DBlob> blob = CompileBlob(path, pixelFunctionName.c_str(), "ps_5_0", &includeHandler);
         Utils::Check << device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->PixelShader);
+
+        Json targets = header.at("targets");
+        for (const auto& target : targets.items()) {
+            const std::string& targetName = target.key();
+            uint32_t targetSlot = target.value().get<uint32_t>();
+            
+            assert(!shader->PixelTargets.contains(targetName));
+            assert(!shader->PixelTargetsInverse.contains(targetSlot));
+
+            shader->PixelTargets[targetName] = targetSlot;
+            shader->PixelTargetsInverse[targetSlot] = targetName;
+        }
     }
 
     return shader;
 }
+
 
 auto BeShader::CompileBlob(
     const std::filesystem::path& filePath,
@@ -269,6 +283,7 @@ auto BeShader::Unbind(ID3D11DeviceContext* context, const BeShaderType type) -> 
         context->PSSetShader(nullptr, nullptr, 0);
     }
 }
+
 
 
 

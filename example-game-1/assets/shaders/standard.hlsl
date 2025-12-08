@@ -3,14 +3,20 @@
 @be-shader-header
 {
     "vertex": "VertexFunction",
-    "pixel": "PixelFunction",
     "vertexLayout": ["position", "normal", "uv0"],
+    "pixel": "PixelFunction",
+    "targets": {
+        "Diffuse.RGB": 0,
+        "WorldNormal.XYZ": 1,
+        "Specular.RGB_Shininess.A": 2
+    },
     "material": {
         "DiffuseColor": { "type": "float3", "default": [1.0, 1.0, 1.0] },
-        "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
         "SpecularColor": { "type": "float3", "default": [1.0, 1.0, 1.0] },
-        "SpecularTexture": { "type": "texture2d", "slot": 1, "default": "black" },
-        "Shininess": { "type": "float", "default": 0.0 }
+        "Shininess": { "type": "float", "default": 0.0 },
+
+        "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
+        "SpecularTexture": { "type": "texture2d", "slot": 1, "default": "black" }
     }
 }
 @be-shader-header-end
@@ -54,7 +60,7 @@ struct PixelOutput {
 
 VertexOutput VertexFunction(VertexInput input) {
     float4 worldPosition = mul(float4(input.Position, 1.0), _Model);
-
+    
     VertexOutput output;
     output.Position = mul(worldPosition, _ProjectionView);
     output.ViewDirection = _CameraPosition - worldPosition.xyz;

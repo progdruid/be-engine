@@ -2,6 +2,9 @@
 @be-shader-header
 {
     "pixel": "PixelFunction",
+    "targets": {
+        "BloomMip": 0
+    },
     "material": {
         "Threshold": { "type": "float", "default": 1.0 },
         "Intensity": { "type": "float", "default": 1.0 },

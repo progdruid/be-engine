@@ -69,19 +69,19 @@ auto Game::LoadAssets() -> void {
     .AddToRegistry(_assetRegistry)
     .BuildNoReturn(device);
 
-
-
     
     // Create shader
     const auto standardShader = BeShader::Create(device.Get(), "assets/shaders/standard");
     _assetRegistry->AddShader("standard", standardShader);
 
+    // Create tessellated shader
+    const auto tessellatedShader = BeShader::Create(device.Get(), "assets/shaders/tessellated");
+    _assetRegistry->AddShader("tessellated", tessellatedShader);
+
     // Create models
-    //const auto planeMaterial = BeMaterial::Create("PlaneMaterial", standardShader, *_assetRegistry, device);
     _plane = CreatePlane(64);
-    //_plane = CreatePlaneHex(32);
     _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, _assetRegistry, device);
-    _cube = BeModel::Create("assets/cube.glb", standardShader, _assetRegistry, device);
+    _cube = BeModel::Create("assets/cube.glb", tessellatedShader, _assetRegistry, device);
     _macintosh = BeModel::Create("assets/model.fbx", standardShader, _assetRegistry, device);
     _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, _assetRegistry, device);
     _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, _assetRegistry, device);
@@ -103,12 +103,12 @@ auto Game::SetupScene() -> void {
             .Scale = glm::vec3(1.f),
             .Model = _plane,
         },
-        // {
-        //     .Name = "Plane",
-        //     .Position = {50, 0, -50},
-        //     .Scale = glm::vec3(100.f, 0.1f, 100.f),
-        //     .Model = _cube,
-        // },
+        {
+            .Name = "Tessellated Cube",
+            .Position = {15, 3, 0},
+            .Scale = glm::vec3(1.5f),
+            .Model = _cube,
+        },
         {
             .Name = "Pagoda",
             .Position = {0, 0, 8},
@@ -166,8 +166,7 @@ auto Game::SetupScene() -> void {
     _directionalLight->ShadowFarPlane = 300.0f;
     _directionalLight->ShadowMapTextureName = "DirectionalLightShadowMap";
     _directionalLight->CalculateMatrix();
-    _renderer->SetContextDataPointer("DirectionalLight", _directionalLight.get());
-
+    
     // Setup point lights
     const auto device = _renderer->GetDevice();
     for (auto i = 0; i < 4; i++) {
@@ -182,7 +181,6 @@ auto Game::SetupScene() -> void {
         
         _pointLights.push_back(pointLight);
     }
-    _renderer->SetContextDataPointer("PointLights", &_pointLights);
 }
 
 auto Game::SetupRenderPasses() -> void {
@@ -272,8 +270,8 @@ auto Game::SetupRenderPasses() -> void {
     // Shadow pass
     const auto shadowPass = new BeShadowPass();
     _renderer->AddRenderPass(shadowPass);
-    shadowPass->InputDirectionalLightName = "DirectionalLight";
-    shadowPass->InputPointLightsName = "PointLights";
+    shadowPass->DirectionalLight = _directionalLight.get();
+    shadowPass->PointLights = &_pointLights;
 
     // Geometry pass
     const auto geometryPass = new BeGeometryPass();
@@ -286,8 +284,8 @@ auto Game::SetupRenderPasses() -> void {
     // Lighting pass
     const auto lightingPass = new BeLightingPass();
     _renderer->AddRenderPass(lightingPass);
-    lightingPass->InputDirectionalLightName = "DirectionalLight";
-    lightingPass->InputPointLightsName = "PointLights";
+    lightingPass->DirectionalLight = _directionalLight.get();
+    lightingPass->PointLights = &_pointLights;
     lightingPass->InputDepthTextureName = "DepthStencil";
     lightingPass->InputTexture0Name = "BaseColor";
     lightingPass->InputTexture1Name = "WorldNormal";

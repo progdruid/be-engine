@@ -51,15 +51,12 @@ auto BeLightingPass::Render() -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
     
-    const BeDirectionalLight& directionalLight = *_renderer->GetContextDataPointer<BeDirectionalLight>(InputDirectionalLightName);
-    const std::vector<BePointLight>& pointLights = *_renderer->GetContextDataPointer<std::vector<BePointLight>>(InputPointLightsName);
-    
     const auto depthResource     = registry->GetTexture(InputDepthTextureName).lock();
     const auto gbufferResource0  = registry->GetTexture(InputTexture0Name).lock();
     const auto gbufferResource1  = registry->GetTexture(InputTexture1Name).lock();
     const auto gbufferResource2  = registry->GetTexture(InputTexture2Name).lock();
     const auto lightingResource  = registry->GetTexture(OutputTextureName).lock();
-    const auto directionalLightShadowMapResource  = registry->GetTexture(directionalLight.ShadowMapTextureName).lock();
+    const auto directionalLightShadowMapResource  = registry->GetTexture(DirectionalLight->ShadowMapTextureName).lock();
     
     context->ClearRenderTargetView(lightingResource->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->OMSetRenderTargets(1, lightingResource->GetRTV().GetAddressOf(), nullptr);
@@ -86,7 +83,7 @@ auto BeLightingPass::Render() -> void {
         SCOPE_EXIT { context->PSSetShaderResources(4, 1, Utils::NullSRVs); };
         _directionalLightShader->Bind(context.Get(), BeShaderType::Pixel);
 
-        BeDirectionalLightLightingBufferGPU directionalLightBuffer(directionalLight);
+        BeDirectionalLightLightingBufferGPU directionalLightBuffer(*DirectionalLight);
         D3D11_MAPPED_SUBRESOURCE directionalLightMappedResource;
         Utils::Check << context->Map(_directionalLightBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &directionalLightMappedResource);
         memcpy(directionalLightMappedResource.pData, &directionalLightBuffer, sizeof(BeDirectionalLightLightingBufferGPU));
@@ -100,7 +97,7 @@ auto BeLightingPass::Render() -> void {
 
     {
         _pointLightShader->Bind(context.Get(), BeShaderType::Pixel);
-        for (const auto& pointLightData : pointLights) {
+        for (const auto& pointLightData : *PointLights) {
             const auto& shadowCubemap = registry->GetTexture(pointLightData.ShadowMapTextureName).lock();
             context->PSSetShaderResources(4, 1, shadowCubemap->GetSRV().GetAddressOf());
 

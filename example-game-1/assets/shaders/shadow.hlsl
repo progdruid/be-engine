@@ -2,8 +2,11 @@
 @be-shader-header
 {
     "vertex": "VertexFunction",
+    "vertexLayout": ["position"],
     "pixel": "PixelFunction",
-    "vertexLayout": ["position"]
+    "targets": {
+        "Shadow": 0
+    }
 }
 @be-shader-header-end
 */

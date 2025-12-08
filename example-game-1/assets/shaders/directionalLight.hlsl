@@ -1,7 +1,10 @@
 /*
 @be-shader-header
 {
-    "pixel": "PixelFunction"
+    "pixel": "PixelFunction",
+    "targets": {
+        "LightHDR": 0
+    }
 }
 @be-shader-header-end
 */
