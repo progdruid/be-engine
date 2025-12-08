@@ -8,6 +8,11 @@
         "domain": "DomainFunction"
     },
     "pixel": "PixelFunction",
+    "targets": {
+        "Diffuse.RGB": 0,
+        "WorldNormal.XYZ": 1,
+        "Specular.RGB_Shininess.A": 2
+    },
     "material": {
         "DiffuseColor": { "type": "float3", "default": [0.5, 0.5, 0.5] },
         "SpecularColor": { "type": "float3", "default": [-0.2, -0.2, -0.1] }, 

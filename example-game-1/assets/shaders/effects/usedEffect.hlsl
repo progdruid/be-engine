@@ -1,7 +1,10 @@
 /*
 @be-shader-header
 {
-    "pixel": "main"
+    "pixel": "main",
+    "targets": {
+        "HDRTarget": 0
+    }
 }
 @be-shader-header-end
 */

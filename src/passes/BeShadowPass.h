@@ -9,8 +9,8 @@
 class BeShadowPass final : public BeRenderPass {
 
 public:
-    std::string InputDirectionalLightName;
-    std::string InputPointLightsName;
+    BeDirectionalLight* DirectionalLight;
+    std::vector<BePointLight>* PointLights;
 
 private:
     std::shared_ptr<BeShader> _directionalShadowShader;

@@ -5,8 +5,10 @@
 /*
 @be-shader-header
 {
-  "pixel": "main",
-  "resources": ["BaseColor", "Depth", "WorldNormal", "#Shadow"]
+    "pixel": "main",
+    "targets": {
+        "HDRTarget": 0
+    }
 }
 @be-shader-header-end
 */

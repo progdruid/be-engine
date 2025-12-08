@@ -137,6 +137,9 @@ class BeShader {
     expose ComPtr<ID3D11HullShader> HullShader;
     expose ComPtr<ID3D11DomainShader> DomainShader;
     expose ComPtr<ID3D11PixelShader> PixelShader;
+    expose std::unordered_map<std::string, uint32_t> PixelTargets;
+    expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
+    
     expose bool HasMaterial = false;
     expose std::vector<BeMaterialPropertyDescriptor> MaterialProperties;
     expose std::vector<BeMaterialTexturePropertyDescriptor> MaterialTextureProperties;

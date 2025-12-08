@@ -1,4 +1,4 @@
-﻿#include "BeShadowPass.h"
+#include "BeShadowPass.h"
 
 #include <umbrellas/include-glm.h>
 #include <scope_guard/scope_guard.hpp>
@@ -31,14 +31,13 @@ auto BeShadowPass::Render() -> void {
         RenderDirectionalShadows();
     }
 
-    const std::vector<BePointLight>& pointLights = *_renderer->GetContextDataPointer<std::vector<BePointLight>>(InputPointLightsName);
 
-    for (size_t i = 0; i < pointLights.size(); i++) {
-        if (!pointLights[i].CastsShadows)
+    for (size_t i = 0; i < PointLights->size(); i++) {
+        if (!(*PointLights)[i].CastsShadows)
             continue;
 
         Utils::BeDebugAnnotation pointLightAnnotation(context, "Point Light Shadows " + std::to_string(i));
-        RenderPointLightShadows(pointLights[i]);
+        RenderPointLightShadows((*PointLights)[i]);
     }
 }
 
@@ -46,13 +45,12 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
     
-    const auto& directionalLight = *_renderer->GetContextDataPointer<BeDirectionalLight>(InputDirectionalLightName);
-    const auto directionalShadowMap = registry->GetTexture(directionalLight.ShadowMapTextureName).lock();
+    const auto directionalShadowMap = registry->GetTexture(DirectionalLight->ShadowMapTextureName).lock();
 
     // sort out viewport
     D3D11_VIEWPORT viewport = {};
-    viewport.Width = directionalLight.ShadowMapResolution;
-    viewport.Height = directionalLight.ShadowMapResolution;
+    viewport.Width = DirectionalLight->ShadowMapResolution;
+    viewport.Height = DirectionalLight->ShadowMapResolution;
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     context->RSSetViewports(1, &viewport);
@@ -85,7 +83,7 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
             glm::scale(glm::mat4(1.0f), object.Scale);
         
         BeShadowpassBufferGPU shadowpassBufferGPU;
-        shadowpassBufferGPU.LightProjectionView = directionalLight.ViewProjection;
+        shadowpassBufferGPU.LightProjectionView = DirectionalLight->ViewProjection;
         shadowpassBufferGPU.ObjectModel = modelMatrix;
         shadowpassBufferGPU.LightPosition = glm::vec3(0.0f);
         D3D11_MAPPED_SUBRESOURCE mappedResource;

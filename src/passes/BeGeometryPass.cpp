@@ -55,7 +55,7 @@ auto BeGeometryPass::Render() -> void {
         context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
     };
 
-    // Set default sampler - temporary,  should be overridden by materials if needed
+    // Set the default sampler - temporary. It should be overriden by materials if needed
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     SCOPE_EXIT { context->PSSetSamplers(0, 1, Utils::NullSamplers); };
 
@@ -85,12 +85,20 @@ auto BeGeometryPass::Render() -> void {
         context->Unmap(_objectBuffer.Get(), 0);
         context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         context->PSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+        if (HasAny(shader->GetShaderType(), BeShaderType::Tesselation)) {
+            context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+            context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+        }
         
         for (const auto& slice : object.DrawSlices) {
             slice.Material->UpdateGPUBuffers(context);
             const auto& materialBuffer = slice.Material->GetBuffer();
             context->VSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
             context->PSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
+            if (HasAny(shader->GetShaderType(), BeShaderType::Tesselation)) {
+                context->HSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
+                context->DSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
+            }
 
             const auto& textureSlots = slice.Material->GetTexturePairs();
             for (const auto& [texture, slot] : textureSlots | std::views::values) {
@@ -102,6 +110,10 @@ auto BeGeometryPass::Render() -> void {
             context->PSSetShaderResources(0, 2, Utils::NullSRVs);
         }
     }
+    context->VSSetConstantBuffers(1, 2, Utils::NullBuffers);
+    context->HSSetConstantBuffers(1, 2, Utils::NullBuffers);
+    context->DSSetConstantBuffers(1, 2, Utils::NullBuffers);
+    context->PSSetConstantBuffers(1, 2, Utils::NullBuffers);
     context->PSSetShaderResources(0, 2, Utils::NullSRVs); // clean material textures
     context->VSSetConstantBuffers(1, 2, Utils::NullBuffers); // clean object and material buffers
     context->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_UNDEFINED);
