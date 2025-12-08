@@ -34,10 +34,12 @@ struct alignas(16) BeUniformBufferGPU {
 struct alignas(16) BeObjectBufferGPU {
     glm::mat4x4 Model;
     glm::mat4x4 ViewProjection;
+    glm::vec3 ViewerPosition;
     
-    explicit BeObjectBufferGPU(const glm::mat4x4& model, const glm::mat4x4& viewProjection) {
+    explicit BeObjectBufferGPU(const glm::mat4x4& model, const glm::mat4x4& viewProjection, const glm::vec3& viewerPosition) {
         Model = model;
         ViewProjection = viewProjection;
+        ViewerPosition = viewerPosition;
     }
 };
 

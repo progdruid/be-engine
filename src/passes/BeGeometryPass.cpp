@@ -78,7 +78,7 @@ auto BeGeometryPass::Render() -> void {
             glm::mat4_cast(object.Rotation) *
             glm::scale(glm::mat4(1.0f), object.Scale);
         
-        BeObjectBufferGPU objectData(modelMatrix, _renderer->UniformData.ProjectionView);
+        BeObjectBufferGPU objectData(modelMatrix, _renderer->UniformData.ProjectionView, _renderer->UniformData.CameraPosition);
         D3D11_MAPPED_SUBRESOURCE objectMappedResource;
         Utils::Check << context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &objectMappedResource);
         memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));

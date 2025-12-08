@@ -7,9 +7,10 @@
 @be-shader-header-end
 */
 
-cbuffer ShadowBuffer : register(b1) {
+cbuffer ModelBuffer : register(b1) {
     row_major float4x4 _Model;
     row_major float4x4 _ProjectionView;
+    float3 _ViewerPosition;
 };
 
 struct VertexInput {
