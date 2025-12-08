@@ -105,8 +105,8 @@ auto Game::SetupScene() -> void {
         },
         {
             .Name = "Tessellated Cube",
-            .Position = {15, 3, 0},
-            .Scale = glm::vec3(1.5f),
+            .Position = {0, 10, 0},
+            .Scale = glm::vec3(2.f),
             .Model = _cube,
         },
         {

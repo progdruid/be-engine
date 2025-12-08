@@ -51,7 +51,7 @@ float3 main(VSOutput input) : SV_TARGET
     // Sample original pixel
     float3 originalColor = colorTexture.Sample(inputSampler, uv).rgb;
     float originalDepth = depthTexture.Sample(inputSampler, uv).r;
-    float3 originalWorldPos = ReconstructWorldPosition(uv, originalDepth, _InverseProjectionView);
+    float3 originalWorldPos = ReconstructWorldPosition(uv, originalDepth, _CameraInverseProjectionView);
     float3 originalNormal = normalTexture.Sample(inputSampler, uv).rgb;
 
     // Edge detection: world position and normal discontinuities
@@ -65,7 +65,7 @@ float3 main(VSOutput input) : SV_TARGET
         float2 offset = float2(x, y) * texelSize;
         float2 sampleUV = uv + offset;
         float sampledDepth = depthTexture.Sample(inputSampler, sampleUV).r;
-        float3 sampledWorldPos = ReconstructWorldPosition(sampleUV, sampledDepth, _InverseProjectionView);
+        float3 sampledWorldPos = ReconstructWorldPosition(sampleUV, sampledDepth, _CameraInverseProjectionView);
         float3 sampledNormal = normalTexture.Sample(inputSampler, sampleUV).rgb;
 
         // World position edge detection

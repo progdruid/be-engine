@@ -66,7 +66,7 @@ float3 PixelFunction(PSInput input) : SV_TARGET {
     float3 worldNormal = WorldNormalXYZ_UnusedA.Sample(InputSampler, input.UV).xyz;
     float4 specular_shininess = SpecularRGB_ShininessA.Sample(InputSampler, input.UV);
 
-    float3 worldPos = ReconstructWorldPosition(input.UV, depth, _InverseProjectionView);
+    float3 worldPos = ReconstructWorldPosition(input.UV, depth, _CameraInverseProjectionView);
     float3 lightDir = _PointLightPosition - worldPos;
     float distanceToLight = length(lightDir);
     if (distanceToLight > _PointLightRadius) {

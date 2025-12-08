@@ -18,10 +18,10 @@
         "SpecularColor": { "type": "float3", "default": [1.0, 1.0, 1.0] },
         "Shininess": { "type": "float", "default": 64.0 },
         "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
-        "TessellationLevel": { "type": "float", "default": 12.0 },
-        "DisplacementStrength": { "type": "float", "default": 0.25 },
+        "TessellationLevel": { "type": "float", "default": 64.0 },
+        "DisplacementStrength": { "type": "float", "default": 0.5 },
         "AnimationSpeed": { "type": "float", "default": 1.5 },
-        "NoiseFrequency": { "type": "float", "default": 2.0 }
+        "NoiseFrequency": { "type": "float", "default": 4.0 }
     }
 }
 @be-shader-header-end
@@ -31,6 +31,8 @@
 
 cbuffer ModelBuffer: register(b1) {
     row_major float4x4 _Model;
+    row_major float4x4 _ProjectionView;
+    float3 _ViewerPosition;
 }
 
 cbuffer MaterialBuffer: register(b2) {
@@ -111,15 +113,16 @@ float FBM(float3 p, int octaves) {
 }
 
 float GetDisplacement(float3 worldPos) {
-    // Ripple effect
     float distFromOrigin = length(worldPos.xz);
     float ripple = sin(distFromOrigin * 3.0 + _Time * _AnimationSpeed * 2.0) * 0.5 + 0.5;
 
-    // FBM breathing
     float3 noisePos = worldPos * _NoiseFrequency + _Time * _AnimationSpeed * float3(0.3, 0.5, 0.7);
     float fbm = FBM(noisePos, 2);
 
-    return lerp(fbm - 0.5, ripple, 0.6);
+    float result = lerp(fbm - 0.5, ripple, 0.6);
+    result*=result*result;
+    
+    return result;
 }
 
 VertexOutput VertexFunction(VertexInput input) {
@@ -163,47 +166,45 @@ VertexOutput HullFunction(InputPatch<VertexOutput, 3> patch, uint pointId : SV_O
 
 [domain("tri")]
 VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : SV_DomainLocation, const OutputPatch<VertexOutput, 3> patch) {
-    float3 worldPos = barycentric.x * patch[0].WorldPosition + 
-                      barycentric.y * patch[1].WorldPosition + 
+    float3 worldPos = barycentric.x * patch[0].WorldPosition +
+                      barycentric.y * patch[1].WorldPosition +
                       barycentric.z * patch[2].WorldPosition;
 
-    float3 normal = barycentric.x * patch[0].Normal + 
-                    barycentric.y * patch[1].Normal + 
-                    barycentric.z * patch[2].Normal;
-
-    float2 uv = barycentric.x * patch[0].UV + 
-                barycentric.y * patch[1].UV + 
+    float2 uv = barycentric.x * patch[0].UV +
+                barycentric.y * patch[1].UV +
                 barycentric.z * patch[2].UV;
 
-    normal = normalize(normal);
-
-    // Get displacement at center
     float disp = GetDisplacement(worldPos);
     float3 displacedPos = worldPos + float3(0, 1, 0) * disp * _DisplacementStrength;
 
-    // ============ RECALCULATE NORMAL VIA FINITE DIFFERENCES ============
-    
-    float epsilon = 0.01;
-    
-    // Sample displacement at nearby X and Z positions
-    float dispX = GetDisplacement(worldPos + float3(epsilon, 0, 0));
-    float dispZ = GetDisplacement(worldPos + float3(0, 0, epsilon));
-    
-    // Displaced positions at offsets
-    float3 posX = (worldPos + float3(epsilon, 0, 0)) + float3(0, 1, 0) * dispX * _DisplacementStrength;
-    float3 posZ = (worldPos + float3(0, 0, epsilon)) + float3(0, 1, 0) * dispZ * _DisplacementStrength;
-    
-    // Compute tangent vectors on the displaced surface
-    float3 tangX = normalize(posX - displacedPos);
-    float3 tangZ = normalize(posZ - displacedPos);
-    
-    // Normal is perpendicular to both tangents
-    float3 computedNormal = normalize(cross(tangZ, tangX));
+    float epsilon = 0.0001;
+
+    float3 bary_du = float3(barycentric.x + epsilon, barycentric.y - epsilon, barycentric.z);
+    float3 bary_dv = float3(barycentric.x, barycentric.y + epsilon, barycentric.z - epsilon);
+
+    float3 worldPos_u = bary_du.x * patch[0].WorldPosition +
+                        bary_du.y * patch[1].WorldPosition +
+                        bary_du.z * patch[2].WorldPosition;
+
+    float3 worldPos_v = bary_dv.x * patch[0].WorldPosition +
+                        bary_dv.y * patch[1].WorldPosition +
+                        bary_dv.z * patch[2].WorldPosition;
+
+    float disp_u = GetDisplacement(worldPos_u);
+    float disp_v = GetDisplacement(worldPos_v);
+
+    float3 displacedPos_u = worldPos_u + float3(0, 1, 0) * disp_u * _DisplacementStrength;
+    float3 displacedPos_v = worldPos_v + float3(0, 1, 0) * disp_v * _DisplacementStrength;
+
+    float3 tangentU = displacedPos_u - displacedPos;
+    float3 tangentV = displacedPos_v - displacedPos;
+
+    float3 normal = -normalize(cross(tangentV, tangentU));
 
     VertexOutput output;
     output.WorldPosition = displacedPos;
     output.Position = mul(float4(displacedPos, 1.0), _ProjectionView);
-    output.Normal = computedNormal;
+    output.Normal = normal;
     output.UV = uv;
 
     return output;

@@ -53,7 +53,7 @@ float3 PixelFunction(PSInput input) : SV_TARGET {
     float3 worldNormal = WorldNormalXYZ_UnusedA.Sample(InputSampler, input.UV).xyz;
     float4 specular_shininess = SpecularRGB_ShininessA.Sample(InputSampler, input.UV);
 
-    float3 worldPos = ReconstructWorldPosition(input.UV, depth, _InverseProjectionView);
+    float3 worldPos = ReconstructWorldPosition(input.UV, depth, _CameraInverseProjectionView);
 
     float4 lightSpacePos = mul(float4(worldPos, 1.0), _DirectionalLightProjectionView);
     lightSpacePos /= lightSpacePos.w;
