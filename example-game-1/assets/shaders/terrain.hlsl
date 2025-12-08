@@ -227,11 +227,11 @@ VertexOutput HullFunction(InputPatch<VertexOutput, 3> patch, uint pointId : SV_O
 VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : SV_DomainLocation, const OutputPatch<VertexOutput, 3> patch) {
     VertexOutput output;
 
-    // Interpolate using barycentric coordinates
-    output.Position = barycentric.x * patch[0].Position + barycentric.y * patch[1].Position + barycentric.z * patch[2].Position;
+    // Interpolate using barycentric coordinates in world space
+    output.WorldPosition = barycentric.x * patch[0].WorldPosition + barycentric.y * patch[1].WorldPosition + barycentric.z * patch[2].WorldPosition;
+    output.Position = mul(float4(output.WorldPosition, 1.0), _ProjectionView);
     output.Normal = barycentric.x * patch[0].Normal + barycentric.y * patch[1].Normal + barycentric.z * patch[2].Normal;
     output.UV = barycentric.x * patch[0].UV + barycentric.y * patch[1].UV + barycentric.z * patch[2].UV;
-    output.WorldPosition = barycentric.x * patch[0].WorldPosition + barycentric.y * patch[1].WorldPosition + barycentric.z * patch[2].WorldPosition;
 
     // Normalize interpolated vectors
     output.Normal = normalize(output.Normal);

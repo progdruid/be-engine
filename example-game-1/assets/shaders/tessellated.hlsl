@@ -19,7 +19,7 @@
         "Shininess": { "type": "float", "default": 64.0 },
         "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
         "TessellationLevel": { "type": "float", "default": 64.0 },
-        "DisplacementStrength": { "type": "float", "default": 0.5 },
+        "DisplacementStrength": { "type": "float", "default": 1.0 },
         "AnimationSpeed": { "type": "float", "default": 1.5 },
         "NoiseFrequency": { "type": "float", "default": 4.0 }
     }
@@ -125,6 +125,17 @@ float GetDisplacement(float3 worldPos) {
     return result;
 }
 
+float3 GetDisplacedPos (const OutputPatch<VertexOutput, 3> patch, float3 bary, float3 objectCenter) {
+    float3 worldPos = bary.x * patch[0].WorldPosition +
+                      bary.y * patch[1].WorldPosition +
+                      bary.z * patch[2].WorldPosition;
+
+    float3 dirFromCenter = normalize(worldPos - objectCenter);
+    float disp = GetDisplacement(worldPos);
+    float3 displacedPos = worldPos + dirFromCenter * disp * _DisplacementStrength;
+    return displacedPos;
+}
+
 VertexOutput VertexFunction(VertexInput input) {
     float4 worldPosition = mul(float4(input.Position, 1.0), _Model);
 
@@ -166,41 +177,25 @@ VertexOutput HullFunction(InputPatch<VertexOutput, 3> patch, uint pointId : SV_O
 
 [domain("tri")]
 VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : SV_DomainLocation, const OutputPatch<VertexOutput, 3> patch) {
-    float3 worldPos = barycentric.x * patch[0].WorldPosition +
-                      barycentric.y * patch[1].WorldPosition +
-                      barycentric.z * patch[2].WorldPosition;
-
-    float2 uv = barycentric.x * patch[0].UV +
-                barycentric.y * patch[1].UV +
-                barycentric.z * patch[2].UV;
-
-    float disp = GetDisplacement(worldPos);
-    float3 displacedPos = worldPos + float3(0, 1, 0) * disp * _DisplacementStrength;
-
+    float3 objectCenter = mul(float4(-0.5, -0.5, 0.5, 1), _Model).xyz;
+    
     float epsilon = 0.0001;
-
     float3 bary_du = float3(barycentric.x + epsilon, barycentric.y - epsilon, barycentric.z);
     float3 bary_dv = float3(barycentric.x, barycentric.y + epsilon, barycentric.z - epsilon);
 
-    float3 worldPos_u = bary_du.x * patch[0].WorldPosition +
-                        bary_du.y * patch[1].WorldPosition +
-                        bary_du.z * patch[2].WorldPosition;
-
-    float3 worldPos_v = bary_dv.x * patch[0].WorldPosition +
-                        bary_dv.y * patch[1].WorldPosition +
-                        bary_dv.z * patch[2].WorldPosition;
-
-    float disp_u = GetDisplacement(worldPos_u);
-    float disp_v = GetDisplacement(worldPos_v);
-
-    float3 displacedPos_u = worldPos_u + float3(0, 1, 0) * disp_u * _DisplacementStrength;
-    float3 displacedPos_v = worldPos_v + float3(0, 1, 0) * disp_v * _DisplacementStrength;
+    float3 displacedPos = GetDisplacedPos(patch, barycentric, objectCenter);
+    float3 displacedPos_u = GetDisplacedPos(patch, bary_du, objectCenter);
+    float3 displacedPos_v = GetDisplacedPos(patch, bary_dv, objectCenter);
 
     float3 tangentU = displacedPos_u - displacedPos;
     float3 tangentV = displacedPos_v - displacedPos;
 
     float3 normal = -normalize(cross(tangentV, tangentU));
 
+    float2 uv = barycentric.x * patch[0].UV +
+                barycentric.y * patch[1].UV +
+                barycentric.z * patch[2].UV;
+        
     VertexOutput output;
     output.WorldPosition = displacedPos;
     output.Position = mul(float4(displacedPos, 1.0), _ProjectionView);

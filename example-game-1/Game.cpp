@@ -102,6 +102,7 @@ auto Game::SetupScene() -> void {
             .Position = {0, 0, 0},
             .Scale = glm::vec3(1.f),
             .Model = _plane,
+            .CastShadows = false,
         },
         {
             .Name = "Tessellated Cube",
@@ -163,7 +164,7 @@ auto Game::SetupScene() -> void {
     _directionalLight->ShadowCameraDistance = 100.0f;
     _directionalLight->ShadowMapWorldSize = 60.0f;
     _directionalLight->ShadowNearPlane = 0.1f;
-    _directionalLight->ShadowFarPlane = 300.0f;
+    _directionalLight->ShadowFarPlane = 400.0f;
     _directionalLight->ShadowMapTextureName = "DirectionalLightShadowMap";
     _directionalLight->CalculateMatrix();
     
@@ -328,9 +329,9 @@ auto Game::SetupCamera(int width, int height) -> void {
     _camera->Width = static_cast<float>(width);
     _camera->Height = static_cast<float>(height);
     _camera->NearPlane = 0.1f;
-    _camera->FarPlane = 100.0f;
+    _camera->FarPlane = 200.0f;
 
-    _renderer->UniformData.NearFarPlane = {0.1f, 100.0f};
+    _renderer->UniformData.NearFarPlane = {_camera->NearPlane, _camera->FarPlane};
     
     _input = std::make_unique<BeInput>(_window->getGLFWWindow());
 }

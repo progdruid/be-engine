@@ -27,6 +27,7 @@ class BeRenderer {
         glm::vec3 Scale = {1.f, 1.f, 1.f};
         std::shared_ptr<BeModel> Model = nullptr;
         std::vector<BeModel::BeDrawSlice> DrawSlices;
+        bool CastShadows = true;
     };
 
     
