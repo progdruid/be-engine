@@ -7,12 +7,12 @@
 #include "BeRenderer.h"
 
 auto BeShadowPass::Initialise() -> void {
-    D3D11_BUFFER_DESC shadowBufferDescriptor = {};
-    shadowBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    shadowBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
-    shadowBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    shadowBufferDescriptor.ByteWidth = sizeof(BeShadowpassBufferGPU);
-    Utils::Check << _renderer->GetDevice()->CreateBuffer(&shadowBufferDescriptor, nullptr, &_shadowConstantBuffer);
+    D3D11_BUFFER_DESC objectBufferDescriptor = {};
+    objectBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    objectBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
+    objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    objectBufferDescriptor.ByteWidth = sizeof(BeObjectBufferGPU);
+    Utils::Check << _renderer->GetDevice()->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer);
     
     _directionalShadowShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/directionalShadow");
     _pointShadowShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/pointShadow");
@@ -77,20 +77,24 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
     
     const auto& objects = _renderer->GetObjects();
     for (const auto& object : objects) {
+        const auto& shader = object.Model->Materials[0]->Shader.lock();
+        
         const glm::mat4x4 modelMatrix =
             glm::translate(glm::mat4(1.0f), object.Position) *
             glm::mat4_cast(object.Rotation) *
             glm::scale(glm::mat4(1.0f), object.Scale);
         
-        BeShadowpassBufferGPU shadowpassBufferGPU;
-        shadowpassBufferGPU.LightProjectionView = DirectionalLight->ViewProjection;
-        shadowpassBufferGPU.ObjectModel = modelMatrix;
-        shadowpassBufferGPU.LightPosition = glm::vec3(0.0f);
-        D3D11_MAPPED_SUBRESOURCE mappedResource;
-        Utils::Check << context->Map(_shadowConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-        memcpy(mappedResource.pData, &shadowpassBufferGPU, sizeof(BeShadowpassBufferGPU));
-        context->Unmap(_shadowConstantBuffer.Get(), 0);
-        context->VSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
+        BeObjectBufferGPU objectData(modelMatrix, DirectionalLight->ViewProjection);
+        D3D11_MAPPED_SUBRESOURCE objectMappedResource;
+        Utils::Check << context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &objectMappedResource);
+        memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
+        context->Unmap(_objectBuffer.Get(), 0);
+        context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+        //context->PSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
+        if (HasAny(shader->GetShaderType(), BeShaderType::Tesselation)) {
+            context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+            context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+        }
 
         for (const auto& slice : object.DrawSlices) {
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
@@ -141,23 +145,25 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
         // for each object
         const auto& objects = _renderer->GetObjects();
         for (const auto& object : objects) {
-
+            const auto& shader = object.Model->Materials[0]->Shader.lock();
+            
             // model matrix
             const glm::mat4x4 modelMatrix =
                 glm::translate(glm::mat4(1.0f), object.Position) *
                 glm::mat4_cast(object.Rotation) *
                 glm::scale(glm::mat4(1.0f), object.Scale);
 
-            // sort out point light constant buffer
-            BeShadowpassBufferGPU shadowpassBufferGPU;
-            shadowpassBufferGPU.LightProjectionView = faceViewProj;
-            shadowpassBufferGPU.ObjectModel = modelMatrix;
-            shadowpassBufferGPU.LightPosition = pointLight.Position;
-            D3D11_MAPPED_SUBRESOURCE mappedResource;
-            Utils::Check << context->Map(_shadowConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-            memcpy(mappedResource.pData, &shadowpassBufferGPU, sizeof(BeShadowpassBufferGPU));
-            context->Unmap(_shadowConstantBuffer.Get(), 0);
-            context->VSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
+            BeObjectBufferGPU objectData(modelMatrix, faceViewProj);
+            D3D11_MAPPED_SUBRESOURCE objectMappedResource;
+            Utils::Check << context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &objectMappedResource);
+            memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
+            context->Unmap(_objectBuffer.Get(), 0);
+            context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+            //context->PSSetConstantBuffers(1, 1, _shadowConstantBuffer.GetAddressOf());
+            if (HasAny(shader->GetShaderType(), BeShaderType::Tesselation)) {
+                context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+                context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+            }
             
             // draw
             for (const auto& slice : object.DrawSlices) {

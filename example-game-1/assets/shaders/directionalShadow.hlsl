@@ -8,9 +8,8 @@
 */
 
 cbuffer ShadowBuffer : register(b1) {
-    row_major float4x4 _ProjectionView;
     row_major float4x4 _Model;
-    float3 _LightPosition;
+    row_major float4x4 _ProjectionView;
 };
 
 struct VertexInput {
