@@ -28,7 +28,7 @@ class Game {
     hide std::unique_ptr<BeCamera> _camera;
     hide std::shared_ptr<BeAssetRegistry> _assetRegistry;
     
-    hide std::shared_ptr<BeModel> _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil;
+    hide std::shared_ptr<BeModel> _plane, _witchItems, _livingCube, _macintosh, _pagoda, _disks, _anvil;
     hide std::unique_ptr<BeDirectionalLight> _directionalLight;
     hide std::vector<BePointLight> _pointLights;
 

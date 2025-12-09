@@ -22,6 +22,7 @@
 #include "passes/BeBloomPass.h"
 #include "passes/BeFullscreenEffectPass.h"
 #include "passes/BeShadowPass.h"
+#include "ImGuiPass.h"
 
 Game::Game() = default;
 Game::~Game() = default;
@@ -34,7 +35,7 @@ auto Game::Run() -> int {
     _window = std::make_unique<BeWindow>(_width, _height, "be: example game 1");
     _assetRegistry = std::make_shared<BeAssetRegistry>();
     const HWND hwnd = _window->getHWND();
-    
+
     _renderer = std::make_unique<BeRenderer>(_width, _height, hwnd, _assetRegistry);
     _renderer->LaunchDevice();
 
@@ -42,8 +43,9 @@ auto Game::Run() -> int {
     SetupScene();
     SetupRenderPasses();
     SetupCamera(_width, _height);
+
     MainLoop();
-    
+
     return 0;
 }
 
@@ -81,7 +83,7 @@ auto Game::LoadAssets() -> void {
     // Create models
     _plane = CreatePlane(64);
     _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, _assetRegistry, device);
-    _cube = BeModel::Create("assets/cube.glb", tessellatedShader, _assetRegistry, device);
+    _livingCube = BeModel::Create("assets/cube.glb", tessellatedShader, _assetRegistry, device);
     _macintosh = BeModel::Create("assets/model.fbx", standardShader, _assetRegistry, device);
     _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, _assetRegistry, device);
     _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, _assetRegistry, device);
@@ -108,7 +110,7 @@ auto Game::SetupScene() -> void {
             .Name = "Tessellated Cube",
             .Position = {0, 10, 0},
             .Scale = glm::vec3(2.f),
-            .Model = _cube,
+            .Model = _livingCube,
         },
         {
             .Name = "Pagoda",
@@ -320,6 +322,14 @@ auto Game::SetupRenderPasses() -> void {
     _renderer->AddRenderPass(backbufferPass);
     backbufferPass->InputTextureName = "TonemapperOutput";
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f}; // black
+
+    // ImGui pass
+    const auto imguiPass = new ImGuiPass(_window->getGLFWWindow());
+    _renderer->AddRenderPass(imguiPass);
+    imguiPass->DirectionalLight = _directionalLight.get();
+    imguiPass->PointLights = &_pointLights;
+    imguiPass->TerrainMaterial = _plane->Materials[0];
+    imguiPass->LivingCubeMaterial = _livingCube->Materials[0];
 
     _renderer->InitialisePasses();
 }
