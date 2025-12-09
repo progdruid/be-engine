@@ -81,7 +81,7 @@ class BeRenderer {
     auto AddRenderPass(BeRenderPass* renderPass) -> void;
     auto InitialisePasses() const -> void;
     auto Render() -> void;
-    
+
     [[nodiscard]] auto GetDevice() const -> ComPtr<ID3D11Device> { return _device; }
     [[nodiscard]] auto GetContext() const -> ComPtr<ID3D11DeviceContext> { return _context; }
     [[nodiscard]] auto GetAssetRegistry() const -> std::weak_ptr<BeAssetRegistry> { return _assetRegistry; }
@@ -90,6 +90,9 @@ class BeRenderer {
     [[nodiscard]] auto GetFullscreenVertexShader() const -> std::shared_ptr<BeShader> { return _fullscreenShader; }
     [[nodiscard]] auto GetBackbufferTarget() const -> ComPtr<ID3D11RenderTargetView> { return _backbufferTarget; }
 
+    [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }
+    [[nodiscard]] auto GetHeight () const -> uint32_t { return _height; }
+    
     auto SetObjects(const std::vector<ObjectEntry>& objects) -> void;
     auto GetObjects() -> const std::vector<ObjectEntry>& { return _objects; }
     auto GetShaderVertexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedVertexBuffer; }

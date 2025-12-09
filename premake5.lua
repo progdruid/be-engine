@@ -115,7 +115,8 @@ project "example-game-1"
         "src/shaders",
         "%{prj.location}",
         "vendor/Assimp/include",
-        "vendor"
+        "vendor",
+        "%{prj.location}/imgui",
     }
 
     links { "Engine" }
