@@ -25,7 +25,6 @@ public:
         std::filesystem::path filePath;
         const std::string fileName = pFileName;
         
-        // Check global includes first
         if (IncludeType == D3D_INCLUDE_SYSTEM) {
             filePath = _globalIncludeDir / fileName;
         }

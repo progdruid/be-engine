@@ -85,9 +85,7 @@ project "MiscConfiguration"
     files {
         "premake5.lua",
         ".gitignore",
-        ".guidelines",
         "README.md",
-        ".claude/*"
     }
 
     

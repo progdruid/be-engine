@@ -47,5 +47,4 @@ class Game {
     hide auto MainLoop() -> void;
 
     hide auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel>;
-    hide auto CreatePlaneHex(size_t hexRadius) -> std::shared_ptr<BeModel>;
 };

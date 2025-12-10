@@ -26,7 +26,7 @@ BeWindow::BeWindow(int width, int height, const std::string& title)
         throw std::runtime_error("Failed to initialize GLFW");
     }
 
-    // No client API: Direct3D will render
+    // No client API, using DX11 not OpenGL, yknow
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     _window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
@@ -35,7 +35,6 @@ BeWindow::BeWindow(int width, int height, const std::string& title)
         throw std::runtime_error("Failed to create GLFW window");
     }
 
-    // Get the native Windows handle
     _hwnd = glfwGetWin32Window(_window);
     assert(_hwnd != nullptr);
 }
@@ -56,7 +55,6 @@ BeWindow::BeWindow(BeWindow&& other) noexcept
 
 BeWindow& BeWindow::operator=(BeWindow&& other) noexcept {
     if (this != &other) {
-        // Clean up existing window
         if (_window) {
             glfwDestroyWindow(_window);
         }

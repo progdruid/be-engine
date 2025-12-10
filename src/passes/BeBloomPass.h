@@ -38,6 +38,8 @@ class BeBloomPass final : public BeRenderPass {
     auto Render() -> void override;
     auto GetPassName() const -> const std::string override { return "Bloom Pass"; }
 
+    auto GetBrightMaterial() const -> std::weak_ptr<BeMaterial> { return _brightMaterial; }
+    
     hide
     auto RenderBrightPass() const -> void;
     auto RenderDownsamplePasses() -> void;

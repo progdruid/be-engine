@@ -1,11 +1,9 @@
 #include "BeInput.h"
 
-// Internal scroll callback
 auto BeInput::scrollCallbackInternal(GLFWwindow* window, double xOffset, double yOffset) -> void {
     auto* input = static_cast<BeInput*>(glfwGetWindowUserPointer(window));
     if (!input) return;
 
-    // Accumulate scroll delta for this frame
     input->_scrollDelta.x += static_cast<float>(xOffset);
     input->_scrollDelta.y += static_cast<float>(yOffset);
 }
@@ -19,11 +17,9 @@ BeInput::BeInput(GLFWwindow* window)
     , _scrollDelta(0.0f)
     , _isMouseCaptured(false) {
 
-    // Set up scroll callback
     glfwSetWindowUserPointer(window, this);
     glfwSetScrollCallback(window, scrollCallbackInternal);
 
-    // Initialize mouse position
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     _mousePosition = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
@@ -33,17 +29,14 @@ BeInput::BeInput(GLFWwindow* window)
 //public interface//////////////////////////////////////////////////////////////////////////////////////////////////
 
 auto BeInput::update() -> void {
-    // Store previous states
     _previousKeys = _currentKeys;
     _previousMouseButtons = _currentMouseButtons;
     _previousMousePosition = _mousePosition;
 
-    // Update current states
     updateKeyStates();
     updateMouseButtonStates();
     updateMousePosition();
 
-    // Reset scroll delta (will be accumulated by callback until next update)
     _scrollDelta = glm::vec2(0.0f);
 }
 
@@ -126,8 +119,6 @@ auto BeInput::isMouseCaptured() const -> bool {
 //private logic/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 auto BeInput::updateKeyStates() -> void {
-    // Poll commonly used keys
-    // Add more keys as needed
     const int keysToCheck[] = {
         GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D,
         GLFW_KEY_Q, GLFW_KEY_E,
@@ -146,7 +137,6 @@ auto BeInput::updateKeyStates() -> void {
 }
 
 auto BeInput::updateMouseButtonStates() -> void {
-    // Poll mouse buttons
     const int buttonsToCheck[] = {
         GLFW_MOUSE_BUTTON_LEFT,
         GLFW_MOUSE_BUTTON_RIGHT,

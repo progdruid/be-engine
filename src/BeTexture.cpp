@@ -79,7 +79,7 @@ auto BeTexture::Builder::FlipVertically(const uint32_t w, const uint32_t h, uint
         uint8_t* topRow = data + y * rowSize;
         uint8_t* bottomRow = data + (h - 1 - y) * rowSize;
 
-        // Swap topRow and bottomRow
+        // swap
         memcpy(tempRow, topRow, rowSize);
         memcpy(topRow, bottomRow, rowSize);
         memcpy(bottomRow, tempRow, rowSize);
@@ -174,10 +174,8 @@ auto BeTexture::CreateTexture2DResources(ComPtr<ID3D11Device> device, const uint
         pInitData = &initData;
     }
     
-    // Create texture
     Utils::Check << device->CreateTexture2D(&textureDesc, pInitData, _texture.GetAddressOf());
     
-    // Create a depth stencil view and its SRV if needed
     if (BindFlags & D3D11_BIND_DEPTH_STENCIL) {
         D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
         dsvDesc.Format = GetDSVFormat(Format);
@@ -186,7 +184,6 @@ auto BeTexture::CreateTexture2DResources(ComPtr<ID3D11Device> device, const uint
         Utils::Check << device->CreateDepthStencilView(_texture.Get(), &dsvDesc, _dsv.GetAddressOf());
     }
     
-    // Create a render target view if needed
     if (BindFlags & D3D11_BIND_RENDER_TARGET) {
         _mipRTVs.resize(Mips);
         
@@ -200,7 +197,6 @@ auto BeTexture::CreateTexture2DResources(ComPtr<ID3D11Device> device, const uint
         }
     }
 
-    // Create a shader resource view if needed
     if (BindFlags & D3D11_BIND_SHADER_RESOURCE) {
         D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
         srvDesc.Format =
@@ -249,7 +245,6 @@ auto BeTexture::CreateCubemapResources(ComPtr<ID3D11Device> device, const uint8_
         Utils::Check << device->CreateShaderResourceView(_texture.Get(), &srvDesc, _srv.GetAddressOf());
     }
 
-    // Create individual face DSVs (for depth cubemaps)
     if (BindFlags & D3D11_BIND_DEPTH_STENCIL) {
         for (uint32_t face = 0; face < 6; face++) {
             D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
@@ -263,7 +258,6 @@ auto BeTexture::CreateCubemapResources(ComPtr<ID3D11Device> device, const uint8_
         }
     }
 
-    // Create individual face RTVs (for color cubemaps, env maps)
     if (BindFlags & D3D11_BIND_RENDER_TARGET) {
         for (uint32_t face = 0; face < 6; face++) {
             D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};

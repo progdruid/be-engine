@@ -64,7 +64,7 @@ namespace Utils {
             std::cout << "Opacity: " << opacity << "\n";
         }
         
-        // Print texture info for each texture type
+        // print texture info for each texture type
         for (int type = aiTextureType_NONE; type <= aiTextureType_UNKNOWN; ++type) {
             int texCount = material->GetTextureCount((aiTextureType)type);
             for (int i = 0; i < texCount; ++i) {
@@ -101,7 +101,6 @@ namespace Utils {
         std::cout << "Lights: " << scene->mNumLights << "\n";
         std::cout << "Cameras: " << scene->mNumCameras << "\n";
 
-        // Print materials
         for (unsigned int i = 0; i < scene->mNumMaterials; ++i) {
             std::cout << "\nMaterial " << i << ":\n";
             PrintMaterialInfo(scene->mMaterials[i]);
@@ -132,27 +131,16 @@ namespace Utils {
     inline ID3D11ShaderResourceView* NullSRVs   [D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
     inline ID3D11RenderTargetView* NullRTVs     [D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 
-    // ========== Debug Annotation Helpers for RenderDoc/PIX ==========
-
-    /**
-     * BeDebugAnnotation provides RenderDoc/PIX debug marker support
-     * Usage:
-     *   {
-     *       BeDebugAnnotation marker(context, "Pass Name");
-     *       // ... rendering code ...
-     *   } // marker automatically ends on scope exit
-     */
+    // debug annotation helper for RenderDoc
     class BeDebugAnnotation {
     public:
         explicit BeDebugAnnotation(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, const std::string& label)
             : _context(context) {
             if (!_context) return;
 
-            // Query for user-defined annotation interface
             _context->QueryInterface(IID_PPV_ARGS(&_annotation));
 
             if (_annotation) {
-                // Convert string to wide string for DirectX API
                 std::wstring wideLabel(label.begin(), label.end());
                 _annotation->BeginEvent(wideLabel.c_str());
             }
@@ -161,11 +149,9 @@ namespace Utils {
         ~BeDebugAnnotation() {
             if (_annotation) {
                 _annotation->EndEvent();
-                // ComPtr automatically releases on destruction
             }
         }
 
-        // Deleted copy/move operations - markers should be scoped
         BeDebugAnnotation(const BeDebugAnnotation&) = delete;
         BeDebugAnnotation& operator=(const BeDebugAnnotation&) = delete;
         BeDebugAnnotation(BeDebugAnnotation&&) = delete;

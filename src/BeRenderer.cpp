@@ -32,7 +32,6 @@ auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
         DXGI_ADAPTER_DESC1 desc{};
         Utils::Check << adapter->GetDesc1(&desc);
 
-        // Skip software adapters
         if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) continue;
 
         return adapter; // first high-perf adapter
@@ -136,7 +135,6 @@ auto BeRenderer::LaunchDevice() -> void {
     linearClampDesc.MaxLOD = D3D11_FLOAT32_MAX;
     Utils::Check << _device->CreateSamplerState(&linearClampDesc, &_postProcessLinearClampSampler);
     
-    // Default depth stencil state
     D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {};
     depthStencilStateDescriptor.DepthEnable = true;
     depthStencilStateDescriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
@@ -172,7 +170,6 @@ auto BeRenderer::Render() -> void {
     _context->RSSetViewports(1, &viewport);
 
 
-    // Update uniform constant buffer
     const BeUniformBufferGPU uniformDataGpu(UniformData);
     D3D11_MAPPED_SUBRESOURCE uniformMappedResource;
     Utils::Check << _context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &uniformMappedResource);
@@ -183,7 +180,6 @@ auto BeRenderer::Render() -> void {
     _context->DSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
     _context->PSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
 
-    // Execute all passes with debug annotations
     for (const auto& pass : _passes) {
         Utils::BeDebugAnnotation passAnnotation(_context, std::string(pass->GetPassName()));
         pass->Render();
