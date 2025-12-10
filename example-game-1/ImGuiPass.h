@@ -11,6 +11,7 @@ class ImGuiPass final : public BeRenderPass {
     std::vector<BePointLight>* PointLights;
     std::shared_ptr<BeMaterial> TerrainMaterial;
     std::shared_ptr<BeMaterial> LivingCubeMaterial;
+    std::weak_ptr<BeMaterial> BloomMaterial;
 
     hide
     GLFWwindow* _window = nullptr;

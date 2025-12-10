@@ -39,7 +39,7 @@ float SamplePointLightShadow(float3 worldPos) {
     float3 lightDir = worldPos - _PointLightPosition;
     float distanceToLight = length(lightDir);
 
-    // Sample cubemap using direction
+    // sample cubemap with direction
     float3 sampleDir = normalize(lightDir);
     float shadowmapDepth = PointLightShadowMap.Sample(InputSampler, sampleDir).r;
     float near = _PointLightShadowNearPlane;

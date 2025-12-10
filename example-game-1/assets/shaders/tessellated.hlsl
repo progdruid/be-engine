@@ -14,14 +14,14 @@
         "Specular.RGB_Shininess.A": 2
     },
     "material": {
-        "DiffuseColor": { "type": "float3", "default": [0.2, 0.8, 0.2] },
+        "DiffuseColor": { "type": "float3", "default": [0.28, 0.39, 1.0] },
         "SpecularColor": { "type": "float3", "default": [1.0, 1.0, 1.0] },
-        "Shininess": { "type": "float", "default": 64.0 },
+        "Shininess": { "type": "float", "default": 100.0 },
         "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
-        "TessellationLevel": { "type": "float", "default": 64.0 },
-        "DisplacementStrength": { "type": "float", "default": 1.0 },
+        "TessellationLevel": { "type": "float", "default": 1024.0 },
+        "DisplacementStrength": { "type": "float", "default": -1.0 },
         "AnimationSpeed": { "type": "float", "default": 1.5 },
-        "NoiseFrequency": { "type": "float", "default": 4.0 }
+        "NoiseFrequency": { "type": "float", "default": 30.0 }
     }
 }
 @be-shader-header-end
@@ -74,29 +74,30 @@ float Hash(float3 p) {
 float Noise(float3 p) {
     float3 i = floor(p);
     float3 f = frac(p);
-    f = f * f * (3.0 - 2.0 * f);
 
-    float a = Hash(i);
-    float b = Hash(i + float3(1, 0, 0));
-    float c = Hash(i + float3(0, 1, 0));
-    float d = Hash(i + float3(1, 1, 0));
-    float e = Hash(i + float3(0, 0, 1));
-    float g = Hash(i + float3(1, 0, 1));
-    float h = Hash(i + float3(0, 1, 1));
-    float j = Hash(i + float3(1, 1, 1));
+    float3 u = f * f * (3.0 - 2.0 * f);
 
-    float ab = lerp(a, b, f.x);
-    float cd = lerp(c, d, f.x);
-    float ef = lerp(e, g, f.x);
-    float gh = lerp(h, j, f.x);
+    float n000 = Hash(i + float3(0, 0, 0));
+    float n100 = Hash(i + float3(1, 0, 0));
+    float n010 = Hash(i + float3(0, 1, 0));
+    float n110 = Hash(i + float3(1, 1, 0));
+    float n001 = Hash(i + float3(0, 0, 1));
+    float n101 = Hash(i + float3(1, 0, 1));
+    float n011 = Hash(i + float3(0, 1, 1));
+    float n111 = Hash(i + float3(1, 1, 1));
 
-    float abcd = lerp(ab, cd, f.y);
-    float efgh = lerp(ef, gh, f.y);
+    float nx0 = lerp(n000, n100, u.x);
+    float nx1 = lerp(n010, n110, u.x);
+    float nxy0 = lerp(nx0, nx1, u.y);
 
-    return lerp(abcd, efgh, f.z);
+    float nx0z = lerp(n001, n101, u.x);
+    float nx1z = lerp(n011, n111, u.x);
+    float nxy1 = lerp(nx0z, nx1z, u.y);
+
+    return lerp(nxy0, nxy1, u.z);
 }
 
-float FBM(float3 p, int octaves) {
+float fbm(float3 p, int octaves) {
     float value = 0.0;
     float amplitude = 1.0;
     float frequency = 1.0;
@@ -117,9 +118,9 @@ float GetDisplacement(float3 worldPos) {
     float ripple = sin(distFromOrigin * 3.0 + _Time * _AnimationSpeed * 2.0) * 0.5 + 0.5;
 
     float3 noisePos = worldPos * _NoiseFrequency + _Time * _AnimationSpeed * float3(0.3, 0.5, 0.7);
-    float fbm = FBM(noisePos, 2);
+    float fbmVal = fbm(noisePos, 2);
 
-    float result = lerp(fbm - 0.5, ripple, 0.6);
+    float result = lerp(fbmVal - 0.5, ripple, 0.6);
     result*=result*result;
     
     return result;
@@ -140,8 +141,8 @@ VertexOutput VertexFunction(VertexInput input) {
     float4 worldPosition = mul(float4(input.Position, 1.0), _Model);
 
     VertexOutput output;
-    output.Position = mul(worldPosition, _ProjectionView);
-    output.Normal = normalize(mul(input.Normal, (float3x3)_Model));
+    output.Position = float4(0, 0, 0, 1);
+    output.Normal = float3(0, 0, 0);
     output.UV = input.UV;
     output.WorldPosition = worldPosition.xyz;
 

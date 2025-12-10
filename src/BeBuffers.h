@@ -57,7 +57,6 @@ struct BeDirectionalLight {
     float ShadowFarPlane;
     std::string ShadowMapTextureName;
 
-    // Calculated once per frame (both passes use this)
     glm::mat4 ViewProjection;
 
     inline auto CalculateMatrix() -> void {

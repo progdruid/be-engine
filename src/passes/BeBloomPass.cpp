@@ -193,10 +193,8 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
         const auto sourceMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget + 1)).lock();
         const auto targetMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
 
-        // Bind source (larger mip) for sampling
         context->PSSetShaderResources(0, 1, sourceMip->GetSRV().GetAddressOf());
 
-        // Set render target and viewport
         D3D11_VIEWPORT viewport = {};
         viewport.Width = static_cast<float>(targetMip->Width);
         viewport.Height = static_cast<float>(targetMip->Height);
@@ -217,7 +215,6 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
         context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
     }
 
-    // Restore blend state
     context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     if (additiveBlendState) additiveBlendState->Release();
 

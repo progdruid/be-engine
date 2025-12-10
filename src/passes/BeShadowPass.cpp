@@ -13,9 +13,6 @@ auto BeShadowPass::Initialise() -> void {
     objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     objectBufferDescriptor.ByteWidth = sizeof(BeObjectBufferGPU);
     Utils::Check << _renderer->GetDevice()->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer);
-    
-    _directionalShadowShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/directionalShadow");
-    _pointShadowShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/pointShadow");
 }
 
 auto BeShadowPass::Render() -> void {

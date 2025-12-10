@@ -205,19 +205,15 @@ auto BeShader::ParseHeader(const std::string& src) -> Json {
     const size_t endPos = src.find(endTag, startPos);
     if (endPos == std::string::npos) return metadata;
     
-    // Find the start of JSON content (after the tag and newline)
     size_t jsonStart = src.find('\n', startPos);
     if (jsonStart == std::string::npos || jsonStart >= endPos) return metadata;
     jsonStart++; // Move past newline
     
-    // Extract content between tags
     std::string jsonContent = src.substr(jsonStart, endPos - jsonStart);
     
-    // Remove leading/trailing whitespace and newlines
     jsonContent.erase(0, jsonContent.find_first_not_of(" \t\r\n"));
     jsonContent.erase(jsonContent.find_last_not_of(" \t\r\n") + 1);
     
-    // Parse JSON
     try {
         metadata = Json::parse(jsonContent);
     } catch (const Json::parse_error& e) {

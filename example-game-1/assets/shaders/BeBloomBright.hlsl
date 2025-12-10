@@ -6,9 +6,9 @@
         "BloomMip": 0
     },
     "material": {
-        "Threshold": { "type": "float", "default": 1.0 },
-        "Intensity": { "type": "float", "default": 1.0 },
-        "Knee": { "type": "float", "default": 0.2 }
+        "Threshold": { "type": "float", "default": 0.75 },
+        "Intensity": { "type": "float", "default": 17.0 },
+        "Knee": { "type": "float", "default": 1.25 }
     }
 }
 @be-shader-header-end

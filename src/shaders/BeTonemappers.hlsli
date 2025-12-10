@@ -13,7 +13,6 @@ float3 Tonemap_Exponential(float3 x, float a) // a ~ 1.0
     return 1.0 - exp(-a * x);
 }
 
-// Parameters from J. Hable's writeups; tweakable.
 float3 HableCurve(float3 x, float A, float B, float C, float D, float E, float F)
 {
     return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
@@ -35,13 +34,10 @@ float3 Tonemap_HableU2(float3 x)
 
 float3 Tonemap_HejlBurgessDawson(float3 x)
 {
-    // Slightly modified fast filmic curve
     float3 X = max(0.0, x - 0.004);
     return (X * (6.2 * X + 0.5)) / (X * (6.2 * X + 1.7) + 0.06);
 }
 
-// Stephen Hill's ACES fitted (linear in/out; sRGB transfer after)
-// sRGB -> ACEScg-ish -> RRT/ODT fit -> sRGB-ish
 float3 Tonemap_ACESFitted(float3 x)
 {
     const float3x3 ACESInputMat = {

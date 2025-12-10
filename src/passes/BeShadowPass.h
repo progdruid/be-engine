@@ -13,9 +13,6 @@ public:
     std::vector<BePointLight>* PointLights;
 
 private:
-    std::shared_ptr<BeShader> _directionalShadowShader;
-    std::shared_ptr<BeShader> _pointShadowShader;
-
     ComPtr<ID3D11Buffer> _objectBuffer;
     
 public:

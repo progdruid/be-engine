@@ -15,7 +15,6 @@ BeLightingPass::~BeLightingPass() = default;
 void BeLightingPass::Initialise() {
     const auto device = _renderer->GetDevice();
 
-    // Additive blending for lights
     D3D11_BLEND_DESC lightingBlendDesc = {};
     lightingBlendDesc.RenderTarget[0].BlendEnable = TRUE;
     lightingBlendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;

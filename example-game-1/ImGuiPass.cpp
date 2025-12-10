@@ -101,6 +101,26 @@ auto ImGuiPass::Render() -> void {
             LivingCubeMaterial->SetFloat("NoiseFrequency", noiseFrequency);
             ImGui::TreePop();
         }
+
+        if (ImGui::TreeNode("Bloom")) {
+            const auto material = BloomMaterial.lock();
+
+            auto threshold = material->GetFloat("Threshold");
+            auto intensity = material->GetFloat("Intensity");
+            auto knee = material->GetFloat("Knee");
+
+            ImGui::DragFloat("Threshold", &threshold, 0.01f, 0.0f, 0.0f, "%.2f");
+            ImGui::DragFloat("Intensity", &intensity, 0.01f, 0.0f, 0.0f, "%.2f");
+            ImGui::DragFloat("Knee", &knee, 0.01f, 0.0f, 0.0f, "%.2f");
+            
+            material->SetFloat("Threshold", threshold);
+            material->SetFloat("Intensity", intensity);
+            material->SetFloat("Knee", knee);
+
+            material->UpdateGPUBuffers(_renderer->GetContext());
+            
+            ImGui::TreePop();
+        }
     }
     ImGui::End();
 

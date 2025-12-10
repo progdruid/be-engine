@@ -67,23 +67,22 @@ struct PixelOutput {
     float4 SpecularRGB_ShininessA : SV_Target2;
 };
 
-// Hash function for pseudo-random values
+//float Hash(float3 p) {
+//    p = frac(p * float3(0.1031, 0.1030, 0.0973));
+//    p += dot(p, p.yzx + 19.19);
+//    return frac((p.x + p.y) * p.z);
+//}
+
 float Hash(float3 p) {
-    p = frac(p * float3(0.1031, 0.1030, 0.0973));
-    p += dot(p, p.yzx + 19.19);
-    return frac((p.x + p.y) * p.z);
+    return frac(sin(dot(p, float3(12.9898, 78.233, 45.164))) * 43758.5453);
 }
 
-// Improved Perlin-like noise function using value noise
 float Noise(float3 p) {
-    // Hash-based pseudo-random
     float3 i = floor(p);
     float3 f = frac(p);
 
-    // Smoothstep curve for interpolation
     float3 u = f * f * (3.0 - 2.0 * f);
 
-    // Sample corners of the cube
     float n000 = Hash(i + float3(0, 0, 0));
     float n100 = Hash(i + float3(1, 0, 0));
     float n010 = Hash(i + float3(0, 1, 0));
@@ -93,7 +92,6 @@ float Noise(float3 p) {
     float n011 = Hash(i + float3(0, 1, 1));
     float n111 = Hash(i + float3(1, 1, 1));
 
-    // Interpolate
     float nx0 = lerp(n000, n100, u.x);
     float nx1 = lerp(n010, n110, u.x);
     float nxy0 = lerp(nx0, nx1, u.y);
@@ -105,7 +103,6 @@ float Noise(float3 p) {
     return lerp(nxy0, nxy1, u.z);
 }
 
-// Fractional Brownian Motion - multiple octaves of noise
 float fbm(float3 p, int octaves) {
     float value = 0.0;
     float amplitude = 1.0;
@@ -146,56 +143,33 @@ float terrainFunc (float2 uv, float2 noiseUV) {
 }
 
 VertexOutput VertexFunction(VertexInput input) {
-    // Sample noise in 0-1 UV space for terrain displacement (sampling unchanged)
     float2 terrainUV = input.UV;
     terrainUV *= _NoiseResolution;
     terrainUV += (_Time * _Speed).rr;
     float terrainHeight = terrainFunc(input.UV, terrainUV) - 0.5;
 
-    // Apply scales to vertex positions
     float3 displacedPos = input.Position * float3(_TerrainScale, 1.0, _TerrainScale);
     displacedPos.y += terrainHeight * _HeightScale;
 
-    // Transform to world space
     float4 worldPosition = mul(float4(displacedPos, 1.0), _Model);
-
-    // Calculate normals using finite differences in UV space
-    // Account for aspect ratio: when horizontal and vertical scales differ,
-    // the slope gradient must account for this ratio
-    float epsilon = 0.01;
-    float h_xp = terrainFunc(input.UV, terrainUV + float2(epsilon, 0)) * _HeightScale;
-    float h_xn = terrainFunc(input.UV, terrainUV - float2(epsilon, 0)) * _HeightScale;
-    float h_zp = terrainFunc(input.UV, terrainUV + float2(0, epsilon)) * _HeightScale;
-    float h_zn = terrainFunc(input.UV, terrainUV - float2(0, epsilon)) * _HeightScale;
-
-    float3 normal;
-    // Gradient accounts for scaling: height difference / horizontal distance
-    // Horizontal distance in world space = epsilon * TerrainScale
-    normal.x = (h_xn - h_xp) / (2.0 * epsilon * _TerrainScale);
-    normal.y = 1.0;
-    normal.z = (h_zn - h_zp) / (2.0 * epsilon * _TerrainScale);
-    normal = normalize(normal);
 
     VertexOutput output;
     output.Position = mul(worldPosition, _ProjectionView);
-    output.Normal = normalize(mul(normal, (float3x3)_Model));
+    output.Normal = float3(0, 0, 0); // normal is computed in hull
     output.UV = input.UV;
     output.WorldPosition = worldPosition.xyz;
 
     return output;
 }
 
-// Patch constant output structure
 struct PatchConstantOutput {
     float EdgeTessFactor[3] : SV_TessFactor;
     float InsideTessFactor : SV_InsideTessFactor;
 };
 
-// Patch constant function for hull shader
 PatchConstantOutput PatchConstantFunction(InputPatch<VertexOutput, 3> patch) {
     PatchConstantOutput output;
 
-    // Pass-through: no tessellation
     output.EdgeTessFactor[0] = 1.0f;
     output.EdgeTessFactor[1] = 1.0f;
     output.EdgeTessFactor[2] = 1.0f;
@@ -204,7 +178,6 @@ PatchConstantOutput PatchConstantFunction(InputPatch<VertexOutput, 3> patch) {
     return output;
 }
 
-// Hull shader
 [domain("tri")]
 [partitioning("integer")]
 [outputtopology("triangle_cw")]
@@ -213,7 +186,6 @@ PatchConstantOutput PatchConstantFunction(InputPatch<VertexOutput, 3> patch) {
 VertexOutput HullFunction(InputPatch<VertexOutput, 3> patch, uint pointId : SV_OutputControlPointID) {
     VertexOutput output = patch[pointId];
 
-    // Calculate face normal from the three displaced positions
     float3 v0 = patch[0].WorldPosition;
     float3 v1 = patch[1].WorldPosition;
     float3 v2 = patch[2].WorldPosition;
@@ -222,18 +194,15 @@ VertexOutput HullFunction(InputPatch<VertexOutput, 3> patch, uint pointId : SV_O
     return output;
 }
 
-// Domain shader
 [domain("tri")]
 VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : SV_DomainLocation, const OutputPatch<VertexOutput, 3> patch) {
     VertexOutput output;
 
-    // Interpolate using barycentric coordinates in world space
     output.WorldPosition = barycentric.x * patch[0].WorldPosition + barycentric.y * patch[1].WorldPosition + barycentric.z * patch[2].WorldPosition;
-    output.Position = mul(float4(output.WorldPosition, 1.0), _ProjectionView);
+    output.Position = barycentric.x * patch[0].Position + barycentric.y * patch[1].Position + barycentric.z * patch[2].Position;
     output.Normal = barycentric.x * patch[0].Normal + barycentric.y * patch[1].Normal + barycentric.z * patch[2].Normal;
     output.UV = barycentric.x * patch[0].UV + barycentric.y * patch[1].UV + barycentric.z * patch[2].UV;
 
-    // Normalize interpolated vectors
     output.Normal = normalize(output.Normal);
 
     return output;

@@ -55,7 +55,7 @@ auto BeGeometryPass::Render() -> void {
         context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
     };
 
-    // Set the default sampler - temporary. It should be overriden by materials if needed
+    // Set the default sampler. It should be overriden by materials if needed
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     SCOPE_EXIT { context->PSSetSamplers(0, 1, Utils::NullSamplers); };
 
@@ -67,7 +67,6 @@ auto BeGeometryPass::Render() -> void {
         shader->Bind(context.Get(), BeShaderType::All);
         SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::All); };
 
-        // Set primitive topology based on whether tessellation is enabled
         const D3D11_PRIMITIVE_TOPOLOGY topology = HasAny(shader->GetShaderType(), BeShaderType::Tesselation)
             ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST
             : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
