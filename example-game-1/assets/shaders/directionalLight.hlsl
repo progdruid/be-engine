@@ -2,6 +2,20 @@
 @be-shader-header
 {
     "pixel": "PixelFunction",
+    "material": {
+        "HasShadowMap": { "type": "float", "default": 0 },
+        "Direction": { "type": "float3", "default": [0, 0, 0] },
+        "Color": { "type": "float3", "default": [0, 0, 0] },
+        "Power": { "type": "float", "default": 0 },
+        "ProjectionView": { "type": "matrix" },
+        "TexelSize": { "type": "float", "default": 0 },
+        
+        "Depth": { "type": "texture2d", "slot": 0, "default": "black" },
+        "Diffuse": { "type": "texture2d", "slot": 1, "default": "black" },
+        "WorldNormal": { "type": "texture2d", "slot": 2, "default": "black" },
+        "Specular_Shininess": { "type": "texture2d", "slot": 3, "default": "black" },
+        "ShadowMap": { "type": "texture2d", "slot": 4, "default": "black" }
+    },
     "targets": {
         "LightHDR": 0
     }
@@ -19,10 +33,12 @@ Texture2D SpecularRGB_ShininessA : register(t3);
 Texture2D DirectionalLightShadowMap : register(t4);
 SamplerState InputSampler : register(s0);
 
-cbuffer DirectionalLightBuffer: register(b1) {
+cbuffer DirectionalLightBuffer: register(b2) {
+    float _DirectionalLightHasShadowMap;
     float3 _DirectionalLightVector;
     float3 _DirectionalLightColor;
     float _DirectionalLightPower;
+    
     row_major float4x4 _DirectionalLightProjectionView;
     float _ShadowMapTexelSize;
 };

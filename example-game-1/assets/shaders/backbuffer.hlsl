@@ -2,6 +2,9 @@
 @be-shader-header
 {
     "pixel": "PixelFunction",
+    "material": {
+        "InputTexture": { "type": "texture2d", "slot": 0, "default": "white" }
+    },
     "targets": {
         "Backbuffer": 0
     }

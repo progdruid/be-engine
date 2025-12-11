@@ -6,6 +6,7 @@
 
 #include "BeShader.h"
 #include "BeAssetRegistry.h"
+#include "BeTexture.h"
 #include "Utils.h"
 
 auto BeMaterial::Create(
@@ -25,6 +26,78 @@ auto BeMaterial::Create(
     return material;
 }
 
+auto BeMaterial::BindMaterial_Temporary(
+    std::weak_ptr<BeMaterial> material,
+    ComPtr<ID3D11DeviceContext> context,
+    BeShaderType shaderType
+) -> void {
+    const auto& mat = material.lock();
+    const auto& buffer = mat->GetBuffer();
+    if (buffer != nullptr) {
+        mat->UpdateGPUBuffers(context);
+
+        if (HasAny(shaderType, BeShaderType::Vertex)) {
+            context->VSSetConstantBuffers(2, 1, buffer.GetAddressOf());
+        }
+        if (HasAny(shaderType, BeShaderType::Tesselation)) {
+            context->HSSetConstantBuffers(2, 1, buffer.GetAddressOf());
+            context->DSSetConstantBuffers(2, 1, buffer.GetAddressOf());
+        }
+        if (HasAny(shaderType, BeShaderType::Pixel)) {
+            context->PSSetConstantBuffers(2, 1, buffer.GetAddressOf());
+        }
+    }
+    
+    const auto& textureSlots = mat->GetTexturePairs();
+    for (const auto& [texture, slot] : textureSlots | std::views::values) {
+        if (HasAny(shaderType, BeShaderType::Vertex)) {
+            context->VSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
+        }
+        if (HasAny(shaderType, BeShaderType::Tesselation)) {
+            context->HSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
+            context->DSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
+        }
+        if (HasAny(shaderType, BeShaderType::Pixel)) {
+            context->PSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
+        }
+    } 
+}
+
+auto BeMaterial::UnbindMaterial_Temporary(
+    std::weak_ptr<BeMaterial> material,
+    ComPtr<ID3D11DeviceContext> context,
+    BeShaderType shaderType
+) -> void {
+    const auto& mat = material.lock();
+
+    if (mat->GetBuffer() != nullptr) {
+        if (HasAny(shaderType, BeShaderType::Vertex)) {
+            context->VSSetConstantBuffers(2, 1, Utils::NullBuffers);
+        }
+        if (HasAny(shaderType, BeShaderType::Tesselation)) {
+            context->HSSetConstantBuffers(2, 1, Utils::NullBuffers);
+            context->DSSetConstantBuffers(2, 1, Utils::NullBuffers);
+        }
+        if (HasAny(shaderType, BeShaderType::Pixel)) {
+            context->PSSetConstantBuffers(2, 1, Utils::NullBuffers);
+        }
+    }
+
+    const auto& textureSlots = mat->GetTexturePairs();
+    for (const auto& [texture, slot] : textureSlots | std::views::values) {
+        if (HasAny(shaderType, BeShaderType::Vertex)) {
+            context->VSSetShaderResources(slot, 1, Utils::NullSRVs);
+        }
+        if (HasAny(shaderType, BeShaderType::Tesselation)) {
+            context->HSSetShaderResources(slot, 1, Utils::NullSRVs);
+            context->DSSetShaderResources(slot, 1, Utils::NullSRVs);
+        }
+        if (HasAny(shaderType, BeShaderType::Pixel)) {
+            context->PSSetShaderResources(slot, 1, Utils::NullSRVs);
+        }
+    } 
+}
+
 BeMaterial::BeMaterial(
     std::string name,
     const bool frequentlyUsed,
@@ -38,7 +111,10 @@ BeMaterial::BeMaterial(
     const auto shaderLocked = Shader.lock();
     assert(shaderLocked);
 
-    CalculateLayout();
+    if (shaderLocked->MaterialProperties.size() == 0)
+        return;
+    
+    AssembleData();
 
     D3D11_BUFFER_DESC bufferDesc = {};
     bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -105,6 +181,13 @@ auto BeMaterial::SetFloat4(const std::string& propertyName, glm::vec4 value) -> 
     _cbufferDirty = true;
 }
 
+auto BeMaterial::SetMatrix(const std::string& propertyName, glm::mat4x4 value) -> void {
+    assert(_propertyOffsets.contains(propertyName));
+    const uint32_t offset = _propertyOffsets.at(propertyName);
+    memcpy(_bufferData.data() + offset, glm::value_ptr(value), sizeof(glm::mat4x4));
+    _cbufferDirty = true;
+}
+
 auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void {
     assert(_textures.contains(propertyName));
     _textures.at(propertyName).first = texture;
@@ -142,6 +225,14 @@ auto BeMaterial::GetFloat4(const std::string& propertyName) const -> glm::vec4 {
     return value;
 }
 
+auto BeMaterial::GetMatrix(const std::string& propertyName) const -> glm::mat4x4 {
+    assert(_propertyOffsets.contains(propertyName));
+    const uint32_t offset = _propertyOffsets.at(propertyName);
+    glm::mat4x4 value;
+    memcpy(glm::value_ptr(value), _bufferData.data() + offset, sizeof(glm::mat4x4));
+    return value;
+}
+
 auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture> {
     assert(_textures.contains(propertyName));
     return _textures.at(propertyName).first;
@@ -163,7 +254,7 @@ auto BeMaterial::UpdateGPUBuffers(const ComPtr<ID3D11DeviceContext>& context) ->
     _cbufferDirty = false;
 }
 
-auto BeMaterial::CalculateLayout() -> void {
+auto BeMaterial::AssembleData() -> void {
     auto shader = Shader.lock();
     assert(shader);
 
@@ -174,8 +265,8 @@ auto BeMaterial::CalculateLayout() -> void {
 
         const uint32_t elementSizeBytes = BeMaterialPropertyDescriptor::SizeMap.at(property.PropertyType);
         const uint32_t positionInRegister = offsetBytes % registerSizeBytes;
-
-        if (positionInRegister + elementSizeBytes > registerSizeBytes) {
+        
+        if (positionInRegister + elementSizeBytes > registerSizeBytes && positionInRegister != 0) {
             offsetBytes = ((offsetBytes / registerSizeBytes) + 1) * registerSizeBytes;
         }
 
@@ -196,7 +287,7 @@ auto BeMaterial::Print() const -> std::string {
     constexpr uint32_t FLOATS_PER_LINE = 4;
 
     for (size_t i = 0; i < _bufferData.size(); ++i) {
-        ss << std::fixed << std::setprecision(1) << _bufferData[i] << "f ";
+        ss << std::fixed << std::setprecision(3) << _bufferData[i] << "f ";
         if ((i + 1) % FLOATS_PER_LINE == 0) {
             ss << "\n";
         }

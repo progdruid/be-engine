@@ -50,12 +50,13 @@ struct BeDirectionalLight {
     float Power;
 
     // Shadow map properties (for shadow pass)
-    float ShadowMapResolution;
+    bool CastsShadows = true;
+    uint32_t ShadowMapResolution;
     float ShadowCameraDistance;
     float ShadowMapWorldSize;
     float ShadowNearPlane;
     float ShadowFarPlane;
-    std::string ShadowMapTextureName;
+    std::shared_ptr<BeTexture> ShadowMap;
 
     glm::mat4 ViewProjection;
 
@@ -84,42 +85,16 @@ struct alignas(16) BeDirectionalLightLightingBufferGPU {
 };
 
 struct BePointLight {
+    expose
     glm::vec3 Position;
     float Radius;
     glm::vec3 Color;
     float Power;
 
     bool CastsShadows = false;
-    float ShadowMapResolution = 1024.0f;
+    uint32_t ShadowMapResolution = 1024;
     float ShadowNearPlane = 0.1f; // far plane is radius
-    std::string ShadowMapTextureName;
-};
+    std::shared_ptr<BeTexture> ShadowMap;
 
-struct alignas(16) BePointLightLightingBufferGPU {
-    glm::vec3 Position;
-    float Radius;
-    glm::vec3 Color;
-    float Power;
-
-    float HasShadowMap;
-    float ShadowMapResolution;
-    float ShadowNearPlane;
-    float Padding;
-    
-    explicit BePointLightLightingBufferGPU(const BePointLight& light) {
-        Position = light.Position;
-        Radius = light.Radius;
-        Color = light.Color;
-        Power = light.Power;
-        HasShadowMap = light.CastsShadows ? 1.0f : 0.0f;
-        ShadowMapResolution = light.ShadowMapResolution;
-        ShadowNearPlane = light.ShadowNearPlane;
-        Padding = 0.0f;
-    }
-};
-
-struct alignas(16) BeShadowpassBufferGPU {
-    glm::mat4x4 LightProjectionView;
-    glm::mat4x4 ObjectModel;
-    glm::vec3 LightPosition;
+    mutable bool Dirty = true;
 };

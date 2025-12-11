@@ -2,6 +2,21 @@
 @be-shader-header
 {
     "pixel": "PixelFunction",
+    "material": {
+        "Position": { "type": "float3", "default": [0, 0, 0] },
+        "Radius": { "type": "float", "default": 0 },
+        "Color": { "type": "float3", "default": [0, 0, 0] },
+        "Power": { "type": "float", "default": 0 },
+        "HasShadowMap": { "type": "float", "default": 0 },
+        "ShadowMapResolution": { "type": "float", "default": 0 },
+        "ShadowNearPlane": { "type": "float", "default": 0 },
+        
+        "Depth": { "type": "texture2d", "slot": 0, "default": "black" },
+        "Diffuse": { "type": "texture2d", "slot": 1, "default": "black" },
+        "WorldNormal": { "type": "texture2d", "slot": 2, "default": "black" },
+        "Specular_Shininess": { "type": "texture2d", "slot": 3, "default": "black" },
+        "PointLightShadowMap": { "type": "texture2d", "slot": 4, "default": "black" }
+    },
     "targets": {
         "LightHDR": 0
     }
@@ -19,7 +34,7 @@ Texture2D SpecularRGB_ShininessA : register(t3);
 TextureCube PointLightShadowMap : register(t4);
 SamplerState InputSampler : register(s0);
 
-cbuffer PointLightBuffer: register(b1) {
+cbuffer PointLightBuffer: register(b2) {
     float3 _PointLightPosition;
     float _PointLightRadius;
     float3 _PointLightColor;

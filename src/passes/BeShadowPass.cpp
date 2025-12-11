@@ -23,38 +23,36 @@ auto BeShadowPass::Render() -> void {
     context->RSGetViewports(&numViewports,  &previousViewport);
     SCOPE_EXIT { context->RSSetViewports(1, &previousViewport); };
 
-    {
+    if (DirectionalLight.lock()->CastsShadows) {
         Utils::BeDebugAnnotation directionalLightAnnotation(context, "Directional Light Shadows");
         RenderDirectionalShadows();
     }
 
-
-    for (size_t i = 0; i < PointLights->size(); i++) {
-        if (!(*PointLights)[i].CastsShadows)
+    for (size_t i = 0; i < PointLights.size(); i++) {
+        if (!PointLights[i].CastsShadows)
             continue;
 
         Utils::BeDebugAnnotation pointLightAnnotation(context, "Point Light Shadows " + std::to_string(i));
-        RenderPointLightShadows((*PointLights)[i]);
+        RenderPointLightShadows(PointLights[i]);
     }
 }
 
 auto BeShadowPass::RenderDirectionalShadows() -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
-
-    const auto directionalShadowMap = registry->GetTexture(DirectionalLight->ShadowMapTextureName).lock();
+    const auto directionalLight = DirectionalLight.lock();
 
     // sort out viewport
     D3D11_VIEWPORT viewport = {};
-    viewport.Width = DirectionalLight->ShadowMapResolution;
-    viewport.Height = DirectionalLight->ShadowMapResolution;
+    viewport.Width = directionalLight->ShadowMapResolution;
+    viewport.Height = directionalLight->ShadowMapResolution;
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     context->RSSetViewports(1, &viewport);
 
     // sort out render target
-    context->OMSetRenderTargets(0, Utils::NullRTVs, directionalShadowMap->GetDSV().Get());
-    context->ClearDepthStencilView(directionalShadowMap->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    context->OMSetRenderTargets(0, Utils::NullRTVs, directionalLight->ShadowMap->GetDSV().Get());
+    context->ClearDepthStencilView(directionalLight->ShadowMap->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     SCOPE_EXIT { context->OMSetRenderTargets(0, nullptr, nullptr); };
 
     // Set vertex and index buffers
@@ -88,7 +86,7 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
             glm::mat4_cast(object.Rotation) *
             glm::scale(glm::mat4(1.0f), object.Scale);
         
-        BeObjectBufferGPU objectData(modelMatrix, DirectionalLight->ViewProjection, glm::vec3(0.f));
+        BeObjectBufferGPU objectData(modelMatrix, directionalLight->ViewProjection, glm::vec3(0.f));
         D3D11_MAPPED_SUBRESOURCE objectMappedResource;
         Utils::Check << context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &objectMappedResource);
         memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
@@ -124,7 +122,6 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
     // get what we need
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
-    const auto pointShadowMap = registry->GetTexture(pointLight.ShadowMapTextureName).lock();
     
     // sort out shader
     //_pointShadowShader->Bind(context.Get(), BeShaderType::Vertex);
@@ -152,7 +149,7 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
     // render each face
     for (int face = 0; face < 6; face++) {
         // sort out render target
-        auto cubemapDSV = pointShadowMap->GetCubemapDSV(face);
+        auto cubemapDSV = pointLight.ShadowMap->GetCubemapDSV(face);
         context->ClearDepthStencilView(cubemapDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
         context->OMSetRenderTargets(0, nullptr, cubemapDSV.Get());
 

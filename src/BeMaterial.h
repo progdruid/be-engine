@@ -5,7 +5,10 @@
 #include <unordered_map>
 #include <vector>
 #include <umbrellas/include-glm.h>
+#include <umbrellas/access-modifiers.hpp>
 #include <wrl/client.h>
+
+#include "BeShader.h"
 
 class BeTexture;
 using Microsoft::WRL::ComPtr;
@@ -14,8 +17,8 @@ class BeShader;
 class BeAssetRegistry;
 
 class BeMaterial {
-public:
-    // Static
+    // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose
     static auto Create(
         std::string_view name,
         bool frequentlyUsed,
@@ -23,10 +26,23 @@ public:
         std::weak_ptr<BeAssetRegistry> registry, ComPtr<ID3D11Device> device
     ) -> std::shared_ptr<BeMaterial>;
 
+    static auto BindMaterial_Temporary(
+        std::weak_ptr<BeMaterial> material,
+        ComPtr<ID3D11DeviceContext> context,
+        BeShaderType shaderType
+    ) -> void;
+    static auto UnbindMaterial_Temporary(
+        std::weak_ptr<BeMaterial> material,
+        ComPtr<ID3D11DeviceContext> context,
+        BeShaderType shaderType
+    ) -> void;
+    
+    // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose
     std::string Name;
     std::weak_ptr<BeShader> Shader;
 
-private:
+    hide
     bool _isFrequentlyUsed;
     
     std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>> _textures;
@@ -35,7 +51,8 @@ private:
     ComPtr<ID3D11Buffer> _cbuffer = nullptr;
     bool _cbufferDirty;
 
-public:
+    // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose
     //BeMaterial();
     ~BeMaterial();
 
@@ -51,20 +68,23 @@ public:
         const ComPtr<ID3D11Device>& device
     );
 
-private:
+    hide
     auto InitializeTextures(std::weak_ptr<BeAssetRegistry> registry, ComPtr<ID3D11Device> device) -> void;
 
-public:
+    // interface ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose
     auto SetFloat  (const std::string& propertyName, float value) -> void;
     auto SetFloat2 (const std::string& propertyName, glm::vec2 value) -> void;
     auto SetFloat3 (const std::string& propertyName, glm::vec3 value) -> void;
     auto SetFloat4 (const std::string& propertyName, glm::vec4 value) -> void;
+    auto SetMatrix (const std::string& propertyName, glm::mat4x4 value) -> void;
     auto SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void;
 
     auto GetFloat  (const std::string& propertyName) const -> float;
     auto GetFloat2 (const std::string& propertyName) const -> glm::vec2;
     auto GetFloat3 (const std::string& propertyName) const -> glm::vec3;
     auto GetFloat4 (const std::string& propertyName) const -> glm::vec4;
+    auto GetMatrix (const std::string& propertyName) const -> glm::mat4x4;
     auto GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture>;
 
     auto UpdateGPUBuffers (const ComPtr<ID3D11DeviceContext>& context) -> void;
@@ -73,6 +93,6 @@ public:
     
     auto Print() const -> std::string;
 
-private:
-    auto CalculateLayout() -> void;
+    // internal ////////////////////////////////////////////////////////////////////////////////////////////////////////
+    auto AssembleData() -> void;
 };

@@ -8,7 +8,9 @@
     "material": {
         "Threshold": { "type": "float", "default": 0.75 },
         "Intensity": { "type": "float", "default": 17.0 },
-        "Knee": { "type": "float", "default": 1.25 }
+        "Knee": { "type": "float", "default": 1.25 },
+
+        "HDRInput": { "type": "texture2d", "slot": 0, "default": "black" }
     }
 }
 @be-shader-header-end

@@ -93,7 +93,8 @@ struct BeMaterialPropertyDescriptor {
         Float,
         Float2,
         Float3,
-        Float4
+        Float4,
+        Matrix
     };
 
     static inline const std::unordered_map<Type, uint32_t> SizeMap = {
@@ -101,6 +102,7 @@ struct BeMaterialPropertyDescriptor {
         {Type::Float2, 2 * sizeof(float)},
         {Type::Float3, 3 * sizeof(float)},
         {Type::Float4, 4 * sizeof(float)},
+        {Type::Matrix, 16 * sizeof(float)},
     };
 
     std::string Name;

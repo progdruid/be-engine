@@ -9,8 +9,8 @@
 class BeShadowPass final : public BeRenderPass {
 
 public:
-    BeDirectionalLight* DirectionalLight;
-    std::vector<BePointLight>* PointLights;
+    std::weak_ptr<BeDirectionalLight> DirectionalLight;
+    std::span<BePointLight> PointLights;
 
 private:
     ComPtr<ID3D11Buffer> _objectBuffer;

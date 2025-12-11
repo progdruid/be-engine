@@ -47,7 +47,8 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
                 {"float", BeMaterialPropertyDescriptor::Type::Float},
                 {"float2", BeMaterialPropertyDescriptor::Type::Float2},
                 {"float3", BeMaterialPropertyDescriptor::Type::Float3},
-                {"float4", BeMaterialPropertyDescriptor::Type::Float4}
+                {"float4", BeMaterialPropertyDescriptor::Type::Float4},
+                {"matrix", BeMaterialPropertyDescriptor::Type::Matrix}
             };
 
             BeMaterialPropertyDescriptor descriptor;
@@ -71,6 +72,15 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
                 const auto vec = value.at("default").get<std::vector<float>>();
                 assert(vec.size() == 4);
                 descriptor.DefaultValue = vec;
+            }
+            else if (descriptor.PropertyType == BeMaterialPropertyDescriptor::Type::Matrix) {
+                std::vector<float> mat = {
+                    1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1
+                };
+                descriptor.DefaultValue = mat;
             }
 
             shader->MaterialProperties.push_back(descriptor);

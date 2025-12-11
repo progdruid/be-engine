@@ -2,9 +2,12 @@
 
 #include <memory>
 #include <vector>
+#include <glm/vec3.hpp>
 
 #include "umbrellas/access-modifiers.hpp"
 
+class BeTexture;
+class BeLightingPass;
 // Forward declarations
 class BeMaterial;
 class BeShader;
@@ -29,9 +32,10 @@ class Game {
     hide std::shared_ptr<BeAssetRegistry> _assetRegistry;
     
     hide std::shared_ptr<BeModel> _plane, _witchItems, _livingCube, _macintosh, _pagoda, _disks, _anvil;
-    hide std::unique_ptr<BeDirectionalLight> _directionalLight;
+    hide std::shared_ptr<BeDirectionalLight> _directionalLight;
     hide std::vector<BePointLight> _pointLights;
-
+    hide BeLightingPass* _lightingPass;
+    
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose Game();
     expose ~Game();
@@ -41,8 +45,8 @@ class Game {
 
     // private logic ///////////////////////////////////////////////////////////////////////////////////////////////////
     hide auto LoadAssets() -> void;
-    hide auto SetupScene() -> void;
     hide auto SetupRenderPasses() -> void;
+    hide auto SetupScene() -> void;
     hide auto SetupCamera(int width, int height) -> void;
     hide auto MainLoop() -> void;
 
