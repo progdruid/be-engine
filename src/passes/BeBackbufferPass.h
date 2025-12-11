@@ -5,6 +5,7 @@
 
 #include "BeRenderPass.h"
 
+class BeMaterial;
 class BeShader;
 
 class BeBackbufferPass final : public BeRenderPass {
@@ -16,6 +17,7 @@ public:
     
 private:
     std::shared_ptr<BeShader> _backbufferShader = nullptr;
+    std::shared_ptr<BeMaterial> _backbufferMaterial = nullptr;
     
 public:
     explicit BeBackbufferPass();

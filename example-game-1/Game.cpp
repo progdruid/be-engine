@@ -93,121 +93,10 @@ auto Game::LoadAssets() -> void {
     _anvil->DrawSlices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
 }
 
-auto Game::SetupScene() -> void {
-    const std::vector<BeRenderer::ObjectEntry> objects = {
-        {
-            .Name = "Macintosh",
-            .Position = {0, 0, -6.9},
-            .Model = _macintosh,
-        },
-        {
-            .Name = "Terrain",
-            .Position = {0, 0, 0},
-            .Scale = glm::vec3(1.f),
-            .Model = _plane,
-            .CastShadows = false,
-        },
-        {
-            .Name = "Tessellated Cube",
-            .Position = {0, 10, 0},
-            .Scale = glm::vec3(2.f),
-            .Model = _livingCube,
-        },
-        {
-            .Name = "Pagoda",
-            .Position = {0, 0, 8},
-            .Scale = glm::vec3(0.2f),
-            .Model = _pagoda,
-        },
-        {
-            .Name = "Witch Items",
-            .Position = {-3, 2, 5},
-            .Scale = glm::vec3(3.f),
-            .Model = _witchItems,
-        },
-        {
-            .Name = "Anvil",
-            .Position = {7, 0, 5},
-            .Rotation = glm::quat(glm::vec3(0, glm::radians(90.f), 0)),
-            .Scale = glm::vec3(0.2f),
-            .Model = _anvil,
-        },
-        {
-            .Name = "Anvil1",
-            .Position = {-7, 0, -3},
-            .Rotation = glm::quat(glm::vec3(0, glm::radians(-90.f), 0)),
-            .Scale = glm::vec3(0.2f),
-            .Model = _anvil,
-        },
-        {
-            .Name = "Anvil2",
-            .Position = {-17, -10, -3},
-            .Rotation = glm::quat(glm::vec3(0, glm::radians(-90.f), 0)),
-            .Scale = glm::vec3(1.0f),
-            .Model = _anvil,
-        },
-        {
-            .Name = "Disks",
-            .Position = {7.5f, 1, -4},
-            .Rotation = glm::quat(glm::vec3(0, glm::radians(150.f), 0)),
-            .Model = _disks,
-        },
-    };
-
-    _renderer->SetObjects(objects);
-
-    _renderer->UniformData.AmbientColor = glm::vec3(0.1f);
-        
-    // Setup directional light
-    _directionalLight = std::make_unique<BeDirectionalLight>();
-    _directionalLight->Direction = glm::normalize(glm::vec3(-0.8f, -1.0f, -0.8f));
-    _directionalLight->Color = glm::vec3(0.7f, 0.7f, 0.99);
-    _directionalLight->Power = (1.0f / 0.7f) * 0.7f;
-    _directionalLight->ShadowMapResolution = 4096.0f;
-    _directionalLight->ShadowCameraDistance = 100.0f;
-    _directionalLight->ShadowMapWorldSize = 60.0f;
-    _directionalLight->ShadowNearPlane = 0.1f;
-    _directionalLight->ShadowFarPlane = 400.0f;
-    _directionalLight->ShadowMapTextureName = "DirectionalLightShadowMap";
-    _directionalLight->CalculateMatrix();
-    
-    // Setup point lights
-    const auto device = _renderer->GetDevice();
-    for (auto i = 0; i < 4; i++) {
-        BePointLight pointLight = {};
-        pointLight.Radius = 20.0f;
-        pointLight.Color = glm::vec3(0.99f, 0.8f, 0.6f);
-        pointLight.Power = (1.0f / 0.7f) * 2.7f;
-        pointLight.CastsShadows = true;
-        pointLight.ShadowMapResolution = 2048.0f;
-        pointLight.ShadowNearPlane = 0.1f;
-        pointLight.ShadowMapTextureName = "PointLight" + std::to_string(i) + "_ShadowMap";
-        
-        _pointLights.push_back(pointLight);
-    }
-}
-
 auto Game::SetupRenderPasses() -> void {
     const auto device = _renderer->GetDevice();
     
     // Create render resources
-    BeTexture::Create(_directionalLight->ShadowMapTextureName)
-    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
-    .SetSize(static_cast<uint32_t>(_directionalLight->ShadowMapResolution), static_cast<uint32_t>(_directionalLight->ShadowMapResolution))
-    .AddToRegistry(_assetRegistry)
-    .Build(device);
-
-    for (const auto & pointLight : _pointLights) {
-        BeTexture::Create(pointLight.ShadowMapTextureName)
-        .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R32_TYPELESS)
-        .SetCubemap(true)
-        .SetSize(static_cast<uint32_t>(pointLight.ShadowMapResolution), static_cast<uint32_t>(pointLight.ShadowMapResolution))
-        .AddToRegistry(_assetRegistry)
-        .Build(device);
-    }
-    
     BeTexture::Create("DepthStencil")
     .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R32_TYPELESS)
@@ -274,8 +163,8 @@ auto Game::SetupRenderPasses() -> void {
     // Shadow pass
     const auto shadowPass = new BeShadowPass();
     _renderer->AddRenderPass(shadowPass);
-    shadowPass->DirectionalLight = _directionalLight.get();
-    shadowPass->PointLights = &_pointLights;
+    shadowPass->DirectionalLight = _directionalLight;
+    shadowPass->PointLights = _pointLights;
 
     // Geometry pass
     const auto geometryPass = new BeGeometryPass();
@@ -286,15 +175,15 @@ auto Game::SetupRenderPasses() -> void {
     geometryPass->OutputTexture2Name = "Specular-Shininess";
 
     // Lighting pass
-    const auto lightingPass = new BeLightingPass();
-    _renderer->AddRenderPass(lightingPass);
-    lightingPass->DirectionalLight = _directionalLight.get();
-    lightingPass->PointLights = &_pointLights;
-    lightingPass->InputDepthTextureName = "DepthStencil";
-    lightingPass->InputTexture0Name = "BaseColor";
-    lightingPass->InputTexture1Name = "WorldNormal";
-    lightingPass->InputTexture2Name = "Specular-Shininess";
-    lightingPass->OutputTextureName = "HDR-Input";
+    _lightingPass = new BeLightingPass();
+    _renderer->AddRenderPass(_lightingPass);
+    _lightingPass->DirectionalLight = _directionalLight;
+    _lightingPass->PointLights = _pointLights;
+    _lightingPass->InputDepthTextureName = "DepthStencil";
+    _lightingPass->InputTexture0Name = "BaseColor";
+    _lightingPass->InputTexture1Name = "WorldNormal";
+    _lightingPass->InputTexture2Name = "Specular-Shininess";
+    _lightingPass->OutputTextureName = "HDR-Input";
 
     // Bloom Pass
     const auto bloomPass = new BeBloomPass();
@@ -312,11 +201,13 @@ auto Game::SetupRenderPasses() -> void {
     
     // Tonemapper pass
     const auto tonemapperShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/tonemapper");
+    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", false, tonemapperShader, _assetRegistry, device);
+    tonemapperMaterial->SetTexture("HDRInput", _assetRegistry->GetTexture("BloomOutput").lock());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     _renderer->AddRenderPass(tonemapperPass);
-    tonemapperPass->InputTextureNames = {"BloomOutput"};
     tonemapperPass->OutputTextureNames = {"TonemapperOutput"};
     tonemapperPass->Shader = tonemapperShader;
+    tonemapperPass->Material = tonemapperMaterial;
 
     // Backbuffer pass
     const auto backbufferPass = new BeBackbufferPass();
@@ -335,6 +226,120 @@ auto Game::SetupRenderPasses() -> void {
     _renderer->InitialisePasses();
     
     imguiPass->BloomMaterial = bloomPass->GetBrightMaterial();
+}
+
+auto Game::SetupScene() -> void {
+    const std::vector<BeRenderer::ObjectEntry> objects = {
+        {
+            .Name = "Macintosh",
+            .Position = {0, 0, -6.9},
+            .Model = _macintosh,
+        },
+        {
+            .Name = "Terrain",
+            .Position = {0, 0, 0},
+            .Scale = glm::vec3(1.f),
+            .Model = _plane,
+            .CastShadows = false,
+        },
+        {
+            .Name = "Tessellated Cube",
+            .Position = {0, 10, 0},
+            .Scale = glm::vec3(2.f),
+            .Model = _livingCube,
+        },
+        {
+            .Name = "Pagoda",
+            .Position = {0, 0, 8},
+            .Scale = glm::vec3(0.2f),
+            .Model = _pagoda,
+        },
+        {
+            .Name = "Witch Items",
+            .Position = {-3, 2, 5},
+            .Scale = glm::vec3(3.f),
+            .Model = _witchItems,
+        },
+        {
+            .Name = "Anvil",
+            .Position = {7, 0, 5},
+            .Rotation = glm::quat(glm::vec3(0, glm::radians(90.f), 0)),
+            .Scale = glm::vec3(0.2f),
+            .Model = _anvil,
+        },
+        {
+            .Name = "Anvil1",
+            .Position = {-7, 0, -3},
+            .Rotation = glm::quat(glm::vec3(0, glm::radians(-90.f), 0)),
+            .Scale = glm::vec3(0.2f),
+            .Model = _anvil,
+        },
+        {
+            .Name = "Anvil2",
+            .Position = {-17, -10, -3},
+            .Rotation = glm::quat(glm::vec3(0, glm::radians(-90.f), 0)),
+            .Scale = glm::vec3(1.0f),
+            .Model = _anvil,
+        },
+        {
+            .Name = "Disks",
+            .Position = {7.5f, 1, -4},
+            .Rotation = glm::quat(glm::vec3(0, glm::radians(150.f), 0)),
+            .Model = _disks,
+        },
+    };
+
+    _renderer->SetObjects(objects);
+
+    _renderer->UniformData.AmbientColor = glm::vec3(0.1f);
+        
+    const auto device = _renderer->GetDevice();
+    
+    // Setup directional light
+    {
+        _directionalLight = std::make_shared<BeDirectionalLight>();
+        _directionalLight->Direction = glm::normalize(glm::vec3(-0.8f, -1.0f, -0.8f));
+        _directionalLight->Color = glm::vec3(0.7f, 0.7f, 0.99);
+        _directionalLight->Power = (1.0f / 0.7f) * 0.7f;
+        _directionalLight->CastsShadows = true;
+        _directionalLight->ShadowMapResolution = 4096;
+        _directionalLight->ShadowCameraDistance = 100.0f;
+        _directionalLight->ShadowMapWorldSize = 60.0f;
+        _directionalLight->ShadowNearPlane = 0.1f;
+        _directionalLight->ShadowFarPlane = 400.0f;
+        _directionalLight->ShadowMap = 
+        BeTexture::Create("DirectionalLightShadowMap")
+        .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
+        .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+        .SetSize(_directionalLight->ShadowMapResolution, _directionalLight->ShadowMapResolution)
+        .AddToRegistry(_assetRegistry)
+        .Build(device);
+        _directionalLight->CalculateMatrix();
+    }
+    
+    // Setup point lights
+    for (uint32_t i = 0; i < 4; ++i) {
+        BePointLight pointLight;
+        
+        pointLight.Radius = 20.0f;
+        pointLight.Color = glm::vec3(0.99f, 0.8f, 0.6f);
+        pointLight.Power = (1.0f / 0.7f) * 2.7f;
+        pointLight.CastsShadows = true;
+        pointLight.ShadowMapResolution = 2048;
+        pointLight.ShadowNearPlane = 0.1f;
+        
+        pointLight.ShadowMap =
+            BeTexture::Create("PointLight" + std::to_string(i) + "_ShadowMap")
+            .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
+            .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+            .SetCubemap(true)
+            .SetSize(pointLight.ShadowMapResolution, pointLight.ShadowMapResolution)
+            .AddToRegistry(_assetRegistry)
+            .Build(device);
+
+        _pointLights.push_back(pointLight);
+    }
+    
 }
 
 auto Game::SetupCamera(int width, int height) -> void {
@@ -398,13 +403,17 @@ auto Game::MainLoop() -> void {
         {
             static float angle = 0.0f;
             angle += dt * glm::radians(15.0f); // 15 degrees per second
-            if (angle > glm::two_pi<float>()) angle -= glm::two_pi<float>();
-            constexpr float radius = 13.0f;
+            if (angle > glm::two_pi<float>())
+                angle -= glm::two_pi<float>();
+
             for (int i = 0; i < _pointLights.size(); ++i) {
-                float add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(_pointLights.size()));
-                float rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
-                auto& light = _pointLights[i];
-                light.Position = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
+                constexpr float radius = 13.0f;
+
+                const auto add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(_pointLights.size()));
+                const auto rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
+                const auto pos = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
+
+                _pointLights[i].Position = pos;
             }
         }
 

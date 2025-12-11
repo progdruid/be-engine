@@ -4,6 +4,9 @@
     "pixel": "PixelFunction",
     "targets": {
         "HDRTarget": 0
+    },
+    "material": {
+        "HDRInput": { "type": "texture2d", "slot": 0, "default": "black" }
     }
 }
 @be-shader-header-end

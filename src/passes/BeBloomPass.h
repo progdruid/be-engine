@@ -29,6 +29,7 @@ class BeBloomPass final : public BeRenderPass {
     std::vector<std::shared_ptr<BeMaterial>> _upsampleMaterials;
 
     std::shared_ptr<BeShader> _addShader;
+    std::shared_ptr<BeMaterial> _addMaterial;
     
     expose
     explicit BeBloomPass();

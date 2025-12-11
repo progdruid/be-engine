@@ -27,36 +27,28 @@ void BeLightingPass::Initialise() {
 
     Utils::Check << device->CreateBlendState(&lightingBlendDesc, _lightingBlendState.GetAddressOf());
 
+    const auto registry = _renderer->GetAssetRegistry().lock();
     
-    D3D11_BUFFER_DESC directionalLightBufferDescriptor = {};
-    directionalLightBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    directionalLightBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
-    directionalLightBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    directionalLightBufferDescriptor.ByteWidth = sizeof(BeDirectionalLightLightingBufferGPU);
-    Utils::Check << device->CreateBuffer(&directionalLightBufferDescriptor, nullptr, &_directionalLightBuffer);
-    
-    D3D11_BUFFER_DESC pointLightBufferDescriptor = {};
-    pointLightBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    pointLightBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
-    pointLightBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    pointLightBufferDescriptor.ByteWidth = sizeof(BePointLightLightingBufferGPU);
-    Utils::Check << device->CreateBuffer(&pointLightBufferDescriptor, nullptr, &_pointLightBuffer);
-
     _directionalLightShader = BeShader::Create( device.Get(), "assets/shaders/directionalLight");
+    _directionalLightMaterial = BeMaterial::Create("DirectionalLightMaterial", true, _directionalLightShader, _renderer->GetAssetRegistry().lock(), _renderer->GetDevice());
+    _directionalLightMaterial->SetTexture("Depth", registry->GetTexture(InputDepthTextureName).lock());
+    _directionalLightMaterial->SetTexture("Diffuse", registry->GetTexture(InputTexture0Name).lock());
+    _directionalLightMaterial->SetTexture("WorldNormal", registry->GetTexture(InputTexture1Name).lock());
+    _directionalLightMaterial->SetTexture("Specular_Shininess", registry->GetTexture(InputTexture2Name).lock());
+    
     _pointLightShader = BeShader::Create(device.Get(), "assets/shaders/pointLight" );
+    _pointLightMaterial = BeMaterial::Create("PointLightMaterial", true, _pointLightShader, _renderer->GetAssetRegistry().lock(), _renderer->GetDevice());
+    _pointLightMaterial->SetTexture("Depth", registry->GetTexture(InputDepthTextureName).lock());
+    _pointLightMaterial->SetTexture("Diffuse", registry->GetTexture(InputTexture0Name).lock());
+    _pointLightMaterial->SetTexture("WorldNormal", registry->GetTexture(InputTexture1Name).lock());
+    _pointLightMaterial->SetTexture("Specular_Shininess", registry->GetTexture(InputTexture2Name).lock());
 }
 
 auto BeLightingPass::Render() -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
     
-    const auto depthResource     = registry->GetTexture(InputDepthTextureName).lock();
-    const auto gbufferResource0  = registry->GetTexture(InputTexture0Name).lock();
-    const auto gbufferResource1  = registry->GetTexture(InputTexture1Name).lock();
-    const auto gbufferResource2  = registry->GetTexture(InputTexture2Name).lock();
     const auto lightingResource  = registry->GetTexture(OutputTextureName).lock();
-    const auto directionalLightShadowMapResource  = registry->GetTexture(DirectionalLight->ShadowMapTextureName).lock();
-    
     context->ClearRenderTargetView(lightingResource->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->OMSetRenderTargets(1, lightingResource->GetRTV().GetAddressOf(), nullptr);
     context->OMSetBlendState(_lightingBlendState.Get(), nullptr, 0xFFFFFFFF);
@@ -67,54 +59,59 @@ auto BeLightingPass::Render() -> void {
 
     _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
     SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::Vertex); };
-
-    context->PSSetShaderResources(0, 1, depthResource->GetSRV().GetAddressOf());
-    context->PSSetShaderResources(1, 1, gbufferResource0->GetSRV().GetAddressOf());
-    context->PSSetShaderResources(2, 1, gbufferResource1->GetSRV().GetAddressOf());
-    context->PSSetShaderResources(3, 1, gbufferResource2->GetSRV().GetAddressOf());
-    SCOPE_EXIT { context->PSSetShaderResources(0, 4, Utils::NullSRVs); };
     
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     SCOPE_EXIT { context->PSSetSamplers(0, 1, Utils::NullSamplers); };
 
     {
-        context->PSSetShaderResources(4, 1, directionalLightShadowMapResource->GetSRV().GetAddressOf());
-        SCOPE_EXIT { context->PSSetShaderResources(4, 1, Utils::NullSRVs); };
+        const auto data = DirectionalLight.lock();
+
         _directionalLightShader->Bind(context.Get(), BeShaderType::Pixel);
-
-        BeDirectionalLightLightingBufferGPU directionalLightBuffer(*DirectionalLight);
-        D3D11_MAPPED_SUBRESOURCE directionalLightMappedResource;
-        Utils::Check << context->Map(_directionalLightBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &directionalLightMappedResource);
-        memcpy(directionalLightMappedResource.pData, &directionalLightBuffer, sizeof(BeDirectionalLightLightingBufferGPU));
-        context->Unmap(_directionalLightBuffer.Get(), 0);
-        context->PSSetConstantBuffers(1, 1, _directionalLightBuffer.GetAddressOf());
-
+        
+        _directionalLightMaterial->SetFloat("HasShadowMap", data->CastsShadows ? 1.0f : 0.0f);
+        _directionalLightMaterial->SetFloat3("Direction", data->Direction);
+        _directionalLightMaterial->SetFloat3("Color", data->Color);
+        _directionalLightMaterial->SetFloat("Power", data->Power);
+        _directionalLightMaterial->SetMatrix("ProjectionView", data->ViewProjection);
+        _directionalLightMaterial->SetFloat("TexelSize", 1.0f / data->ShadowMapResolution);
+        _directionalLightMaterial->SetTexture("ShadowMap", data->ShadowMap);
+        
+        BeMaterial::BindMaterial_Temporary(_directionalLightMaterial, context, BeShaderType::Pixel);
+        
         context->IASetInputLayout(nullptr);
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
         context->Draw(4, 0);
+
+        BeMaterial::UnbindMaterial_Temporary(_directionalLightMaterial, context, BeShaderType::Pixel);
+        context->PSSetConstantBuffers(2, 1, Utils::NullBuffers);
     }
 
     {
         _pointLightShader->Bind(context.Get(), BeShaderType::Pixel);
-        for (const auto& pointLightData : *PointLights) {
-            const auto& shadowCubemap = registry->GetTexture(pointLightData.ShadowMapTextureName).lock();
-            context->PSSetShaderResources(4, 1, shadowCubemap->GetSRV().GetAddressOf());
+        for (const auto& pointLight : PointLights) {
 
-            BePointLightLightingBufferGPU pointLightBuffer(pointLightData);
-            D3D11_MAPPED_SUBRESOURCE pointLightMappedResource;
-            Utils::Check << context->Map(_pointLightBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &pointLightMappedResource);
-            memcpy(pointLightMappedResource.pData, &pointLightBuffer, sizeof(BePointLightLightingBufferGPU));
-            context->Unmap(_pointLightBuffer.Get(), 0);
-            context->PSSetConstantBuffers(1, 1, _pointLightBuffer.GetAddressOf());
+            _pointLightMaterial->SetFloat3("Position", pointLight.Position);
+            _pointLightMaterial->SetFloat("Radius", pointLight.Radius);
+            _pointLightMaterial->SetFloat3("Color", pointLight.Color);
+            _pointLightMaterial->SetFloat("Power", pointLight.Power);
+            _pointLightMaterial->SetFloat("HasShadowMap", pointLight.CastsShadows ? 1.0f : 0.0f);
+            _pointLightMaterial->SetFloat("ShadowMapResolution", pointLight.ShadowMapResolution);
+            _pointLightMaterial->SetFloat("ShadowNearPlane", pointLight.ShadowNearPlane);
+            _pointLightMaterial->SetTexture("PointLightShadowMap", pointLight.ShadowMap);
+            
+            _pointLightMaterial->UpdateGPUBuffers(context.Get());
+            context->PSSetConstantBuffers(2, 1, _pointLightMaterial->GetBuffer().GetAddressOf());
+            BeMaterial::BindMaterial_Temporary(_pointLightMaterial, context, BeShaderType::Pixel);
     
             context->IASetInputLayout(nullptr);
             context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
             context->Draw(4, 0);
         }
-        context->PSSetShaderResources(4, 1, Utils::NullSRVs);
+
+        context->PSSetConstantBuffers(2, 1, Utils::NullBuffers);
+        BeMaterial::UnbindMaterial_Temporary(_pointLightMaterial, context, BeShaderType::Pixel);
     }
 
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED);
     BeShader::Unbind(context.Get(), BeShaderType::Pixel);
-    context->PSSetConstantBuffers(1, 1, Utils::NullBuffers);
 }
