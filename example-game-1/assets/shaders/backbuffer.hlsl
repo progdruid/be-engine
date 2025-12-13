@@ -1,6 +1,7 @@
 /*
 @be-shader-header
 {
+    "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "material": {

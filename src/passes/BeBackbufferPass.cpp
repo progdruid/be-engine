@@ -1,6 +1,7 @@
 ﻿#include "BeBackbufferPass.h"
 
 #include "BeAssetRegistry.h"
+#include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
 #include "BeShader.h"
@@ -19,6 +20,7 @@ auto BeBackbufferPass::Initialise() -> void {
 
 auto BeBackbufferPass::Render() -> void {
     const auto context = _renderer->GetContext();
+    const auto& pipeline = _renderer->GetPipeline();
     
     // render target
     const auto registry = _renderer->GetAssetRegistry().lock();
@@ -27,22 +29,16 @@ auto BeBackbufferPass::Render() -> void {
     context->ClearRenderTargetView(backbufferTarget.Get(), reinterpret_cast<FLOAT*>(&fullClearColor));
     context->OMSetRenderTargets(1, backbufferTarget.GetAddressOf(), nullptr);
 
-    // resources
-    BeMaterial::BindMaterial_Temporary(_backbufferMaterial, context, BeShaderType::Pixel);
-    context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
-    
     // shaders
-    _backbufferShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
+    pipeline->BindShader(_backbufferShader, BeShaderType::Vertex | BeShaderType::Pixel);
+    pipeline->BindMaterial(_backbufferMaterial);
+    context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
 
     // draw
-    context->IASetInputLayout(nullptr);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
     context->Draw(4, 0);
 
     // clear
-    BeShader::Unbind(context.Get(), BeShaderType::All);
-    BeMaterial::UnbindMaterial_Temporary(_backbufferMaterial, context, BeShaderType::Pixel);
-    context->PSSetShaderResources(0, 4, Utils::NullSRVs);
+    pipeline->Clear();
     context->PSSetSamplers(0, 1, Utils::NullSamplers);
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
 }

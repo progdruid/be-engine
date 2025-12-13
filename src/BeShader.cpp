@@ -86,7 +86,25 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
             shader->MaterialProperties.push_back(descriptor);
         }
     }
+    
+    {
+        assert(header.contains("topology"));
+        const auto& topology = header.at("topology");
 
+        if (topology == "triangle-list") {
+            shader->Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        }
+        else if (topology == "triangle-strip") {
+            shader->Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+        }
+        else if (topology == "patch-list-3") {
+            shader->Topology = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
+        }
+        else {
+            assert(false && "Unsupported topology");
+        }
+    }
+    
     if (header.contains("vertex")) {
         shader->ShaderType = BeShaderType::Vertex;
 
@@ -251,8 +269,12 @@ auto BeShader::Split(std::string_view str, const char* delimiters) -> std::vecto
 auto BeShader::Bind(ID3D11DeviceContext* context, const BeShaderType type) const -> void {
     const auto shaderType = ShaderType & type;
     if (HasAny(shaderType, BeShaderType::Vertex)) {
-        if (ComputedInputLayout)
+        if (ComputedInputLayout) {
             context->IASetInputLayout(ComputedInputLayout.Get());
+        }
+        else {
+            context->IASetInputLayout(nullptr);
+        }
         context->VSSetShader(VertexShader.Get(), nullptr, 0);
     }
     if (HasAny(shaderType, BeShaderType::Tesselation)) {

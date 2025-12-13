@@ -1,9 +1,10 @@
-#include "BeRenderer.h"
+﻿#include "BeRenderer.h"
 
 #include <cassert>
 #include <scope_guard/scope_guard.hpp>
 #include <dxgi1_6.h>
 
+#include "BePipeline.h"
 #include "passes/BeRenderPass.h"
 #include "BeShader.h"
 #include "Utils.h"
@@ -100,6 +101,7 @@ auto BeRenderer::LaunchDevice() -> void {
     Utils::Check << _factory->CreateSwapChainForHwnd(_device.Get(), _windowHandle, &scDesc, nullptr, nullptr, &_swapchain);
     Utils::Check << _factory->MakeWindowAssociation(_windowHandle, DXGI_MWA_NO_ALT_ENTER);
 
+    _pipeline = BePipeline::Create(_context);
     
     ComPtr<ID3D11Texture2D> backBuffer;
     Utils::Check

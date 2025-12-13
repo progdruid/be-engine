@@ -1,6 +1,7 @@
 /*
 @be-shader-header
 {
+    "topology": "patch-list-3",
     "vertex": "VertexFunction",
     "vertexLayout": ["position", "normal", "uv0"],
     "tesselation": {

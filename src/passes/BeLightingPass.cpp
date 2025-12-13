@@ -4,6 +4,7 @@
 #include <umbrellas/include-glm.h>
 
 #include "BeAssetRegistry.h"
+#include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "Utils.h"
@@ -47,6 +48,7 @@ void BeLightingPass::Initialise() {
 auto BeLightingPass::Render() -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
+    const auto& pipeline = _renderer->GetPipeline();
     
     const auto lightingResource  = registry->GetTexture(OutputTextureName).lock();
     context->ClearRenderTargetView(lightingResource->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
@@ -60,55 +62,38 @@ auto BeLightingPass::Render() -> void {
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     SCOPE_EXIT { context->PSSetSamplers(0, 1, Utils::NullSamplers); };
 
-    {
-        const auto data = DirectionalLight.lock();
 
-        _directionalLightShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
+    // directional light
+    pipeline->BindShader(_directionalLightShader, BeShaderType::Vertex | BeShaderType::Pixel);
         
-        _directionalLightMaterial->SetFloat("HasShadowMap", data->CastsShadows ? 1.0f : 0.0f);
-        _directionalLightMaterial->SetFloat3("Direction", data->Direction);
-        _directionalLightMaterial->SetFloat3("Color", data->Color);
-        _directionalLightMaterial->SetFloat("Power", data->Power);
-        _directionalLightMaterial->SetMatrix("ProjectionView", data->ViewProjection);
-        _directionalLightMaterial->SetFloat("TexelSize", 1.0f / data->ShadowMapResolution);
-        _directionalLightMaterial->SetTexture("ShadowMap", data->ShadowMap);
+    const auto data = DirectionalLight.lock();
+    _directionalLightMaterial->SetFloat("HasShadowMap", data->CastsShadows ? 1.0f : 0.0f);
+    _directionalLightMaterial->SetFloat3("Direction", data->Direction);
+    _directionalLightMaterial->SetFloat3("Color", data->Color);
+    _directionalLightMaterial->SetFloat("Power", data->Power);
+    _directionalLightMaterial->SetMatrix("ProjectionView", data->ViewProjection);
+    _directionalLightMaterial->SetFloat("TexelSize", 1.0f / data->ShadowMapResolution);
+    _directionalLightMaterial->SetTexture("ShadowMap", data->ShadowMap);
+    pipeline->BindMaterial(_directionalLightMaterial);
         
-        BeMaterial::BindMaterial_Temporary(_directionalLightMaterial, context, BeShaderType::Pixel);
-        
-        context->IASetInputLayout(nullptr);
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-        context->Draw(4, 0);
+    context->Draw(4, 0);
+    pipeline->Clear();
 
-        BeMaterial::UnbindMaterial_Temporary(_directionalLightMaterial, context, BeShaderType::Pixel);
-        context->PSSetConstantBuffers(2, 1, Utils::NullBuffers);
-    }
 
-    {
-        _pointLightShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
-        for (const auto& pointLight : PointLights) {
-
-            _pointLightMaterial->SetFloat3("Position", pointLight.Position);
-            _pointLightMaterial->SetFloat("Radius", pointLight.Radius);
-            _pointLightMaterial->SetFloat3("Color", pointLight.Color);
-            _pointLightMaterial->SetFloat("Power", pointLight.Power);
-            _pointLightMaterial->SetFloat("HasShadowMap", pointLight.CastsShadows ? 1.0f : 0.0f);
-            _pointLightMaterial->SetFloat("ShadowMapResolution", pointLight.ShadowMapResolution);
-            _pointLightMaterial->SetFloat("ShadowNearPlane", pointLight.ShadowNearPlane);
-            _pointLightMaterial->SetTexture("PointLightShadowMap", pointLight.ShadowMap);
-            
-            _pointLightMaterial->UpdateGPUBuffers(context.Get());
-            context->PSSetConstantBuffers(2, 1, _pointLightMaterial->GetBuffer().GetAddressOf());
-            BeMaterial::BindMaterial_Temporary(_pointLightMaterial, context, BeShaderType::Pixel);
+    // point lights
+    pipeline->BindShader(_pointLightShader, BeShaderType::Vertex | BeShaderType::Pixel);
+    for (const auto& pointLight : PointLights) {
+        _pointLightMaterial->SetFloat3("Position", pointLight.Position);
+        _pointLightMaterial->SetFloat("Radius", pointLight.Radius);
+        _pointLightMaterial->SetFloat3("Color", pointLight.Color);
+        _pointLightMaterial->SetFloat("Power", pointLight.Power);
+        _pointLightMaterial->SetFloat("HasShadowMap", pointLight.CastsShadows ? 1.0f : 0.0f);
+        _pointLightMaterial->SetFloat("ShadowMapResolution", pointLight.ShadowMapResolution);
+        _pointLightMaterial->SetFloat("ShadowNearPlane", pointLight.ShadowNearPlane);
+        _pointLightMaterial->SetTexture("PointLightShadowMap", pointLight.ShadowMap);
+        pipeline->BindMaterial(_pointLightMaterial);
     
-            context->IASetInputLayout(nullptr);
-            context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-            context->Draw(4, 0);
-        }
-
-        context->PSSetConstantBuffers(2, 1, Utils::NullBuffers);
-        BeMaterial::UnbindMaterial_Temporary(_pointLightMaterial, context, BeShaderType::Pixel);
+        context->Draw(4, 0);
     }
-
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED);
-    BeShader::Unbind(context.Get(), BeShaderType::Pixel);
+    pipeline->Clear();
 }

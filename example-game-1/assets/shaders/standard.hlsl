@@ -2,6 +2,7 @@
 /*
 @be-shader-header
 {
+    "topology": "triangle-list",
     "vertex": "VertexFunction",
     "vertexLayout": ["position", "normal", "uv0"],
     "pixel": "PixelFunction",
