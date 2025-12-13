@@ -22,8 +22,7 @@ auto BeFullscreenEffectPass::Render() -> void {
     context->OMSetRenderTargets(renderTargets.size(), renderTargets.data(), nullptr);
 
     // shaders
-    _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
-    Shader->Bind(context.Get(), BeShaderType::Pixel);
+    Shader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
 
     // input
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
