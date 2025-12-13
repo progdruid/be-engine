@@ -2,6 +2,7 @@
 
 #include "BeRenderer.h"
 #include "BeAssetRegistry.h"
+#include "BePipeline.h"
 #include "BeShader.h"
 
 BeBloomPass::BeBloomPass() = default;
@@ -86,8 +87,8 @@ auto BeBloomPass::Render() -> void {
 auto BeBloomPass::RenderBrightPass() const -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
-
-    const auto hdrTexture = registry->GetTexture(InputHDRTextureName).lock();
+    const auto pipeline = _renderer->GetPipeline();
+    
     const auto bloomMip0  = registry->GetTexture(BloomMipTextureName + "0").lock();
 
     // targets
@@ -95,23 +96,15 @@ auto BeBloomPass::RenderBrightPass() const -> void {
     context->OMSetRenderTargets(1, bloomMip0->GetRTV().GetAddressOf(), nullptr);
 
     // shaders
-    _brightShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
-
-    // resources
+    pipeline->BindShader(_brightShader, BeShaderType::Vertex | BeShaderType::Pixel);
+    pipeline->BindMaterial(_brightMaterial);
     context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
-    BeMaterial::BindMaterial_Temporary(_brightMaterial, context.Get(), BeShaderType::Pixel);
-    //const auto& brightMaterialBuffer = _brightMaterial->GetBuffer();
-    //context->PSSetConstantBuffers(2, 1, brightMaterialBuffer.GetAddressOf());
-
+    
     // draw
-    context->IASetInputLayout(nullptr);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
     context->Draw(4, 0);
 
     // clear
-    BeShader::Unbind(context.Get(), BeShaderType::All);
-    BeMaterial::UnbindMaterial_Temporary(_brightMaterial, context.Get(), BeShaderType::Pixel);
-    context->PSSetConstantBuffers(2, 1, Utils::NullBuffers);
+    pipeline->Clear();
     context->PSSetSamplers(0, 1, Utils::NullSamplers);
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
     
@@ -120,15 +113,15 @@ auto BeBloomPass::RenderBrightPass() const -> void {
 auto BeBloomPass::RenderDownsamplePasses() -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
-
+    const auto& pipeline = _renderer->GetPipeline();
+    
     uint32_t numberOfPreviousViewports = 1;
     D3D11_VIEWPORT previousViewport;
     context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
 
-    _kawaseShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
-
+    pipeline->BindShader(_kawaseShader, BeShaderType::Vertex | BeShaderType::Pixel);
     context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
-
+    
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
         const auto targetMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
 
@@ -145,18 +138,16 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
         context->OMSetRenderTargets(1, targetMip->GetRTV().GetAddressOf(), nullptr);
 
         // material
-        BeMaterial::BindMaterial_Temporary(_downsampleMaterials[mipTarget], context.Get(), BeShaderType::Pixel);
-
+        pipeline->BindMaterial(_downsampleMaterials[mipTarget]);
+        
         // draw
-        context->IASetInputLayout(nullptr);
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
         context->Draw(4, 0);
 
         context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
         BeMaterial::UnbindMaterial_Temporary(_downsampleMaterials[mipTarget], context.Get(), BeShaderType::Pixel);
     }
 
-    BeShader::Unbind(context.Get(), BeShaderType::All);
+    pipeline->Clear();
     context->PSSetSamplers(0, 1, Utils::NullSamplers);
     context->RSSetViewports(1, &previousViewport);
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
@@ -165,13 +156,13 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
 auto BeBloomPass::RenderUpsamplePasses() -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
-
+    const auto& pipeline = _renderer->GetPipeline();
+    
     uint32_t numberOfPreviousViewports = 1;
     D3D11_VIEWPORT previousViewport;
     context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
-    
-    _kawaseShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
 
+    pipeline->BindShader(_kawaseShader, BeShaderType::Vertex | BeShaderType::Pixel);
     context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
 
     // Set additive blend state for upsampling (accumulate into mips)
@@ -198,21 +189,18 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
         viewport.MaxDepth = 1.0f;
         context->RSSetViewports(1, &viewport);
         context->OMSetRenderTargets(1, targetMip->GetRTV().GetAddressOf(), nullptr);
-        
-        BeMaterial::BindMaterial_Temporary(_upsampleMaterials[mipTarget], context.Get(), BeShaderType::Pixel);
 
-        context->IASetInputLayout(nullptr);
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        pipeline->BindMaterial(_upsampleMaterials[mipTarget]);
+
         context->Draw(4, 0);
 
-        BeMaterial::UnbindMaterial_Temporary(_upsampleMaterials[mipTarget], context.Get(), BeShaderType::Pixel);
         context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
     }
 
     context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     if (additiveBlendState) additiveBlendState->Release();
 
-    BeShader::Unbind(context.Get(), BeShaderType::All); 
+    pipeline->Clear();
     context->PSSetSamplers(0, 1, Utils::NullSamplers);
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
     context->RSSetViewports(1, &previousViewport);
@@ -221,27 +209,19 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
 auto BeBloomPass::RenderAddPass() const -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
+    const auto& pipeline = _renderer->GetPipeline();
     
-    // targets
     const auto outputTexture = registry->GetTexture(OutputTextureName).lock();
     context->ClearRenderTargetView(outputTexture->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->OMSetRenderTargets(1, outputTexture->GetRTV().GetAddressOf(), nullptr);
 
-    // shaders
-    _addShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
-
-    // resources
-    BeMaterial::BindMaterial_Temporary(_addMaterial, context.Get(), BeShaderType::Pixel);;
+    pipeline->BindShader(_addShader, BeShaderType::Vertex | BeShaderType::Pixel);
+    pipeline->BindMaterial(_addMaterial);
     context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
-
-    // draw
-    context->IASetInputLayout(nullptr);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+    
     context->Draw(4, 0);
 
-    // clean
-    BeShader::Unbind(context.Get(), BeShaderType::All);
-    BeMaterial::UnbindMaterial_Temporary(_addMaterial, context.Get(), BeShaderType::Pixel);
+    pipeline->Clear();
     context->PSSetSamplers(0, 1, Utils::NullSamplers);
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);   
 }

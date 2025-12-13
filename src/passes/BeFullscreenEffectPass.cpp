@@ -1,6 +1,7 @@
 ﻿#include "BeFullscreenEffectPass.h"
 
 #include "BeAssetRegistry.h"
+#include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 
@@ -10,6 +11,7 @@ BeFullscreenEffectPass::~BeFullscreenEffectPass() = default;
 auto BeFullscreenEffectPass::Initialise() -> void {}
 
 auto BeFullscreenEffectPass::Render() -> void {
+    const auto& pipeline = _renderer->GetPipeline();
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
     
@@ -22,22 +24,17 @@ auto BeFullscreenEffectPass::Render() -> void {
     context->OMSetRenderTargets(renderTargets.size(), renderTargets.data(), nullptr);
 
     // shaders
-    Shader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
-
-    // input
+    pipeline->BindShader(Shader, BeShaderType::Vertex | BeShaderType::Pixel);
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     if (Material) {
-        BeMaterial::BindMaterial_Temporary(Material, context, BeShaderType::All);
+        pipeline->BindMaterial(Material);
     }
 
     // draw
-    context->IASetInputLayout(nullptr);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
     context->Draw(4, 0);
 
     // clear
-    BeShader::Unbind(context.Get(), BeShaderType::All);
-    BeMaterial::UnbindMaterial_Temporary(Material, context, BeShaderType::All);
+    pipeline->Clear();
     context->OMSetRenderTargets(OutputTextureNames.size(), Utils::NullRTVs, nullptr);
     context->PSSetSamplers(0, 1, Utils::NullSamplers);
 }

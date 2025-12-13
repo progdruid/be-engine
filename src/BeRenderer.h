@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <d3d11.h>
 #include <vector>
@@ -12,6 +12,7 @@
 #include "BeTexture.h"
 #include "BeShader.h"
 
+class BePipeline;
 class BeRenderPass;
 class BeShader;
 using Microsoft::WRL::ComPtr;
@@ -52,6 +53,7 @@ class BeRenderer {
     ComPtr<IDXGIFactory2> _factory;
     ComPtr<IDXGISwapChain1> _swapchain;
     ComPtr<ID3D11RenderTargetView> _backbufferTarget;
+    std::shared_ptr<BePipeline> _pipeline = nullptr;
 
     ComPtr<ID3D11Buffer> _uniformBuffer;
     ComPtr<ID3D11SamplerState> _pointSampler;
@@ -83,6 +85,7 @@ class BeRenderer {
 
     [[nodiscard]] auto GetDevice() const -> ComPtr<ID3D11Device> { return _device; }
     [[nodiscard]] auto GetContext() const -> ComPtr<ID3D11DeviceContext> { return _context; }
+    [[nodiscard]] auto GetPipeline() const -> std::shared_ptr<BePipeline> { return _pipeline; }
     [[nodiscard]] auto GetAssetRegistry() const -> std::weak_ptr<BeAssetRegistry> { return _assetRegistry; }
     [[nodiscard]] auto GetPointSampler() const -> ComPtr<ID3D11SamplerState> { return _pointSampler; }
     [[nodiscard]] auto GetPostProcessLinearClampSampler() const -> ComPtr<ID3D11SamplerState> { return _postProcessLinearClampSampler; }

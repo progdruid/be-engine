@@ -25,6 +25,12 @@ enum class BeShaderType : uint8_t {
 };
 ENABLE_BITMASK(BeShaderType);
 
+enum class BeShaderTopology : uint8_t {
+    None,
+    TriangleList,
+    PatchList3,
+};
+
 struct BeVertexElementDescriptor {
     enum class BeVertexSemantic : uint8_t {
         Position,
@@ -135,6 +141,7 @@ class BeShader {
 
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose BeShaderType ShaderType = BeShaderType::None;
+    expose D3D11_PRIMITIVE_TOPOLOGY Topology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
     expose ComPtr<ID3D11InputLayout> ComputedInputLayout;
     expose ComPtr<ID3D11VertexShader> VertexShader;
     expose ComPtr<ID3D11HullShader> HullShader;
