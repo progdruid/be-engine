@@ -1,6 +1,7 @@
 /*
 @be-shader-header
 {
+    "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "material": {
         "Position": { "type": "float3", "default": [0, 0, 0] },
@@ -26,6 +27,7 @@
 
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
+#include "fullscreen-vertex.hlsl"
 
 Texture2D Depth : register(t0);
 Texture2D DiffuseRGB : register(t1);
@@ -43,11 +45,6 @@ cbuffer PointLightBuffer: register(b2) {
     float _PointLightHasShadowMap;
     float _PointLightShadowMapResolution;
     float _PointLightShadowNearPlane;
-};
-
-struct PSInput {
-    float4 Position : SV_POSITION;
-    float2 UV : TEXCOORD0;
 };
 
 float SamplePointLightShadow(float3 worldPos) {
@@ -75,7 +72,7 @@ float SamplePointLightShadow(float3 worldPos) {
 
 
 
-float3 PixelFunction(PSInput input) : SV_TARGET {
+float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
     float depth = Depth.Sample(InputSampler, input.UV).r;
     float3 diffuse = DiffuseRGB.Sample(InputSampler, input.UV);
     float3 worldNormal = WorldNormalXYZ_UnusedA.Sample(InputSampler, input.UV).xyz;
