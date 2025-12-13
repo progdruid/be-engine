@@ -95,8 +95,7 @@ auto BeBloomPass::RenderBrightPass() const -> void {
     context->OMSetRenderTargets(1, bloomMip0->GetRTV().GetAddressOf(), nullptr);
 
     // shaders
-    _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
-    _brightShader->Bind(context.Get(), BeShaderType::Pixel);
+    _brightShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
 
     // resources
     context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
@@ -126,8 +125,7 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
     D3D11_VIEWPORT previousViewport;
     context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
 
-    _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
-    _kawaseShader->Bind(context.Get(), BeShaderType::Pixel);
+    _kawaseShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
 
     context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
 
@@ -171,9 +169,8 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
     uint32_t numberOfPreviousViewports = 1;
     D3D11_VIEWPORT previousViewport;
     context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
-
-    _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
-    _kawaseShader->Bind(context.Get(), BeShaderType::Pixel);
+    
+    _kawaseShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
 
     context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
 

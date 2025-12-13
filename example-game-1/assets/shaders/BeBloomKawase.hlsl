@@ -1,6 +1,7 @@
 /*
 @be-shader-header
 {
+    "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "targets": {
         "BloomMipOutput": 0
@@ -15,6 +16,8 @@
 @be-shader-header-end
 */
 
+#include "fullscreen-vertex.hlsl"
+
 Texture2D BloomMipInput : register(t0);
 SamplerState sLinear : register(s0);
 
@@ -23,12 +26,7 @@ cbuffer MaterialConstants : register(b2) {
     float PassRadius;
 };
 
-struct PSInput {
-    float4 Position : SV_POSITION;
-    float2 UV : TEXCOORD0;
-};
-
-float3 PixelFunction(PSInput input) : SV_TARGET {
+float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
     float2 offset = TexelSize * PassRadius;
     
     static const float2 offsets[6] = {

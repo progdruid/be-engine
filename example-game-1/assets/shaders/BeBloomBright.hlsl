@@ -1,6 +1,7 @@
 /*
 @be-shader-header
 {
+    "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "targets": {
         "BloomMip": 0
@@ -16,8 +17,10 @@
 @be-shader-header-end
 */
 
+#include "fullscreen-vertex.hlsl"
+
 Texture2D HDRInput : register(t0);
-SamplerState sLinear : register(s0);
+SamplerState Linear : register(s0);
 
 cbuffer MaterialConstants : register(b2) {
     float Threshold;
@@ -25,13 +28,8 @@ cbuffer MaterialConstants : register(b2) {
     float Knee;
 };
 
-struct PSInput {
-    float4 Position : SV_POSITION;
-    float2 UV : TEXCOORD0;
-};
-
-float3 PixelFunction(PSInput input) : SV_TARGET {
-    float3 hdrColor = HDRInput.Sample(sLinear, input.UV).rgb;
+float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
+    float3 hdrColor = HDRInput.Sample(Linear, input.UV).rgb;
 
     float luminance = dot(hdrColor, float3(0.2126, 0.7152, 0.0722));
     float brightPart = saturate((luminance - Threshold) * rcp(max(luminance, 0.0001)));
