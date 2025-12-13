@@ -76,7 +76,7 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
         SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::Vertex | BeShaderType::Tesselation); };
 
         context->IASetPrimitiveTopology(
-            HasAny(shader->GetShaderType(), BeShaderType::Tesselation)
+            HasAny(shader->ShaderType, BeShaderType::Tesselation)
             ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST
             : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
         );
@@ -93,7 +93,7 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
         context->Unmap(_objectBuffer.Get(), 0);
         context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         //context->PSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        if (HasAny(shader->GetShaderType(), BeShaderType::Tesselation)) {
+        if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
             context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
             context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         }
@@ -103,7 +103,7 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
             const auto& materialBuffer = slice.Material->GetBuffer();
             context->VSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
             //context->PSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-            if (HasAny(shader->GetShaderType(), BeShaderType::Tesselation)) {
+            if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
                 context->HSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
                 context->DSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
             }
@@ -167,7 +167,7 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
             SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::Vertex | BeShaderType::Tesselation); };
 
             context->IASetPrimitiveTopology(
-                HasAny(shader->GetShaderType(), BeShaderType::Tesselation)
+                HasAny(shader->ShaderType, BeShaderType::Tesselation)
                 ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST
                 : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
             );
@@ -185,7 +185,7 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
             context->Unmap(_objectBuffer.Get(), 0);
             context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
             //context->PSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-            if (HasAny(shader->GetShaderType(), BeShaderType::Tesselation)) {
+            if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
                 context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
                 context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
             }
@@ -196,7 +196,7 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
                 const auto& materialBuffer = slice.Material->GetBuffer();
                 context->VSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
                 //context->PSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-                if (HasAny(shader->GetShaderType(), BeShaderType::Tesselation)) {
+                if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
                     context->HSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
                     context->DSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
                 }

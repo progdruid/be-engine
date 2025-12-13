@@ -134,6 +134,7 @@ class BeShader {
     hide static auto Split (std::string_view str, const char* delimiters) -> std::vector<std::string_view>;
 
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose BeShaderType ShaderType = BeShaderType::None;
     expose ComPtr<ID3D11InputLayout> ComputedInputLayout;
     expose ComPtr<ID3D11VertexShader> VertexShader;
     expose ComPtr<ID3D11HullShader> HullShader;
@@ -146,7 +147,6 @@ class BeShader {
     expose std::vector<BeMaterialPropertyDescriptor> MaterialProperties;
     expose std::vector<BeMaterialTexturePropertyDescriptor> MaterialTextureProperties;
 
-    hide BeShaderType _shaderType = BeShaderType::None;
     
     // lifecycle ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose BeShader() = default;
@@ -154,6 +154,5 @@ class BeShader {
 
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
     expose auto Bind (ID3D11DeviceContext* context, BeShaderType type) const -> void;
-    expose inline auto GetShaderType () const -> BeShaderType  { return _shaderType; }
 };
 

@@ -228,8 +228,7 @@ auto BeBloomPass::RenderAddPass() const -> void {
     context->OMSetRenderTargets(1, outputTexture->GetRTV().GetAddressOf(), nullptr);
 
     // shaders
-    _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
-    _addShader->Bind(context.Get(), BeShaderType::Pixel);
+    _addShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
 
     // resources
     BeMaterial::BindMaterial_Temporary(_addMaterial, context.Get(), BeShaderType::Pixel);;

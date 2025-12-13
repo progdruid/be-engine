@@ -5,6 +5,7 @@
 #include <umbrellas/include-glm.h>
 
 #include "BeAssetRegistry.h"
+#include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
 #include "Utils.h"
@@ -24,14 +25,17 @@ auto BeGeometryPass::Initialise() -> void {
 
 auto BeGeometryPass::Render() -> void {
     const auto context = _renderer->GetContext();
+    const auto pipeline = _renderer->GetPipeline();
     const auto registry = _renderer->GetAssetRegistry().lock();
 
+
+    
+    // Clear and set render targets
     const auto depthResource    = registry->GetTexture(OutputDepthTextureName).lock();
     const auto gbufferResource0 = registry->GetTexture(OutputTexture0Name).lock();
     const auto gbufferResource1 = registry->GetTexture(OutputTexture1Name).lock();
     const auto gbufferResource2 = registry->GetTexture(OutputTexture2Name).lock();
     
-    // Clear and set render targets
     context->ClearDepthStencilView(depthResource->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     context->ClearRenderTargetView(gbufferResource0->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->ClearRenderTargetView(gbufferResource1->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
@@ -45,6 +49,8 @@ auto BeGeometryPass::Render() -> void {
     context->OMSetRenderTargets(3, gbufferRTVs, depthResource->GetDSV().Get());
     SCOPE_EXIT { context->OMSetRenderTargets(3, Utils::NullRTVs, nullptr); };
 
+
+    
     // Set vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
     uint32_t offset = 0;
@@ -55,19 +61,22 @@ auto BeGeometryPass::Render() -> void {
         context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
     };
 
+    
     // Set the default sampler. It should be overriden by materials if needed
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     SCOPE_EXIT { context->PSSetSamplers(0, 1, Utils::NullSamplers); };
 
+    
     // Draw all objects
     const auto& objects = _renderer->GetObjects();
     for (const auto& object : objects) {
         const auto shader = object.Model->Shader;
         assert(shader);
-        shader->Bind(context.Get(), BeShaderType::All);
-        SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::All); };
+        
+        pipeline->BindShader(shader, BeShaderType::All);
+        SCOPE_EXIT { pipeline->Clear(); };
 
-        const D3D11_PRIMITIVE_TOPOLOGY topology = HasAny(shader->GetShaderType(), BeShaderType::Tesselation)
+        const D3D11_PRIMITIVE_TOPOLOGY topology = HasAny(shader->ShaderType, BeShaderType::Tesselation)
             ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST
             : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         context->IASetPrimitiveTopology(topology);
@@ -84,7 +93,7 @@ auto BeGeometryPass::Render() -> void {
         context->Unmap(_objectBuffer.Get(), 0);
         context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         context->PSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        if (HasAny(shader->GetShaderType(), BeShaderType::Tesselation)) {
+        if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
             context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
             context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         }
@@ -94,7 +103,7 @@ auto BeGeometryPass::Render() -> void {
             const auto& materialBuffer = slice.Material->GetBuffer();
             context->VSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
             context->PSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-            if (HasAny(shader->GetShaderType(), BeShaderType::Tesselation)) {
+            if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
                 context->HSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
                 context->DSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
             }
