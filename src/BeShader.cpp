@@ -88,7 +88,7 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
     }
 
     if (header.contains("vertex")) {
-        shader->_shaderType = BeShaderType::Vertex;
+        shader->ShaderType = BeShaderType::Vertex;
 
         std::string vertexFunctionName = header.at("vertex");
         ComPtr<ID3DBlob> blob = CompileBlob(path, vertexFunctionName.c_str(), "vs_5_0", &includeHandler);
@@ -127,7 +127,7 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
     }
 
     if (header.contains("tesselation")) {
-        shader->_shaderType = shader->_shaderType | BeShaderType::Tesselation;
+        shader->ShaderType = shader->ShaderType | BeShaderType::Tesselation;
 
         const Json& tesselation = header.at("tesselation");
         std::string hullFunctionName = tesselation.at("hull");
@@ -140,7 +140,7 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
     
     if (header.contains("pixel")) {
         assert(header.contains("targets"));
-        shader->_shaderType = shader->_shaderType | BeShaderType::Pixel;
+        shader->ShaderType = shader->ShaderType | BeShaderType::Pixel;
 
         std::string pixelFunctionName = header.at("pixel");
         ComPtr<ID3DBlob> blob = CompileBlob(path, pixelFunctionName.c_str(), "ps_5_0", &includeHandler);
@@ -193,18 +193,6 @@ auto BeShader::CompileBlob(
 }
 
 auto BeShader::ParseHeader(const std::string& src) -> Json {
-    //const std::string startTag = "@be-shader-header";
-    //
-    //size_t startPos = src.find(startTag);
-    //if (startPos == std::string::npos) return;
-    //startPos = src.find('\n', startPos) + 1;
-    //
-    //const size_t endPos = src.find("*/", startPos);
-    //if (endPos == std::string::npos) return;
-    //
-    //std::string_view content = Take(src, startPos, endPos);
-    //const std::vector<std::string_view> lines = Split(content, "\n")
-    
     const std::string startTag = "@be-shader-header";
     const std::string endTag   = "@be-shader-header-end";
     
@@ -261,7 +249,7 @@ auto BeShader::Split(std::string_view str, const char* delimiters) -> std::vecto
 
 
 auto BeShader::Bind(ID3D11DeviceContext* context, const BeShaderType type) const -> void {
-    const auto shaderType = _shaderType & type;
+    const auto shaderType = ShaderType & type;
     if (HasAny(shaderType, BeShaderType::Vertex)) {
         if (ComputedInputLayout)
             context->IASetInputLayout(ComputedInputLayout.Get());

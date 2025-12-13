@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <d3d11.h>
 #include <vector>
@@ -57,7 +57,6 @@ class BeRenderer {
     ComPtr<ID3D11SamplerState> _pointSampler;
     ComPtr<ID3D11SamplerState> _postProcessLinearClampSampler;
     ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
-    std::shared_ptr<BeShader> _fullscreenShader = nullptr;
 
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
@@ -87,7 +86,6 @@ class BeRenderer {
     [[nodiscard]] auto GetAssetRegistry() const -> std::weak_ptr<BeAssetRegistry> { return _assetRegistry; }
     [[nodiscard]] auto GetPointSampler() const -> ComPtr<ID3D11SamplerState> { return _pointSampler; }
     [[nodiscard]] auto GetPostProcessLinearClampSampler() const -> ComPtr<ID3D11SamplerState> { return _postProcessLinearClampSampler; }
-    [[nodiscard]] auto GetFullscreenVertexShader() const -> std::shared_ptr<BeShader> { return _fullscreenShader; }
     [[nodiscard]] auto GetBackbufferTarget() const -> ComPtr<ID3D11RenderTargetView> { return _backbufferTarget; }
 
     [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }

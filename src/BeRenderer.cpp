@@ -1,4 +1,4 @@
-﻿#include "BeRenderer.h"
+#include "BeRenderer.h"
 
 #include <cassert>
 #include <scope_guard/scope_guard.hpp>
@@ -142,8 +142,6 @@ auto BeRenderer::LaunchDevice() -> void {
     depthStencilStateDescriptor.StencilEnable = false;
     Utils::Check << _device->CreateDepthStencilState(&depthStencilStateDescriptor, _defaultDepthStencilState.GetAddressOf());
     _context->OMSetDepthStencilState(_defaultDepthStencilState.Get(), 1);
-    
-    _fullscreenShader = BeShader::Create(_device.Get(),"assets/shaders/fullscreen");
 }
 
 auto BeRenderer::AddRenderPass(BeRenderPass* renderPass) -> void {
