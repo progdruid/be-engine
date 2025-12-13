@@ -1,6 +1,7 @@
 /*
 @be-shader-header
 {
+    "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "material": {
         "HasShadowMap": { "type": "float", "default": 0 },
@@ -25,6 +26,7 @@
 
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
+#include "fullscreen-vertex.hlsl"
 
 Texture2D Depth : register(t0);
 Texture2D DiffuseRGB : register(t1);
@@ -43,11 +45,6 @@ cbuffer DirectionalLightBuffer: register(b2) {
     float _ShadowMapTexelSize;
 };
 
-struct PSInput {
-    float4 Position : SV_POSITION;
-    float2 UV : TEXCOORD0;
-};
-
 float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float texelSize, float currentDepth) {
     float shadow = 0.0;
 
@@ -63,7 +60,7 @@ float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float t
     return shadow / 9.0;
 }
 
-float3 PixelFunction(PSInput input) : SV_TARGET {
+float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
     float depth = Depth.Sample(InputSampler, input.UV).r;
     float3 diffuse = DiffuseRGB.Sample(InputSampler, input.UV);
     float3 worldNormal = WorldNormalXYZ_UnusedA.Sample(InputSampler, input.UV).xyz;

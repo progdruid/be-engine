@@ -57,16 +57,13 @@ auto BeLightingPass::Render() -> void {
         context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     };
 
-    _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
-    SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::Vertex); };
-    
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     SCOPE_EXIT { context->PSSetSamplers(0, 1, Utils::NullSamplers); };
 
     {
         const auto data = DirectionalLight.lock();
 
-        _directionalLightShader->Bind(context.Get(), BeShaderType::Pixel);
+        _directionalLightShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
         
         _directionalLightMaterial->SetFloat("HasShadowMap", data->CastsShadows ? 1.0f : 0.0f);
         _directionalLightMaterial->SetFloat3("Direction", data->Direction);
@@ -87,7 +84,7 @@ auto BeLightingPass::Render() -> void {
     }
 
     {
-        _pointLightShader->Bind(context.Get(), BeShaderType::Pixel);
+        _pointLightShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
         for (const auto& pointLight : PointLights) {
 
             _pointLightMaterial->SetFloat3("Position", pointLight.Position);
