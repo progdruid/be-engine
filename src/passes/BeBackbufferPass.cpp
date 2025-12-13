@@ -32,8 +32,7 @@ auto BeBackbufferPass::Render() -> void {
     context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     
     // shaders
-    _renderer->GetFullscreenVertexShader()->Bind(context.Get(), BeShaderType::Vertex);
-    _backbufferShader->Bind(context.Get(), BeShaderType::Pixel);
+    _backbufferShader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Pixel);
 
     // draw
     context->IASetInputLayout(nullptr);
