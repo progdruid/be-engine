@@ -4,6 +4,7 @@
 #include <scope_guard/scope_guard.hpp>
 
 #include "BeAssetRegistry.h"
+#include "BePipeline.h"
 #include "BeRenderer.h"
 
 auto BeShadowPass::Initialise() -> void {
@@ -40,6 +41,7 @@ auto BeShadowPass::Render() -> void {
 auto BeShadowPass::RenderDirectionalShadows() -> void {
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
+    const auto& pipeline = _renderer->GetPipeline();
     const auto directionalLight = DirectionalLight.lock();
 
     // sort out viewport
@@ -69,17 +71,8 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
     for (const auto& object : objects) {
         if (!object.CastShadows)
             continue;
-        
-        const auto& shader = object.Model->Shader;
 
-        shader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Tesselation);
-        SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::Vertex | BeShaderType::Tesselation); };
-
-        context->IASetPrimitiveTopology(
-            HasAny(shader->ShaderType, BeShaderType::Tesselation)
-            ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST
-            : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
-        );
+        pipeline->BindShader(object.Model->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
         
         const glm::mat4x4 modelMatrix =
             glm::translate(glm::mat4(1.0f), object.Position) *
@@ -92,25 +85,19 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
         memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
         context->Unmap(_objectBuffer.Get(), 0);
         context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        //context->PSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
+        if (HasAny(object.Model->Shader->ShaderType, BeShaderType::Tesselation)) {
             context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
             context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         }
 
         for (const auto& slice : object.DrawSlices) {
-            slice.Material->UpdateGPUBuffers(context);
-            const auto& materialBuffer = slice.Material->GetBuffer();
-            context->VSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-            //context->PSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-            if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
-                context->HSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-                context->DSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-            }
-
+            pipeline->BindMaterial(slice.Material);
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
         }
+
+        pipeline->Clear();
     }
+    
     context->VSSetConstantBuffers(1, 2, Utils::NullBuffers);
     context->HSSetConstantBuffers(1, 2, Utils::NullBuffers);
     context->DSSetConstantBuffers(1, 2, Utils::NullBuffers);
@@ -122,17 +109,13 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
     // get what we need
     const auto context = _renderer->GetContext();
     const auto registry = _renderer->GetAssetRegistry().lock();
-    
-    // sort out shader
-    //_pointShadowShader->Bind(context.Get(), BeShaderType::Vertex);
-    //SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::Vertex); };
+    const auto& pipeline = _renderer->GetPipeline();
     
     // sort out vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
     uint32_t offset = 0;
     context->IASetVertexBuffers(0, 1, _renderer->GetShaderVertexBuffer().GetAddressOf(), &stride, &offset);
     context->IASetIndexBuffer(_renderer->GetShaderIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-    //context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     SCOPE_EXIT {
         context->IASetVertexBuffers(0, 1, Utils::NullBuffers, &stride, &offset);
         context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
@@ -160,17 +143,8 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
         for (const auto& object : objects) {
             if (!object.CastShadows)
                 continue;
-            
-            const auto& shader = object.Model->Shader;
-            
-            shader->Bind(context.Get(), BeShaderType::Vertex | BeShaderType::Tesselation);
-            SCOPE_EXIT { BeShader::Unbind(context.Get(), BeShaderType::Vertex | BeShaderType::Tesselation); };
 
-            context->IASetPrimitiveTopology(
-                HasAny(shader->ShaderType, BeShaderType::Tesselation)
-                ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST
-                : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
-            );
+            pipeline->BindShader(object.Model->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
             
             // model matrix
             const glm::mat4x4 modelMatrix =
@@ -184,32 +158,22 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
             memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
             context->Unmap(_objectBuffer.Get(), 0);
             context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-            //context->PSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-            if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
+            if (HasAny(object.Model->Shader->ShaderType, BeShaderType::Tesselation)) {
                 context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
                 context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
             }
             
             // draw
             for (const auto& slice : object.DrawSlices) {
-                slice.Material->UpdateGPUBuffers(context);
-                const auto& materialBuffer = slice.Material->GetBuffer();
-                context->VSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-                //context->PSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-                if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
-                    context->HSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-                    context->DSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-                }
-
+                pipeline->BindMaterial(slice.Material);
                 context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
             }
+            
+            pipeline->Clear();
         }
     }
-    // clean up
+    
     context->OMSetRenderTargets(0, nullptr, nullptr);
-    context->VSSetConstantBuffers(1, 2, Utils::NullBuffers);
-    context->HSSetConstantBuffers(1, 2, Utils::NullBuffers);
-    context->DSSetConstantBuffers(1, 2, Utils::NullBuffers);
 }
 
 auto BeShadowPass::CalculatePointLightFaceViewProjection(const BePointLight& pointLight, const int faceIndex) -> glm::mat4 {

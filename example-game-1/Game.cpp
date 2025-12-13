@@ -3,9 +3,7 @@
 
 #define NOMINMAX
 
-#include <cstdio>
 #include <cassert>
-#include <numbers>
 #include <umbrellas/include-glm.h>
 
 #include "BeWindow.h"
