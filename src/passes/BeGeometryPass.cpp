@@ -27,8 +27,7 @@ auto BeGeometryPass::Render() -> void {
     const auto context = _renderer->GetContext();
     const auto pipeline = _renderer->GetPipeline();
     const auto registry = _renderer->GetAssetRegistry().lock();
-
-
+    
     
     // Clear and set render targets
     const auto depthResource    = registry->GetTexture(OutputDepthTextureName).lock();
@@ -48,7 +47,6 @@ auto BeGeometryPass::Render() -> void {
     };
     context->OMSetRenderTargets(3, gbufferRTVs, depthResource->GetDSV().Get());
     SCOPE_EXIT { context->OMSetRenderTargets(3, Utils::NullRTVs, nullptr); };
-
 
     
     // Set vertex and index buffers
@@ -76,11 +74,6 @@ auto BeGeometryPass::Render() -> void {
         pipeline->BindShader(shader, BeShaderType::All);
         SCOPE_EXIT { pipeline->Clear(); };
 
-        const D3D11_PRIMITIVE_TOPOLOGY topology = HasAny(shader->ShaderType, BeShaderType::Tesselation)
-            ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST
-            : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        context->IASetPrimitiveTopology(topology);
-
         glm::mat4x4 modelMatrix =
             glm::translate(glm::mat4(1.0f), object.Position) *
             glm::mat4_cast(object.Rotation) *
@@ -99,30 +92,8 @@ auto BeGeometryPass::Render() -> void {
         }
         
         for (const auto& slice : object.DrawSlices) {
-            slice.Material->UpdateGPUBuffers(context);
-            const auto& materialBuffer = slice.Material->GetBuffer();
-            context->VSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-            context->PSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-            if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
-                context->HSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-                context->DSSetConstantBuffers(2, 1, materialBuffer.GetAddressOf());
-            }
-
-            const auto& textureSlots = slice.Material->GetTexturePairs();
-            for (const auto& [texture, slot] : textureSlots | std::views::values) {
-                context->PSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
-            } 
-
+            pipeline->BindMaterial(slice.Material);
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
-        
-            context->PSSetShaderResources(0, 2, Utils::NullSRVs);
         }
     }
-    context->VSSetConstantBuffers(1, 2, Utils::NullBuffers);
-    context->HSSetConstantBuffers(1, 2, Utils::NullBuffers);
-    context->DSSetConstantBuffers(1, 2, Utils::NullBuffers);
-    context->PSSetConstantBuffers(1, 2, Utils::NullBuffers);
-    context->PSSetShaderResources(0, 2, Utils::NullSRVs); // clean material textures
-    context->VSSetConstantBuffers(1, 2, Utils::NullBuffers); // clean object and material buffers
-    context->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_UNDEFINED);
 }
