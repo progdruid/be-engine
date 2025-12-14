@@ -1,10 +1,13 @@
 ﻿#pragma once
 #include <d3d11.h>
+#include <memory>
 #include <span>
 
-#include "BeBuffers.h"
 #include "BeRenderPass.h"
 
+struct BePointLight;
+struct BeDirectionalLight;
+class BeMaterial;
 class BeShader;
 class BeRenderer;
 

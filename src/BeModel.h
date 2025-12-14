@@ -1,13 +1,15 @@
 #pragma once
 #include <filesystem>
 #include <memory>
-#include <d3d11.h>
 #include <wrl/client.h>
 #include <umbrellas/include-glm.h>
 #include <assimp/scene.h>
 
-#include "BeMaterial.h"
 
+class BeTexture;
+class BeShader;
+class BeMaterial;
+class BeRenderer;
 using Microsoft::WRL::ComPtr;
 
 class BeAssetRegistry;
@@ -21,27 +23,26 @@ struct BeFullVertex {
     glm::vec2 UV2       {0, 0};         // 56
 };
 
+struct BeDrawSlice {
+    uint32_t IndexCount;
+    uint32_t StartIndexLocation;
+    int32_t BaseVertexLocation;
+    std::shared_ptr<BeMaterial> Material = nullptr;
+};
+
 struct BeModel {
-    struct BeDrawSlice {
-        uint32_t IndexCount;
-        uint32_t StartIndexLocation;
-        int32_t BaseVertexLocation;
-        std::shared_ptr<BeMaterial> Material = nullptr;
-    };
 
     // Static
     static auto Create(
         const std::filesystem::path& modelPath,
         std::weak_ptr<BeShader> usedShaderForMaterials,
-        std::weak_ptr<BeAssetRegistry> registry,
-        ComPtr<ID3D11Device> device
+        const BeRenderer& renderer
     ) -> std::shared_ptr<BeModel>;
+    
     static auto LoadTextureFromAssimpPath(
         const struct aiString& texPath,
         const struct aiScene* scene,
-        const std::filesystem::path& parentPath,
-        std::weak_ptr<BeAssetRegistry> registry,
-        ComPtr<ID3D11Device> device
+        const std::filesystem::path& parentPath, const BeRenderer& renderer
     ) -> std::shared_ptr<BeTexture>;
 
     std::vector<BeDrawSlice> DrawSlices;

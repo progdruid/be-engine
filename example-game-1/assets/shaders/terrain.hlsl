@@ -22,7 +22,9 @@
         "TerrainScale": { "type": "float", "default": 1.0 },
         "HeightScale": { "type": "float", "default": 1.0 },
         "NoiseResolution": { "type": "float", "default": 4.0 },
-        "Speed": { "type": "float", "default": 0.2 }
+        "Speed": { "type": "float", "default": 0.2 },
+
+        "InputSampler": { "type": "sampler", "slot": 0 }    
     }
 }
 @be-shader-header-end

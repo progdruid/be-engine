@@ -11,15 +11,16 @@
 #include "BeInput.h"
 #include "BeRenderer.h"
 #include "BeCamera.h"
-#include "passes/BeBackbufferPass.h"
-#include "passes/BeGeometryPass.h"
-#include "passes/BeLightingPass.h"
 #include "BeMaterial.h"
 #include "BeShader.h"
 #include "BeModel.h"
+#include "BeTexture.h"
+#include "passes/BeShadowPass.h"
+#include "passes/BeGeometryPass.h"
+#include "passes/BeLightingPass.h"
 #include "passes/BeBloomPass.h"
 #include "passes/BeFullscreenEffectPass.h"
-#include "passes/BeShadowPass.h"
+#include "passes/BeBackbufferPass.h"
 #include "ImGuiPass.h"
 
 Game::Game() = default;
@@ -34,7 +35,7 @@ auto Game::Run() -> int {
     _assetRegistry = std::make_shared<BeAssetRegistry>();
     const HWND hwnd = _window->getHWND();
 
-    _renderer = std::make_unique<BeRenderer>(_width, _height, hwnd, _assetRegistry);
+    _renderer = std::make_shared<BeRenderer>(_width, _height, hwnd, _assetRegistry);
     _renderer->LaunchDevice();
 
     LoadAssets();
@@ -71,24 +72,26 @@ auto Game::LoadAssets() -> void {
 
     
     // Create shader
-    const auto standardShader = BeShader::Create(device.Get(), "assets/shaders/standard");
+    const auto standardShader = BeShader::Create("assets/shaders/standard", *_renderer);
     _assetRegistry->AddShader("standard", standardShader);
 
     // Create tessellated shader
-    const auto tessellatedShader = BeShader::Create(device.Get(), "assets/shaders/tessellated");
+    const auto tessellatedShader = BeShader::Create("assets/shaders/tessellated", *_renderer);
     _assetRegistry->AddShader("tessellated", tessellatedShader);
 
+    
     // Create models
     _plane = CreatePlane(64);
-    _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, _assetRegistry, device);
-    _livingCube = BeModel::Create("assets/cube.glb", tessellatedShader, _assetRegistry, device);
+    _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, *_renderer);
+    _livingCube = BeModel::Create("assets/cube.glb", tessellatedShader, *_renderer);
     _livingCube->Materials[0]->SetFloat3("DiffuseColor", glm::vec3(0.28, 0.39, 1.0));
-    _macintosh = BeModel::Create("assets/model.fbx", standardShader, _assetRegistry, device);
-    _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, _assetRegistry, device);
-    _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, _assetRegistry, device);
-    _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, _assetRegistry, device);
-
+    _macintosh = BeModel::Create("assets/model.fbx", standardShader, *_renderer);
+    _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, *_renderer);
+    _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, *_renderer);
+    _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *_renderer);
     _anvil->DrawSlices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
+
+    
 }
 
 auto Game::SetupRenderPasses() -> void {
@@ -198,9 +201,10 @@ auto Game::SetupRenderPasses() -> void {
     bloomPass->OutputTextureName = "BloomOutput";
     
     // Tonemapper pass
-    const auto tonemapperShader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/tonemapper");
-    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", false, tonemapperShader, _assetRegistry, device);
+    const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper", *_renderer);
+    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", false, tonemapperShader, *_renderer);
     tonemapperMaterial->SetTexture("HDRInput", _assetRegistry->GetTexture("BloomOutput").lock());
+    tonemapperMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     _renderer->AddRenderPass(tonemapperPass);
     tonemapperPass->OutputTextureNames = {"TonemapperOutput"};
@@ -420,8 +424,8 @@ auto Game::MainLoop() -> void {
 }
 
 auto Game::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
-    const auto shader = BeShader::Create(_renderer->GetDevice().Get(), "assets/shaders/terrain");
-    auto material = BeMaterial::Create("TerrainMat", true, shader, _assetRegistry, _renderer->GetDevice());
+    const auto shader = BeShader::Create("assets/shaders/terrain", *_renderer);
+    auto material = BeMaterial::Create("TerrainMat", true, shader, *_renderer);
     material->SetFloat("TerrainScale", 200.0f);
     material->SetFloat("HeightScale", 100.0f);
     
@@ -468,7 +472,7 @@ auto Game::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
         }
     }
 
-    BeModel::BeDrawSlice slice{};
+    BeDrawSlice slice{};
     slice.IndexCount = static_cast<uint32_t>(model->Indices.size());
     slice.StartIndexLocation = 0;
     slice.BaseVertexLocation = 0;

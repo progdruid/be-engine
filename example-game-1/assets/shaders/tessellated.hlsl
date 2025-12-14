@@ -22,7 +22,9 @@
         "TessellationLevel": { "type": "float", "default": 1024.0 },
         "DisplacementStrength": { "type": "float", "default": -1.0 },
         "AnimationSpeed": { "type": "float", "default": 1.5 },
-        "NoiseFrequency": { "type": "float", "default": 30.0 }
+        "NoiseFrequency": { "type": "float", "default": 30.0 },
+
+        "InputSampler": { "type": "sampler", "slot": 0 }
     }
 }
 @be-shader-header-end

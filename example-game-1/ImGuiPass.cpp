@@ -4,6 +4,7 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_dx11.h>
 
+#include "BeMaterial.h"
 #include "BeRenderer.h"
 
 ImGuiPass::ImGuiPass(GLFWwindow* window)

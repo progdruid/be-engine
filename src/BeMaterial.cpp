@@ -6,6 +6,7 @@
 
 #include "BeShader.h"
 #include "BeAssetRegistry.h"
+#include "BeRenderer.h"
 #include "BeTexture.h"
 #include "Utils.h"
 
@@ -13,96 +14,23 @@ auto BeMaterial::Create(
     std::string_view name,
     bool frequentlyUsed,
     std::weak_ptr<BeShader> shader,
-    std::weak_ptr<BeAssetRegistry> registry,
-    ComPtr<ID3D11Device> device
+    const BeRenderer& renderer
 )
     -> std::shared_ptr<BeMaterial> {
     auto shaderLocked = shader.lock();
     assert(shaderLocked && "Shader must be valid");
     assert(shaderLocked->HasMaterial && "Shader must have material");
 
-    auto material = std::make_shared<BeMaterial>(std::string(name), frequentlyUsed, shader, device);
-    material->InitializeTextures(registry, device);
+    auto material = std::make_shared<BeMaterial>(std::string(name), frequentlyUsed, shader, renderer);
+    material->InitialiseSlotMaps(renderer);
     return material;
-}
-
-auto BeMaterial::BindMaterial_Temporary(
-    std::weak_ptr<BeMaterial> material,
-    ComPtr<ID3D11DeviceContext> context,
-    BeShaderType shaderType
-) -> void {
-    const auto& mat = material.lock();
-    const auto& buffer = mat->GetBuffer();
-    if (buffer != nullptr) {
-        mat->UpdateGPUBuffers(context);
-
-        if (HasAny(shaderType, BeShaderType::Vertex)) {
-            context->VSSetConstantBuffers(2, 1, buffer.GetAddressOf());
-        }
-        if (HasAny(shaderType, BeShaderType::Tesselation)) {
-            context->HSSetConstantBuffers(2, 1, buffer.GetAddressOf());
-            context->DSSetConstantBuffers(2, 1, buffer.GetAddressOf());
-        }
-        if (HasAny(shaderType, BeShaderType::Pixel)) {
-            context->PSSetConstantBuffers(2, 1, buffer.GetAddressOf());
-        }
-    }
-    
-    const auto& textureSlots = mat->GetTexturePairs();
-    for (const auto& [texture, slot] : textureSlots | std::views::values) {
-        if (HasAny(shaderType, BeShaderType::Vertex)) {
-            context->VSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
-        }
-        if (HasAny(shaderType, BeShaderType::Tesselation)) {
-            context->HSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
-            context->DSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
-        }
-        if (HasAny(shaderType, BeShaderType::Pixel)) {
-            context->PSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
-        }
-    } 
-}
-
-auto BeMaterial::UnbindMaterial_Temporary(
-    std::weak_ptr<BeMaterial> material,
-    ComPtr<ID3D11DeviceContext> context,
-    BeShaderType shaderType
-) -> void {
-    const auto& mat = material.lock();
-
-    if (mat->GetBuffer() != nullptr) {
-        if (HasAny(shaderType, BeShaderType::Vertex)) {
-            context->VSSetConstantBuffers(2, 1, Utils::NullBuffers);
-        }
-        if (HasAny(shaderType, BeShaderType::Tesselation)) {
-            context->HSSetConstantBuffers(2, 1, Utils::NullBuffers);
-            context->DSSetConstantBuffers(2, 1, Utils::NullBuffers);
-        }
-        if (HasAny(shaderType, BeShaderType::Pixel)) {
-            context->PSSetConstantBuffers(2, 1, Utils::NullBuffers);
-        }
-    }
-
-    const auto& textureSlots = mat->GetTexturePairs();
-    for (const auto& [texture, slot] : textureSlots | std::views::values) {
-        if (HasAny(shaderType, BeShaderType::Vertex)) {
-            context->VSSetShaderResources(slot, 1, Utils::NullSRVs);
-        }
-        if (HasAny(shaderType, BeShaderType::Tesselation)) {
-            context->HSSetShaderResources(slot, 1, Utils::NullSRVs);
-            context->DSSetShaderResources(slot, 1, Utils::NullSRVs);
-        }
-        if (HasAny(shaderType, BeShaderType::Pixel)) {
-            context->PSSetShaderResources(slot, 1, Utils::NullSRVs);
-        }
-    } 
 }
 
 BeMaterial::BeMaterial(
     std::string name,
     const bool frequentlyUsed,
     const std::weak_ptr<BeShader>& shader,
-    const ComPtr<ID3D11Device>& device
+    const BeRenderer& renderer
 )
     : Name(std::move(name))
     , Shader(shader)
@@ -111,7 +39,7 @@ BeMaterial::BeMaterial(
     const auto shaderLocked = Shader.lock();
     assert(shaderLocked);
 
-    if (shaderLocked->MaterialProperties.size() == 0)
+    if (shaderLocked->MaterialProperties.empty())
         return;
     
     AssembleData();
@@ -132,7 +60,7 @@ BeMaterial::BeMaterial(
     D3D11_SUBRESOURCE_DATA data = {};
     data.pSysMem = _bufferData.data();
 
-    Utils::Check << device->CreateBuffer(&bufferDesc, &data, _cbuffer.GetAddressOf());
+    Utils::Check << renderer.GetDevice()->CreateBuffer(&bufferDesc, &data, _cbuffer.GetAddressOf());
 
     _cbufferDirty = false;
 }
@@ -140,16 +68,20 @@ BeMaterial::BeMaterial(
 //BeMaterial::BeMaterial() = default;
 BeMaterial::~BeMaterial() = default;
 
-auto BeMaterial::InitializeTextures(std::weak_ptr<BeAssetRegistry> registry, ComPtr<ID3D11Device> device) -> void {
-    auto shader = Shader.lock();
+auto BeMaterial::InitialiseSlotMaps(const BeRenderer& renderer) -> void {
+    const auto shader = Shader.lock();
     assert(shader);
     
     for (const auto& property : shader->MaterialTextureProperties) {
-        auto texWeak = registry.lock()->GetTexture(property.DefaultTexturePath);
+        auto texWeak = renderer.GetAssetRegistry().lock()->GetTexture(property.DefaultTexturePath);
         auto texture = texWeak.lock();
         assert(texture && ("Texture not found in registry: " + property.DefaultTexturePath).c_str());
 
         _textures[property.Name] = {texture, property.SlotIndex};
+    }
+
+    for (const auto& property : shader->MaterialSamplers) {
+        _samplers[property.Name] = { nullptr, property.SlotIndex };
     }
 }
 
@@ -186,11 +118,6 @@ auto BeMaterial::SetMatrix(const std::string& propertyName, glm::mat4x4 value) -
     const uint32_t offset = _propertyOffsets.at(propertyName);
     memcpy(_bufferData.data() + offset, glm::value_ptr(value), sizeof(glm::mat4x4));
     _cbufferDirty = true;
-}
-
-auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void {
-    assert(_textures.contains(propertyName));
-    _textures.at(propertyName).first = texture;
 }
 
 auto BeMaterial::GetFloat(const std::string& propertyName) const -> float {
@@ -233,10 +160,28 @@ auto BeMaterial::GetMatrix(const std::string& propertyName) const -> glm::mat4x4
     return value;
 }
 
+
+
+auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void {
+    assert(_textures.contains(propertyName));
+    _textures.at(propertyName).first = texture;
+}
+
 auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture> {
     assert(_textures.contains(propertyName));
     return _textures.at(propertyName).first;
 }
+
+auto BeMaterial::SetSampler(const std::string& propertyName, ComPtr<ID3D11SamplerState> sampler) -> void {
+    assert(_samplers.contains(propertyName));
+    _samplers.at(propertyName).first = sampler;
+}
+
+auto BeMaterial::GetSampler(const std::string& propertyName) const -> ComPtr<ID3D11SamplerState> {
+    assert(_samplers.contains(propertyName));
+    return _samplers.at(propertyName).first;
+}
+
 
 auto BeMaterial::UpdateGPUBuffers(const ComPtr<ID3D11DeviceContext>& context) -> void {
     if (!_cbufferDirty) return;

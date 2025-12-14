@@ -7,6 +7,7 @@
 #include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
+#include "BeTexture.h"
 #include "Utils.h"
 
 
@@ -30,19 +31,21 @@ void BeLightingPass::Initialise() {
 
     const auto registry = _renderer->GetAssetRegistry().lock();
     
-    _directionalLightShader = BeShader::Create( device.Get(), "assets/shaders/directionalLight");
-    _directionalLightMaterial = BeMaterial::Create("DirectionalLightMaterial", true, _directionalLightShader, _renderer->GetAssetRegistry().lock(), _renderer->GetDevice());
+    _directionalLightShader = BeShader::Create( "assets/shaders/directionalLight", *_renderer);
+    _directionalLightMaterial = BeMaterial::Create("DirectionalLightMaterial", true, _directionalLightShader, *_renderer);
     _directionalLightMaterial->SetTexture("Depth", registry->GetTexture(InputDepthTextureName).lock());
     _directionalLightMaterial->SetTexture("Diffuse", registry->GetTexture(InputTexture0Name).lock());
     _directionalLightMaterial->SetTexture("WorldNormal", registry->GetTexture(InputTexture1Name).lock());
     _directionalLightMaterial->SetTexture("Specular_Shininess", registry->GetTexture(InputTexture2Name).lock());
+    _directionalLightMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
     
-    _pointLightShader = BeShader::Create(device.Get(), "assets/shaders/pointLight" );
-    _pointLightMaterial = BeMaterial::Create("PointLightMaterial", true, _pointLightShader, _renderer->GetAssetRegistry().lock(), _renderer->GetDevice());
+    _pointLightShader = BeShader::Create("assets/shaders/pointLight", *_renderer);
+    _pointLightMaterial = BeMaterial::Create("PointLightMaterial", true, _pointLightShader, *_renderer);
     _pointLightMaterial->SetTexture("Depth", registry->GetTexture(InputDepthTextureName).lock());
     _pointLightMaterial->SetTexture("Diffuse", registry->GetTexture(InputTexture0Name).lock());
     _pointLightMaterial->SetTexture("WorldNormal", registry->GetTexture(InputTexture1Name).lock());
     _pointLightMaterial->SetTexture("Specular_Shininess", registry->GetTexture(InputTexture2Name).lock());
+    _pointLightMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
 }
 
 auto BeLightingPass::Render() -> void {
@@ -59,21 +62,17 @@ auto BeLightingPass::Render() -> void {
         context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     };
 
-    context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
-    SCOPE_EXIT { context->PSSetSamplers(0, 1, Utils::NullSamplers); };
-
-
     // directional light
     pipeline->BindShader(_directionalLightShader, BeShaderType::Vertex | BeShaderType::Pixel);
         
-    const auto data = DirectionalLight.lock();
-    _directionalLightMaterial->SetFloat("HasShadowMap", data->CastsShadows ? 1.0f : 0.0f);
-    _directionalLightMaterial->SetFloat3("Direction", data->Direction);
-    _directionalLightMaterial->SetFloat3("Color", data->Color);
-    _directionalLightMaterial->SetFloat("Power", data->Power);
-    _directionalLightMaterial->SetMatrix("ProjectionView", data->ViewProjection);
-    _directionalLightMaterial->SetFloat("TexelSize", 1.0f / data->ShadowMapResolution);
-    _directionalLightMaterial->SetTexture("ShadowMap", data->ShadowMap);
+    const auto sunLight = DirectionalLight.lock();
+    _directionalLightMaterial->SetFloat("HasShadowMap", sunLight->CastsShadows ? 1.0f : 0.0f);
+    _directionalLightMaterial->SetFloat3("Direction", sunLight->Direction);
+    _directionalLightMaterial->SetFloat3("Color", sunLight->Color);
+    _directionalLightMaterial->SetFloat("Power", sunLight->Power);
+    _directionalLightMaterial->SetMatrix("ProjectionView", sunLight->ViewProjection);
+    _directionalLightMaterial->SetFloat("TexelSize", 1.0f / sunLight->ShadowMapResolution);
+    _directionalLightMaterial->SetTexture("ShadowMap", sunLight->ShadowMap);
     pipeline->BindMaterial(_directionalLightMaterial);
         
     context->Draw(4, 0);

@@ -7,14 +7,15 @@
 
 #include "BeShader.h"
 #include "BeAssetRegistry.h"
+#include "BeMaterial.h"
+#include "BeRenderer.h"
 #include "BeTexture.h"
 #include "Utils.h"
 
 auto BeModel::Create(
     const std::filesystem::path& modelPath,
     std::weak_ptr<BeShader> usedShaderForMaterials,
-    std::weak_ptr<BeAssetRegistry> registry,
-    ComPtr<ID3D11Device> device
+    const BeRenderer& renderer
 ) -> std::shared_ptr<BeModel> {
     constexpr auto flags = (
         aiProcess_Triangulate |
@@ -44,7 +45,7 @@ auto BeModel::Create(
         if (it != assimpIndexToMaterial.end())
             continue;
 
-        auto material = BeMaterial::Create("mat" + std::to_string(assimpMaterialIndex), true, usedShaderForMaterials, registry, device);
+        auto material = BeMaterial::Create("mat" + std::to_string(assimpMaterialIndex), true, usedShaderForMaterials, renderer);
         assimpIndexToMaterial[assimpMaterialIndex] = material;
 
         const auto meshMaterial = scene->mMaterials[assimpMaterialIndex];
@@ -52,12 +53,12 @@ auto BeModel::Create(
         aiString texPath;
         constexpr int diffuseTexIndex = 0;
         if (meshMaterial->GetTexture(aiTextureType_DIFFUSE, diffuseTexIndex, &texPath) == AI_SUCCESS) {
-            auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), registry, device);
+            auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), renderer);
             material->SetTexture("DiffuseTexture", texture);
         }
         constexpr int specularTexIndex = 0;
         if (meshMaterial->GetTexture(aiTextureType_SPECULAR, specularTexIndex, &texPath) == AI_SUCCESS) {
-            auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), registry, device);
+            auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), renderer);
             material->SetTexture("SpecularTexture", texture);
         }
 
@@ -72,6 +73,8 @@ auto BeModel::Create(
         if (meshMaterial->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
             material->SetFloat("Shininess", shininess);
         }
+
+        material->SetSampler("InputSampler", renderer.GetPointSampler());
     }
 
     for (const auto & material : assimpIndexToMaterial | std::views::values) {
@@ -137,9 +140,12 @@ auto BeModel::LoadTextureFromAssimpPath(
     const aiString& texPath,
     const aiScene* scene,
     const std::filesystem::path& parentPath,
-    std::weak_ptr<BeAssetRegistry> registry,
-    ComPtr<ID3D11Device> device
-) -> std::shared_ptr<BeTexture> {
+    const BeRenderer& renderer
+)
+    -> std::shared_ptr<BeTexture> {
+    const auto device = renderer.GetDevice();
+    const auto registry = renderer.GetAssetRegistry().lock();
+
     static int tempCount = -1;
     tempCount++;
     auto builder =

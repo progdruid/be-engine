@@ -71,6 +71,20 @@ auto BePipeline::BindMaterial(const std::shared_ptr<BeMaterial>& material) -> vo
             _context->PSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
         }
     }
+
+    const auto& samplerSlots = material->GetSamplerPairs();
+    for (const auto& [sampler, slot] : samplerSlots | std::views::values) {
+        if (HasAny(_boundShaderType, BeShaderType::Vertex)) {
+            _context->VSSetSamplers(slot, 1, sampler.GetAddressOf());
+        }
+        if (HasAny(_boundShaderType, BeShaderType::Tesselation)) {
+            _context->HSSetSamplers(slot, 1, sampler.GetAddressOf());
+            _context->DSSetSamplers(slot, 1, sampler.GetAddressOf());
+        }
+        if (HasAny(_boundShaderType, BeShaderType::Pixel)) {
+            _context->PSSetSamplers(slot, 1, sampler.GetAddressOf());
+        }
+    }
     
     _boundMaterial = material;
 }

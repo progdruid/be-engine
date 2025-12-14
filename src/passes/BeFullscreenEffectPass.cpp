@@ -4,6 +4,7 @@
 #include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
+#include "BeTexture.h"
 
 BeFullscreenEffectPass::BeFullscreenEffectPass() = default;
 BeFullscreenEffectPass::~BeFullscreenEffectPass() = default;
@@ -25,7 +26,6 @@ auto BeFullscreenEffectPass::Render() -> void {
 
     // shaders
     pipeline->BindShader(Shader, BeShaderType::Vertex | BeShaderType::Pixel);
-    context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
     if (Material) {
         pipeline->BindMaterial(Material);
     }
@@ -36,5 +36,4 @@ auto BeFullscreenEffectPass::Render() -> void {
     // clear
     pipeline->Clear();
     context->OMSetRenderTargets(OutputTextureNames.size(), Utils::NullRTVs, nullptr);
-    context->PSSetSamplers(0, 1, Utils::NullSamplers);
 }

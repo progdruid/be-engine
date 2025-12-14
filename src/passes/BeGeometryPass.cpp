@@ -5,6 +5,7 @@
 #include <umbrellas/include-glm.h>
 
 #include "BeAssetRegistry.h"
+#include "BeModel.h"
 #include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
@@ -58,11 +59,6 @@ auto BeGeometryPass::Render() -> void {
         context->IASetVertexBuffers(0, 1, Utils::NullBuffers, &stride, &offset);
         context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
     };
-
-    
-    // Set the default sampler. It should be overriden by materials if needed
-    context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
-    SCOPE_EXIT { context->PSSetSamplers(0, 1, Utils::NullSamplers); };
 
     
     // Draw all objects

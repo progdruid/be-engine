@@ -9,6 +9,7 @@
 #include <wrl/client.h>
 #include <umbrellas/access-modifiers.hpp>
 
+#include "BeRenderer.h"
 #include "BeShaderIncludeHandler.hpp"
 #include "Utils.h"
 
@@ -122,11 +123,15 @@ struct BeMaterialTexturePropertyDescriptor {
     std::string DefaultTexturePath;
 };
 
+struct BeMaterialSamplerDescriptor {
+    std::string Name;
+    uint8_t SlotIndex;
+};
+
 class BeShader {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     expose static inline std::string StandardShaderIncludePath = "src/shaders/";
-    expose static auto Create(ID3D11Device* device, const std::filesystem::path& filePath) -> std::shared_ptr<BeShader>;
-    expose static auto Unbind (ID3D11DeviceContext* context, const BeShaderType type = BeShaderType::All) -> void;
+    expose static auto Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader>;
     
     hide static auto CompileBlob (
         const std::filesystem::path& filePath,
@@ -153,13 +158,11 @@ class BeShader {
     expose bool HasMaterial = false;
     expose std::vector<BeMaterialPropertyDescriptor> MaterialProperties;
     expose std::vector<BeMaterialTexturePropertyDescriptor> MaterialTextureProperties;
+    expose std::vector<BeMaterialSamplerDescriptor> MaterialSamplers;
 
     
     // lifecycle ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose BeShader() = default;
     expose ~BeShader() = default;
-
-    // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
-    expose auto Bind (ID3D11DeviceContext* context, BeShaderType type) const -> void;
 };
 

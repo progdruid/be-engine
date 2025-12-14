@@ -4,19 +4,20 @@
 #include "BeAssetRegistry.h"
 #include "BePipeline.h"
 #include "BeShader.h"
+#include "BeTexture.h"
 
 BeBloomPass::BeBloomPass() = default;
 BeBloomPass::~BeBloomPass() = default;
 
 auto BeBloomPass::Initialise() -> void {
-    const auto device = _renderer->GetDevice();
     const auto registry = _renderer->GetAssetRegistry().lock();
 
-    _brightShader = BeShader::Create(device.Get(), "assets/shaders/BeBloomBright");
-    _brightMaterial = BeMaterial::Create("Bright Pass Material", false, _brightShader, AssetRegistry, device);
+    _brightShader = BeShader::Create("assets/shaders/BeBloomBright", *_renderer);
+    _brightMaterial = BeMaterial::Create("Bright Pass Material", false, _brightShader, *_renderer);
     _brightMaterial->SetTexture("HDRInput", registry->GetTexture(InputHDRTextureName).lock());
+    _brightMaterial->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
 
-    _kawaseShader = BeShader::Create(device.Get(), "assets/shaders/BeBloomKawase");
+    _kawaseShader = BeShader::Create("assets/shaders/BeBloomKawase", *_renderer);
 
     // Create downsample materials for each mip level (1 to size-1)
     _downsampleMaterials.resize(BloomMipCount);
@@ -25,8 +26,7 @@ auto BeBloomPass::Initialise() -> void {
             "Downsample Mip " + std::to_string(mipTarget),
             false,
             _kawaseShader,
-            AssetRegistry,
-            device
+            *_renderer
         );
 
         const auto sourceMip = registry->GetTexture(BloomMipTextureName+std::to_string(mipTarget - 1)).lock();
@@ -39,6 +39,7 @@ auto BeBloomPass::Initialise() -> void {
         mat->SetFloat2("TexelSize", glm::vec2(texelSizeX, texelSizeY));
         mat->SetFloat("PassRadius", passRadius);
         mat->SetTexture("BloomMipInput", sourceMip);
+        mat->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
         mat->UpdateGPUBuffers(_renderer->GetContext().Get());
 
         _downsampleMaterials[mipTarget] = mat;
@@ -50,8 +51,7 @@ auto BeBloomPass::Initialise() -> void {
             "Upsample Mip " + std::to_string(mipTarget),
             false,
             _kawaseShader,
-            AssetRegistry,
-            device
+            *_renderer
         );
 
         const auto sourceMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget + 1)).lock();
@@ -65,16 +65,18 @@ auto BeBloomPass::Initialise() -> void {
         mat->SetFloat2("TexelSize", glm::vec2(texelSizeX, texelSizeY));
         mat->SetFloat("PassRadius", upsampleRadius);
         mat->SetTexture("BloomMipInput", sourceMip);
+        mat->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
         mat->UpdateGPUBuffers(_renderer->GetContext().Get());
 
         _upsampleMaterials[mipTarget] = mat;
     }
 
-    _addShader = BeShader::Create(device.Get(), "assets/shaders/BeBloomAdd");
-    _addMaterial = BeMaterial::Create("Add Pass Material", false, _addShader, AssetRegistry, device);
+    _addShader = BeShader::Create("assets/shaders/BeBloomAdd", *_renderer);
+    _addMaterial = BeMaterial::Create("Add Pass Material", false, _addShader, *_renderer);
     _addMaterial->SetTexture("HDRInput", registry->GetTexture(InputHDRTextureName).lock());
     _addMaterial->SetTexture("BloomInput", registry->GetTexture(BloomMipTextureName + "0").lock());
     _addMaterial->SetTexture("DirtTexture", registry->GetTexture(DirtTextureName).lock());
+    _addMaterial->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
 }
 
 auto BeBloomPass::Render() -> void {
@@ -98,14 +100,12 @@ auto BeBloomPass::RenderBrightPass() const -> void {
     // shaders
     pipeline->BindShader(_brightShader, BeShaderType::Vertex | BeShaderType::Pixel);
     pipeline->BindMaterial(_brightMaterial);
-    context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
     
     // draw
     context->Draw(4, 0);
 
     // clear
     pipeline->Clear();
-    context->PSSetSamplers(0, 1, Utils::NullSamplers);
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
     
 }
@@ -120,7 +120,6 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
     context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
 
     pipeline->BindShader(_kawaseShader, BeShaderType::Vertex | BeShaderType::Pixel);
-    context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
     
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
         const auto targetMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
@@ -144,11 +143,9 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
         context->Draw(4, 0);
 
         context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
-        BeMaterial::UnbindMaterial_Temporary(_downsampleMaterials[mipTarget], context.Get(), BeShaderType::Pixel);
     }
 
     pipeline->Clear();
-    context->PSSetSamplers(0, 1, Utils::NullSamplers);
     context->RSSetViewports(1, &previousViewport);
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
 }
@@ -161,10 +158,7 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
     uint32_t numberOfPreviousViewports = 1;
     D3D11_VIEWPORT previousViewport;
     context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
-
-    pipeline->BindShader(_kawaseShader, BeShaderType::Vertex | BeShaderType::Pixel);
-    context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
-
+    
     // Set additive blend state for upsampling (accumulate into mips)
     ID3D11BlendState* additiveBlendState = nullptr;
     D3D11_BLEND_DESC blendDesc = {};
@@ -178,6 +172,8 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
     Utils::Check << _renderer->GetDevice()->CreateBlendState(&blendDesc, &additiveBlendState);
     context->OMSetBlendState(additiveBlendState, nullptr, 0xFFFFFFFF);
+
+    pipeline->BindShader(_kawaseShader, BeShaderType::Vertex | BeShaderType::Pixel);
 
     for (int32_t mipTarget = BloomMipCount - 2; mipTarget >= 0; --mipTarget) {
         const auto targetMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
@@ -201,7 +197,6 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
     if (additiveBlendState) additiveBlendState->Release();
 
     pipeline->Clear();
-    context->PSSetSamplers(0, 1, Utils::NullSamplers);
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
     context->RSSetViewports(1, &previousViewport);
 }
@@ -217,11 +212,9 @@ auto BeBloomPass::RenderAddPass() const -> void {
 
     pipeline->BindShader(_addShader, BeShaderType::Vertex | BeShaderType::Pixel);
     pipeline->BindMaterial(_addMaterial);
-    context->PSSetSamplers(0, 1, _renderer->GetPostProcessLinearClampSampler().GetAddressOf());
     
     context->Draw(4, 0);
 
     pipeline->Clear();
-    context->PSSetSamplers(0, 1, Utils::NullSamplers);
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);   
 }

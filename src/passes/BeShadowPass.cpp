@@ -4,8 +4,10 @@
 #include <scope_guard/scope_guard.hpp>
 
 #include "BeAssetRegistry.h"
+#include "BeModel.h"
 #include "BePipeline.h"
 #include "BeRenderer.h"
+#include "BeTexture.h"
 
 auto BeShadowPass::Initialise() -> void {
     D3D11_BUFFER_DESC objectBufferDescriptor = {};
