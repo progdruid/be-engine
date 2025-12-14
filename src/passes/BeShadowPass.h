@@ -1,21 +1,25 @@
 ﻿#pragma once
+#include <d3d11.h>
 #include <memory>
+#include <span>
 #include <string>
+#include <umbrellas/include-glm.h>
 
-#include "BeBuffers.h"
 #include "BeRenderPass.h"
-#include "BeShader.h"
+
+struct BePointLight;
+struct BeDirectionalLight;
 
 class BeShadowPass final : public BeRenderPass {
 
-public:
+    expose
     std::weak_ptr<BeDirectionalLight> DirectionalLight;
     std::span<BePointLight> PointLights;
 
-private:
+    hide
     ComPtr<ID3D11Buffer> _objectBuffer;
     
-public:
+    expose
     explicit BeShadowPass() = default;
     ~BeShadowPass() override = default;
 
@@ -23,7 +27,7 @@ public:
     auto Render() -> void override;
     auto GetPassName() const -> const std::string override { return "Shadow Pass"; }
 
-private:
+    hide
     auto RenderDirectionalShadows() -> void;
     auto RenderPointLightShadows(const BePointLight& pointLight) -> void;
 

@@ -1,6 +1,9 @@
 ﻿#pragma once
-#include "BeModel.h"
-#include "umbrellas/include-glm.h"
+#include <memory>
+#include <umbrellas/include-glm.h>
+#include <umbrellas/access-modifiers.hpp>
+
+class BeTexture;
 
 struct BeUniformData {
     glm::mat4 ProjectionView {1.0f};

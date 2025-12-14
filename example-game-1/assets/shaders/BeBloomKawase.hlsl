@@ -11,7 +11,8 @@
         "TexelSize": { "type": "float2", "default": [0.001, 0.001] },
         "PassRadius": { "type": "float", "default": 0.5 },
 
-        "BloomMipInput": { "type": "texture2d", "slot": 0, "default": "black" }
+        "BloomMipInput": { "type": "texture2d", "slot": 0, "default": "black" },
+        "InputSampler": { "type": "sampler", "slot": 0 }
     }
 }
 @be-shader-header-end

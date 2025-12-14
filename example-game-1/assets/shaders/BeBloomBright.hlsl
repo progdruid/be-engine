@@ -12,7 +12,8 @@
         "Intensity": { "type": "float", "default": 17.0 },
         "Knee": { "type": "float", "default": 1.25 },
 
-        "HDRInput": { "type": "texture2d", "slot": 0, "default": "black" }
+        "HDRInput": { "type": "texture2d", "slot": 0, "default": "black" },
+        "InputSampler": { "type": "sampler", "slot": 0 }
     }
 }
 @be-shader-header-end

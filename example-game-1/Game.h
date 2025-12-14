@@ -26,7 +26,7 @@ class Game {
     hide uint32_t _width;
     hide uint32_t _height;
     hide std::unique_ptr<BeWindow> _window;
-    hide std::unique_ptr<BeRenderer> _renderer;
+    hide std::shared_ptr<BeRenderer> _renderer;
     hide std::unique_ptr<BeInput> _input;
     hide std::unique_ptr<BeCamera> _camera;
     hide std::shared_ptr<BeAssetRegistry> _assetRegistry;

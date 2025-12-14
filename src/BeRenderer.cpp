@@ -4,6 +4,7 @@
 #include <scope_guard/scope_guard.hpp>
 #include <dxgi1_6.h>
 
+#include "BeModel.h"
 #include "BePipeline.h"
 #include "passes/BeRenderPass.h"
 #include "BeShader.h"
@@ -215,7 +216,7 @@ auto BeRenderer::SetObjects(const std::vector<ObjectEntry>& objects) -> void {
     for (auto& object : _objects) {
         fullVertices.insert(fullVertices.end(), object.Model->FullVertices.begin(), object.Model->FullVertices.end());
         indices.insert(indices.end(), object.Model->Indices.begin(), object.Model->Indices.end());
-        for (BeModel::BeDrawSlice slice : object.Model->DrawSlices) {
+        for (auto slice : object.Model->DrawSlices) {
             slice.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - object.Model->FullVertices.size());
             slice.StartIndexLocation += static_cast<uint32_t>(indices.size() - object.Model->Indices.size());
             object.DrawSlices.push_back(slice);

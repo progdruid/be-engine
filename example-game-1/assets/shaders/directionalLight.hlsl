@@ -16,7 +16,9 @@
         "Diffuse": { "type": "texture2d", "slot": 1, "default": "black" },
         "WorldNormal": { "type": "texture2d", "slot": 2, "default": "black" },
         "Specular_Shininess": { "type": "texture2d", "slot": 3, "default": "black" },
-        "ShadowMap": { "type": "texture2d", "slot": 4, "default": "black" }
+        "ShadowMap": { "type": "texture2d", "slot": 4, "default": "black" },
+
+        "InputSampler": { "type": "sampler", "slot": 0 }
     },
     "targets": {
         "LightHDR": 0

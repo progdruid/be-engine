@@ -8,7 +8,9 @@
 #include "BeShaderIncludeHandler.hpp"
 #include "Utils.h"
 
-auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePath) -> std::shared_ptr<BeShader> {
+auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader> {
+    const auto& device = renderer.GetDevice();
+    
     auto shader = std::make_shared<BeShader>();
 
     BeShaderIncludeHandler includeHandler(
@@ -40,6 +42,13 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
                 descriptor.SlotIndex = value.at("slot").get<int>();
                 descriptor.DefaultTexturePath = value.at("default").get<std::string>();
                 shader->MaterialTextureProperties.push_back(descriptor);
+                continue;
+            }
+            else if (value["type"].get<std::string>() == "sampler") {
+                BeMaterialSamplerDescriptor descriptor;
+                descriptor.Name = key;
+                descriptor.SlotIndex = value.at("slot").get<int>();
+                shader->MaterialSamplers.push_back(descriptor);
                 continue;
             }
 
@@ -135,7 +144,7 @@ auto BeShader::Create(ID3D11Device* device, const std::filesystem::path& filePat
                 inputLayout.push_back(elementDesc);
             }
 
-            Utils::Check << device->CreateInputLayout(
+            Utils::Check << renderer.GetDevice()->CreateInputLayout(
                 inputLayout.data(),
                 static_cast<UINT>(inputLayout.size()),
                 blob->GetBufferPointer(),
@@ -263,43 +272,3 @@ auto BeShader::Split(std::string_view str, const char* delimiters) -> std::vecto
     result.push_back(Take(str, start, str.size()));
     return result;
 }
-
-
-
-auto BeShader::Bind(ID3D11DeviceContext* context, const BeShaderType type) const -> void {
-    const auto shaderType = ShaderType & type;
-    if (HasAny(shaderType, BeShaderType::Vertex)) {
-        if (ComputedInputLayout) {
-            context->IASetInputLayout(ComputedInputLayout.Get());
-        }
-        else {
-            context->IASetInputLayout(nullptr);
-        }
-        context->VSSetShader(VertexShader.Get(), nullptr, 0);
-    }
-    if (HasAny(shaderType, BeShaderType::Tesselation)) {
-        context->HSSetShader(HullShader.Get(), nullptr, 0);
-        context->DSSetShader(DomainShader.Get(), nullptr, 0);
-    }
-    if (HasAny(shaderType, BeShaderType::Pixel)) {
-        context->PSSetShader(PixelShader.Get(), nullptr, 0);
-    }
-}
-
-auto BeShader::Unbind(ID3D11DeviceContext* context, const BeShaderType type) -> void {
-    if (HasAny(type, BeShaderType::Vertex)) {
-        context->IASetInputLayout(nullptr);
-        context->VSSetShader(nullptr, nullptr, 0);
-    }
-    if (HasAny(type, BeShaderType::Tesselation)) {
-        context->HSSetShader(nullptr, nullptr, 0);
-        context->DSSetShader(nullptr, nullptr, 0);
-    }
-    if (HasAny(type, BeShaderType::Pixel)) {
-        context->PSSetShader(nullptr, nullptr, 0);
-    }
-}
-
-
-
-

@@ -13,9 +13,10 @@ auto BeBackbufferPass::Initialise() -> void {
     const auto& device = _renderer->GetDevice();
     const auto& registry = _renderer->GetAssetRegistry().lock();
 
-    _backbufferShader = BeShader::Create(device.Get(), "assets/shaders/backbuffer");
-    _backbufferMaterial = BeMaterial::Create("Backbuffer Material", false, _backbufferShader, _renderer->GetAssetRegistry().lock(), device);
+    _backbufferShader = BeShader::Create("assets/shaders/backbuffer", *_renderer);
+    _backbufferMaterial = BeMaterial::Create("Backbuffer Material", false, _backbufferShader, *_renderer);
     _backbufferMaterial->SetTexture("InputTexture", registry->GetTexture(InputTextureName).lock());
+    _backbufferMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
 }
 
 auto BeBackbufferPass::Render() -> void {
@@ -32,14 +33,12 @@ auto BeBackbufferPass::Render() -> void {
     // shaders
     pipeline->BindShader(_backbufferShader, BeShaderType::Vertex | BeShaderType::Pixel);
     pipeline->BindMaterial(_backbufferMaterial);
-    context->PSSetSamplers(0, 1, _renderer->GetPointSampler().GetAddressOf());
 
     // draw
     context->Draw(4, 0);
 
     // clear
     pipeline->Clear();
-    context->PSSetSamplers(0, 1, Utils::NullSamplers);
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
 }
 

@@ -1,8 +1,12 @@
 #pragma once
 
-#include "BeBuffers.h"
+#include <memory>
+#include <vector>
 #include "passes/BeRenderPass.h"
 
+struct BePointLight;
+struct BeDirectionalLight;
+class BeMaterial;
 struct GLFWwindow;
 
 class ImGuiPass final : public BeRenderPass {
@@ -24,3 +28,4 @@ class ImGuiPass final : public BeRenderPass {
     auto Render() -> void override;
     auto GetPassName() const -> const std::string override { return "ImGui Pass"; }
 };
+

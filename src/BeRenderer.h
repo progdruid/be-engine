@@ -1,17 +1,21 @@
 ﻿#pragma once
 
 #include <d3d11.h>
+#include <dxgi1_2.h>
 #include <vector>
 #include <wrl/client.h>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <umbrellas/include-glm.h>
 
-#include "BeModel.h"
 #include "BeBuffers.h"
-#include "BeTexture.h"
-#include "BeShader.h"
+#include "umbrellas/access-modifiers.hpp"
 
+
+struct BeDrawSlice;
+struct BeModel;
+class BeAssetRegistry;
 class BePipeline;
 class BeRenderPass;
 class BeShader;
@@ -27,7 +31,7 @@ class BeRenderer {
         glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
         glm::vec3 Scale = {1.f, 1.f, 1.f};
         std::shared_ptr<BeModel> Model = nullptr;
-        std::vector<BeModel::BeDrawSlice> DrawSlices;
+        std::vector<BeDrawSlice> DrawSlices;
         bool CastShadows = true;
     };
 
