@@ -4,6 +4,7 @@
 #include <umbrellas/include-glm.h>
 
 #include "BeAssetRegistry.h"
+#include "BeMaterial.h"
 #include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeShader.h"

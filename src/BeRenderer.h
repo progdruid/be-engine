@@ -26,12 +26,10 @@ class BeRenderer {
 
     // types ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose struct ObjectEntry {
-        std::string Name;
         glm::vec3 Position = {0.f, 0.f, 0.f};
         glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
         glm::vec3 Scale = {1.f, 1.f, 1.f};
         std::shared_ptr<BeModel> Model = nullptr;
-        std::vector<BeDrawSlice> DrawSlices;
         bool CastShadows = true;
     };
 
@@ -66,11 +64,10 @@ class BeRenderer {
 
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
-    std::vector<ObjectEntry> _objects;
+    std::unordered_map<BeModel*, std::vector<BeDrawSlice>> _modelDrawSlices;
+    std::vector<ObjectEntry> _objectsToDraw;
     
-    std::unordered_map<std::string, void*> _contextDataPointers;
     std::vector<BeRenderPass*> _passes;
-
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
@@ -97,18 +94,14 @@ class BeRenderer {
 
     [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }
     [[nodiscard]] auto GetHeight () const -> uint32_t { return _height; }
+
     
-    auto SetObjects(const std::vector<ObjectEntry>& objects) -> void;
-    auto GetObjects() -> const std::vector<ObjectEntry>& { return _objects; }
+    auto SetModels(const std::vector<std::shared_ptr<BeModel>>& models) -> void;
+    auto GetDrawSlicesForModel(const std::shared_ptr<BeModel>& model) -> const std::vector<BeDrawSlice>& { return _modelDrawSlices.at(model.get()); }
+
+    auto SubmitObject(const ObjectEntry& object) -> void { _objectsToDraw.push_back(object); }
+    auto GetObjectsToDraw() -> std::vector<ObjectEntry>& { return _objectsToDraw; }
+    
     auto GetShaderVertexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedVertexBuffer; }
     auto GetShaderIndexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedIndexBuffer; }
-
-    template<typename T>
-    auto GetContextDataPointer(const std::string& name) const -> T* {
-        return static_cast<T*>(_contextDataPointers.at(name));
-    }
-    template<typename T>
-    auto SetContextDataPointer(const std::string& name, T* data) -> void{
-        _contextDataPointers[name] = static_cast<void*>(data);
-    }
 };

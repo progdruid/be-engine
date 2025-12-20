@@ -2,6 +2,7 @@
 
 #include "BeRenderer.h"
 #include "BeAssetRegistry.h"
+#include "BeMaterial.h"
 #include "BePipeline.h"
 #include "BeShader.h"
 #include "BeTexture.h"

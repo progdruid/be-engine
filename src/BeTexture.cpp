@@ -114,6 +114,9 @@ BeTexture::BeTexture(ComPtr<ID3D11Device> device, const BeTextureDescriptor& des
 , BindFlags(descriptor.BindFlags)
 , Format(descriptor.Format)
 {
+    static uint32_t textureCount = 0;
+    UniqueID = ++textureCount;
+    
     CreateMipViewports();
 
     if (!descriptor.IsCubemap) {
