@@ -1,6 +1,7 @@
 ﻿#include "BeBackbufferPass.h"
 
 #include "BeAssetRegistry.h"
+#include "BeMaterial.h"
 #include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"

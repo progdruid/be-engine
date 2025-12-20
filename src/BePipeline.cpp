@@ -1,5 +1,6 @@
 #include "BePipeline.h"
 
+#include "BeMaterial.h"
 #include "BeTexture.h"
 
 auto BePipeline::Create(const ComPtr<ID3D11DeviceContext>& context)-> std::shared_ptr<BePipeline> {
@@ -39,8 +40,8 @@ auto BePipeline::BindShader(const std::shared_ptr<BeShader>& shader, BeShaderTyp
 auto BePipeline::BindMaterial(const std::shared_ptr<BeMaterial>& material) -> void {
     assert(_boundShaderType != BeShaderType::None); // Shader must be bound before material (see BindShader())
     assert(_boundShader != nullptr);                // Shader must be bound before material (see BindShader())
-    assert(!material->Shader.owner_before(_boundShader) && !_boundShader.owner_before(material->Shader));
-    // Material must use to the same shader (see BindShader())
+    assert(!material->Shader.expired());
+    assert(material->Shader.lock() == _boundShader); // Material must use the same shader (see BindShader())
     
     const auto& buffer = material->GetBuffer();
     if (buffer != nullptr) {
@@ -57,20 +58,8 @@ auto BePipeline::BindMaterial(const std::shared_ptr<BeMaterial>& material) -> vo
             _context->PSSetConstantBuffers(2, 1, buffer.GetAddressOf());
         }
     }
-    
-    const auto& textureSlots = material->GetTexturePairs();
-    for (const auto& [texture, slot] : textureSlots | std::views::values) {
-        if (HasAny(_boundShaderType, BeShaderType::Vertex)) {
-            _context->VSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
-        }
-        if (HasAny(_boundShaderType, BeShaderType::Tesselation)) {
-            _context->HSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
-            _context->DSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
-        }
-        if (HasAny(_boundShaderType, BeShaderType::Pixel)) {
-            _context->PSSetShaderResources(slot, 1, texture->GetSRV().GetAddressOf());
-        }
-    }
+
+    BindMaterialTextures(*material);
 
     const auto& samplerSlots = material->GetSamplerPairs();
     for (const auto& [sampler, slot] : samplerSlots | std::views::values) {
@@ -105,4 +94,35 @@ auto BePipeline::Clear() -> void {
     _boundShader.reset();
     _boundShader = nullptr;
     _boundMaterial = nullptr;
+}
+
+auto BePipeline::ClearCache() -> void {
+    _vertexResCache.fill(0);
+    _tessResCache.fill(0);
+    _pixelResCache.fill(0);
+}
+
+auto BePipeline::BindMaterialTextures(const BeMaterial& material) -> void {
+    
+    const auto& textureSlots = material.GetTexturePairs();
+    
+    for (const auto& [texture, slot] : textureSlots | std::views::values) {
+
+        const auto srv = texture->GetSRV();
+        const auto id = texture->UniqueID;
+        
+        if (HasAny(_boundShaderType, BeShaderType::Vertex) && _vertexResCache[slot] != id) {
+            _context->VSSetShaderResources(slot, 1, srv.GetAddressOf());
+            _vertexResCache[slot] = id;
+        }
+        if (HasAny(_boundShaderType, BeShaderType::Tesselation) && _tessResCache[slot] != id) {
+            _context->HSSetShaderResources(slot, 1, srv.GetAddressOf());
+            _context->DSSetShaderResources(slot, 1, srv.GetAddressOf());
+            _tessResCache[slot] = id;
+        }
+        if (HasAny(_boundShaderType, BeShaderType::Pixel) && _pixelResCache[slot] != id) {
+            _context->PSSetShaderResources(slot, 1, srv.GetAddressOf());
+            _pixelResCache[slot] = id;
+        }
+    }
 }

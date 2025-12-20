@@ -65,6 +65,7 @@ class BeTexture {
     
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose std::string Name;
+    expose uint32_t UniqueID;
     expose uint32_t Width;
     expose uint32_t Height;
     expose bool IsCubemap;

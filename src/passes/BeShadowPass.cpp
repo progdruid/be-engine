@@ -69,7 +69,7 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
         context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
     };
 
-    const auto& objects = _renderer->GetObjects();
+    const auto& objects = _renderer->GetObjectsToDraw();
     for (const auto& object : objects) {
         if (!object.CastShadows)
             continue;
@@ -92,7 +92,8 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
             context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         }
 
-        for (const auto& slice : object.DrawSlices) {
+        const auto & drawSlices = _renderer->GetDrawSlicesForModel(object.Model);
+        for (const auto& slice : drawSlices) {
             pipeline->BindMaterial(slice.Material);
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
         }
@@ -141,7 +142,7 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
         const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
         // for each object
-        const auto& objects = _renderer->GetObjects();
+        const auto& objects = _renderer->GetObjectsToDraw();
         for (const auto& object : objects) {
             if (!object.CastShadows)
                 continue;
@@ -166,7 +167,8 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
             }
             
             // draw
-            for (const auto& slice : object.DrawSlices) {
+            const auto& drawSlices = _renderer->GetDrawSlicesForModel(object.Model);
+            for (const auto& slice : drawSlices) {
                 pipeline->BindMaterial(slice.Material);
                 context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
             }

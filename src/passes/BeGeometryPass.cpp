@@ -62,7 +62,7 @@ auto BeGeometryPass::Render() -> void {
 
     
     // Draw all objects
-    const auto& objects = _renderer->GetObjects();
+    const auto& objects = _renderer->GetObjectsToDraw();
     for (const auto& object : objects) {
         const auto shader = object.Model->Shader;
         assert(shader);
@@ -86,8 +86,9 @@ auto BeGeometryPass::Render() -> void {
             context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
             context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         }
-        
-        for (const auto& slice : object.DrawSlices) {
+
+        const auto & drawSlices = _renderer->GetDrawSlicesForModel(object.Model);
+        for (const auto& slice : drawSlices) {
             pipeline->BindMaterial(slice.Material);
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
         }

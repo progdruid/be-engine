@@ -92,6 +92,11 @@ auto Game::LoadAssets() -> void {
     _anvil->DrawSlices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
 
     
+    const std::vector<std::shared_ptr<BeModel>> models = {
+        _plane, _witchItems, _livingCube, _macintosh, _pagoda, _disks, _anvil
+    };
+    _renderer->SetModels(models);
+    
 }
 
 auto Game::SetupRenderPasses() -> void {
@@ -231,67 +236,58 @@ auto Game::SetupRenderPasses() -> void {
 }
 
 auto Game::SetupScene() -> void {
-    const std::vector<BeRenderer::ObjectEntry> objects = {
+    
+    _objects = {
         {
-            .Name = "Macintosh",
             .Position = {0, 0, -6.9},
             .Model = _macintosh,
         },
         {
-            .Name = "Terrain",
             .Position = {0, 0, 0},
             .Scale = glm::vec3(1.f),
             .Model = _plane,
             .CastShadows = false,
         },
         {
-            .Name = "Tessellated Cube",
             .Position = {0, 10, 0},
             .Scale = glm::vec3(2.f),
             .Model = _livingCube,
         },
         {
-            .Name = "Pagoda",
             .Position = {0, 0, 8},
             .Scale = glm::vec3(0.2f),
             .Model = _pagoda,
         },
         {
-            .Name = "Witch Items",
             .Position = {-3, 2, 5},
             .Scale = glm::vec3(3.f),
             .Model = _witchItems,
         },
         {
-            .Name = "Anvil",
             .Position = {7, 0, 5},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(90.f), 0)),
             .Scale = glm::vec3(0.2f),
             .Model = _anvil,
         },
         {
-            .Name = "Anvil1",
             .Position = {-7, 0, -3},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(-90.f), 0)),
             .Scale = glm::vec3(0.2f),
             .Model = _anvil,
         },
         {
-            .Name = "Anvil2",
             .Position = {-17, -10, -3},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(-90.f), 0)),
             .Scale = glm::vec3(1.0f),
             .Model = _anvil,
         },
         {
-            .Name = "Disks",
             .Position = {7.5f, 1, -4},
             .Rotation = glm::quat(glm::vec3(0, glm::radians(150.f), 0)),
             .Model = _disks,
         },
     };
-
-    _renderer->SetObjects(objects);
+    
 
     _renderer->UniformData.AmbientColor = glm::vec3(0.1f);
         
@@ -419,6 +415,10 @@ auto Game::MainLoop() -> void {
             }
         }
 
+
+        for (const auto & object : _objects)
+            _renderer->SubmitObject(object);
+        
         _renderer->Render();
     }
 }

@@ -4,6 +4,7 @@
 #include <vector>
 #include <glm/vec3.hpp>
 
+#include "BeRenderer.h"
 #include "umbrellas/access-modifiers.hpp"
 
 class BeTexture;
@@ -35,6 +36,8 @@ class Game {
     hide std::shared_ptr<BeDirectionalLight> _directionalLight;
     hide std::vector<BePointLight> _pointLights;
     hide BeLightingPass* _lightingPass;
+
+    hide std::vector<BeRenderer::ObjectEntry> _objects; 
     
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose Game();
