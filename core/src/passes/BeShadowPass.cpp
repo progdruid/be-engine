@@ -69,17 +69,17 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
         context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
     };
 
-    const auto& objects = _renderer->GetObjectsToDraw();
-    for (const auto& object : objects) {
-        if (!object.CastShadows)
+    const auto& entries = _renderer->GetDrawEntries();
+    for (const auto& entry : entries) {
+        if (!entry.CastShadows)
             continue;
 
-        pipeline->BindShader(object.Model->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
+        pipeline->BindShader(entry.Model->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
         
         const glm::mat4x4 modelMatrix =
-            glm::translate(glm::mat4(1.0f), object.Position) *
-            glm::mat4_cast(object.Rotation) *
-            glm::scale(glm::mat4(1.0f), object.Scale);
+            glm::translate(glm::mat4(1.0f), entry.Position) *
+            glm::mat4_cast(entry.Rotation) *
+            glm::scale(glm::mat4(1.0f), entry.Scale);
         
         BeObjectBufferGPU objectData(modelMatrix, directionalLight->ViewProjection, glm::vec3(0.f));
         D3D11_MAPPED_SUBRESOURCE objectMappedResource;
@@ -87,12 +87,12 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
         memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
         context->Unmap(_objectBuffer.Get(), 0);
         context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        if (HasAny(object.Model->Shader->ShaderType, BeShaderType::Tesselation)) {
+        if (HasAny(entry.Model->Shader->ShaderType, BeShaderType::Tesselation)) {
             context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
             context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         }
 
-        const auto & drawSlices = _renderer->GetDrawSlicesForModel(object.Model);
+        const auto & drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
         for (const auto& slice : drawSlices) {
             pipeline->BindMaterial(slice.Material);
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
@@ -142,18 +142,18 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
         const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
         // for each object
-        const auto& objects = _renderer->GetObjectsToDraw();
-        for (const auto& object : objects) {
-            if (!object.CastShadows)
+        const auto& entries = _renderer->GetDrawEntries();
+        for (const auto& entry : entries) {
+            if (!entry.CastShadows)
                 continue;
 
-            pipeline->BindShader(object.Model->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
+            pipeline->BindShader(entry.Model->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
             
             // model matrix
             const glm::mat4x4 modelMatrix =
-                glm::translate(glm::mat4(1.0f), object.Position) *
-                glm::mat4_cast(object.Rotation) *
-                glm::scale(glm::mat4(1.0f), object.Scale);
+                glm::translate(glm::mat4(1.0f), entry.Position) *
+                glm::mat4_cast(entry.Rotation) *
+                glm::scale(glm::mat4(1.0f), entry.Scale);
 
             BeObjectBufferGPU objectData(modelMatrix, faceViewProj, pointLight.Position);
             D3D11_MAPPED_SUBRESOURCE objectMappedResource;
@@ -161,13 +161,13 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
             memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
             context->Unmap(_objectBuffer.Get(), 0);
             context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-            if (HasAny(object.Model->Shader->ShaderType, BeShaderType::Tesselation)) {
+            if (HasAny(entry.Model->Shader->ShaderType, BeShaderType::Tesselation)) {
                 context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
                 context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
             }
             
             // draw
-            const auto& drawSlices = _renderer->GetDrawSlicesForModel(object.Model);
+            const auto& drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
             for (const auto& slice : drawSlices) {
                 pipeline->BindMaterial(slice.Material);
                 context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);

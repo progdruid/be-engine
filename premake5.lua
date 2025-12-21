@@ -3,10 +3,12 @@
 
 -- cleaning previously generated files and folders
 local function cleanGenerated()
-    os.rmdir("bin")
-    os.rmdir("obj")
-    os.rmdir("example-game-*/bin")
-    os.rmdir("example-game-*/obj")
+    os.rmdir("core/bin")
+    os.rmdir("core/obj")
+    os.rmdir("toolkit/bin")
+    os.rmdir("toolkit/obj")
+    os.rmdir("example-game-1/bin")
+    os.rmdir("example-game-1/obj")
     os.remove("**.sln")
     os.remove("**.vcxproj")
     os.remove("**.vcxproj.filters")
@@ -21,44 +23,46 @@ end
 
 
 -- workspace and project definitions
-workspace "Be"
+workspace "be"
     configurations { "Debug", "Release" }
     system "windows"
     architecture "x86_64"
     location "."
-    startproject "example-game-0"
+    startproject "example-game-1"
 
-
--- engine
-project "Engine"
+-- core
+project "core"
     kind "StaticLib"
     language "C++"
     cppdialect "C++20"
+    location "core"
 
-    targetdir ("%{wks.location}/bin/%{cfg.architecture}/%{cfg.buildcfg}")
-    objdir    ("%{wks.location}/obj/%{cfg.architecture}/%{cfg.buildcfg}")
+    targetdir ("%{prj.location}/bin/%{cfg.architecture}/%{cfg.buildcfg}")
+    objdir    ("%{prj.location}/obj/%{cfg.architecture}/%{cfg.buildcfg}")
 
     files {
-        "src/**.cpp",
-        "src/**.c",
-        "src/**.h",
-        "src/**.hpp",
-        "src/**.hlsl",
-        "src/**.hlsli",
-    }
-
-    excludes {
-        "example-game*/**",
+        "%{prj.location}/src/**.cpp",
+        "%{prj.location}/src/**.c",
+        "%{prj.location}/src/**.h",
+        "%{prj.location}/src/**.hpp",
+        "%{prj.location}/src/**.hlsl",
+        "%{prj.location}/src/**.hlsli",
     }
 
     includedirs {
-        "src",
-        "src/shaders",
+        "%{prj.location}/src",
+        "%{prj.location}/src/shaders",
         "vendor/Assimp/include",
         "vendor"
     }
     libdirs { "vendor/glfw/lib-vc2022", "vendor/Assimp/lib/x64" }
-    links { "glfw3", "d3d11", "dxgi", "d3dcompiler", "assimp-vc143-mt" }
+    links { 
+        "glfw3", 
+        "d3d11", 
+        "dxgi", 
+        "d3dcompiler", 
+        "assimp-vc143-mt" 
+    }
 
     filter { "files:**.hlsl" }
         buildaction "None"
@@ -78,17 +82,69 @@ project "Engine"
 
     filter {}
 
+-- toolkit
+project "toolkit"
+    kind "StaticLib"
+    language "C++"
+    cppdialect "C++20"
+    location "toolkit"
+
+    targetdir ("%{prj.location}/bin/%{cfg.architecture}/%{cfg.buildcfg}")
+    objdir    ("%{prj.location}/obj/%{cfg.architecture}/%{cfg.buildcfg}")
+
+    files {
+        "%{prj.location}/**.cpp",
+        "%{prj.location}/**.c",
+        "%{prj.location}/**.h",
+        "%{prj.location}/**.hpp",
+    }
+
+    includedirs {
+        "%{prj.location}",
+        "core/src",
+        "vendor"
+    }
+    libdirs { "vendor/glfw/lib-vc2022", "vendor/Assimp/lib/x64" }
+    links {
+        "core",
+        "glfw3",
+        "d3d11",
+        "dxgi",
+        "d3dcompiler",
+        "assimp-vc143-mt"
+    }
+
+    -- filter { "files:**.hlsl" }
+    --     buildaction "None"
+
+    filter "configurations:Debug"
+        symbols "On"
+        defines { "DEBUG" }
+        optimize "Off"
+
+    filter "configurations:Release"
+        symbols "Off"
+        defines { "NDEBUG" }
+        optimize "Full"
+
+    filter { "toolset:msc*", "language:C++" }
+        buildoptions { "/Zc:__cplusplus" }
+
+    filter {}
+
 
 -- misc project
-project "MiscConfiguration"
+project "misc-configuration"
     kind "Utility"
     files {
         "premake5.lua",
         ".gitignore",
         "README.md",
+        "*DotSettings*"
     }
 
-    
+
+-- example project
 project "example-game-1"
     kind "ConsoleApp"
     language "C++"
@@ -109,18 +165,19 @@ project "example-game-1"
     }
 
     includedirs {
-        "src",
-        "src/shaders",
+        "core/src",
+        "core/src/shaders",
+        "toolkit",
         "%{prj.location}",
         "vendor/Assimp/include",
         "vendor",
         "%{prj.location}/imgui",
     }
 
-    links { "Engine" }
+    links { "core", "toolkit" }
 
     postbuildcommands {
-        "{COPY} %{wks.location}/src/shaders %{cfg.targetdir}/standardShaders",
+        "{COPY} %{wks.location}/core/src/shaders %{cfg.targetdir}/standardShaders",
         "{COPY} %{prj.location}/assets %{cfg.targetdir}/assets",
         "{COPY} %{wks.location}/vendor/Assimp/bin/x64/assimp-vc143-mt.dll %{cfg.targetdir}"
     }

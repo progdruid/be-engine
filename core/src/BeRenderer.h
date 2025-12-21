@@ -25,7 +25,7 @@ using Microsoft::WRL::ComPtr;
 class BeRenderer {
 
     // types ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose struct ObjectEntry {
+    expose struct DrawEntry {
         glm::vec3 Position = {0.f, 0.f, 0.f};
         glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
         glm::vec3 Scale = {1.f, 1.f, 1.f};
@@ -65,7 +65,9 @@ class BeRenderer {
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
     std::unordered_map<BeModel*, std::vector<BeDrawSlice>> _modelDrawSlices;
-    std::vector<ObjectEntry> _objectsToDraw;
+    std::vector<DrawEntry> _drawEntries;
+
+    std::vector<std::shared_ptr<BeModel>> _registeredModels;
     
     std::vector<BeRenderPass*> _passes;
 
@@ -81,6 +83,7 @@ class BeRenderer {
     
     expose
     auto AddRenderPass(BeRenderPass* renderPass) -> void;
+    auto ClearPasses() -> void;
     auto InitialisePasses() const -> void;
     auto Render() -> void;
 
@@ -95,12 +98,14 @@ class BeRenderer {
     [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }
     [[nodiscard]] auto GetHeight () const -> uint32_t { return _height; }
 
-    
+    expose
     auto SetModels(const std::vector<std::shared_ptr<BeModel>>& models) -> void;
+    auto RegisterModels(const std::vector<std::shared_ptr<BeModel>>& models) -> void;
+    auto BakeModels() -> void;
     auto GetDrawSlicesForModel(const std::shared_ptr<BeModel>& model) -> const std::vector<BeDrawSlice>& { return _modelDrawSlices.at(model.get()); }
 
-    auto SubmitObject(const ObjectEntry& object) -> void { _objectsToDraw.push_back(object); }
-    auto GetObjectsToDraw() -> std::vector<ObjectEntry>& { return _objectsToDraw; }
+    auto SubmitDrawEntry(const DrawEntry& entry) -> void { _drawEntries.push_back(entry); }
+    auto GetDrawEntries() -> std::vector<DrawEntry>& { return _drawEntries; }
     
     auto GetShaderVertexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedVertexBuffer; }
     auto GetShaderIndexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedIndexBuffer; }

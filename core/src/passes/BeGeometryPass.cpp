@@ -62,18 +62,18 @@ auto BeGeometryPass::Render() -> void {
 
     
     // Draw all objects
-    const auto& objects = _renderer->GetObjectsToDraw();
-    for (const auto& object : objects) {
-        const auto shader = object.Model->Shader;
+    const auto& entries = _renderer->GetDrawEntries();
+    for (const auto& entry : entries) {
+        const auto shader = entry.Model->Shader;
         assert(shader);
         
         pipeline->BindShader(shader, BeShaderType::All);
         SCOPE_EXIT { pipeline->Clear(); };
 
         glm::mat4x4 modelMatrix =
-            glm::translate(glm::mat4(1.0f), object.Position) *
-            glm::mat4_cast(object.Rotation) *
-            glm::scale(glm::mat4(1.0f), object.Scale);
+            glm::translate(glm::mat4(1.0f), entry.Position) *
+            glm::mat4_cast(entry.Rotation) *
+            glm::scale(glm::mat4(1.0f), entry.Scale);
         
         BeObjectBufferGPU objectData(modelMatrix, _renderer->UniformData.ProjectionView, _renderer->UniformData.CameraPosition);
         D3D11_MAPPED_SUBRESOURCE objectMappedResource;
@@ -87,7 +87,7 @@ auto BeGeometryPass::Render() -> void {
             context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
         }
 
-        const auto & drawSlices = _renderer->GetDrawSlicesForModel(object.Model);
+        const auto & drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
         for (const auto& slice : drawSlices) {
             pipeline->BindMaterial(slice.Material);
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
