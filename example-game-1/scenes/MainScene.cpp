@@ -1,6 +1,8 @@
 
 #include "MainScene.h"
 
+#include <glfw/glfw3.h>
+
 #include "BeAssetRegistry.h"
 #include "BeCamera.h"
 #include "BeInput.h"
@@ -9,6 +11,9 @@
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
+#include "BeWindow.h"
+#include "imgui/imgui.h"
+#include "imgui/BeImGuiPass.h"
 #include "passes/BeBackbufferPass.h"
 #include "passes/BeBloomPass.h"
 #include "passes/BeFullscreenEffectPass.h"
@@ -19,19 +24,21 @@
 MainScene::MainScene(
     const std::shared_ptr<BeRenderer>& renderer,
     const std::shared_ptr<BeAssetRegistry>& assetRegistry,
-    const std::shared_ptr<BeCamera>& camera,
-    const std::shared_ptr<BeInput>& input,
-    uint32_t screenWidth,
-    uint32_t screenHeight
+    const std::shared_ptr<BeWindow>& window,
+    const std::shared_ptr<BeInput>& input
 )
     : _renderer(renderer)
     , _assetRegistry(assetRegistry)
-    , _camera(camera)
+    , _window(window)
     , _input(input)
-    , _screenWidth(screenWidth)
-    , _screenHeight(screenHeight) {}
+{}
 
 auto MainScene::Prepare() -> void {
+
+    _camera = std::make_unique<BeCamera>(_renderer, _window); 
+    _camera->NearPlane = 0.1f;
+    _camera->FarPlane = 200.0f;
+    
     const auto device = _renderer->GetDevice();
 
     BeShader::StandardShaderIncludePath = "standardShaders/";
@@ -116,47 +123,49 @@ auto MainScene::Prepare() -> void {
         _pointLights.push_back(pointLight);
     }
 
-    _renderer->ClearPasses();
 
+    const uint32_t screenWidth = _window->GetWidth();
+    const uint32_t screenHeight = _window->GetHeight();
+    
     BeTexture::Create("DepthStencil")
     .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R32_TYPELESS)
-    .SetSize(_screenWidth, _screenHeight)
+    .SetSize(screenWidth, screenHeight)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
     BeTexture::Create("BaseColor")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
-    .SetSize(_screenWidth, _screenHeight)
+    .SetSize(screenWidth, screenHeight)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
     BeTexture::Create("WorldNormal")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
-    .SetSize(_screenWidth, _screenHeight)
+    .SetSize(screenWidth, screenHeight)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
     BeTexture::Create("Specular-Shininess")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
-    .SetSize(_screenWidth, _screenHeight)
+    .SetSize(screenWidth, screenHeight)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
     BeTexture::Create("HDR-Input")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
-    .SetSize(_screenWidth, _screenHeight)
+    .SetSize(screenWidth, screenHeight)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
     for (int mip = 0; mip < 5; ++mip) {
         const float multiplier = glm::pow(0.5f, mip);
-        const uint32_t mipWidth = _screenWidth * multiplier;
-        const uint32_t mipHeight = _screenHeight * multiplier;
+        const uint32_t mipWidth = screenWidth * multiplier;
+        const uint32_t mipHeight = screenHeight * multiplier;
 
         BeTexture::Create("Bloom_Mip" + std::to_string(mip))
         .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
@@ -169,30 +178,32 @@ auto MainScene::Prepare() -> void {
     BeTexture::Create("BloomOutput")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
-    .SetSize(_screenWidth, _screenHeight)
+    .SetSize(screenWidth, screenHeight)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
     BeTexture::Create("TonemapperOutput")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
-    .SetSize(_screenWidth, _screenHeight)
+    .SetSize(screenWidth, screenHeight)
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
-    auto shadowPass = new BeShadowPass();
+    _renderer->ClearPasses();
+
+    const auto shadowPass = new BeShadowPass();
     _renderer->AddRenderPass(shadowPass);
     shadowPass->DirectionalLight = _directionalLight;
     shadowPass->PointLights = _pointLights;
 
-    auto geometryPass = new BeGeometryPass();
+    const auto geometryPass = new BeGeometryPass();
     _renderer->AddRenderPass(geometryPass);
     geometryPass->OutputDepthTextureName = "DepthStencil";
     geometryPass->OutputTexture0Name = "BaseColor";
     geometryPass->OutputTexture1Name = "WorldNormal";
     geometryPass->OutputTexture2Name = "Specular-Shininess";
 
-    auto lightingPass = new BeLightingPass();
+    const auto lightingPass = new BeLightingPass();
     _renderer->AddRenderPass(lightingPass);
     lightingPass->DirectionalLight = _directionalLight;
     lightingPass->PointLights = _pointLights;
@@ -202,7 +213,7 @@ auto MainScene::Prepare() -> void {
     lightingPass->InputTexture2Name = "Specular-Shininess";
     lightingPass->OutputTextureName = "HDR-Input";
 
-    auto bloomPass = new BeBloomPass();
+    const auto bloomPass = new BeBloomPass();
     _renderer->AddRenderPass(bloomPass);
     bloomPass->AssetRegistry = _assetRegistry;
     bloomPass->InputHDRTextureName = "HDR-Input";
@@ -215,27 +226,26 @@ auto MainScene::Prepare() -> void {
     bloomPass->DirtTextureName = "BloomDirtTexture";
     bloomPass->OutputTextureName = "BloomOutput";
 
-    auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper", *_renderer);
-    auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", false, tonemapperShader, *_renderer);
+    const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper", *_renderer);
+    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", false, tonemapperShader, *_renderer);
     tonemapperMaterial->SetTexture("HDRInput", _assetRegistry->GetTexture("BloomOutput").lock());
     tonemapperMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
-    auto tonemapperPass = new BeFullscreenEffectPass();
+    const auto tonemapperPass = new BeFullscreenEffectPass();
     _renderer->AddRenderPass(tonemapperPass);
     tonemapperPass->OutputTextureNames = {"TonemapperOutput"};
     tonemapperPass->Shader = tonemapperShader;
     tonemapperPass->Material = tonemapperMaterial;
 
-    auto backbufferPass = new BeBackbufferPass();
+    const auto backbufferPass = new BeBackbufferPass();
     _renderer->AddRenderPass(backbufferPass);
     backbufferPass->InputTextureName = "TonemapperOutput";
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
 
+    const auto imguiPass = new BeImGuiPass(_window);
+    _renderer->AddRenderPass(imguiPass);
+    imguiPass->SetUICallback([this](){ DrawUI(); });
+    
     _renderer->InitialisePasses();
-}
-
-auto MainScene::Tick(float deltaTime) -> void {
-    Update(deltaTime);
-    Render();
 }
 
 auto MainScene::OnLoad() -> void {
@@ -248,76 +258,74 @@ auto MainScene::OnLoad() -> void {
     _registry.emplace<NameComponent>(entity, "Plane");
     _registry.emplace<TransformComponent>(entity, glm::vec3(0, 0, 0), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(1.f));
     _registry.emplace<RenderComponent>(entity, _plane, false);
-
+    
     entity = _registry.create();
     _registry.emplace<NameComponent>(entity, "LivingCube");
     _registry.emplace<TransformComponent>(entity, glm::vec3(0, 10, 0), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(2.f));
     _registry.emplace<RenderComponent>(entity, _livingCube, true);
-
+    
     entity = _registry.create();
     _registry.emplace<NameComponent>(entity, "Pagoda");
     _registry.emplace<TransformComponent>(entity, glm::vec3(0, 0, 8), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(0.2f));
     _registry.emplace<RenderComponent>(entity, _pagoda, true);
-
+    
     entity = _registry.create();
     _registry.emplace<NameComponent>(entity, "WitchItems");
     _registry.emplace<TransformComponent>(entity, glm::vec3(-3, 2, 5), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(3.f));
     _registry.emplace<RenderComponent>(entity, _witchItems, true);
-
+    
     entity = _registry.create();
     _registry.emplace<NameComponent>(entity, "Anvil1");
     _registry.emplace<TransformComponent>(entity, glm::vec3(7, 0, 5), glm::quat(glm::vec3(0, glm::radians(90.f), 0)), glm::vec3(0.2f));
     _registry.emplace<RenderComponent>(entity, _anvil, true);
-
+    
     entity = _registry.create();
     _registry.emplace<NameComponent>(entity, "Anvil2");
     _registry.emplace<TransformComponent>(entity, glm::vec3(-7, 0, -3), glm::quat(glm::vec3(0, glm::radians(-90.f), 0)), glm::vec3(0.2f));
     _registry.emplace<RenderComponent>(entity, _anvil, true);
-
+    
     entity = _registry.create();
     _registry.emplace<NameComponent>(entity, "Anvil3");
     _registry.emplace<TransformComponent>(entity, glm::vec3(-17, -10, -3), glm::quat(glm::vec3(0, glm::radians(-90.f), 0)), glm::vec3(1.0f));
     _registry.emplace<RenderComponent>(entity, _anvil, true);
-
+    
     entity = _registry.create();
     _registry.emplace<NameComponent>(entity, "Disks");
     _registry.emplace<TransformComponent>(entity, glm::vec3(7.5f, 1, -4), glm::quat(glm::vec3(0, glm::radians(150.f), 0)), glm::vec3(1.f));
     _registry.emplace<RenderComponent>(entity, _disks, true);
 }
 
-auto MainScene::Update(float deltaTime) -> void {
+
+auto MainScene::Tick(float deltaTime) -> void {
     constexpr float moveSpeed = 5.0f;
     float speed = moveSpeed * deltaTime;
-    if (_input->getKey(GLFW_KEY_LEFT_SHIFT)) speed *= 2.0f;
-    if (_input->getKey(GLFW_KEY_W)) _camera->Position += _camera->getFront() * speed;
-    if (_input->getKey(GLFW_KEY_S)) _camera->Position -= _camera->getFront() * speed;
-    if (_input->getKey(GLFW_KEY_D)) _camera->Position -= _camera->getRight() * speed;
-    if (_input->getKey(GLFW_KEY_A)) _camera->Position += _camera->getRight() * speed;
-    if (_input->getKey(GLFW_KEY_E)) _camera->Position += glm::vec3(0, 1, 0) * speed;
-    if (_input->getKey(GLFW_KEY_Q)) _camera->Position -= glm::vec3(0, 1, 0) * speed;
+    if (_input->GetKey(GLFW_KEY_LEFT_SHIFT)) speed *= 2.0f;
+    if (_input->GetKey(GLFW_KEY_W)) _camera->Position += _camera->GetFront() * speed;
+    if (_input->GetKey(GLFW_KEY_S)) _camera->Position -= _camera->GetFront() * speed;
+    if (_input->GetKey(GLFW_KEY_D)) _camera->Position -= _camera->GetRight() * speed;
+    if (_input->GetKey(GLFW_KEY_A)) _camera->Position += _camera->GetRight() * speed;
+    if (_input->GetKey(GLFW_KEY_E)) _camera->Position += glm::vec3(0, 1, 0) * speed;
+    if (_input->GetKey(GLFW_KEY_Q)) _camera->Position -= glm::vec3(0, 1, 0) * speed;
 
     bool captureMouse = false;
-    if (_input->getMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
+    if (_input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
         constexpr float mouseSens = 0.1f;
 
         captureMouse = true;
-        const glm::vec2 mouseDelta = _input->getMouseDelta();
+        const glm::vec2 mouseDelta = _input->GetMouseDelta();
         _camera->Yaw   -= mouseDelta.x * mouseSens;
         _camera->Pitch -= mouseDelta.y * mouseSens;
         _camera->Pitch = glm::clamp(_camera->Pitch, -89.0f, 89.0f);
     }
-    _input->setMouseCapture(captureMouse);
+    _input->SetMouseCapture(captureMouse);
 
-    const glm::vec2 scrollDelta = _input->getScrollDelta();
+    const glm::vec2 scrollDelta = _input->GetScrollDelta();
     if (scrollDelta.y != 0.0f) {
         _camera->Fov -= scrollDelta.y;
         _camera->Fov = glm::clamp(_camera->Fov, 20.0f, 90.0f);
     }
 
-    _camera->updateMatrices();
-
-    _renderer->UniformData.ProjectionView = _camera->getProjectionMatrix() * _camera->getViewMatrix();
-    _renderer->UniformData.CameraPosition = _camera->Position;
+    _camera->Update();
 
     {
         static float angle = 0.0f;
@@ -335,10 +343,8 @@ auto MainScene::Update(float deltaTime) -> void {
             _pointLights[i].Position = pos;
         }
     }
-}
 
-auto MainScene::Render() -> void {
-    auto renderView = _registry.view<TransformComponent, RenderComponent>();
+    const auto renderView = _registry.view<TransformComponent, RenderComponent>();
     renderView.each([this](auto& transform, auto& render) {
         _renderer->SubmitDrawEntry(BeRenderer::DrawEntry{
             .Position = transform.Position,
@@ -348,6 +354,15 @@ auto MainScene::Render() -> void {
             .CastShadows = render.CastShadows,
         });
     });
+}
+
+auto MainScene::DrawUI() -> void {
+    
+    ImGui::Begin("Settings");
+    ImGui::SetWindowFontScale(1.2f);
+    ImGui::SliderFloat("Directional Light Intensity", &_directionalLight->Power, 0.0f, 10.0f);
+    ImGui::SliderFloat("Point Light Intensity", &_pointLights[0].Power, 0.0f, 10.0f);
+    ImGui::End();
 }
 
 auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {

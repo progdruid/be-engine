@@ -17,12 +17,7 @@ class BeScene;
 class BeTexture;
 class BeMaterial;
 class BeShader;
-class BeWindow;
-class BeRenderer;
-class BeInput;
-class BeCamera;
-class BeAssetRegistry;
-struct BeRenderPass;
+class BeRenderPass;
 struct BeModel;
 struct BeDirectionalLight;
 struct BePointLight;
@@ -31,7 +26,7 @@ class Game {
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide uint32_t _width;
     hide uint32_t _height;
-    hide std::unique_ptr<BeWindow> _window;
+    hide std::shared_ptr<BeWindow> _window;
     hide std::shared_ptr<BeRenderer> _renderer;
     hide std::shared_ptr<BeInput> _input;
     hide std::shared_ptr<BeCamera> _camera;

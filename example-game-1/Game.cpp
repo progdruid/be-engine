@@ -3,6 +3,8 @@
 
 #define NOMINMAX
 
+#include <glfw/glfw3.h>
+
 #include "BeWindow.h"
 #include "BeAssetRegistry.h"
 #include "BeInput.h"
@@ -20,19 +22,16 @@ Game::~Game() = default;
 auto Game::Run() -> int {
     _width = 1920;
     _height = 1080;
-
-    _window = std::make_unique<BeWindow>(_width, _height, "be: example game 1");
+    
+    _window = std::make_shared<BeWindow>(_width, _height, "be: example game 1");
     _assetRegistry = std::make_shared<BeAssetRegistry>();
-    const HWND hwnd = _window->getHWND();
-
-    _renderer = std::make_shared<BeRenderer>(_width, _height, hwnd, _assetRegistry);
+    _renderer = std::make_shared<BeRenderer>(_width, _height, _window, _assetRegistry);
     _renderer->LaunchDevice();
-
-    SetupCamera(_width, _height);
+    
+    _input = std::make_unique<BeInput>(_window);
+    
     SetupScenes();
 
-    _sceneManager->RequestSceneChange("menu");
-    _sceneManager->ApplyPendingSceneChange();
     MainLoop();
 
     return 0;
@@ -41,7 +40,7 @@ auto Game::SetupScenes() -> void {
     _sceneManager = std::make_unique<BeSceneManager>();
 
     auto menuScene = std::make_unique<MenuScene>(_sceneManager.get());
-    auto mainScene = std::make_unique<MainScene>(_renderer, _assetRegistry, _camera, _input, _width, _height);
+    auto mainScene = std::make_unique<MainScene>(_renderer, _assetRegistry, _window, _input);
 
     _sceneManager->RegisterScene("menu", std::move(menuScene));
     _sceneManager->RegisterScene("main", std::move(mainScene));
@@ -50,26 +49,17 @@ auto Game::SetupScenes() -> void {
     _sceneManager->GetScene<MainScene>("main")->Prepare();
 
     _renderer->BakeModels();
-}
 
-auto Game::SetupCamera(int width, int height) -> void {
-    _camera = std::make_unique<BeCamera>();
-    _camera->Width = static_cast<float>(width);
-    _camera->Height = static_cast<float>(height);
-    _camera->NearPlane = 0.1f;
-    _camera->FarPlane = 200.0f;
-
-    _renderer->UniformData.NearFarPlane = {_camera->NearPlane, _camera->FarPlane};
-    
-    _input = std::make_unique<BeInput>(_window->getGLFWWindow());
+    _sceneManager->RequestSceneChange("menu");
+    _sceneManager->ApplyPendingSceneChange();
 }
 
 auto Game::MainLoop() -> void {
     double lastTime = glfwGetTime();
 
-    while (!_window->shouldClose()) {
+    while (!_window->ShouldClose()) {
         _window->pollEvents();
-        _input->update();
+        _input->Update();
 
         const double now = glfwGetTime();
         const float dt = static_cast<float>(now - lastTime);

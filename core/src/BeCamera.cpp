@@ -1,6 +1,14 @@
 #include "BeCamera.h"
 
-void BeCamera::updateMatrices() {
+#include "BeRenderer.h"
+#include "BeWindow.h"
+
+BeCamera::BeCamera(
+    const std::shared_ptr<BeRenderer>& renderer,
+    const std::shared_ptr<BeWindow>& window
+) : _renderer(renderer), _window(window) {}
+
+void BeCamera::Update() {
     // Update direction vectors
     const float cy = cos(glm::radians(Yaw));
     const float sy = sin(glm::radians(Yaw));
@@ -13,5 +21,12 @@ void BeCamera::updateMatrices() {
 
     // Update view and projection matrices
     _viewMatrix = glm::lookAtLH(Position, Position + _front, _up);
-    _projectionMatrix = glm::perspectiveFovLH_ZO(glm::radians(Fov), Width, Height, NearPlane, FarPlane);
+    const float fov    = glm::radians(Fov);
+    const float width  = static_cast<float>(_window->GetWidth());
+    const float height = static_cast<float>(_window->GetHeight());
+    _projectionMatrix = glm::perspectiveFovLH_ZO(fov, width, height, NearPlane, FarPlane);
+
+    _renderer->UniformData.NearFarPlane = {NearPlane, FarPlane};
+    _renderer->UniformData.ProjectionView = _projectionMatrix * _viewMatrix;
+    _renderer->UniformData.CameraPosition = Position;
 }

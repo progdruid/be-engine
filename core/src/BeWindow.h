@@ -32,14 +32,14 @@ public:
 
     auto pollEvents() -> void;
 
-    [[nodiscard]] auto shouldClose() const -> bool;
-    [[nodiscard]] auto getHWND() const -> HWND;
-    [[nodiscard]] auto getGLFWWindow() const -> GLFWwindow*;
-    [[nodiscard]] auto getWidth() const -> int { return _width; }
-    [[nodiscard]] auto getHeight() const -> int { return _height; }
-    [[nodiscard]] auto getTitle() const -> const std::string& { return _title; }
+    [[nodiscard]] auto ShouldClose() const -> bool;
+    [[nodiscard]] auto GetHwnd() const -> HWND;
+    [[nodiscard]] auto GetGlfwWindow() const -> GLFWwindow*;
+    [[nodiscard]] auto GetWidth() const -> int { return _width; }
+    [[nodiscard]] auto GetHeight() const -> int { return _height; }
+    [[nodiscard]] auto GetTitle() const -> const std::string& { return _title; }
 
 private:
     //private logic/////////////////////////////////////////////////////////////////////////////////////////////////////
-    auto setupErrorCallback() -> void;
+    auto SetupErrorCallback() -> void;
 };

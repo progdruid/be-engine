@@ -11,6 +11,7 @@
 
 #include "BeBuffers.h"
 
+class BeWindow;
 struct BeDrawSlice;
 struct BeModel;
 class BeAssetRegistry;
@@ -42,7 +43,7 @@ class BeRenderer {
     hide
     uint32_t _width;
     uint32_t _height;
-    HWND _windowHandle;
+    std::shared_ptr<BeWindow> _window;
     std::weak_ptr<BeAssetRegistry> _assetRegistry;
     
     // dx11 core components
@@ -71,7 +72,12 @@ class BeRenderer {
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
-    explicit BeRenderer(uint32_t width, uint32_t height, HWND windowHandle, std::weak_ptr<BeAssetRegistry> registry);
+    explicit BeRenderer(
+        uint32_t width,
+        uint32_t height,
+        const std::shared_ptr<BeWindow>& window,
+        std::weak_ptr<BeAssetRegistry> registry
+    );
     ~BeRenderer();
     
     auto LaunchDevice () -> void;

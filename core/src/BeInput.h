@@ -1,15 +1,15 @@
 #pragma once
 
-#include <glfw/glfw3.h>
+#include <memory>
 #include <umbrellas/include-glm.h>
 #include <unordered_map>
 
-// Forward declaration
+struct GLFWwindow;
 class BeWindow;
 
 class BeInput {
     // Allow internal scroll callback to access private members
-    static auto scrollCallbackInternal(GLFWwindow* window, double xOffset, double yOffset) -> void;
+    static auto ScrollCallbackInternal(GLFWwindow* window, double xOffset, double yOffset) -> void;
 
 private:
     //fields////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -35,35 +35,35 @@ private:
 
 public:
     //initialisation////////////////////////////////////////////////////////////////////////////////////////////////////
-    explicit BeInput(GLFWwindow* window);
+    explicit BeInput(const std::shared_ptr<BeWindow>& window);
     ~BeInput() = default;
 
     //public interface//////////////////////////////////////////////////////////////////////////////////////////////////
-    auto update() -> void;
+    auto Update() -> void;
 
     // Keyboard
-    [[nodiscard]] auto getKey(int key) const -> bool;
-    [[nodiscard]] auto getKeyDown(int key) const -> bool;
-    [[nodiscard]] auto getKeyUp(int key) const -> bool;
+    [[nodiscard]] auto GetKey(int key) const -> bool;
+    [[nodiscard]] auto GetKeyDown(int key) const -> bool;
+    [[nodiscard]] auto GetKeyUp(int key) const -> bool;
 
     // Mouse buttons
-    [[nodiscard]] auto getMouseButton(int button) const -> bool;
-    [[nodiscard]] auto getMouseButtonDown(int button) const -> bool;
-    [[nodiscard]] auto getMouseButtonUp(int button) const -> bool;
+    [[nodiscard]] auto GetMouseButton(int button) const -> bool;
+    [[nodiscard]] auto GetMouseButtonDown(int button) const -> bool;
+    [[nodiscard]] auto GetMouseButtonUp(int button) const -> bool;
 
     // Mouse position and movement
-    [[nodiscard]] auto getMousePosition() const -> glm::vec2;
-    [[nodiscard]] auto getMouseDelta() const -> glm::vec2;
+    [[nodiscard]] auto GetMousePosition() const -> glm::vec2;
+    [[nodiscard]] auto GetMouseDelta() const -> glm::vec2;
 
     // Scroll wheel
-    [[nodiscard]] auto getScrollDelta() const -> glm::vec2;
+    [[nodiscard]] auto GetScrollDelta() const -> glm::vec2;
 
-    auto setMouseCapture(bool capture) -> void;
-    [[nodiscard]] auto isMouseCaptured() const -> bool;
+    auto SetMouseCapture(bool capture) -> void;
+    [[nodiscard]] auto IsMouseCaptured() const -> bool;
 
 private:
     //private logic/////////////////////////////////////////////////////////////////////////////////////////////////////
-    auto updateKeyStates() -> void;
-    auto updateMouseButtonStates() -> void;
-    auto updateMousePosition() -> void;
+    auto UpdateKeyStates() -> void;
+    auto UpdateMouseButtonStates() -> void;
+    auto UpdateMousePosition() -> void;
 };
