@@ -1,19 +1,20 @@
 #pragma once
 
-#include "BaseScene.h"
 #include <memory>
+#include <string>
 #include <vector>
-#include <glm/vec3.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include "entt/entt.hpp"
+#include <umbrellas/include-glm.h>
 
-class BeRenderer;
-class BeAssetRegistry;
-class BeModel;
-class BeCamera;
+#include "entt/entt.hpp"
+#include "BaseScene.h"
+
 class BeInput;
-class BeDirectionalLight;
+class BeCamera;
+class BeAssetRegistry;
+class BeRenderer;
+struct BeModel;
 struct BePointLight;
+struct BeDirectionalLight;
 
 struct TransformComponent {
     glm::vec3 Position = {0.f, 0.f, 0.f};
@@ -46,8 +47,8 @@ private:
     std::shared_ptr<BeModel> _plane, _witchItems, _livingCube, _macintosh, _pagoda, _disks, _anvil;
 
 public:
-    MainScene(std::shared_ptr<BeRenderer> renderer, std::shared_ptr<BeAssetRegistry> assetRegistry,
-              std::shared_ptr<BeCamera> camera, std::shared_ptr<BeInput> input,
+    MainScene(const std::shared_ptr<BeRenderer>& renderer, const std::shared_ptr<BeAssetRegistry>& assetRegistry,
+              const std::shared_ptr<BeCamera>& camera, const std::shared_ptr<BeInput>& input,
               uint32_t screenWidth, uint32_t screenHeight);
     ~MainScene() override = default;
 

@@ -3,9 +3,9 @@
 #include <memory>
 #include <wrl/client.h>
 #include <umbrellas/include-glm.h>
-#include <assimp/scene.h>
 
-
+struct aiScene;
+struct aiString;
 class BeTexture;
 class BeShader;
 class BeMaterial;
@@ -40,8 +40,8 @@ struct BeModel {
     ) -> std::shared_ptr<BeModel>;
     
     static auto LoadTextureFromAssimpPath(
-        const struct aiString& texPath,
-        const struct aiScene* scene,
+        const aiString& texPath,
+        const aiScene* scene,
         const std::filesystem::path& parentPath, const BeRenderer& renderer
     ) -> std::shared_ptr<BeTexture>;
 

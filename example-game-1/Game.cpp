@@ -71,13 +71,13 @@ auto Game::MainLoop() -> void {
         _window->pollEvents();
         _input->update();
 
-        double now = glfwGetTime();
-        float dt = static_cast<float>(now - lastTime);
+        const double now = glfwGetTime();
+        const float dt = static_cast<float>(now - lastTime);
         lastTime = now;
 
         _renderer->UniformData.Time = now;
 
-        auto activeScene = _sceneManager->GetActiveScene<BaseScene>();
+        const auto activeScene = _sceneManager->GetActiveScene<BaseScene>();
         if (activeScene) {
             activeScene->Tick(dt);
         }

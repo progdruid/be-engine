@@ -7,9 +7,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <glm/vec4.hpp>
-
-#include "umbrellas/access-modifiers.hpp"
+#include <umbrellas/include-glm.h>
+#include <umbrellas/access-modifiers.hpp>
 
 class BeAssetRegistry;
 using Microsoft::WRL::ComPtr;

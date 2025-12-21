@@ -16,6 +16,7 @@ auto BeSceneManager::ApplyPendingSceneChange() -> void {
     if (!_hasPendingSceneChange) {
         return;
     }
+    _hasPendingSceneChange = false;
 
     if (_activeScene) {
         _activeScene->OnUnload();
@@ -23,8 +24,6 @@ auto BeSceneManager::ApplyPendingSceneChange() -> void {
 
     _activeScene = _scenes[_pendingSceneName].get();
     _activeScene->OnLoad();
-
-    _hasPendingSceneChange = false;
 }
 
 auto BeSceneManager::GetScene(const std::string& name) -> BeScene* {
