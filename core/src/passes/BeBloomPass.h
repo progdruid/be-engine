@@ -2,9 +2,9 @@
 
 #include <memory>
 #include <vector>
+#include <umbrellas/access-modifiers.hpp>
 
 #include "BeRenderPass.h"
-#include "umbrellas/access-modifiers.hpp"
 
 class BeAssetRegistry;
 class BeMaterial;

@@ -9,10 +9,10 @@
 #include <wrl/client.h>
 #include <umbrellas/access-modifiers.hpp>
 
-#include "BeRenderer.h"
-#include "BeShaderIncludeHandler.hpp"
 #include "Utils.h"
 
+class BeShaderIncludeHandler;
+class BeRenderer;
 using Microsoft::WRL::ComPtr;
 using Json = nlohmann::ordered_json;
 

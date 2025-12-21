@@ -1,27 +1,35 @@
+
 #include "MainScene.h"
-#include "BeRenderer.h"
+
 #include "BeAssetRegistry.h"
 #include "BeCamera.h"
 #include "BeInput.h"
-#include "BeShader.h"
 #include "BeMaterial.h"
 #include "BeModel.h"
+#include "BeRenderer.h"
+#include "BeShader.h"
 #include "BeTexture.h"
-#include "passes/BeShadowPass.h"
-#include "passes/BeGeometryPass.h"
-#include "passes/BeLightingPass.h"
+#include "passes/BeBackbufferPass.h"
 #include "passes/BeBloomPass.h"
 #include "passes/BeFullscreenEffectPass.h"
-#include "passes/BeBackbufferPass.h"
-#include "ImGuiPass.h"
-#include <glm/gtc/matrix_transform.hpp>
-#include <GLFW/glfw3.h>
+#include "passes/BeGeometryPass.h"
+#include "passes/BeLightingPass.h"
+#include "passes/BeShadowPass.h"
 
-MainScene::MainScene(std::shared_ptr<BeRenderer> renderer, std::shared_ptr<BeAssetRegistry> assetRegistry,
-                     std::shared_ptr<BeCamera> camera, std::shared_ptr<BeInput> input,
-                     uint32_t screenWidth, uint32_t screenHeight)
-    : _renderer(renderer), _assetRegistry(assetRegistry), _camera(camera), _input(input),
-      _screenWidth(screenWidth), _screenHeight(screenHeight) {}
+MainScene::MainScene(
+    const std::shared_ptr<BeRenderer>& renderer,
+    const std::shared_ptr<BeAssetRegistry>& assetRegistry,
+    const std::shared_ptr<BeCamera>& camera,
+    const std::shared_ptr<BeInput>& input,
+    uint32_t screenWidth,
+    uint32_t screenHeight
+)
+    : _renderer(renderer)
+    , _assetRegistry(assetRegistry)
+    , _camera(camera)
+    , _input(input)
+    , _screenWidth(screenWidth)
+    , _screenHeight(screenHeight) {}
 
 auto MainScene::Prepare() -> void {
     const auto device = _renderer->GetDevice();
@@ -222,16 +230,7 @@ auto MainScene::Prepare() -> void {
     backbufferPass->InputTextureName = "TonemapperOutput";
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
 
-    auto imguiPass = new ImGuiPass(nullptr);
-    _renderer->AddRenderPass(imguiPass);
-    imguiPass->DirectionalLight = _directionalLight.get();
-    imguiPass->PointLights = &_pointLights;
-    imguiPass->TerrainMaterial = _plane->Materials[0];
-    imguiPass->LivingCubeMaterial = _livingCube->Materials[0];
-
     _renderer->InitialisePasses();
-
-    imguiPass->BloomMaterial = bloomPass->GetBrightMaterial();
 }
 
 auto MainScene::Tick(float deltaTime) -> void {

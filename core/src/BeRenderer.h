@@ -5,13 +5,11 @@
 #include <vector>
 #include <wrl/client.h>
 #include <memory>
-#include <string>
 #include <unordered_map>
 #include <umbrellas/include-glm.h>
+#include <umbrellas/access-modifiers.hpp>
 
 #include "BeBuffers.h"
-#include "umbrellas/access-modifiers.hpp"
-
 
 struct BeDrawSlice;
 struct BeModel;
