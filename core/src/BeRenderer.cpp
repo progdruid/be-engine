@@ -152,6 +152,13 @@ auto BeRenderer::AddRenderPass(BeRenderPass* renderPass) -> void {
     renderPass->InjectRenderer(this);
 }
 
+auto BeRenderer::ClearPasses() -> void {
+    for (auto pass : _passes) {
+        delete pass;
+    }
+    _passes.clear();
+}
+
 auto BeRenderer::InitialisePasses() const -> void {
     for (const auto& pass : _passes)
         pass->Initialise();
@@ -193,7 +200,7 @@ auto BeRenderer::Render() -> void {
     _context->PSSetConstantBuffers(0, 1, emptyBuffers);
 
     _pipeline->ClearCache();
-    _objectsToDraw.clear();
+    _drawEntries.clear();
     
     _swapchain->Present(1, 0);
 }
@@ -243,3 +250,17 @@ auto BeRenderer::SetModels(const std::vector<std::shared_ptr<BeModel>>& models) 
     indexData.pSysMem = indices.data();
     Utils::Check << _device->CreateBuffer(&indexBufferDescriptor, &indexData, &_sharedIndexBuffer);
 }
+
+auto BeRenderer::RegisterModels(const std::vector<std::shared_ptr<BeModel>>& models) -> void {
+    _registeredModels.insert(_registeredModels.end(), models.begin(), models.end());
+}
+
+auto BeRenderer::BakeModels() -> void {
+    // This forces RegisterModels to be compiled
+    if (false) {
+        std::vector<std::shared_ptr<BeModel>> temp;
+        RegisterModels(temp);
+    }
+    SetModels(_registeredModels);
+}
+

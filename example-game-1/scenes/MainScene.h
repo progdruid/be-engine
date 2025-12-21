@@ -1,0 +1,65 @@
+#pragma once
+
+#include "BaseScene.h"
+#include <memory>
+#include <vector>
+#include <glm/vec3.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include "entt/entt.hpp"
+
+class BeRenderer;
+class BeAssetRegistry;
+class BeModel;
+class BeCamera;
+class BeInput;
+class BeDirectionalLight;
+struct BePointLight;
+
+struct TransformComponent {
+    glm::vec3 Position = {0.f, 0.f, 0.f};
+    glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
+    glm::vec3 Scale = {1.f, 1.f, 1.f};
+};
+
+struct RenderComponent {
+    std::shared_ptr<BeModel> Model;
+    bool CastShadows = true;
+};
+
+struct NameComponent {
+    std::string Name;
+};
+
+class MainScene : public BaseScene {
+private:
+    entt::registry _registry;
+    std::shared_ptr<BeRenderer> _renderer;
+    std::shared_ptr<BeAssetRegistry> _assetRegistry;
+    std::shared_ptr<BeCamera> _camera;
+    std::shared_ptr<BeInput> _input;
+    std::shared_ptr<BeDirectionalLight> _directionalLight;
+    std::vector<BePointLight> _pointLights;
+
+    uint32_t _screenWidth = 0;
+    uint32_t _screenHeight = 0;
+
+    std::shared_ptr<BeModel> _plane, _witchItems, _livingCube, _macintosh, _pagoda, _disks, _anvil;
+
+public:
+    MainScene(std::shared_ptr<BeRenderer> renderer, std::shared_ptr<BeAssetRegistry> assetRegistry,
+              std::shared_ptr<BeCamera> camera, std::shared_ptr<BeInput> input,
+              uint32_t screenWidth, uint32_t screenHeight);
+    ~MainScene() override = default;
+
+    auto Prepare() -> void override;
+    auto OnLoad() -> void override;
+    auto Tick(float deltaTime) -> void override;
+    auto Update(float deltaTime) -> void;
+    auto Render() -> void;
+
+    auto GetRegistry() -> entt::registry& { return _registry; }
+    auto GetCamera() -> std::shared_ptr<BeCamera> { return _camera; }
+
+private:
+    auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel>;
+};
