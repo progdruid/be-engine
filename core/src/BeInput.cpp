@@ -1,6 +1,10 @@
 #include "BeInput.h"
 
-auto BeInput::scrollCallbackInternal(GLFWwindow* window, double xOffset, double yOffset) -> void {
+#include <glfw/glfw3.h>
+
+#include "BeWindow.h"
+
+auto BeInput::ScrollCallbackInternal(GLFWwindow* window, double xOffset, double yOffset) -> void {
     auto* input = static_cast<BeInput*>(glfwGetWindowUserPointer(window));
     if (!input) return;
 
@@ -10,43 +14,44 @@ auto BeInput::scrollCallbackInternal(GLFWwindow* window, double xOffset, double 
 
 //initialisation////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BeInput::BeInput(GLFWwindow* window)
-    : _window(window)
+BeInput::BeInput(const std::shared_ptr<BeWindow>& window)
+    : _window(window->GetGlfwWindow())
     , _mousePosition(0.0f)
     , _previousMousePosition(0.0f)
     , _scrollDelta(0.0f)
-    , _isMouseCaptured(false) {
-
-    glfwSetWindowUserPointer(window, this);
-    glfwSetScrollCallback(window, scrollCallbackInternal);
+    , _isMouseCaptured(false)
+{
+    
+    glfwSetWindowUserPointer(_window, this);
+    glfwSetScrollCallback(_window, ScrollCallbackInternal);
 
     double xpos, ypos;
-    glfwGetCursorPos(window, &xpos, &ypos);
+    glfwGetCursorPos(_window, &xpos, &ypos);
     _mousePosition = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
     _previousMousePosition = _mousePosition;
 }
 
 //public interface//////////////////////////////////////////////////////////////////////////////////////////////////
 
-auto BeInput::update() -> void {
+auto BeInput::Update() -> void {
     _previousKeys = _currentKeys;
     _previousMouseButtons = _currentMouseButtons;
     _previousMousePosition = _mousePosition;
 
-    updateKeyStates();
-    updateMouseButtonStates();
-    updateMousePosition();
+    UpdateKeyStates();
+    UpdateMouseButtonStates();
+    UpdateMousePosition();
 
     _scrollDelta = glm::vec2(0.0f);
 }
 
-auto BeInput::getKey(int key) const -> bool {
+auto BeInput::GetKey(int key) const -> bool {
     const auto it = _currentKeys.find(key);
     if (it == _currentKeys.end()) return false;
     return it->second;
 }
 
-auto BeInput::getKeyDown(int key) const -> bool {
+auto BeInput::GetKeyDown(int key) const -> bool {
     const auto currentIt = _currentKeys.find(key);
     const auto previousIt = _previousKeys.find(key);
 
@@ -56,7 +61,7 @@ auto BeInput::getKeyDown(int key) const -> bool {
     return currentPressed && !previousPressed;
 }
 
-auto BeInput::getKeyUp(int key) const -> bool {
+auto BeInput::GetKeyUp(int key) const -> bool {
     const auto currentIt = _currentKeys.find(key);
     const auto previousIt = _previousKeys.find(key);
 
@@ -66,13 +71,13 @@ auto BeInput::getKeyUp(int key) const -> bool {
     return !currentPressed && previousPressed;
 }
 
-auto BeInput::getMouseButton(int button) const -> bool {
+auto BeInput::GetMouseButton(int button) const -> bool {
     const auto it = _currentMouseButtons.find(button);
     if (it == _currentMouseButtons.end()) return false;
     return it->second;
 }
 
-auto BeInput::getMouseButtonDown(int button) const -> bool {
+auto BeInput::GetMouseButtonDown(int button) const -> bool {
     const auto currentIt = _currentMouseButtons.find(button);
     const auto previousIt = _previousMouseButtons.find(button);
 
@@ -82,7 +87,7 @@ auto BeInput::getMouseButtonDown(int button) const -> bool {
     return currentPressed && !previousPressed;
 }
 
-auto BeInput::getMouseButtonUp(int button) const -> bool {
+auto BeInput::GetMouseButtonUp(int button) const -> bool {
     const auto currentIt = _currentMouseButtons.find(button);
     const auto previousIt = _previousMouseButtons.find(button);
 
@@ -92,19 +97,19 @@ auto BeInput::getMouseButtonUp(int button) const -> bool {
     return !currentPressed && previousPressed;
 }
 
-auto BeInput::getMousePosition() const -> glm::vec2 {
+auto BeInput::GetMousePosition() const -> glm::vec2 {
     return _mousePosition;
 }
 
-auto BeInput::getMouseDelta() const -> glm::vec2 {
+auto BeInput::GetMouseDelta() const -> glm::vec2 {
     return _mousePosition - _previousMousePosition;
 }
 
-auto BeInput::getScrollDelta() const -> glm::vec2 {
+auto BeInput::GetScrollDelta() const -> glm::vec2 {
     return _scrollDelta;
 }
 
-auto BeInput::setMouseCapture(bool capture) -> void {
+auto BeInput::SetMouseCapture(bool capture) -> void {
     if (capture == _isMouseCaptured) return;
 
     _isMouseCaptured = capture;
@@ -112,13 +117,13 @@ auto BeInput::setMouseCapture(bool capture) -> void {
     glfwSetInputMode(_window, GLFW_CURSOR, cursorMode);
 }
 
-auto BeInput::isMouseCaptured() const -> bool {
+auto BeInput::IsMouseCaptured() const -> bool {
     return _isMouseCaptured;
 }
 
 //private logic/////////////////////////////////////////////////////////////////////////////////////////////////////
 
-auto BeInput::updateKeyStates() -> void {
+auto BeInput::UpdateKeyStates() -> void {
     const int keysToCheck[] = {
         GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D,
         GLFW_KEY_Q, GLFW_KEY_E,
@@ -136,7 +141,7 @@ auto BeInput::updateKeyStates() -> void {
     }
 }
 
-auto BeInput::updateMouseButtonStates() -> void {
+auto BeInput::UpdateMouseButtonStates() -> void {
     const int buttonsToCheck[] = {
         GLFW_MOUSE_BUTTON_LEFT,
         GLFW_MOUSE_BUTTON_RIGHT,
@@ -149,7 +154,7 @@ auto BeInput::updateMouseButtonStates() -> void {
     }
 }
 
-auto BeInput::updateMousePosition() -> void {
+auto BeInput::UpdateMousePosition() -> void {
     double xpos, ypos;
     glfwGetCursorPos(_window, &xpos, &ypos);
     _mousePosition = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));

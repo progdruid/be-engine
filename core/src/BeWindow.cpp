@@ -20,7 +20,7 @@ namespace {
 BeWindow::BeWindow(int width, int height, const std::string& title)
     : _window(nullptr), _hwnd(nullptr), _width(width), _height(height), _title(title) {
 
-    setupErrorCallback();
+    SetupErrorCallback();
 
     if (!glfwInit()) {
         throw std::runtime_error("Failed to initialize GLFW");
@@ -75,18 +75,18 @@ auto BeWindow::pollEvents() -> void {
     glfwPollEvents();
 }
 
-auto BeWindow::shouldClose() const -> bool {
+auto BeWindow::ShouldClose() const -> bool {
     return glfwWindowShouldClose(_window);
 }
 
-auto BeWindow::getHWND() const -> HWND {
+auto BeWindow::GetHwnd() const -> HWND {
     return _hwnd;
 }
 
-auto BeWindow::getGLFWWindow() const -> GLFWwindow* {
+auto BeWindow::GetGlfwWindow() const -> GLFWwindow* {
     return _window;
 }
 
-auto BeWindow::setupErrorCallback() -> void {
+auto BeWindow::SetupErrorCallback() -> void {
     glfwSetErrorCallback(errorCallback);
 }

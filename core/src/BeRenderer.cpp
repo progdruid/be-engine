@@ -8,6 +8,7 @@
 #include "BePipeline.h"
 #include "passes/BeRenderPass.h"
 #include "BeShader.h"
+#include "BeWindow.h"
 #include "Utils.h"
 
 auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
@@ -41,10 +42,15 @@ auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
     return nullptr;
 }
 
-BeRenderer::BeRenderer(uint32_t width, uint32_t height, HWND windowHandle, std::weak_ptr<BeAssetRegistry> registry)
+BeRenderer::BeRenderer(
+    uint32_t width,
+    uint32_t height,
+    const std::shared_ptr<BeWindow>& window,
+    std::weak_ptr<BeAssetRegistry> registry
+)
     : _width(width)
     , _height(height)
-    , _windowHandle(windowHandle)
+    , _window(window)
     , _assetRegistry(std::move(registry))
 {}
 
@@ -99,8 +105,9 @@ auto BeRenderer::LaunchDevice() -> void {
         .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
     };
 
-    Utils::Check << _factory->CreateSwapChainForHwnd(_device.Get(), _windowHandle, &scDesc, nullptr, nullptr, &_swapchain);
-    Utils::Check << _factory->MakeWindowAssociation(_windowHandle, DXGI_MWA_NO_ALT_ENTER);
+    const auto& hwnd = _window->GetHwnd();
+    Utils::Check << _factory->CreateSwapChainForHwnd(_device.Get(), hwnd, &scDesc, nullptr, nullptr, &_swapchain);
+    Utils::Check << _factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
 
     _pipeline = BePipeline::Create(_context);
     

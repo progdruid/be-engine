@@ -4,10 +4,12 @@
 #include <string>
 #include <vector>
 #include <umbrellas/include-glm.h>
+#include <umbrellas/access-modifiers.hpp>
 
 #include "entt/entt.hpp"
 #include "BaseScene.h"
 
+class BeWindow;
 class BeInput;
 class BeCamera;
 class BeAssetRegistry;
@@ -32,35 +34,35 @@ struct NameComponent {
 };
 
 class MainScene : public BaseScene {
-private:
+    hide
     entt::registry _registry;
     std::shared_ptr<BeRenderer> _renderer;
     std::shared_ptr<BeAssetRegistry> _assetRegistry;
+    std::shared_ptr<BeWindow> _window;
     std::shared_ptr<BeCamera> _camera;
     std::shared_ptr<BeInput> _input;
     std::shared_ptr<BeDirectionalLight> _directionalLight;
     std::vector<BePointLight> _pointLights;
 
-    uint32_t _screenWidth = 0;
-    uint32_t _screenHeight = 0;
-
     std::shared_ptr<BeModel> _plane, _witchItems, _livingCube, _macintosh, _pagoda, _disks, _anvil;
 
-public:
-    MainScene(const std::shared_ptr<BeRenderer>& renderer, const std::shared_ptr<BeAssetRegistry>& assetRegistry,
-              const std::shared_ptr<BeCamera>& camera, const std::shared_ptr<BeInput>& input,
-              uint32_t screenWidth, uint32_t screenHeight);
+    expose
+    MainScene(
+        const std::shared_ptr<BeRenderer>& renderer,
+        const std::shared_ptr<BeAssetRegistry>& assetRegistry,
+        const std::shared_ptr<BeWindow>& window,
+        const std::shared_ptr<BeInput>& input
+    );
     ~MainScene() override = default;
 
     auto Prepare() -> void override;
     auto OnLoad() -> void override;
     auto Tick(float deltaTime) -> void override;
-    auto Update(float deltaTime) -> void;
-    auto Render() -> void;
-
+    auto DrawUI() -> void;
+    
     auto GetRegistry() -> entt::registry& { return _registry; }
     auto GetCamera() -> std::shared_ptr<BeCamera> { return _camera; }
-
+    
 private:
     auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel>;
 };
