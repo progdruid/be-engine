@@ -6,18 +6,18 @@
 #include <wrl/client.h>
 #include <memory>
 #include <unordered_map>
-#include <umbrellas/include-glm.h>
 #include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/include-glm.h>
 
 #include "BeBuffers.h"
 
 class BeWindow;
-struct BeDrawSlice;
-struct BeModel;
 class BeAssetRegistry;
 class BePipeline;
 class BeRenderPass;
 class BeShader;
+struct BeDrawSlice;
+struct BeModel;
 using Microsoft::WRL::ComPtr;
 
 

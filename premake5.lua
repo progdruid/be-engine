@@ -9,6 +9,8 @@ local function cleanGenerated()
     os.rmdir("toolkit/obj")
     os.rmdir("example-game-1/bin")
     os.rmdir("example-game-1/obj")
+    os.rmdir("example-quick-start/bin")
+    os.rmdir("example-quick-start/obj")
     os.remove("**.sln")
     os.remove("**.vcxproj")
     os.remove("**.vcxproj.filters")
@@ -21,6 +23,13 @@ if _ACTION == "vs2022" or _ACTION == "vs2019" then
     cleanGenerated()
 end
 
+newaction {
+    trigger = "clean",
+    description = "Clean all generated project files",
+    onStart = function()
+        cleanGenerated()
+    end
+}
 
 -- workspace and project definitions
 workspace "be"
@@ -28,7 +37,7 @@ workspace "be"
     system "windows"
     architecture "x86_64"
     location "."
-    startproject "example-game-1"
+    startproject "example-quick-start"
 
 -- core
 project "core"
@@ -171,7 +180,61 @@ project "example-game-1"
         "%{prj.location}",
         "vendor/Assimp/include",
         "vendor",
-        "%{prj.location}/imgui",
+    }
+
+    links { "core", "toolkit" }
+
+    postbuildcommands {
+        "{COPY} %{wks.location}/core/src/shaders %{cfg.targetdir}/standardShaders",
+        "{COPY} %{prj.location}/assets %{cfg.targetdir}/assets",
+        "{COPY} %{wks.location}/vendor/Assimp/bin/x64/assimp-vc143-mt.dll %{cfg.targetdir}"
+    }
+
+    filter { "files:**.hlsl" }
+        buildaction "None"
+
+    filter "configurations:Debug"
+        symbols "On"
+        defines { "DEBUG" }
+        optimize "Off"
+
+    filter "configurations:Release"
+        symbols "Off"
+        defines { "NDEBUG" }
+        optimize "Full"
+
+    filter { "toolset:msc*", "language:C++" }
+        buildoptions { "/Zc:__cplusplus" }
+
+    filter {}
+    
+    
+project "example-quick-start"
+    kind "ConsoleApp"
+    language "C++"
+    cppdialect "C++20"
+
+    location "example-quick-start"
+
+    targetdir ("%{prj.location}/bin/%{cfg.architecture}/%{cfg.buildcfg}")
+    objdir    ("%{prj.location}/obj/%{cfg.architecture}/%{cfg.buildcfg}")
+    debugdir  ("%{prj.location}/bin/%{cfg.architecture}/%{cfg.buildcfg}")
+
+    files {
+        "%{prj.location}/**.cpp",
+        "%{prj.location}/**.h",
+        "%{prj.location}/**.hpp",
+        "%{prj.location}/assets/**.hlsl",
+        "%{prj.location}/assets/**.hlsli",
+    }
+
+    includedirs {
+        "core/src",
+        "core/src/shaders",
+        "toolkit",
+        "%{prj.location}",
+        "vendor",
+        "vendor/Assimp/include",
     }
 
     links { "core", "toolkit" }
