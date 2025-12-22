@@ -9,7 +9,6 @@
 #include "BeAssetRegistry.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
-#include "BeCamera.h"
 
 #include <scenes/BeSceneManager.h>
 #include "scenes/MenuScene.h"
@@ -36,6 +35,7 @@ auto Game::Run() -> int {
 
     return 0;
 }
+
 auto Game::SetupScenes() -> void {
     _sceneManager = std::make_unique<BeSceneManager>();
 
@@ -58,7 +58,7 @@ auto Game::MainLoop() -> void {
     double lastTime = glfwGetTime();
 
     while (!_window->ShouldClose()) {
-        _window->pollEvents();
+        _window->PollEvents();
         _input->Update();
 
         const double now = glfwGetTime();

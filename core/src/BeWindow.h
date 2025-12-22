@@ -30,7 +30,7 @@ public:
 
     //public interface///////////////////////////////////////////////////////////////////////////////////////
 
-    auto pollEvents() -> void;
+    auto PollEvents() -> void;
 
     [[nodiscard]] auto ShouldClose() const -> bool;
     [[nodiscard]] auto GetHwnd() const -> HWND;

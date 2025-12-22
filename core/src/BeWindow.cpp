@@ -71,7 +71,7 @@ BeWindow& BeWindow::operator=(BeWindow&& other) noexcept {
     return *this;
 }
 
-auto BeWindow::pollEvents() -> void {
+auto BeWindow::PollEvents() -> void {
     glfwPollEvents();
 }
 
