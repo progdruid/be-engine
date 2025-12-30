@@ -58,7 +58,6 @@ class MainScene : public BaseScene {
     auto Prepare() -> void override;
     auto OnLoad() -> void override;
     auto Tick(float deltaTime) -> void override;
-    auto DrawUI() -> void;
     
     auto GetRegistry() -> entt::registry& { return _registry; }
     auto GetCamera() -> std::shared_ptr<BeCamera> { return _camera; }

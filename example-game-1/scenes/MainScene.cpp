@@ -12,8 +12,6 @@
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "BeWindow.h"
-#include "imgui/imgui.h"
-#include "imgui/BeImGuiPass.h"
 #include "passes/BeBackbufferPass.h"
 #include "passes/BeBloomPass.h"
 #include "passes/BeFullscreenEffectPass.h"
@@ -35,7 +33,9 @@ MainScene::MainScene(
 
 auto MainScene::Prepare() -> void {
 
-    _camera = std::make_unique<BeCamera>(_renderer, _window); 
+    _camera = std::make_unique<BeCamera>(); 
+    _camera->Width = _window->GetWidth();
+    _camera->Height = _window->GetHeight();
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
     
@@ -189,6 +189,14 @@ auto MainScene::Prepare() -> void {
     .AddToRegistry(_assetRegistry)
     .Build(device);
 
+    BeTexture::Create("BloomDirtTexture")
+    .LoadFromFile("assets/bloom-dirt-mask.png")
+    .AddToRegistry(_assetRegistry)
+    .BuildNoReturn(device);
+}
+
+auto MainScene::OnLoad() -> void {
+    
     _renderer->ClearPasses();
 
     const auto shadowPass = new BeShadowPass();
@@ -219,10 +227,6 @@ auto MainScene::Prepare() -> void {
     bloomPass->InputHDRTextureName = "HDR-Input";
     bloomPass->BloomMipTextureName = "Bloom_Mip";
     bloomPass->BloomMipCount = 5;
-    BeTexture::Create("BloomDirtTexture")
-    .LoadFromFile("assets/bloom-dirt-mask.png")
-    .AddToRegistry(_assetRegistry)
-    .BuildNoReturn(device);
     bloomPass->DirtTextureName = "BloomDirtTexture";
     bloomPass->OutputTextureName = "BloomOutput";
 
@@ -240,15 +244,9 @@ auto MainScene::Prepare() -> void {
     _renderer->AddRenderPass(backbufferPass);
     backbufferPass->InputTextureName = "TonemapperOutput";
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
-
-    const auto imguiPass = new BeImGuiPass(_window);
-    _renderer->AddRenderPass(imguiPass);
-    imguiPass->SetUICallback([this](){ DrawUI(); });
     
     _renderer->InitialisePasses();
-}
-
-auto MainScene::OnLoad() -> void {
+    
     auto entity = _registry.create();
     _registry.emplace<NameComponent>(entity, "Macintosh");
     _registry.emplace<TransformComponent>(entity, glm::vec3(0, 0, -6.9), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(1.f));
@@ -293,6 +291,8 @@ auto MainScene::OnLoad() -> void {
     _registry.emplace<NameComponent>(entity, "Disks");
     _registry.emplace<TransformComponent>(entity, glm::vec3(7.5f, 1, -4), glm::quat(glm::vec3(0, glm::radians(150.f), 0)), glm::vec3(1.f));
     _registry.emplace<RenderComponent>(entity, _disks, true);
+
+    
 }
 
 
@@ -325,7 +325,12 @@ auto MainScene::Tick(float deltaTime) -> void {
         _camera->Fov = glm::clamp(_camera->Fov, 20.0f, 90.0f);
     }
 
-    _camera->Update();
+    {
+        _camera->Update();
+        _renderer->UniformData.NearFarPlane = {_camera->NearPlane, _camera->FarPlane};
+        _renderer->UniformData.ProjectionView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
+        _renderer->UniformData.CameraPosition = _camera->Position;
+    }
 
     {
         static float angle = 0.0f;
@@ -354,15 +359,6 @@ auto MainScene::Tick(float deltaTime) -> void {
             .CastShadows = render.CastShadows,
         });
     });
-}
-
-auto MainScene::DrawUI() -> void {
-    
-    ImGui::Begin("Settings");
-    ImGui::SetWindowFontScale(1.2f);
-    ImGui::SliderFloat("Directional Light Intensity", &_directionalLight->Power, 0.0f, 10.0f);
-    ImGui::SliderFloat("Point Light Intensity", &_pointLights[0].Power, 0.0f, 10.0f);
-    ImGui::End();
 }
 
 auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
@@ -423,3 +419,5 @@ auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> 
 
     return model;
 }
+
+
