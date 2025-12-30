@@ -55,6 +55,9 @@ BeWindow::BeWindow(BeWindow&& other) noexcept
 
 BeWindow& BeWindow::operator=(BeWindow&& other) noexcept {
     if (this != &other) {
+        _height = other._height;
+        _title = std::move(other._title);
+
         if (_window) {
             glfwDestroyWindow(_window);
         }
@@ -62,9 +65,6 @@ BeWindow& BeWindow::operator=(BeWindow&& other) noexcept {
         _window = other._window;
         _hwnd = other._hwnd;
         _width = other._width;
-        _height = other._height;
-        _title = std::move(other._title);
-
         other._window = nullptr;
         other._hwnd = nullptr;
     }
