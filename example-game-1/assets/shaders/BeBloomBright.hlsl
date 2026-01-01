@@ -16,7 +16,7 @@
         "InputSampler": "sampler(0)",
     }
 }
-@be-shader-header-end
+@be-end
 */
 
 #include "fullscreen-vertex.hlsl"
