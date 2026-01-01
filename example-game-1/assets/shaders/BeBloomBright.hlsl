@@ -1,5 +1,5 @@
 /*
-@be-shader-header
+@be-shader:
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",

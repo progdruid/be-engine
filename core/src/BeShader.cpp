@@ -26,7 +26,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     std::stringstream buffer;
     buffer << file.rdbuf();
     const std::string src = buffer.str();
-    const Json header = ParseHeader(src, "@be-shader-header");
+    const Json header = ParseHeader(src, "@be-shader:");
     
     
     if (header.contains("material")) {
