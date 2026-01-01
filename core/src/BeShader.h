@@ -117,7 +117,7 @@ struct BeMaterialPropertyDescriptor {
     std::vector<float> DefaultValue;
 };
 
-struct BeMaterialTexturePropertyDescriptor {
+struct BeMaterialTextureDescriptor {
     std::string Name;
     uint8_t SlotIndex;
     std::string DefaultTexturePath;
@@ -126,6 +126,13 @@ struct BeMaterialTexturePropertyDescriptor {
 struct BeMaterialSamplerDescriptor {
     std::string Name;
     uint8_t SlotIndex;
+};
+
+struct BeMaterialDescriptor {
+    std::string TypeName;
+    std::vector<BeMaterialPropertyDescriptor> Properties;
+    std::vector<BeMaterialTextureDescriptor> Textures;
+    std::vector<BeMaterialSamplerDescriptor> Samplers;
 };
 
 class BeShader {
@@ -157,9 +164,7 @@ class BeShader {
     expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
     
     expose bool HasMaterial = false;
-    expose std::vector<BeMaterialPropertyDescriptor> MaterialProperties;
-    expose std::vector<BeMaterialTexturePropertyDescriptor> MaterialTextureProperties;
-    expose std::vector<BeMaterialSamplerDescriptor> MaterialSamplers;
+    expose std::vector<BeMaterialDescriptor> MaterialDescriptors;
 
     
     // lifecycle ///////////////////////////////////////////////////////////////////////////////////////////////////////

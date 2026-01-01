@@ -39,7 +39,7 @@ BeMaterial::BeMaterial(
     const auto shaderLocked = Shader.lock();
     assert(shaderLocked);
 
-    if (shaderLocked->MaterialProperties.empty())
+    if (shaderLocked->MaterialDescriptors[0].Properties.empty())
         return;
     
     AssembleData();
@@ -72,7 +72,7 @@ auto BeMaterial::InitialiseSlotMaps(const BeRenderer& renderer) -> void {
     const auto shader = Shader.lock();
     assert(shader);
     
-    for (const auto& property : shader->MaterialTextureProperties) {
+    for (const auto& property : shader->MaterialDescriptors[0].Textures) {
         auto texWeak = renderer.GetAssetRegistry().lock()->GetTexture(property.DefaultTexturePath);
         auto texture = texWeak.lock();
         assert(texture && ("Texture not found in registry: " + property.DefaultTexturePath).c_str());
@@ -80,7 +80,7 @@ auto BeMaterial::InitialiseSlotMaps(const BeRenderer& renderer) -> void {
         _textures[property.Name] = {texture, property.SlotIndex};
     }
 
-    for (const auto& property : shader->MaterialSamplers) {
+    for (const auto& property : shader->MaterialDescriptors[0].Samplers) {
         _samplers[property.Name] = { nullptr, property.SlotIndex };
     }
 }
@@ -205,7 +205,7 @@ auto BeMaterial::AssembleData() -> void {
 
     uint32_t offsetBytes = 0;
 
-    for (const auto& property : shader->MaterialProperties) {
+    for (const auto& property : shader->MaterialDescriptors[0].Properties) {
         constexpr uint32_t registerSizeBytes = 16;
 
         const uint32_t elementSizeBytes = BeMaterialPropertyDescriptor::SizeMap.at(property.PropertyType);
@@ -220,7 +220,7 @@ auto BeMaterial::AssembleData() -> void {
     }
 
     _bufferData.resize(offsetBytes / 4);
-    for (const auto& property : shader->MaterialProperties) {
+    for (const auto& property : shader->MaterialDescriptors[0].Properties) {
         const uint32_t propertyOffset = _propertyOffsets.at(property.Name);
         const auto& defaultValue = property.DefaultValue;
         memcpy(_bufferData.data() + propertyOffset, defaultValue.data(), defaultValue.size() * sizeof(float));

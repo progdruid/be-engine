@@ -33,6 +33,9 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         shader->HasMaterial = true;
         const std::string& materialName = header.at("material");
         const Json materialJson = ParseFor(src, "@be-material: " + materialName);
+        BeMaterialDescriptor materialDescriptor;
+        materialDescriptor.TypeName = materialName;
+        
         for (const auto& materialJsonItem : materialJson.items()) {
             
             // splitting
@@ -57,24 +60,24 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
             
             // extracting
             if (typeString == "texture2d") {
-                BeMaterialTexturePropertyDescriptor descriptor;
+                BeMaterialTextureDescriptor descriptor;
                 descriptor.Name = key;
                 descriptor.SlotIndex = slotIndex;
                 descriptor.DefaultTexturePath = defaultString;
-                shader->MaterialTextureProperties.push_back(descriptor);
+                materialDescriptor.Textures.push_back(descriptor);
             }
             else if (typeString == "sampler") {
                 BeMaterialSamplerDescriptor descriptor;
                 descriptor.Name = key;
                 descriptor.SlotIndex = slotIndex;
-                shader->MaterialSamplers.push_back(descriptor);
+                materialDescriptor.Samplers.push_back(descriptor);
             }
             else if (typeString == "float") {
                 BeMaterialPropertyDescriptor descriptor;
                 descriptor.Name = key;
                 descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float;
                 descriptor.DefaultValue.push_back(std::stof(defaultString));
-                shader->MaterialProperties.push_back(descriptor);
+                materialDescriptor.Properties.push_back(descriptor);
             }
             else if (typeString == "float2") {
                 Json j = Json::parse(defaultString, nullptr, true, true, true);
@@ -85,7 +88,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                 descriptor.Name = key;
                 descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float2;
                 descriptor.DefaultValue = vec;
-                shader->MaterialProperties.push_back(descriptor);
+                materialDescriptor.Properties.push_back(descriptor);
             }
             else if (typeString == "float3") {
                 Json j = Json::parse(defaultString, nullptr, true, true, true);
@@ -96,7 +99,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                 descriptor.Name = key;
                 descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float3;
                 descriptor.DefaultValue = vec;
-                shader->MaterialProperties.push_back(descriptor);
+                materialDescriptor.Properties.push_back(descriptor);
             }
             else if (typeString == "float4") {
                 Json j = Json::parse(defaultString, nullptr, true, true, true);
@@ -107,7 +110,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                 descriptor.Name = key;
                 descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float4;
                 descriptor.DefaultValue = vec;
-                shader->MaterialProperties.push_back(descriptor);
+                materialDescriptor.Properties.push_back(descriptor);
             }
             else if (typeString == "matrix") {
                 std::vector<float> mat = {
@@ -121,9 +124,11 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                 descriptor.Name = key;
                 descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Matrix;
                 descriptor.DefaultValue = mat;
-                shader->MaterialProperties.push_back(descriptor);
+                materialDescriptor.Properties.push_back(descriptor);
             }
         }
+        
+        shader->MaterialDescriptors.push_back(materialDescriptor);
     }
     
     {
