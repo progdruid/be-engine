@@ -21,7 +21,9 @@
     "vertex": "VertexFunction",
     "vertexLayout": ["position", "normal", "uv0"],
     "pixel": "PixelFunction",
-    "material": "Main",
+    "materials": {
+        "Main": 2,
+    },
     "targets": {
         "Diffuse.RGB": 0,
         "WorldNormal.XYZ": 1,

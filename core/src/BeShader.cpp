@@ -31,12 +31,15 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     const Json header = ParseFor(src, "@be-shader:");
     
     
-    if (header.contains("material")) {
+    if (header.contains("materials")) {
         shader->HasMaterial = true;
-        const std::string& materialName = header.at("material");
-        const Json materialJson = ParseFor(src, "@be-material: " + materialName);
+        const auto& materialsJson = header.at("materials");
+        
         BeMaterialDescriptor materialDescriptor;
-        materialDescriptor.TypeName = materialName;
+        materialDescriptor.TypeName = materialsJson.items().begin().key();
+        materialDescriptor.SlotIndex = materialsJson.items().begin().value();
+        
+        const Json materialJson = ParseFor(src, "@be-material: " + materialDescriptor.TypeName);
         
         for (const auto& materialJsonItem : materialJson.items()) {
             

@@ -15,7 +15,9 @@
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
-    "material": "Main",
+    "materials": {
+        "Main": 2,
+    },
     "targets": {
         "BloomMipOutput": 0
     },
