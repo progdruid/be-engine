@@ -43,7 +43,7 @@ class BeRenderer {
     hide
     uint32_t _width;
     uint32_t _height;
-    std::shared_ptr<BeWindow> _window;
+    HWND _hwnd;
     std::weak_ptr<BeAssetRegistry> _assetRegistry;
     
     // dx11 core components
@@ -75,7 +75,7 @@ class BeRenderer {
     explicit BeRenderer(
         uint32_t width,
         uint32_t height,
-        const std::shared_ptr<BeWindow>& window,
+        HWND window,
         std::weak_ptr<BeAssetRegistry> registry
     );
     ~BeRenderer();

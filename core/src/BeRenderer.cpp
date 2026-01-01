@@ -45,12 +45,12 @@ auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
 BeRenderer::BeRenderer(
     uint32_t width,
     uint32_t height,
-    const std::shared_ptr<BeWindow>& window,
+    HWND window,
     std::weak_ptr<BeAssetRegistry> registry
 )
     : _width(width)
     , _height(height)
-    , _window(window)
+    , _hwnd(window)
     , _assetRegistry(std::move(registry))
 {}
 
@@ -105,7 +105,7 @@ auto BeRenderer::LaunchDevice() -> void {
         .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
     };
 
-    const auto& hwnd = _window->GetHwnd();
+    const auto& hwnd = _hwnd;
     Utils::Check << _factory->CreateSwapChainForHwnd(_device.Get(), hwnd, &scDesc, nullptr, nullptr, &_swapchain);
     Utils::Check << _factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
 

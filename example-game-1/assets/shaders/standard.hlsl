@@ -1,5 +1,6 @@
 
 /*
+
 @be-shader-header
 {
     "topology": "triangle-list",
@@ -12,17 +13,45 @@
         "Specular.RGB_Shininess.A": 2
     },
     "material": {
-        "DiffuseColor": { "type": "float3", "default": [1.0, 1.0, 1.0] },
-        "SpecularColor": { "type": "float3", "default": [1.0, 1.0, 1.0] },
-        "Shininess": { "type": "float", "default": 0.0 },
+        "DiffuseColor": "float3 = [1.0, 1.0, 1.0]",
+        "SpecularColor": "float3 = [1.0, 1.0, 1.0]",
+        "Shininess": "float = 0.0",
 
-        "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
-        "SpecularTexture": { "type": "texture2d", "slot": 1, "default": "black" },
+        "DiffuseTexture": "texture2d(0) = white",
+        "SpecularTexture": "texture2d(1) = black",
 
-        "InputSampler": { "type": "sampler", "slot": 0 }
+        "InputSampler": "sampler(0)",
     }
 }
 @be-shader-header-end
+
+
+@be-material: Main
+{
+    "DiffuseColor": "float3 = [1.0, 1.0, 1.0]",
+    "SpecularColor": "float3 = [1.0, 1.0, 1.0]",
+    "Shininess": "float = 0.0",
+
+    "DiffuseTexture": "texture2d(0) = white",
+    "SpecularTexture": "texture2d(1) = black",
+
+    "InputSampler": "sampler(0)",
+}
+
+@be-shader: Standard
+{
+    "topology": "triangle-list",
+    "vertex": "VertexFunction",
+    "vertexLayout": ["position", "normal", "uv0"],
+    "pixel": "PixelFunction",
+    "materials": [ "Main", "BeUniform.beshader->Uniform" ],
+    "targets": {
+        "Diffuse.RGB": 0,
+        "WorldNormal.XYZ": 1,
+        "Specular.RGB_Shininess.A": 2
+    }
+}
+
 */
 
 cbuffer ModelBuffer: register(b1) {

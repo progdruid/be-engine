@@ -1,23 +1,31 @@
 #pragma once
 
 #include <string>
+#include <umbrellas/access-modifiers.hpp>
 
+// ReSharper disable once CppInconsistentNaming
 struct GLFWwindow;
+// ReSharper disable once CppInconsistentNaming
 struct HWND__;
+// ReSharper disable once CppInconsistentNaming
 using HWND = HWND__*;
 
 class BeWindow {
-private:
-    //fields///////////////////////////////////////////////////////////////////////////////////////
+    //fields////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    hide
     GLFWwindow* _window;
     HWND _hwnd;
     int _width;
     int _height;
     std::string _title;
 
-public:
-    //initialisation///////////////////////////////////////////////////////////////////////////////////////
-    explicit BeWindow(int width, int height, const std::string& title = "Window");
+    //lifetime//////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose
+    explicit BeWindow(
+        int width,
+        int height,
+        const std::string& title = "Window"
+    );
     ~BeWindow();
 
     // no copy
@@ -28,8 +36,9 @@ public:
     BeWindow(BeWindow&&) noexcept;
     BeWindow& operator=(BeWindow&&) noexcept;
 
-    //public interface///////////////////////////////////////////////////////////////////////////////////////
 
+    //interface/////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose
     auto PollEvents() -> void;
 
     [[nodiscard]] auto ShouldClose() const -> bool;
@@ -39,7 +48,5 @@ public:
     [[nodiscard]] auto GetHeight() const -> int { return _height; }
     [[nodiscard]] auto GetTitle() const -> const std::string& { return _title; }
 
-private:
-    //private logic/////////////////////////////////////////////////////////////////////////////////////////////////////
-    auto SetupErrorCallback() -> void;
+    hide auto SetupErrorCallback() -> void;
 };
