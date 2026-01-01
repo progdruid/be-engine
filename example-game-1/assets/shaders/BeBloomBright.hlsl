@@ -1,22 +1,29 @@
 /*
+
+@be-material: Main
+{
+    "Threshold": "float = 0.75",
+    "Intensity": "float = 17.0",
+    "Knee": "float = 1.25",
+
+    "HDRInput": "texture2d(0) = black",
+    "InputSampler": "sampler(0)",
+}
+@be-end
+
+
 @be-shader:
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
+    "material": "Main",
     "targets": {
         "BloomMip": 0
     },
-    "material": {
-        "Threshold": "float = 0.75",
-        "Intensity": "float = 17.0",
-        "Knee": "float = 1.25",
-
-        "HDRInput": "texture2d(0) = black",
-        "InputSampler": "sampler(0)",
-    }
 }
 @be-end
+
 */
 
 #include "fullscreen-vertex.hlsl"

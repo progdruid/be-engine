@@ -1,18 +1,24 @@
 /*
+
+@be-material: Main
+{
+    "InputTexture": "texture2d(0) = white",
+    "InputSampler": "sampler(0)",
+}
+@be-end
+
 @be-shader:
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
-    "material": {
-        "InputTexture": "texture2d(0) = white",
-        "InputSampler": "sampler(0)",
-    },
+    "material": "Main",
     "targets": {
         "Backbuffer": 0
     }
 }
 @be-end
+
 */
 
 #include "fullscreen-vertex.hlsl"

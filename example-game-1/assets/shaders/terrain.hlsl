@@ -1,4 +1,20 @@
 /*
+
+@be-material: Main
+{
+    "DiffuseColor": "float3 = [0.5, 0.5, 0.5]",
+    "SpecularColor": "float3 = [-0.2, -0.2, -0.1]", 
+    "Shininess":  "float = 0.0",
+    "DiffuseTexture": "texture2d(0) = white",
+    "TerrainScale": "float = 1.0",
+    "HeightScale": "float = 1.0",
+    "NoiseResolution": "float = 4.0",
+    "Speed": "float = 0.2",
+
+    "InputSampler": "sampler(0)",    
+}
+@be-end
+
 @be-shader:
 {
     "topology": "patch-list-3",
@@ -9,25 +25,15 @@
         "domain": "DomainFunction"
     },
     "pixel": "PixelFunction",
+    "material": "Main", 
     "targets": {
         "Diffuse.RGB": 0,
         "WorldNormal.XYZ": 1,
         "Specular.RGB_Shininess.A": 2
     },
-    "material": {
-        "DiffuseColor": "float3 = [0.5, 0.5, 0.5]",
-        "SpecularColor": "float3 = [-0.2, -0.2, -0.1]", 
-        "Shininess":  "float = 0.0",
-        "DiffuseTexture": "texture2d(0) = white",
-        "TerrainScale": "float = 1.0",
-        "HeightScale": "float = 1.0",
-        "NoiseResolution": "float = 4.0",
-        "Speed": "float = 0.2",
-
-        "InputSampler": "sampler(0)",    
-    }
 }
 @be-end
+
 */
 
 #include <BeUniformBuffer.hlsli>

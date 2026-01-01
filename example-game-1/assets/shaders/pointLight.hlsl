@@ -1,31 +1,37 @@
 /*
+
+@be-material: Main
+{
+    "Position": "float3 = [0, 0, 0]",
+    "Radius": "float = 0",
+    "Color": "float3 = [0, 0, 0]",
+    "Power": "float = 0",
+    "HasShadowMap": "float = 0",
+    "ShadowMapResolution": "float = 0",
+    "ShadowNearPlane": "float = 0",
+    
+    "Depth": "texture2d(0) = black",
+    "Diffuse": "texture2d(1) = black",
+    "WorldNormal": "texture2d(2) = black",
+    "Specular_Shininess": "texture2d(3) = black",
+    "PointLightShadowMap": "texture2d(4) = black",
+
+    "InputSampler": "sampler(0)"
+}
+@be-end
+
 @be-shader:
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
-    "material": {
-        "Position": "float3 = [0, 0, 0]",
-        "Radius": "float = 0",
-        "Color": "float3 = [0, 0, 0]",
-        "Power": "float = 0",
-        "HasShadowMap": "float = 0",
-        "ShadowMapResolution": "float = 0",
-        "ShadowNearPlane": "float = 0",
-        
-        "Depth": "texture2d(0) = black",
-        "Diffuse": "texture2d(1) = black",
-        "WorldNormal": "texture2d(2) = black",
-        "Specular_Shininess": "texture2d(3) = black",
-        "PointLightShadowMap": "texture2d(4) = black",
-
-        "InputSampler": "sampler(0)"
-    },
+    "material": "Main",
     "targets": {
         "LightHDR": 0
     }
 }
 @be-end
+
 */
 
 #include <BeUniformBuffer.hlsli>
