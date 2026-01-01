@@ -25,7 +25,9 @@
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
-    "material": "Main",
+    "materials": {
+        "Main": 2,
+    },
     "targets": {
         "LightHDR": 0
     }

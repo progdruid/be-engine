@@ -16,7 +16,7 @@ auto BeMaterial::Create(
     std::weak_ptr<BeShader> shader,
     const BeRenderer& renderer
 )
-    -> std::shared_ptr<BeMaterial> {
+-> std::shared_ptr<BeMaterial> {
     auto shaderLocked = shader.lock();
     assert(shaderLocked && "Shader must be valid");
     assert(shaderLocked->HasMaterial && "Shader must have material");

@@ -17,7 +17,9 @@
     "targets": {
         "BloomOutput": 0
     },
-    "material": "Main",
+    "materials": {
+        "Main": 2,
+    },
 }
 @be-end
 */

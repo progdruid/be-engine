@@ -75,6 +75,7 @@ struct BeMaterialSamplerDescriptor {
 
 struct BeMaterialDescriptor {
     std::string TypeName;
+    uint8_t SlotIndex;
     std::vector<BeMaterialPropertyDescriptor> Properties;
     std::vector<BeMaterialTextureDescriptor> Textures;
     std::vector<BeMaterialSamplerDescriptor> Samplers;
