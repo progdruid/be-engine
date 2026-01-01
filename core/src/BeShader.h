@@ -41,54 +41,7 @@ struct BeVertexElementDescriptor {
         TexCoord0,
         TexCoord1,
         TexCoord2,
-        _Count
-    };
-
-    static inline const std::unordered_map<std::string, BeVertexSemantic> SemanticMap = {
-        {"position", BeVertexSemantic::Position},
-        {"normal", BeVertexSemantic::Normal},
-        {"color3", BeVertexSemantic::Color3},
-        {"color4", BeVertexSemantic::Color4},
-        {"uv0", BeVertexSemantic::TexCoord0},
-        {"uv1", BeVertexSemantic::TexCoord1},
-        {"uv2", BeVertexSemantic::TexCoord2},
-    };
-    static inline const std::unordered_map<BeVertexSemantic, const char*> SemanticNames = {
-        {BeVertexSemantic::Position, "POSITION"},
-        {BeVertexSemantic::Normal, "NORMAL"},
-        {BeVertexSemantic::Color3, "COLOR"},
-        {BeVertexSemantic::Color4, "COLOR"},
-        {BeVertexSemantic::TexCoord0, "TEXCOORD"}, //????????
-        {BeVertexSemantic::TexCoord1, "TEXCOORD1"},
-        {BeVertexSemantic::TexCoord2, "TEXCOORD2"},
-    };
-
-    static inline const std::unordered_map<BeVertexSemantic, DXGI_FORMAT> ElementFormats = {
-        {BeVertexSemantic::Position, DXGI_FORMAT_R32G32B32_FLOAT},
-        {BeVertexSemantic::Normal, DXGI_FORMAT_R32G32B32_FLOAT},
-        {BeVertexSemantic::Color3, DXGI_FORMAT_R32G32B32_FLOAT},
-        {BeVertexSemantic::Color4, DXGI_FORMAT_R32G32B32A32_FLOAT},
-        {BeVertexSemantic::TexCoord0, DXGI_FORMAT_R32G32_FLOAT},
-        {BeVertexSemantic::TexCoord1, DXGI_FORMAT_R32G32_FLOAT},
-        {BeVertexSemantic::TexCoord2, DXGI_FORMAT_R32G32_FLOAT},
-    };
-    static inline const std::unordered_map<BeVertexSemantic, uint32_t> SemanticSizes = {
-        {BeVertexSemantic::Position, 12},
-        {BeVertexSemantic::Normal, 12},
-        {BeVertexSemantic::Color3, 12},
-        {BeVertexSemantic::Color4, 16},
-        {BeVertexSemantic::TexCoord0, 8},
-        {BeVertexSemantic::TexCoord1, 8},
-        {BeVertexSemantic::TexCoord2, 8},
-    };
-    static inline const std::unordered_map<BeVertexSemantic, uint32_t> ElementOffsets = {
-        {BeVertexSemantic::Position,   0},
-        {BeVertexSemantic::Normal,    12},
-        {BeVertexSemantic::Color3,    24},
-        {BeVertexSemantic::Color4,    24},
-        {BeVertexSemantic::TexCoord0, 40},
-        {BeVertexSemantic::TexCoord1, 48},
-        {BeVertexSemantic::TexCoord2, 56},
+        Count_
     };
     
     std::string Name;
@@ -102,14 +55,6 @@ struct BeMaterialPropertyDescriptor {
         Float3,
         Float4,
         Matrix
-    };
-
-    static inline const std::unordered_map<Type, uint32_t> SizeMap = {
-        {Type::Float,  1 * sizeof(float)},
-        {Type::Float2, 2 * sizeof(float)},
-        {Type::Float3, 3 * sizeof(float)},
-        {Type::Float4, 4 * sizeof(float)},
-        {Type::Matrix, 16 * sizeof(float)},
     };
 
     std::string Name;
@@ -137,7 +82,7 @@ struct BeMaterialDescriptor {
 
 class BeShader {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose static inline std::string StandardShaderIncludePath = "src/shaders/";
+    expose static std::string StandardShaderIncludePath;
     expose static auto Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader>;
     
     hide static auto CompileBlob (

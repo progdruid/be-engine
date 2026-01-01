@@ -208,7 +208,15 @@ auto BeMaterial::AssembleData() -> void {
     for (const auto& property : shader->MaterialDescriptors[0].Properties) {
         constexpr uint32_t registerSizeBytes = 16;
 
-        const uint32_t elementSizeBytes = BeMaterialPropertyDescriptor::SizeMap.at(property.PropertyType);
+        static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> SizeMap = {
+            {BeMaterialPropertyDescriptor::Type::Float,  1 * sizeof(float)},
+            {BeMaterialPropertyDescriptor::Type::Float2, 2 * sizeof(float)},
+            {BeMaterialPropertyDescriptor::Type::Float3, 3 * sizeof(float)},
+            {BeMaterialPropertyDescriptor::Type::Float4, 4 * sizeof(float)},
+            {BeMaterialPropertyDescriptor::Type::Matrix, 16 * sizeof(float)},
+        };
+        
+        const uint32_t elementSizeBytes = SizeMap.at(property.PropertyType);
         const uint32_t positionInRegister = offsetBytes % registerSizeBytes;
         
         if (positionInRegister + elementSizeBytes > registerSizeBytes && positionInRegister != 0) {
