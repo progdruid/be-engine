@@ -110,7 +110,7 @@ class BeShader {
     expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
     
     expose bool HasMaterial = false;
-    expose std::vector<BeMaterialDescriptor> MaterialDescriptors;
+    expose std::unordered_map<std::string, BeMaterialDescriptor> MaterialDescriptors;
 
     
     // lifecycle ///////////////////////////////////////////////////////////////////////////////////////////////////////

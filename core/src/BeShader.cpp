@@ -33,107 +33,109 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     
     if (header.contains("materials")) {
         shader->HasMaterial = true;
-        const auto& materialsJson = header.at("materials");
+        const auto& materialLinksJson = header.at("materials");
         
-        BeMaterialDescriptor materialDescriptor;
-        materialDescriptor.TypeName = materialsJson.items().begin().key();
-        materialDescriptor.SlotIndex = materialsJson.items().begin().value();
-        
-        const Json materialJson = ParseFor(src, "@be-material: " + materialDescriptor.TypeName);
-        
-        for (const auto& materialJsonItem : materialJson.items()) {
+        for (const auto& materialLinkJson : materialLinksJson.items()) {
+            BeMaterialDescriptor materialDescriptor;
+            materialDescriptor.TypeName = materialLinkJson.key();
+            materialDescriptor.SlotIndex = materialLinkJson.value();
             
-            // splitting
-            const auto& key = materialJsonItem.key();
-            const std::string valueString = materialJsonItem.value();
-            const auto parts = Split(valueString, "=");
-            assert(!parts.empty());
-            const auto typeParts = Split(Trim(parts[0], " \n\r\t"), "()");
-            assert(!typeParts.empty());
+            const Json materialJson = ParseFor(src, "@be-material: " + materialDescriptor.TypeName);
             
-            // final strings
-            const std::string typeString (typeParts[0]);
-            uint8_t slotIndex = 0;
-            std::string defaultString;  
+            for (const auto& materialJsonItem : materialJson.items()) {
             
-            if (typeParts.size() > 1) {
-                slotIndex = std::stoi(std::string(typeParts[1]));
-            }
-            if (parts.size() > 1) {
-                defaultString = Trim(parts[1], " \n\r\t");
+                // splitting
+                const auto& key = materialJsonItem.key();
+                const std::string valueString = materialJsonItem.value();
+                const auto parts = Split(valueString, "=");
+                assert(!parts.empty());
+                const auto typeParts = Split(Trim(parts[0], " \n\r\t"), "()");
+                assert(!typeParts.empty());
+            
+                // final strings
+                const std::string typeString (typeParts[0]);
+                uint8_t slotIndex = 0;
+                std::string defaultString;  
+            
+                if (typeParts.size() > 1) {
+                    slotIndex = std::stoi(std::string(typeParts[1]));
+                }
+                if (parts.size() > 1) {
+                    defaultString = Trim(parts[1], " \n\r\t");
+                }
+            
+                // extracting
+                if (typeString == "texture2d") {
+                    BeMaterialTextureDescriptor descriptor;
+                    descriptor.Name = key;
+                    descriptor.SlotIndex = slotIndex;
+                    descriptor.DefaultTexturePath = defaultString;
+                    materialDescriptor.Textures.push_back(descriptor);
+                }
+                else if (typeString == "sampler") {
+                    BeMaterialSamplerDescriptor descriptor;
+                    descriptor.Name = key;
+                    descriptor.SlotIndex = slotIndex;
+                    materialDescriptor.Samplers.push_back(descriptor);
+                }
+                else if (typeString == "float") {
+                    BeMaterialPropertyDescriptor descriptor;
+                    descriptor.Name = key;
+                    descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float;
+                    descriptor.DefaultValue.push_back(std::stof(defaultString));
+                    materialDescriptor.Properties.push_back(descriptor);
+                }
+                else if (typeString == "float2") {
+                    Json j = Json::parse(defaultString, nullptr, true, true, true);
+                    const auto vec = j.get<std::vector<float>>();
+                    assert(vec.size() == 2);
+                
+                    BeMaterialPropertyDescriptor descriptor;
+                    descriptor.Name = key;
+                    descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float2;
+                    descriptor.DefaultValue = vec;
+                    materialDescriptor.Properties.push_back(descriptor);
+                }
+                else if (typeString == "float3") {
+                    Json j = Json::parse(defaultString, nullptr, true, true, true);
+                    const auto vec = j.get<std::vector<float>>();
+                    assert(vec.size() == 3);
+                
+                    BeMaterialPropertyDescriptor descriptor;
+                    descriptor.Name = key;
+                    descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float3;
+                    descriptor.DefaultValue = vec;
+                    materialDescriptor.Properties.push_back(descriptor);
+                }
+                else if (typeString == "float4") {
+                    Json j = Json::parse(defaultString, nullptr, true, true, true);
+                    const auto vec = j.get<std::vector<float>>();
+                    assert(vec.size() == 4);
+                
+                    BeMaterialPropertyDescriptor descriptor;
+                    descriptor.Name = key;
+                    descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float4;
+                    descriptor.DefaultValue = vec;
+                    materialDescriptor.Properties.push_back(descriptor);
+                }
+                else if (typeString == "matrix") {
+                    std::vector<float> mat = {
+                        1, 0, 0, 0,
+                        0, 1, 0, 0,
+                        0, 0, 1, 0,
+                        0, 0, 0, 1
+                    };
+                
+                    BeMaterialPropertyDescriptor descriptor;
+                    descriptor.Name = key;
+                    descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Matrix;
+                    descriptor.DefaultValue = mat;
+                    materialDescriptor.Properties.push_back(descriptor);
+                }
             }
             
-            // extracting
-            if (typeString == "texture2d") {
-                BeMaterialTextureDescriptor descriptor;
-                descriptor.Name = key;
-                descriptor.SlotIndex = slotIndex;
-                descriptor.DefaultTexturePath = defaultString;
-                materialDescriptor.Textures.push_back(descriptor);
-            }
-            else if (typeString == "sampler") {
-                BeMaterialSamplerDescriptor descriptor;
-                descriptor.Name = key;
-                descriptor.SlotIndex = slotIndex;
-                materialDescriptor.Samplers.push_back(descriptor);
-            }
-            else if (typeString == "float") {
-                BeMaterialPropertyDescriptor descriptor;
-                descriptor.Name = key;
-                descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float;
-                descriptor.DefaultValue.push_back(std::stof(defaultString));
-                materialDescriptor.Properties.push_back(descriptor);
-            }
-            else if (typeString == "float2") {
-                Json j = Json::parse(defaultString, nullptr, true, true, true);
-                const auto vec = j.get<std::vector<float>>();
-                assert(vec.size() == 2);
-                
-                BeMaterialPropertyDescriptor descriptor;
-                descriptor.Name = key;
-                descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float2;
-                descriptor.DefaultValue = vec;
-                materialDescriptor.Properties.push_back(descriptor);
-            }
-            else if (typeString == "float3") {
-                Json j = Json::parse(defaultString, nullptr, true, true, true);
-                const auto vec = j.get<std::vector<float>>();
-                assert(vec.size() == 3);
-                
-                BeMaterialPropertyDescriptor descriptor;
-                descriptor.Name = key;
-                descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float3;
-                descriptor.DefaultValue = vec;
-                materialDescriptor.Properties.push_back(descriptor);
-            }
-            else if (typeString == "float4") {
-                Json j = Json::parse(defaultString, nullptr, true, true, true);
-                const auto vec = j.get<std::vector<float>>();
-                assert(vec.size() == 4);
-                
-                BeMaterialPropertyDescriptor descriptor;
-                descriptor.Name = key;
-                descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float4;
-                descriptor.DefaultValue = vec;
-                materialDescriptor.Properties.push_back(descriptor);
-            }
-            else if (typeString == "matrix") {
-                std::vector<float> mat = {
-                    1, 0, 0, 0,
-                    0, 1, 0, 0,
-                    0, 0, 1, 0,
-                    0, 0, 0, 1
-                };
-                
-                BeMaterialPropertyDescriptor descriptor;
-                descriptor.Name = key;
-                descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Matrix;
-                descriptor.DefaultValue = mat;
-                materialDescriptor.Properties.push_back(descriptor);
-            }
+            shader->MaterialDescriptors[materialDescriptor.TypeName] = materialDescriptor;
         }
-        
-        shader->MaterialDescriptors.push_back(materialDescriptor);
     }
     
     {
