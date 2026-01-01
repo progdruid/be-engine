@@ -8,6 +8,8 @@
 #include "BeShaderIncludeHandler.hpp"
 #include "Utils.h"
 
+std::string BeShader::StandardShaderIncludePath = "src/shaders/";
+
 auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader> {
     const auto& device = renderer.GetDevice();
     
@@ -163,19 +165,44 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
             std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout;
             inputLayout.reserve(vertexLayoutJson.size());
 
-            for (const auto& descriptorJson : vertexLayoutJson) {
-                BeVertexElementDescriptor descriptor;
-                descriptor.Attribute = BeVertexElementDescriptor::SemanticMap.at(descriptorJson);
+            for (const std::string vertexSemanticName : vertexLayoutJson) {
+                static const std::unordered_map<std::string, const char*> SemanticNames = {
+                    {"position", "POSITION"},
+                    {"normal", "NORMAL"},
+                    {"color3", "COLOR"},
+                    {"color4", "COLOR"},
+                    {"uv0", "TEXCOORD"}, //????????
+                    {"uv1", "TEXCOORD1"},
+                    {"uv2", "TEXCOORD2"},
+                };
+                static const std::unordered_map<std::string, DXGI_FORMAT> ElementFormats = {
+                    {"position", DXGI_FORMAT_R32G32B32_FLOAT},
+                    {"normal", DXGI_FORMAT_R32G32B32_FLOAT},
+                    {"color3", DXGI_FORMAT_R32G32B32_FLOAT},
+                    {"color4", DXGI_FORMAT_R32G32B32A32_FLOAT},
+                    {"uv0", DXGI_FORMAT_R32G32_FLOAT},
+                    {"uv1", DXGI_FORMAT_R32G32_FLOAT},
+                    {"uv2", DXGI_FORMAT_R32G32_FLOAT},
+                };
+                static const std::unordered_map<std::string, uint32_t> ElementOffsets = {
+                    {"position", 0},
+                    {"normal",  12},
+                    {"color3",  24},
+                    {"color4",  24},
+                    {"uv0",     40},
+                    {"uv1",     48},
+                    {"uv2",     56},
+                };
 
                 D3D11_INPUT_ELEMENT_DESC elementDesc;
                 elementDesc.SemanticIndex = 0;
                 elementDesc.InputSlot = 0;
-                elementDesc.AlignedByteOffset = BeVertexElementDescriptor::ElementOffsets.at(descriptor.Attribute);
                 elementDesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
                 elementDesc.InstanceDataStepRate = 0;
-                elementDesc.SemanticName = BeVertexElementDescriptor::SemanticNames.at(descriptor.Attribute);
-                elementDesc.Format = BeVertexElementDescriptor::ElementFormats.at(descriptor.Attribute);
-
+                elementDesc.AlignedByteOffset = ElementOffsets.at(vertexSemanticName);
+                elementDesc.SemanticName = SemanticNames.at(vertexSemanticName);
+                elementDesc.Format = ElementFormats.at(vertexSemanticName);
+                
                 inputLayout.push_back(elementDesc);
             }
 
