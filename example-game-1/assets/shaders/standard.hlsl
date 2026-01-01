@@ -1,7 +1,7 @@
 
 /*
 
-@be-shader-header
+@be-shader:
 {
     "topology": "triangle-list",
     "vertex": "VertexFunction",
@@ -37,8 +37,10 @@
 
     "InputSampler": "sampler(0)",
 }
+@be-end
 
-@be-shader: Standard
+
+@be-shader.:
 {
     "topology": "triangle-list",
     "vertex": "VertexFunction",
@@ -51,6 +53,7 @@
         "Specular.RGB_Shininess.A": 2
     }
 }
+@be-end
 
 */
 

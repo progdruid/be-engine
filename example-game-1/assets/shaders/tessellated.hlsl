@@ -1,5 +1,5 @@
 /*
-@be-shader-header
+@be-shader:
 {
     "topology": "patch-list-3",
     "vertex": "VertexFunction",
