@@ -25,7 +25,7 @@
         "LightHDR": 0
     }
 }
-@be-shader-header-end
+@be-end
 */
 
 #include <BeUniformBuffer.hlsli>
