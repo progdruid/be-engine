@@ -139,7 +139,7 @@ class BeShader {
         const char* target,
         BeShaderIncludeHandler* includeHandler
     ) -> ComPtr<ID3DBlob>;
-    hide static auto ParseHeader (const std::string& src, const std::string& target) -> Json;
+    hide static auto ParseFor (const std::string& src, const std::string& target) -> Json;
     hide static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
     hide static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;
     hide static auto Split (std::string_view str, const char* delimiters) -> std::vector<std::string_view>;

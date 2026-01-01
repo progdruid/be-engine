@@ -26,12 +26,13 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     std::stringstream buffer;
     buffer << file.rdbuf();
     const std::string src = buffer.str();
-    const Json header = ParseHeader(src, "@be-shader:");
+    const Json header = ParseFor(src, "@be-shader:");
     
     
     if (header.contains("material")) {
         shader->HasMaterial = true;
-        const auto& materialJson = header.at("material");
+        const std::string& materialName = header.at("material");
+        const Json materialJson = ParseFor(src, "@be-material: " + materialName);
         for (const auto& materialJsonItem : materialJson.items()) {
             
             // splitting
@@ -248,7 +249,7 @@ auto BeShader::CompileBlob(
     return shaderBlob;
 }
 
-auto BeShader::ParseHeader(const std::string& src, const std::string& target) -> Json {
+auto BeShader::ParseFor(const std::string& src, const std::string& target) -> Json {
     const std::string& startTag = target;
     const std::string& endTag   = "@be-end";
     

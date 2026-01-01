@@ -1,16 +1,21 @@
 /*
+
+@be-material: Main
+{
+    "HDRInput": "texture2d(0) = black",
+    "InputSampler": "sampler(0)",
+}
+@be-end
+
 @be-shader:
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
+    "material": "Main",
     "targets": {
         "HDRTarget": 0
     },
-    "material": {
-        "HDRInput": "texture2d(0) = black",
-        "InputSampler": "sampler(0)",
-    }
 }
 @be-end
 */

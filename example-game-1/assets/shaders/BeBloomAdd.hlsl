@@ -1,4 +1,14 @@
 /*
+
+@be-material: Main
+{
+    "HDRInput": "texture2d(0) = black",
+    "BloomInput": "texture2d(1) = black",
+    "DirtTexture": "texture2d(2) = black",
+    "InputSampler": "sampler(0)",
+}
+@be-end
+
 @be-shader:
 {
     "topology": "triangle-strip",
@@ -7,12 +17,7 @@
     "targets": {
         "BloomOutput": 0
     },
-    "material": {
-        "HDRInput": "texture2d(0) = black",
-        "BloomInput": "texture2d(1) = black",
-        "DirtTexture": "texture2d(2) = black",
-        "InputSampler": "sampler(0)",
-    }
+    "material": "Main",
 }
 @be-end
 */

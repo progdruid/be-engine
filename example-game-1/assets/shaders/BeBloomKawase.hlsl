@@ -1,21 +1,27 @@
 /*
+
+@be-material: Main
+{
+    "TexelSize": "float2 = [0.001, 0.001]",
+    "PassRadius": "float = 0.5",
+
+    "BloomMipInput": "texture2d(0) = black",
+    "InputSampler": "sampler(0)",
+}
+@be-end
+
 @be-shader:
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
+    "material": "Main",
     "targets": {
         "BloomMipOutput": 0
     },
-    "material": {
-        "TexelSize": "float2 = [0.001, 0.001]",
-        "PassRadius": "float = 0.5",
-
-        "BloomMipInput": "texture2d(0) = black",
-        "InputSampler": "sampler(0)",
-    }
 }
 @be-end
+
 */
 
 #include "fullscreen-vertex.hlsl"
