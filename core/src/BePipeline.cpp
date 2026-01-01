@@ -46,16 +46,17 @@ auto BePipeline::BindMaterial(const std::shared_ptr<BeMaterial>& material) -> vo
     const auto& buffer = material->GetBuffer();
     if (buffer != nullptr) {
         material->UpdateGPUBuffers(_context);
-
+        const auto& slot = material->GetBufferSlot();
+        
         if (HasAny(_boundShaderType, BeShaderType::Vertex)) {
-            _context->VSSetConstantBuffers(2, 1, buffer.GetAddressOf());
+            _context->VSSetConstantBuffers(slot, 1, buffer.GetAddressOf());
         }
         if (HasAny(_boundShaderType, BeShaderType::Tesselation)) {
-            _context->HSSetConstantBuffers(2, 1, buffer.GetAddressOf());
-            _context->DSSetConstantBuffers(2, 1, buffer.GetAddressOf());
+            _context->HSSetConstantBuffers(slot, 1, buffer.GetAddressOf());
+            _context->DSSetConstantBuffers(slot, 1, buffer.GetAddressOf());
         }
         if (HasAny(_boundShaderType, BeShaderType::Pixel)) {
-            _context->PSSetConstantBuffers(2, 1, buffer.GetAddressOf());
+            _context->PSSetConstantBuffers(slot, 1, buffer.GetAddressOf());
         }
     }
 

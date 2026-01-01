@@ -39,7 +39,7 @@ BeMaterial::BeMaterial(
     const auto shaderLocked = Shader.lock();
     assert(shaderLocked);
 
-    if (shaderLocked->MaterialDescriptors[0].Properties.empty())
+    if (shaderLocked->MaterialDescriptors["Main"].Properties.empty())
         return;
     
     AssembleData();
@@ -62,6 +62,7 @@ BeMaterial::BeMaterial(
 
     Utils::Check << renderer.GetDevice()->CreateBuffer(&bufferDesc, &data, _cbuffer.GetAddressOf());
 
+    _cbufferSlot = shaderLocked->MaterialDescriptors["Main"].SlotIndex;
     _cbufferDirty = false;
 }
 
@@ -72,7 +73,7 @@ auto BeMaterial::InitialiseSlotMaps(const BeRenderer& renderer) -> void {
     const auto shader = Shader.lock();
     assert(shader);
     
-    for (const auto& property : shader->MaterialDescriptors[0].Textures) {
+    for (const auto& property : shader->MaterialDescriptors["Main"].Textures) {
         auto texWeak = renderer.GetAssetRegistry().lock()->GetTexture(property.DefaultTexturePath);
         auto texture = texWeak.lock();
         assert(texture && ("Texture not found in registry: " + property.DefaultTexturePath).c_str());
@@ -80,7 +81,7 @@ auto BeMaterial::InitialiseSlotMaps(const BeRenderer& renderer) -> void {
         _textures[property.Name] = {texture, property.SlotIndex};
     }
 
-    for (const auto& property : shader->MaterialDescriptors[0].Samplers) {
+    for (const auto& property : shader->MaterialDescriptors["Main"].Samplers) {
         _samplers[property.Name] = { nullptr, property.SlotIndex };
     }
 }
@@ -205,7 +206,7 @@ auto BeMaterial::AssembleData() -> void {
 
     uint32_t offsetBytes = 0;
 
-    for (const auto& property : shader->MaterialDescriptors[0].Properties) {
+    for (const auto& property : shader->MaterialDescriptors["Main"].Properties) {
         constexpr uint32_t registerSizeBytes = 16;
 
         static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> SizeMap = {
@@ -228,7 +229,7 @@ auto BeMaterial::AssembleData() -> void {
     }
 
     _bufferData.resize(offsetBytes / 4);
-    for (const auto& property : shader->MaterialDescriptors[0].Properties) {
+    for (const auto& property : shader->MaterialDescriptors["Main"].Properties) {
         const uint32_t propertyOffset = _propertyOffsets.at(property.Name);
         const auto& defaultValue = property.DefaultValue;
         memcpy(_bufferData.data() + propertyOffset, defaultValue.data(), defaultValue.size() * sizeof(float));

@@ -31,7 +31,7 @@ class BeMaterial {
     expose
     std::string Name;
     std::weak_ptr<BeShader> Shader;
-
+    
     hide
     bool _isFrequentlyUsed;
     
@@ -41,6 +41,7 @@ class BeMaterial {
     std::unordered_map<std::string, uint32_t> _propertyOffsets;
     std::vector<float> _bufferData;
     ComPtr<ID3D11Buffer> _cbuffer = nullptr;
+    int8_t _cbufferSlot = -1;
     bool _cbufferDirty;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -85,6 +86,7 @@ class BeMaterial {
     
     auto UpdateGPUBuffers (const ComPtr<ID3D11DeviceContext>& context) -> void;
     auto GetBuffer () const -> const ComPtr<ID3D11Buffer>& { return _cbuffer; }
+    auto GetBufferSlot () const -> uint8_t { assert(_cbufferSlot != -1); return _cbufferSlot; }
     auto GetTexturePairs () const -> const std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>>& { return _textures; }
     auto GetSamplerPairs () const -> const std::unordered_map<std::string, std::pair<ComPtr<ID3D11SamplerState>, uint8_t>>& { return _samplers; }
     
