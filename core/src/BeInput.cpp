@@ -12,16 +12,14 @@ auto BeInput::ScrollCallbackInternal(GLFWwindow* window, double xOffset, double 
     input->_scrollDelta.y += static_cast<float>(yOffset);
 }
 
-//initialisation////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BeInput::BeInput(const std::shared_ptr<BeWindow>& window)
-    : _window(window->GetGlfwWindow())
+BeInput::BeInput(GLFWwindow* windowHandle)
+    : _window(windowHandle)
     , _mousePosition(0.0f)
     , _previousMousePosition(0.0f)
     , _scrollDelta(0.0f)
     , _isMouseCaptured(false)
 {
-    
     glfwSetWindowUserPointer(_window, this);
     glfwSetScrollCallback(_window, ScrollCallbackInternal);
 
@@ -31,7 +29,7 @@ BeInput::BeInput(const std::shared_ptr<BeWindow>& window)
     _previousMousePosition = _mousePosition;
 }
 
-//public interface//////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 auto BeInput::Update() -> void {
     _previousKeys = _currentKeys;
@@ -121,10 +119,10 @@ auto BeInput::IsMouseCaptured() const -> bool {
     return _isMouseCaptured;
 }
 
-//private logic/////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 auto BeInput::UpdateKeyStates() -> void {
-    const int keysToCheck[] = {
+    constexpr int keysToCheck[] = {
         GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D,
         GLFW_KEY_Q, GLFW_KEY_E,
         GLFW_KEY_SPACE, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_LEFT_CONTROL,
@@ -142,7 +140,7 @@ auto BeInput::UpdateKeyStates() -> void {
 }
 
 auto BeInput::UpdateMouseButtonStates() -> void {
-    const int buttonsToCheck[] = {
+    constexpr int buttonsToCheck[] = {
         GLFW_MOUSE_BUTTON_LEFT,
         GLFW_MOUSE_BUTTON_RIGHT,
         GLFW_MOUSE_BUTTON_MIDDLE,

@@ -143,7 +143,8 @@ class BeShader {
     hide static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
     hide static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;
     hide static auto Split (std::string_view str, const char* delimiters) -> std::vector<std::string_view>;
-
+    
+    
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose BeShaderType ShaderType = BeShaderType::None;
     expose D3D11_PRIMITIVE_TOPOLOGY Topology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;

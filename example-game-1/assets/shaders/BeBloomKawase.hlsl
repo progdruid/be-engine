@@ -8,11 +8,11 @@
         "BloomMipOutput": 0
     },
     "material": {
-        "TexelSize": { "type": "float2", "default": [0.001, 0.001] },
-        "PassRadius": { "type": "float", "default": 0.5 },
+        "TexelSize": "float2 = [0.001, 0.001]",
+        "PassRadius": "float = 0.5",
 
-        "BloomMipInput": { "type": "texture2d", "slot": 0, "default": "black" },
-        "InputSampler": { "type": "sampler", "slot": 0 }
+        "BloomMipInput": "texture2d(0) = black",
+        "InputSampler": "sampler(0)",
     }
 }
 @be-shader-header-end

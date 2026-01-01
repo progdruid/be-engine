@@ -5,20 +5,20 @@
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "material": {
-        "HasShadowMap": { "type": "float", "default": 0 },
-        "Direction": { "type": "float3", "default": [0, 0, 0] },
-        "Color": { "type": "float3", "default": [0, 0, 0] },
-        "Power": { "type": "float", "default": 0 },
-        "ProjectionView": { "type": "matrix" },
-        "TexelSize": { "type": "float", "default": 0 },
+        "HasShadowMap": "float = 0",
+        "Direction": "float3 = [0, 0, 0]",
+        "Color": "float3 = [0, 0, 0]",
+        "Power": "float = 0",
+        "ProjectionView": "matrix",
+        "TexelSize": "float = 0",
         
-        "Depth": { "type": "texture2d", "slot": 0, "default": "black" },
-        "Diffuse": { "type": "texture2d", "slot": 1, "default": "black" },
-        "WorldNormal": { "type": "texture2d", "slot": 2, "default": "black" },
-        "Specular_Shininess": { "type": "texture2d", "slot": 3, "default": "black" },
-        "ShadowMap": { "type": "texture2d", "slot": 4, "default": "black" },
+        "Depth": "texture2d(0) = black",
+        "Diffuse": "texture2d(1) = black",
+        "WorldNormal": "texture2d(2) = black",
+        "Specular_Shininess": "texture2d(3) = black",
+        "ShadowMap": "texture2d(4) = black",
 
-        "InputSampler": { "type": "sampler", "slot": 0 }
+        "InputSampler": "sampler(0)",
     },
     "targets": {
         "LightHDR": 0

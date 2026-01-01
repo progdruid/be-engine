@@ -15,16 +15,16 @@
         "Specular.RGB_Shininess.A": 2
     },
     "material": {
-        "DiffuseColor": { "type": "float3", "default": [0.28, 0.39, 1.0] },
-        "SpecularColor": { "type": "float3", "default": [1.0, 1.0, 1.0] },
-        "Shininess": { "type": "float", "default": 100.0 },
-        "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
-        "TessellationLevel": { "type": "float", "default": 1024.0 },
-        "DisplacementStrength": { "type": "float", "default": -1.0 },
-        "AnimationSpeed": { "type": "float", "default": 1.5 },
-        "NoiseFrequency": { "type": "float", "default": 30.0 },
+        "DiffuseColor": "float3 = [0.28, 0.39, 1.0]",
+        "SpecularColor": "float3 = [1.0, 1.0, 1.0]",
+        "Shininess": "float = 100.0",
+        "DiffuseTexture": "texture2d(0) = white",
+        "TessellationLevel": "float = 1024.0",
+        "DisplacementStrength": "float = -1.0",
+        "AnimationSpeed": "float = 1.5",
+        "NoiseFrequency": "float = 30.0",
 
-        "InputSampler": { "type": "sampler", "slot": 0 }
+        "InputSampler": "sampler(0)",
     }
 }
 @be-shader-header-end

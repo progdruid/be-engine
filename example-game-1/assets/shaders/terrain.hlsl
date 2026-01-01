@@ -15,16 +15,16 @@
         "Specular.RGB_Shininess.A": 2
     },
     "material": {
-        "DiffuseColor": { "type": "float3", "default": [0.5, 0.5, 0.5] },
-        "SpecularColor": { "type": "float3", "default": [-0.2, -0.2, -0.1] }, 
-        "Shininess":  { "type": "float", "default": 0.0 },
-        "DiffuseTexture": { "type": "texture2d", "slot": 0, "default": "white" },
-        "TerrainScale": { "type": "float", "default": 1.0 },
-        "HeightScale": { "type": "float", "default": 1.0 },
-        "NoiseResolution": { "type": "float", "default": 4.0 },
-        "Speed": { "type": "float", "default": 0.2 },
+        "DiffuseColor": "float3 = [0.5, 0.5, 0.5]",
+        "SpecularColor": "float3 = [-0.2, -0.2, -0.1]", 
+        "Shininess":  "float = 0.0",
+        "DiffuseTexture": "texture2d(0) = white",
+        "TerrainScale": "float = 1.0",
+        "HeightScale": "float = 1.0",
+        "NoiseResolution": "float = 4.0",
+        "Speed": "float = 0.2",
 
-        "InputSampler": { "type": "sampler", "slot": 0 }    
+        "InputSampler": "sampler(0)",    
     }
 }
 @be-shader-header-end

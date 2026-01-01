@@ -8,12 +8,12 @@
         "BloomMip": 0
     },
     "material": {
-        "Threshold": { "type": "float", "default": 0.75 },
-        "Intensity": { "type": "float", "default": 17.0 },
-        "Knee": { "type": "float", "default": 1.25 },
+        "Threshold": "float = 0.75",
+        "Intensity": "float = 17.0",
+        "Knee": "float = 1.25",
 
-        "HDRInput": { "type": "texture2d", "slot": 0, "default": "black" },
-        "InputSampler": { "type": "sampler", "slot": 0 }
+        "HDRInput": "texture2d(0) = black",
+        "InputSampler": "sampler(0)",
     }
 }
 @be-shader-header-end

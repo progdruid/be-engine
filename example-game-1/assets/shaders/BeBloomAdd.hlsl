@@ -8,10 +8,10 @@
         "BloomOutput": 0
     },
     "material": {
-        "HDRInput": { "type": "texture2d", "slot": 0, "default": "black" },
-        "BloomInput": { "type": "texture2d", "slot": 1, "default": "black" },
-        "DirtTexture": { "type": "texture2d", "slot": 2, "default": "black" },
-        "InputSampler": { "type": "sampler", "slot": 0 }
+        "HDRInput": "texture2d(0) = black",
+        "BloomInput": "texture2d(1) = black",
+        "DirtTexture": "texture2d(2) = black",
+        "InputSampler": "sampler(0)",
     }
 }
 @be-shader-header-end

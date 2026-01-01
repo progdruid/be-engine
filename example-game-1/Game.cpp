@@ -1,8 +1,6 @@
 
 #include "Game.h"
 
-#define NOMINMAX
-
 #include <glfw/glfw3.h>
 
 #include "BeWindow.h"
@@ -10,7 +8,7 @@
 #include "BeInput.h"
 #include "BeRenderer.h"
 
-#include <scenes/BeSceneManager.h>
+#include "scenes/BeSceneManager.h"
 #include "scenes/MenuScene.h"
 #include "scenes/MainScene.h"
 
@@ -24,10 +22,10 @@ auto Game::Run() -> int {
     
     _window = std::make_shared<BeWindow>(_width, _height, "be: example game 1");
     _assetRegistry = std::make_shared<BeAssetRegistry>();
-    _renderer = std::make_shared<BeRenderer>(_width, _height, _window, _assetRegistry);
+    _renderer = std::make_shared<BeRenderer>(_width, _height, _window->GetHwnd(), _assetRegistry);
     _renderer->LaunchDevice();
     
-    _input = std::make_unique<BeInput>(_window);
+    _input = std::make_unique<BeInput>(_window->GetGlfwWindow());
     
     SetupScenes();
 

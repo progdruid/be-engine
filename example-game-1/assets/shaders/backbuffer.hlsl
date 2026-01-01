@@ -5,8 +5,8 @@
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "material": {
-        "InputTexture": { "type": "texture2d", "slot": 0, "default": "white" },
-        "InputSampler": { "type": "sampler", "slot": 0 }
+        "InputTexture": "texture2d(0) = white",
+        "InputSampler": "sampler(0)",
     },
     "targets": {
         "Backbuffer": 0
