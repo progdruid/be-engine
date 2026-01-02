@@ -27,7 +27,7 @@ auto BeFullscreenEffectPass::Render() -> void {
     // shaders
     pipeline->BindShader(Shader, BeShaderType::Vertex | BeShaderType::Pixel);
     if (Material) {
-        pipeline->BindMaterial(Material);
+        pipeline->BindMaterialAutomatic(Material);
     }
 
     // draw

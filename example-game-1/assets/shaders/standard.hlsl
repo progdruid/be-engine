@@ -1,6 +1,14 @@
 
 /*
 
+@be-material: Object
+{
+    "Model": "matrix",
+    "ProjectionView": "matrix",
+    "ViewerPosition": "float3 = [0, 0, 0]",
+}
+@be-end
+
 @be-material: Main
 {
     "DiffuseColor": "float3 = [1.0, 1.0, 1.0]",
@@ -22,6 +30,7 @@
     "vertexLayout": ["position", "normal", "uv0"],
     "pixel": "PixelFunction",
     "materials": {
+        "Object": 1,
         "Main": 2,
     },
     "targets": {

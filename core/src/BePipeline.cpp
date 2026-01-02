@@ -37,26 +37,26 @@ auto BePipeline::BindShader(const std::shared_ptr<BeShader>& shader, BeShaderTyp
     _boundShader = shader;
 }
 
-auto BePipeline::BindMaterial(const std::shared_ptr<BeMaterial>& material) -> void {
-    assert(_boundShaderType != BeShaderType::None); // Shader must be bound before material (see BindShader())
-    assert(_boundShader != nullptr);                // Shader must be bound before material (see BindShader())
-    assert(!material->Shader.expired());
-    assert(material->Shader.lock() == _boundShader); // Material must use the same shader (see BindShader())
-    
+auto BePipeline::BindMaterialAutomatic(const std::shared_ptr<BeMaterial>& material) -> void {
+    assert(_boundShader);
+    const uint8_t slot = _boundShader->GetMaterialSlot(material->GetSchemeName());
+    BindMaterialManual(material, slot);
+}
+
+auto BePipeline::BindMaterialManual(const std::shared_ptr<BeMaterial>& material, const uint8_t materialSlot) -> void {
     const auto& buffer = material->GetBuffer();
     if (buffer != nullptr) {
         material->UpdateGPUBuffers(_context);
-        const auto& slot = material->GetBufferSlot();
         
         if (HasAny(_boundShaderType, BeShaderType::Vertex)) {
-            _context->VSSetConstantBuffers(slot, 1, buffer.GetAddressOf());
+            _context->VSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
         }
         if (HasAny(_boundShaderType, BeShaderType::Tesselation)) {
-            _context->HSSetConstantBuffers(slot, 1, buffer.GetAddressOf());
-            _context->DSSetConstantBuffers(slot, 1, buffer.GetAddressOf());
+            _context->HSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
+            _context->DSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
         }
         if (HasAny(_boundShaderType, BeShaderType::Pixel)) {
-            _context->PSSetConstantBuffers(slot, 1, buffer.GetAddressOf());
+            _context->PSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
         }
     }
 

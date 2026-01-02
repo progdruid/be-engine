@@ -14,7 +14,6 @@ class BeRenderer;
 class BeTexture;
 using Microsoft::WRL::ComPtr;
 
-class BeShader;
 class BeAssetRegistry;
 
 class BeMaterial {
@@ -23,17 +22,17 @@ class BeMaterial {
     static auto Create(
         std::string_view name,
         bool frequentlyUsed,
-        std::weak_ptr<BeShader> shader,
+        const BeMaterialScheme& descriptor,
         const BeRenderer& renderer
     ) -> std::shared_ptr<BeMaterial>;
 
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
     std::string Name;
-    std::weak_ptr<BeShader> Shader;
     
     hide
     bool _isFrequentlyUsed;
+    BeMaterialScheme _scheme;
     
     std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>> _textures;
     std::unordered_map<std::string, std::pair<ComPtr<ID3D11SamplerState>, uint8_t>> _samplers;
@@ -41,7 +40,6 @@ class BeMaterial {
     std::unordered_map<std::string, uint32_t> _propertyOffsets;
     std::vector<float> _bufferData;
     ComPtr<ID3D11Buffer> _cbuffer = nullptr;
-    int8_t _cbufferSlot = -1;
     bool _cbufferDirty;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -57,7 +55,7 @@ class BeMaterial {
     explicit BeMaterial(
         std::string name,
         const bool frequentlyUsed,
-        const std::weak_ptr<BeShader>& shader,
+        BeMaterialScheme descriptor,
         const BeRenderer& renderer
     );
 
@@ -66,6 +64,8 @@ class BeMaterial {
 
     // interface ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
+    auto GetSchemeName () const -> std::string { return _scheme.Name; }
+    
     auto SetFloat  (const std::string& propertyName, float value) -> void;
     auto SetFloat2 (const std::string& propertyName, glm::vec2 value) -> void;
     auto SetFloat3 (const std::string& propertyName, glm::vec3 value) -> void;
@@ -86,12 +86,11 @@ class BeMaterial {
     
     auto UpdateGPUBuffers (const ComPtr<ID3D11DeviceContext>& context) -> void;
     auto GetBuffer () const -> const ComPtr<ID3D11Buffer>& { return _cbuffer; }
-    auto GetBufferSlot () const -> uint8_t { assert(_cbufferSlot != -1); return _cbufferSlot; }
     auto GetTexturePairs () const -> const std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>>& { return _textures; }
     auto GetSamplerPairs () const -> const std::unordered_map<std::string, std::pair<ComPtr<ID3D11SamplerState>, uint8_t>>& { return _samplers; }
     
     auto Print() const -> std::string;
 
     // internal ////////////////////////////////////////////////////////////////////////////////////////////////////////
-    auto AssembleData() -> void;
+    hide auto AssembleData() -> void;
 };

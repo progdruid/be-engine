@@ -40,7 +40,8 @@ class BePipeline {
     
     expose
     auto BindShader (const std::shared_ptr<BeShader>& shader, BeShaderType shaderType) -> void;
-    auto BindMaterial (const std::shared_ptr<BeMaterial>& material) -> void;
+    auto BindMaterialAutomatic (const std::shared_ptr<BeMaterial>& material) -> void;
+    auto BindMaterialManual (const std::shared_ptr<BeMaterial>& material, const uint8_t materialSlot) -> void;
     auto Clear() -> void;
     auto ClearCache() -> void;
     
