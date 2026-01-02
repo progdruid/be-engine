@@ -24,7 +24,7 @@
 @be-end
 */
 
-#include "fullscreen-vertex.hlsl"
+#include "fullscreen-vertex.beshade"
 
 Texture2D HDRInput : register(t0);
 Texture2D BloomInput : register(t1);

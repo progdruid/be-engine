@@ -28,7 +28,7 @@
 
 */
 
-#include "fullscreen-vertex.hlsl"
+#include "fullscreen-vertex.beshade"
 
 Texture2D HDRInput : register(t0);
 SamplerState Linear : register(s0);
