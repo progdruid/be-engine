@@ -23,7 +23,7 @@
 
 */
 
-#include "fullscreen-vertex.hlsl"
+#include "fullscreen-vertex.beshade"
 
 Texture2D InputTexture : register(t0);
 SamplerState InputSampler : register(s0);

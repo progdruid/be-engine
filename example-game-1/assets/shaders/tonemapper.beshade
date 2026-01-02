@@ -23,7 +23,7 @@
 */
 
 #include <BeTonemappers.hlsli>
-#include "fullscreen-vertex.hlsl"
+#include "fullscreen-vertex.beshade"
 
 Texture2D HDRInput : register(t0);
 SamplerState InputSampler : register(s0);

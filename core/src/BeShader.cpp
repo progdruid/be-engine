@@ -21,7 +21,6 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     );
 
     std::filesystem::path path = filePath;
-    path += ".hlsl";
     assert(std::filesystem::exists(path));
 
     shader->Path = path.string();

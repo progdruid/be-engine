@@ -14,7 +14,7 @@ auto BeBackbufferPass::Initialise() -> void {
     const auto& device = _renderer->GetDevice();
     const auto& registry = _renderer->GetAssetRegistry().lock();
 
-    _backbufferShader = BeShader::Create("assets/shaders/backbuffer", *_renderer);
+    _backbufferShader = BeShader::Create("assets/shaders/backbuffer.beshade", *_renderer);
     
     const auto& descriptor = _backbufferShader->GetMaterialScheme("Main");
     _backbufferMaterial = BeMaterial::Create("Backbuffer Material", false, descriptor, *_renderer);

@@ -59,10 +59,10 @@ auto MainScene::Prepare() -> void {
     .AddToRegistry(_assetRegistry)
     .BuildNoReturn(device);
 
-    const auto standardShader = BeShader::Create("assets/shaders/standard", *_renderer);
+    const auto standardShader = BeShader::Create("assets/shaders/standard.beshade", *_renderer);
     _assetRegistry->AddShader("standard", standardShader);
 
-    const auto tessellatedShader = BeShader::Create("assets/shaders/tessellated", *_renderer);
+    const auto tessellatedShader = BeShader::Create("assets/shaders/tessellated.beshade", *_renderer);
     _assetRegistry->AddShader("tessellated", tessellatedShader);
 
     _plane = CreatePlane(64);
@@ -230,7 +230,7 @@ auto MainScene::OnLoad() -> void {
     bloomPass->DirtTextureName = "BloomDirtTexture";
     bloomPass->OutputTextureName = "BloomOutput";
 
-    const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper", *_renderer);
+    const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.beshade", *_renderer);
     const auto& tonemapperScheme = tonemapperShader->GetMaterialScheme("Main");
     const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", false, tonemapperScheme, *_renderer);
     tonemapperMaterial->SetTexture("HDRInput", _assetRegistry->GetTexture("BloomOutput").lock());
@@ -363,7 +363,7 @@ auto MainScene::Tick(float deltaTime) -> void {
 }
 
 auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
-    const auto shader = BeShader::Create("assets/shaders/terrain", *_renderer);
+    const auto shader = BeShader::Create("assets/shaders/terrain.beshade", *_renderer);
     const auto& scheme = shader->GetMaterialScheme("Main");
     auto material = BeMaterial::Create("TerrainMat", true, scheme, *_renderer);
     material->SetFloat("TerrainScale", 200.0f);
