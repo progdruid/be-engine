@@ -15,7 +15,9 @@ auto BeBackbufferPass::Initialise() -> void {
     const auto& registry = _renderer->GetAssetRegistry().lock();
 
     _backbufferShader = BeShader::Create("assets/shaders/backbuffer", *_renderer);
-    _backbufferMaterial = BeMaterial::Create("Backbuffer Material", false, _backbufferShader, *_renderer);
+    
+    const auto& descriptor = _backbufferShader->GetMaterialScheme("Main");
+    _backbufferMaterial = BeMaterial::Create("Backbuffer Material", false, descriptor, *_renderer);
     _backbufferMaterial->SetTexture("InputTexture", registry->GetTexture(InputTextureName).lock());
     _backbufferMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
 }
@@ -33,7 +35,7 @@ auto BeBackbufferPass::Render() -> void {
 
     // shaders
     pipeline->BindShader(_backbufferShader, BeShaderType::Vertex | BeShaderType::Pixel);
-    pipeline->BindMaterial(_backbufferMaterial);
+    pipeline->BindMaterialAutomatic( _backbufferMaterial);
 
     // draw
     context->Draw(4, 0);

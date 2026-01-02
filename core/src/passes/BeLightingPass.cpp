@@ -33,7 +33,8 @@ void BeLightingPass::Initialise() {
     const auto registry = _renderer->GetAssetRegistry().lock();
     
     _directionalLightShader = BeShader::Create( "assets/shaders/directionalLight", *_renderer);
-    _directionalLightMaterial = BeMaterial::Create("DirectionalLightMaterial", true, _directionalLightShader, *_renderer);
+    const auto& directionalScheme = _directionalLightShader->GetMaterialScheme("Main");
+    _directionalLightMaterial = BeMaterial::Create("DirectionalLightMaterial", true, directionalScheme, *_renderer);
     _directionalLightMaterial->SetTexture("Depth", registry->GetTexture(InputDepthTextureName).lock());
     _directionalLightMaterial->SetTexture("Diffuse", registry->GetTexture(InputTexture0Name).lock());
     _directionalLightMaterial->SetTexture("WorldNormal", registry->GetTexture(InputTexture1Name).lock());
@@ -41,7 +42,8 @@ void BeLightingPass::Initialise() {
     _directionalLightMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
     
     _pointLightShader = BeShader::Create("assets/shaders/pointLight", *_renderer);
-    _pointLightMaterial = BeMaterial::Create("PointLightMaterial", true, _pointLightShader, *_renderer);
+    const auto& pointScheme = _pointLightShader->GetMaterialScheme("Main");
+    _pointLightMaterial = BeMaterial::Create("PointLightMaterial", true, pointScheme, *_renderer);
     _pointLightMaterial->SetTexture("Depth", registry->GetTexture(InputDepthTextureName).lock());
     _pointLightMaterial->SetTexture("Diffuse", registry->GetTexture(InputTexture0Name).lock());
     _pointLightMaterial->SetTexture("WorldNormal", registry->GetTexture(InputTexture1Name).lock());
@@ -74,7 +76,7 @@ auto BeLightingPass::Render() -> void {
     _directionalLightMaterial->SetMatrix("ProjectionView", sunLight->ViewProjection);
     _directionalLightMaterial->SetFloat("TexelSize", 1.0f / sunLight->ShadowMapResolution);
     _directionalLightMaterial->SetTexture("ShadowMap", sunLight->ShadowMap);
-    pipeline->BindMaterial(_directionalLightMaterial);
+    pipeline->BindMaterialAutomatic(_directionalLightMaterial);
         
     context->Draw(4, 0);
     pipeline->Clear();
@@ -91,7 +93,7 @@ auto BeLightingPass::Render() -> void {
         _pointLightMaterial->SetFloat("ShadowMapResolution", pointLight.ShadowMapResolution);
         _pointLightMaterial->SetFloat("ShadowNearPlane", pointLight.ShadowNearPlane);
         _pointLightMaterial->SetTexture("PointLightShadowMap", pointLight.ShadowMap);
-        pipeline->BindMaterial(_pointLightMaterial);
+        pipeline->BindMaterialAutomatic(_pointLightMaterial);
     
         context->Draw(4, 0);
     }

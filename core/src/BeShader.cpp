@@ -24,6 +24,8 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     path += ".hlsl";
     assert(std::filesystem::exists(path));
 
+    shader->Path = path.string();
+    
     std::ifstream file(path);
     std::stringstream buffer;
     buffer << file.rdbuf();
@@ -36,11 +38,10 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         const auto& materialLinksJson = header.at("materials");
         
         for (const auto& materialLinkJson : materialLinksJson.items()) {
-            BeMaterialDescriptor materialDescriptor;
-            materialDescriptor.TypeName = materialLinkJson.key();
-            materialDescriptor.SlotIndex = materialLinkJson.value();
+            BeMaterialScheme materialScheme;
+            materialScheme.Name = materialLinkJson.key();
             
-            const Json materialJson = ParseFor(src, "@be-material: " + materialDescriptor.TypeName);
+            const Json materialJson = ParseFor(src, "@be-material: " + materialScheme.Name);
             
             for (const auto& materialJsonItem : materialJson.items()) {
             
@@ -70,20 +71,20 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                     descriptor.Name = key;
                     descriptor.SlotIndex = slotIndex;
                     descriptor.DefaultTexturePath = defaultString;
-                    materialDescriptor.Textures.push_back(descriptor);
+                    materialScheme.Textures.push_back(descriptor);
                 }
                 else if (typeString == "sampler") {
                     BeMaterialSamplerDescriptor descriptor;
                     descriptor.Name = key;
                     descriptor.SlotIndex = slotIndex;
-                    materialDescriptor.Samplers.push_back(descriptor);
+                    materialScheme.Samplers.push_back(descriptor);
                 }
                 else if (typeString == "float") {
                     BeMaterialPropertyDescriptor descriptor;
                     descriptor.Name = key;
                     descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float;
                     descriptor.DefaultValue.push_back(std::stof(defaultString));
-                    materialDescriptor.Properties.push_back(descriptor);
+                    materialScheme.Properties.push_back(descriptor);
                 }
                 else if (typeString == "float2") {
                     Json j = Json::parse(defaultString, nullptr, true, true, true);
@@ -94,7 +95,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                     descriptor.Name = key;
                     descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float2;
                     descriptor.DefaultValue = vec;
-                    materialDescriptor.Properties.push_back(descriptor);
+                    materialScheme.Properties.push_back(descriptor);
                 }
                 else if (typeString == "float3") {
                     Json j = Json::parse(defaultString, nullptr, true, true, true);
@@ -105,7 +106,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                     descriptor.Name = key;
                     descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float3;
                     descriptor.DefaultValue = vec;
-                    materialDescriptor.Properties.push_back(descriptor);
+                    materialScheme.Properties.push_back(descriptor);
                 }
                 else if (typeString == "float4") {
                     Json j = Json::parse(defaultString, nullptr, true, true, true);
@@ -116,7 +117,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                     descriptor.Name = key;
                     descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float4;
                     descriptor.DefaultValue = vec;
-                    materialDescriptor.Properties.push_back(descriptor);
+                    materialScheme.Properties.push_back(descriptor);
                 }
                 else if (typeString == "matrix") {
                     std::vector<float> mat = {
@@ -130,11 +131,12 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                     descriptor.Name = key;
                     descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Matrix;
                     descriptor.DefaultValue = mat;
-                    materialDescriptor.Properties.push_back(descriptor);
+                    materialScheme.Properties.push_back(descriptor);
                 }
             }
             
-            shader->MaterialDescriptors[materialDescriptor.TypeName] = materialDescriptor;
+            shader->_materialSchemes[materialScheme.Name] = materialScheme;
+            shader->_materialSlots[materialScheme.Name] = materialLinkJson.value();
         }
     }
     
@@ -256,39 +258,9 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     return shader;
 }
 
-
-auto BeShader::CompileBlob(
-    const std::filesystem::path& filePath,
-    const char* entrypointName,
-    const char* target,
-    BeShaderIncludeHandler* includeHandler)
--> ComPtr<ID3DBlob> {
-
-    ComPtr<ID3DBlob> shaderBlob, errorBlob;
-    const auto result = D3DCompileFromFile(
-        filePath.wstring().c_str(),
-        nullptr,
-        includeHandler,
-        entrypointName,
-        target,
-        0, 0,
-        &shaderBlob,
-        &errorBlob);
-    if (FAILED(result)) {
-        if (errorBlob) {
-            std::string errorMsg(static_cast<const char*>(errorBlob->GetBufferPointer()), errorBlob->GetBufferSize());
-            throw std::runtime_error("Shader compilation error: " + errorMsg);
-        } else {
-            Utils::ThrowIfFailed(result);
-        }
-    }
-    
-    return shaderBlob;
-}
-
 auto BeShader::ParseFor(const std::string& src, const std::string& target) -> Json {
     const std::string& startTag = target;
-    const std::string& endTag   = "@be-end";
+    const std::string& endTag = "@be-end";
     
     Json metadata = Json::object();
     
@@ -338,4 +310,34 @@ auto BeShader::Split(std::string_view str, const char* delimiters) -> std::vecto
     }
     result.push_back(Take(str, start, str.size()));
     return result;
+}
+
+
+auto BeShader::CompileBlob(
+    const std::filesystem::path& filePath,
+    const char* entrypointName,
+    const char* target,
+    BeShaderIncludeHandler* includeHandler)
+-> ComPtr<ID3DBlob> {
+
+    ComPtr<ID3DBlob> shaderBlob, errorBlob;
+    const auto result = D3DCompileFromFile(
+        filePath.wstring().c_str(),
+        nullptr,
+        includeHandler,
+        entrypointName,
+        target,
+        0, 0,
+        &shaderBlob,
+        &errorBlob);
+    if (FAILED(result)) {
+        if (errorBlob) {
+            std::string errorMsg(static_cast<const char*>(errorBlob->GetBufferPointer()), errorBlob->GetBufferSize());
+            throw std::runtime_error("Shader compilation error: " + errorMsg);
+        } else {
+            Utils::ThrowIfFailed(result);
+        }
+    }
+    
+    return shaderBlob;
 }

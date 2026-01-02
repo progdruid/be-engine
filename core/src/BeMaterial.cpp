@@ -4,7 +4,6 @@
 #include <sstream>
 #include <iomanip>
 
-#include "BeShader.h"
 #include "BeAssetRegistry.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
@@ -13,15 +12,11 @@
 auto BeMaterial::Create(
     std::string_view name,
     bool frequentlyUsed,
-    std::weak_ptr<BeShader> shader,
+    const BeMaterialScheme& descriptor,
     const BeRenderer& renderer
 )
 -> std::shared_ptr<BeMaterial> {
-    auto shaderLocked = shader.lock();
-    assert(shaderLocked && "Shader must be valid");
-    assert(shaderLocked->HasMaterial && "Shader must have material");
-
-    auto material = std::make_shared<BeMaterial>(std::string(name), frequentlyUsed, shader, renderer);
+    auto material = std::make_shared<BeMaterial>(std::string(name), frequentlyUsed, descriptor, renderer);
     material->InitialiseSlotMaps(renderer);
     return material;
 }
@@ -29,17 +24,14 @@ auto BeMaterial::Create(
 BeMaterial::BeMaterial(
     std::string name,
     const bool frequentlyUsed,
-    const std::weak_ptr<BeShader>& shader,
+    BeMaterialScheme descriptor,
     const BeRenderer& renderer
 )
     : Name(std::move(name))
-    , Shader(shader)
     , _isFrequentlyUsed(frequentlyUsed)
+    , _scheme(std::move(descriptor))
 {
-    const auto shaderLocked = Shader.lock();
-    assert(shaderLocked);
-
-    if (shaderLocked->MaterialDescriptors["Main"].Properties.empty())
+    if (_scheme.Properties.empty())
         return;
     
     AssembleData();
@@ -62,7 +54,6 @@ BeMaterial::BeMaterial(
 
     Utils::Check << renderer.GetDevice()->CreateBuffer(&bufferDesc, &data, _cbuffer.GetAddressOf());
 
-    _cbufferSlot = shaderLocked->MaterialDescriptors["Main"].SlotIndex;
     _cbufferDirty = false;
 }
 
@@ -70,10 +61,7 @@ BeMaterial::BeMaterial(
 BeMaterial::~BeMaterial() = default;
 
 auto BeMaterial::InitialiseSlotMaps(const BeRenderer& renderer) -> void {
-    const auto shader = Shader.lock();
-    assert(shader);
-    
-    for (const auto& property : shader->MaterialDescriptors["Main"].Textures) {
+    for (const auto& property : _scheme.Textures) {
         auto texWeak = renderer.GetAssetRegistry().lock()->GetTexture(property.DefaultTexturePath);
         auto texture = texWeak.lock();
         assert(texture && ("Texture not found in registry: " + property.DefaultTexturePath).c_str());
@@ -81,7 +69,7 @@ auto BeMaterial::InitialiseSlotMaps(const BeRenderer& renderer) -> void {
         _textures[property.Name] = {texture, property.SlotIndex};
     }
 
-    for (const auto& property : shader->MaterialDescriptors["Main"].Samplers) {
+    for (const auto& property : _scheme.Samplers) {
         _samplers[property.Name] = { nullptr, property.SlotIndex };
     }
 }
@@ -201,12 +189,9 @@ auto BeMaterial::UpdateGPUBuffers(const ComPtr<ID3D11DeviceContext>& context) ->
 }
 
 auto BeMaterial::AssembleData() -> void {
-    auto shader = Shader.lock();
-    assert(shader);
-
     uint32_t offsetBytes = 0;
 
-    for (const auto& property : shader->MaterialDescriptors["Main"].Properties) {
+    for (const auto& property : _scheme.Properties) {
         constexpr uint32_t registerSizeBytes = 16;
 
         static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> SizeMap = {
@@ -229,7 +214,7 @@ auto BeMaterial::AssembleData() -> void {
     }
 
     _bufferData.resize(offsetBytes / 4);
-    for (const auto& property : shader->MaterialDescriptors["Main"].Properties) {
+    for (const auto& property : _scheme.Properties) {
         const uint32_t propertyOffset = _propertyOffsets.at(property.Name);
         const auto& defaultValue = property.DefaultValue;
         memcpy(_bufferData.data() + propertyOffset, defaultValue.data(), defaultValue.size() * sizeof(float));

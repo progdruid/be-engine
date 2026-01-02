@@ -73,9 +73,8 @@ struct BeMaterialSamplerDescriptor {
     uint8_t SlotIndex;
 };
 
-struct BeMaterialDescriptor {
-    std::string TypeName;
-    uint8_t SlotIndex;
+struct BeMaterialScheme {
+    std::string Name;
     std::vector<BeMaterialPropertyDescriptor> Properties;
     std::vector<BeMaterialTextureDescriptor> Textures;
     std::vector<BeMaterialSamplerDescriptor> Samplers;
@@ -86,19 +85,21 @@ class BeShader {
     expose static std::string StandardShaderIncludePath;
     expose static auto Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader>;
     
+    hide static auto ParseFor(const std::string& src, const std::string& target) -> Json;
+    hide static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
+    hide static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;
+    hide static auto Split (std::string_view str, const char* delimiters) -> std::vector<std::string_view>;
+    
     hide static auto CompileBlob (
         const std::filesystem::path& filePath,
         const char* entrypointName,
         const char* target,
         BeShaderIncludeHandler* includeHandler
     ) -> ComPtr<ID3DBlob>;
-    hide static auto ParseFor (const std::string& src, const std::string& target) -> Json;
-    hide static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
-    hide static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;
-    hide static auto Split (std::string_view str, const char* delimiters) -> std::vector<std::string_view>;
     
     
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose std::string Path;
     expose BeShaderType ShaderType = BeShaderType::None;
     expose D3D11_PRIMITIVE_TOPOLOGY Topology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
     expose ComPtr<ID3D11InputLayout> ComputedInputLayout;
@@ -110,11 +111,19 @@ class BeShader {
     expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
     
     expose bool HasMaterial = false;
-    expose std::unordered_map<std::string, BeMaterialDescriptor> MaterialDescriptors;
-
+    hide std::unordered_map<std::string, BeMaterialScheme> _materialSchemes;
+    hide std::unordered_map<std::string, uint8_t> _materialSlots;
     
     // lifecycle ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose BeShader() = default;
     expose ~BeShader() = default;
+    
+    // interface ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose auto GetMaterialScheme (const std::string& name) const -> BeMaterialScheme {
+        return _materialSchemes.at(name);
+    }
+    expose auto GetMaterialSlot (const std::string& name) const -> uint8_t {
+        return _materialSlots.at(name);
+    }
 };
 

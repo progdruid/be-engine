@@ -94,7 +94,7 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
 
         const auto & drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
         for (const auto& slice : drawSlices) {
-            pipeline->BindMaterial(slice.Material);
+            pipeline->BindMaterialAutomatic(slice.Material);
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
         }
 
@@ -169,7 +169,7 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
             // draw
             const auto& drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
             for (const auto& slice : drawSlices) {
-                pipeline->BindMaterial(slice.Material);
+                pipeline->BindMaterialAutomatic(slice.Material);
                 context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
             }
             

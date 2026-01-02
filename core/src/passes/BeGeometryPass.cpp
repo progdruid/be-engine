@@ -5,6 +5,7 @@
 #include <umbrellas/include-glm.h>
 
 #include "BeAssetRegistry.h"
+#include "BeMaterial.h"
 #include "BeModel.h"
 #include "BePipeline.h"
 #include "BeRenderer.h"
@@ -70,26 +71,35 @@ auto BeGeometryPass::Render() -> void {
         pipeline->BindShader(shader, BeShaderType::All);
         SCOPE_EXIT { pipeline->Clear(); };
 
-        glm::mat4x4 modelMatrix =
+        const auto& materialScheme = shader->GetMaterialScheme("Object");
+        const auto objectMaterial = BeMaterial::Create("Object", true, materialScheme, *_renderer);
+
+        const glm::mat4x4 modelMatrix =
             glm::translate(glm::mat4(1.0f), entry.Position) *
             glm::mat4_cast(entry.Rotation) *
             glm::scale(glm::mat4(1.0f), entry.Scale);
         
-        BeObjectBufferGPU objectData(modelMatrix, _renderer->UniformData.ProjectionView, _renderer->UniformData.CameraPosition);
-        D3D11_MAPPED_SUBRESOURCE objectMappedResource;
-        Utils::Check << context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &objectMappedResource);
-        memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
-        context->Unmap(_objectBuffer.Get(), 0);
-        context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        context->PSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
-            context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-            context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        }
+        objectMaterial->SetMatrix("Model", modelMatrix);
+        objectMaterial->SetMatrix("ProjectionView", _renderer->UniformData.ProjectionView);
+        objectMaterial->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
+        objectMaterial->UpdateGPUBuffers(context);
+        pipeline->BindMaterialAutomatic(objectMaterial);
+        
+        //BeObjectBufferGPU objectData(modelMatrix, _renderer->UniformData.ProjectionView, _renderer->UniformData.CameraPosition);
+        //D3D11_MAPPED_SUBRESOURCE objectMappedResource;
+        //Utils::Check << context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &objectMappedResource);
+        //memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
+        //context->Unmap(_objectBuffer.Get(), 0);
+        //context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+        //context->PSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+        //if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
+        //    context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+        //    context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
+        //}
 
         const auto & drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
         for (const auto& slice : drawSlices) {
-            pipeline->BindMaterial(slice.Material);
+            pipeline->BindMaterialAutomatic(slice.Material);
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
         }
     }
