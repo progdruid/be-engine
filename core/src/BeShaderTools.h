@@ -1,0 +1,28 @@
+#pragma once
+#include <string>
+#include <string_view>
+#include <vector>
+#include <filesystem>
+#include <nlohmann/json.hpp>
+#include <umbrellas/access-modifiers.hpp>
+
+using Json = nlohmann::ordered_json;
+
+class BeShaderTools {
+    expose
+    static auto ParseShaderMetadata(const std::filesystem::path& pathToShader) -> Json;
+    static auto ParseMaterialMetadata(const std::string& materialSchemeName, const std::filesystem::path& pathToMaterial) -> Json;
+
+    struct ParsedMaterialProperty {
+        std::string Name;
+        std::string Type;
+        int8_t Slot = -1;
+        std::string Default;
+    };
+    static auto ParseMaterialProperty (const std::string& text) -> ParsedMaterialProperty;
+    
+    static auto ParseFor(const std::string& src, const std::string& target) -> Json;
+    static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
+    static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;
+    static auto Split (std::string_view str, const char* delimiters) -> std::vector<std::string_view>;
+};

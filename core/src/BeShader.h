@@ -75,6 +75,7 @@ struct BeMaterialSamplerDescriptor {
 
 struct BeMaterialScheme {
     std::string Name;
+    std::filesystem::path Path;
     std::vector<BeMaterialPropertyDescriptor> Properties;
     std::vector<BeMaterialTextureDescriptor> Textures;
     std::vector<BeMaterialSamplerDescriptor> Samplers;
@@ -84,11 +85,6 @@ class BeShader {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     expose static std::string StandardShaderIncludePath;
     expose static auto Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader>;
-    
-    hide static auto ParseFor(const std::string& src, const std::string& target) -> Json;
-    hide static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
-    hide static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;
-    hide static auto Split (std::string_view str, const char* delimiters) -> std::vector<std::string_view>;
     
     hide static auto CompileBlob (
         const std::filesystem::path& filePath,

@@ -2,24 +2,24 @@
 /*
 
 @be-material: Object
-{
-    "Model": "matrix",
-    "ProjectionView": "matrix",
-    "ViewerPosition": "float3 = [0, 0, 0]",
-}
+[
+    "Model: matrix",
+    "ProjectionView: matrix",
+    "ViewerPosition: float3 = [0, 0, 0]",
+]
 @be-end
 
 @be-material: Main
-{
-    "DiffuseColor": "float3 = [1.0, 1.0, 1.0]",
-    "SpecularColor": "float3 = [1.0, 1.0, 1.0]",
-    "Shininess": "float = 0.0",
+[
+    "DiffuseColor: float3 = [1.0, 1.0, 1.0]",
+    "SpecularColor: float3 = [1.0, 1.0, 1.0]",
+    "Shininess: float = 0.0",
 
-    "DiffuseTexture": "texture2d(0) = white",
-    "SpecularTexture": "texture2d(1) = black",
+    "DiffuseTexture: texture2d(0) = white",
+    "SpecularTexture: texture2d(1) = black",
 
-    "InputSampler": "sampler(0)",
-}
+    "InputSampler: sampler(0)",
+]
 @be-end
 
 
