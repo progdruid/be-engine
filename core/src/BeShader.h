@@ -4,7 +4,6 @@
 #include <filesystem>
 #include <string>
 #include <unordered_map>
-#include <vector>
 #include <nlohmann/json.hpp>
 #include <wrl/client.h>
 #include <umbrellas/access-modifiers.hpp>
@@ -14,8 +13,6 @@
 class BeShaderIncludeHandler;
 class BeRenderer;
 using Microsoft::WRL::ComPtr;
-using Json = nlohmann::ordered_json;
-
 
 enum class BeShaderType : uint8_t {
     None = 0,
@@ -48,39 +45,6 @@ struct BeVertexElementDescriptor {
     BeVertexSemantic Attribute;
 };
 
-struct BeMaterialPropertyDescriptor {
-    enum class Type : uint8_t {
-        Float,
-        Float2,
-        Float3,
-        Float4,
-        Matrix
-    };
-
-    std::string Name;
-    Type PropertyType;
-    std::vector<float> DefaultValue;
-};
-
-struct BeMaterialTextureDescriptor {
-    std::string Name;
-    uint8_t SlotIndex;
-    std::string DefaultTexturePath;
-};
-
-struct BeMaterialSamplerDescriptor {
-    std::string Name;
-    uint8_t SlotIndex;
-};
-
-struct BeMaterialScheme {
-    std::string Name;
-    std::filesystem::path Path;
-    std::vector<BeMaterialPropertyDescriptor> Properties;
-    std::vector<BeMaterialTextureDescriptor> Textures;
-    std::vector<BeMaterialSamplerDescriptor> Samplers;
-};
-
 class BeShader {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     expose static std::string StandardShaderIncludePath;
@@ -107,7 +71,7 @@ class BeShader {
     expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
     
     expose bool HasMaterial = false;
-    hide std::unordered_map<std::string, BeMaterialScheme> _materialSchemes;
+    hide std::unordered_map<std::string, std::filesystem::path> _materialSchemePaths;
     hide std::unordered_map<std::string, uint8_t> _materialSlots;
     
     // lifecycle ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -115,8 +79,8 @@ class BeShader {
     expose ~BeShader() = default;
     
     // interface ///////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose auto GetMaterialScheme (const std::string& name) const -> BeMaterialScheme {
-        return _materialSchemes.at(name);
+    expose auto GetMaterialSchemePath (const std::string& name) const -> std::filesystem::path {
+        return _materialSchemePaths.at(name);
     }
     expose auto GetMaterialSlot (const std::string& name) const -> uint8_t {
         return _materialSlots.at(name);

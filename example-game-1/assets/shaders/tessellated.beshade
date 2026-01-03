@@ -34,8 +34,8 @@
     },
     "pixel": "PixelFunction",
     "materials": {
-        "Object": 1,
-        "Main": 2,
+        "Object": { "slot": 1, "path": "assets/shaders/objectMaterial.beshade" },
+        "Main": { "slot": 2 },
     },
     "targets": {
         "Diffuse.RGB": 0,
@@ -47,12 +47,11 @@
 */
 
 #include <BeUniformBuffer.hlsli>
+#include "objectMaterial.beshade"
 
 cbuffer ModelBuffer: register(b1) {
-    row_major float4x4 _Model;
-    row_major float4x4 _ProjectionView;
-    float3 _ViewerPosition;
-}
+    StandardObjectData _Object;
+};
 
 cbuffer MaterialBuffer: register(b2) {
     float3 _DiffuseColor;
@@ -157,7 +156,7 @@ float3 GetDisplacedPos (const OutputPatch<VertexOutput, 3> patch, float3 bary, f
 }
 
 VertexOutput VertexFunction(VertexInput input) {
-    float4 worldPosition = mul(float4(input.Position, 1.0), _Model);
+    float4 worldPosition = mul(float4(input.Position, 1.0), _Object.Model);
 
     VertexOutput output;
     output.Position = float4(0, 0, 0, 1);
@@ -197,7 +196,7 @@ VertexOutput HullFunction(InputPatch<VertexOutput, 3> patch, uint pointId : SV_O
 
 [domain("tri")]
 VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : SV_DomainLocation, const OutputPatch<VertexOutput, 3> patch) {
-    float3 objectCenter = mul(float4(-0.5, -0.5, 0.5, 1), _Model).xyz;
+    float3 objectCenter = mul(float4(-0.5, -0.5, 0.5, 1), _Object.Model).xyz;
     
     float epsilon = 0.0001;
     float3 bary_du = float3(barycentric.x + epsilon, barycentric.y - epsilon, barycentric.z);
@@ -218,7 +217,7 @@ VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : 
         
     VertexOutput output;
     output.WorldPosition = displacedPos;
-    output.Position = mul(float4(displacedPos, 1.0), _ProjectionView);
+    output.Position = mul(float4(displacedPos, 1.0), _Object.ProjectionView);
     output.Normal = normal;
     output.UV = uv;
 

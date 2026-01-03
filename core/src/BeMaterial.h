@@ -8,6 +8,7 @@
 #include <umbrellas/access-modifiers.hpp>
 #include <wrl/client.h>
 
+#include "BeMaterialScheme.h"
 #include "BeShader.h"
 
 class BeRenderer;
@@ -21,8 +22,8 @@ class BeMaterial {
     expose
     static auto Create(
         std::string_view name,
+        const BeMaterialScheme& scheme,
         bool frequentlyUsed,
-        const BeMaterialScheme& descriptor,
         const BeRenderer& renderer
     ) -> std::shared_ptr<BeMaterial>;
 

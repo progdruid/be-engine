@@ -11,12 +11,12 @@
 
 auto BeMaterial::Create(
     std::string_view name,
+    const BeMaterialScheme& scheme,
     bool frequentlyUsed,
-    const BeMaterialScheme& descriptor,
     const BeRenderer& renderer
 )
--> std::shared_ptr<BeMaterial> {
-    auto material = std::make_shared<BeMaterial>(std::string(name), frequentlyUsed, descriptor, renderer);
+    -> std::shared_ptr<BeMaterial> {
+    auto material = std::make_shared<BeMaterial>(std::string(name), frequentlyUsed, scheme, renderer);
     material->InitialiseSlotMaps(renderer);
     return material;
 }

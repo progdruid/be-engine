@@ -16,13 +16,8 @@ BeGeometryPass::BeGeometryPass() = default;
 BeGeometryPass::~BeGeometryPass() = default;
 
 auto BeGeometryPass::Initialise() -> void {
-    //material buffer
-    D3D11_BUFFER_DESC objectBufferDescriptor = {};
-    objectBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    objectBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
-    objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    objectBufferDescriptor.ByteWidth = sizeof(BeObjectBufferGPU);
-    Utils::Check << _renderer->GetDevice()->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer);
+    auto objectScheme = BeMaterialScheme::Create("Object", "assets/shaders/objectMaterial.beshade");
+    _objectMaterial = BeMaterial::Create("Object", objectScheme, true, *_renderer);
 }
 
 auto BeGeometryPass::Render() -> void {
@@ -71,19 +66,16 @@ auto BeGeometryPass::Render() -> void {
         pipeline->BindShader(shader, BeShaderType::All);
         SCOPE_EXIT { pipeline->Clear(); };
 
-        const auto& materialScheme = shader->GetMaterialScheme("Object");
-        const auto objectMaterial = BeMaterial::Create("Object", true, materialScheme, *_renderer);
-
         const glm::mat4x4 modelMatrix =
             glm::translate(glm::mat4(1.0f), entry.Position) *
             glm::mat4_cast(entry.Rotation) *
             glm::scale(glm::mat4(1.0f), entry.Scale);
         
-        objectMaterial->SetMatrix("Model", modelMatrix);
-        objectMaterial->SetMatrix("ProjectionView", _renderer->UniformData.ProjectionView);
-        objectMaterial->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
-        objectMaterial->UpdateGPUBuffers(context);
-        pipeline->BindMaterialAutomatic(objectMaterial);
+        _objectMaterial->SetMatrix("Model", modelMatrix);
+        _objectMaterial->SetMatrix("ProjectionView", _renderer->UniformData.ProjectionView);
+        _objectMaterial->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
+        _objectMaterial->UpdateGPUBuffers(context);
+        pipeline->BindMaterialAutomatic(_objectMaterial);
         
         //BeObjectBufferGPU objectData(modelMatrix, _renderer->UniformData.ProjectionView, _renderer->UniformData.CameraPosition);
         //D3D11_MAPPED_SUBRESOURCE objectMappedResource;

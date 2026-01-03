@@ -15,9 +15,9 @@ auto BeBackbufferPass::Initialise() -> void {
     const auto& registry = _renderer->GetAssetRegistry().lock();
 
     _backbufferShader = BeShader::Create("assets/shaders/backbuffer.beshade", *_renderer);
-    
-    const auto& descriptor = _backbufferShader->GetMaterialScheme("Main");
-    _backbufferMaterial = BeMaterial::Create("Backbuffer Material", false, descriptor, *_renderer);
+
+    auto backbufferScheme = BeMaterialScheme::Create("Main", _backbufferShader->GetMaterialSchemePath("Main"));
+    _backbufferMaterial = BeMaterial::Create("Backbuffer Material", backbufferScheme, false, *_renderer);
     _backbufferMaterial->SetTexture("InputTexture", registry->GetTexture(InputTextureName).lock());
     _backbufferMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
 }
