@@ -1,26 +1,26 @@
 /*
 
 @be-material: Object
-{
-    "Model": "matrix",
-    "ProjectionView": "matrix",
-    "ViewerPosition": "float3 = [0, 0, 0]",
-}
+[
+    "Model: matrix",
+    "ProjectionView: matrix",
+    "ViewerPosition: float3 = [0, 0, 0]",
+]
 @be-end
 
 @be-material: Main
-{
-    "DiffuseColor": "float3 = [0.5, 0.5, 0.5]",
-    "SpecularColor": "float3 = [-0.2, -0.2, -0.1]", 
-    "Shininess":  "float = 0.0",
-    "DiffuseTexture": "texture2d(0) = white",
-    "TerrainScale": "float = 1.0",
-    "HeightScale": "float = 1.0",
-    "NoiseResolution": "float = 4.0",
-    "Speed": "float = 0.2",
+[
+    "DiffuseColor: float3 = [0.5, 0.5, 0.5]",
+    "SpecularColor: float3 = [-0.2, -0.2, -0.1]", 
+    "Shininess: float = 0.0",
+    "DiffuseTexture: texture2d(0) = white",
+    "TerrainScale: float = 1.0",
+    "HeightScale: float = 1.0",
+    "NoiseResolution: float = 4.0",
+    "Speed: float = 0.2",
 
-    "InputSampler": "sampler(0)",    
-}
+    "InputSampler: sampler(0)"    
+]
 @be-end
 
 @be-shader:
@@ -34,8 +34,8 @@
     },
     "pixel": "PixelFunction",
     "materials": {
-        "Object": 1,
-        "Main": 2,
+        "Object": { "slot": 1 },
+        "Main": { "slot": 2 },
     },
     "targets": {
         "Diffuse.RGB": 0,

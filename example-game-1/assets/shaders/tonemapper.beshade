@@ -1,10 +1,10 @@
 /*
 
 @be-material: Main
-{
-    "HDRInput": "texture2d(0) = black",
-    "InputSampler": "sampler(0)",
-}
+[
+    "HDRInput: texture2d(0) = black",
+    "InputSampler: sampler(0)",
+]
 @be-end
 
 @be-shader:

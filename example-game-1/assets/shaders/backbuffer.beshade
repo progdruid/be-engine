@@ -1,10 +1,10 @@
 /*
 
 @be-material: Main
-{
-    "InputTexture": "texture2d(0) = white",
-    "InputSampler": "sampler(0)",
-}
+[
+    "InputTexture: texture2d(0) = white",
+    "InputSampler: sampler(0)",
+]
 @be-end
 
 @be-shader:
