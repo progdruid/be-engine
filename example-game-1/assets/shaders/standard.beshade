@@ -1,14 +1,6 @@
 
 /*
 
-@be-material: Object
-[
-    "Model: matrix",
-    "ProjectionView: matrix",
-    "ViewerPosition: float3 = [0, 0, 0]",
-]
-@be-end
-
 @be-material: Main
 [
     "DiffuseColor: float3 = [1.0, 1.0, 1.0]",
@@ -30,8 +22,8 @@
     "vertexLayout": ["position", "normal", "uv0"],
     "pixel": "PixelFunction",
     "materials": {
-        "Object": 1,
-        "Main": 2,
+        "Object": { "slot": 1, "path": "assets/shaders/objectMaterial.beshade" },
+        "Main": { "slot": 2 },
     },
     "targets": {
         "Diffuse.RGB": 0,
@@ -43,11 +35,11 @@
 
 */
 
+#include "objectMaterial.beshade"
+
 cbuffer ModelBuffer: register(b1) {
-    row_major float4x4 _Model;
-    row_major float4x4 _ProjectionView;
-    float3 _ViewerPosition;
-}
+    StandardObjectData _Object;
+};
 
 cbuffer MaterialBuffer: register(b2) {
     float3 _DiffuseColor;
@@ -78,11 +70,11 @@ struct PixelOutput {
 };
 
 VertexOutput VertexFunction(VertexInput input) {
-    float4 worldPosition = mul(float4(input.Position, 1.0), _Model);
+    float4 worldPosition = mul(float4(input.Position, 1.0), _Object.Model);
     
     VertexOutput output;
-    output.Position = mul(worldPosition, _ProjectionView);
-    output.Normal = normalize(mul(input.Normal, (float3x3)_Model));
+    output.Position = mul(worldPosition, _Object.ProjectionView);
+    output.Normal = normalize(mul(input.Normal, (float3x3)_Object.Model));
     output.UV = input.UV;
 
     return output;

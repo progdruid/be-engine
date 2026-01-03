@@ -26,7 +26,7 @@
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "materials": {
-        "Main": 2,
+        "Main": { "slot": 2 },
     },
     "targets": {
         "LightHDR": 0

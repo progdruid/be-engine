@@ -231,8 +231,8 @@ auto MainScene::OnLoad() -> void {
     bloomPass->OutputTextureName = "BloomOutput";
 
     const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.beshade", *_renderer);
-    const auto& tonemapperScheme = tonemapperShader->GetMaterialScheme("Main");
-    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", false, tonemapperScheme, *_renderer);
+    const auto& tonemapperScheme = BeMaterialScheme::Create("Main", tonemapperShader->GetMaterialSchemePath("Main"));;
+    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, *_renderer);
     tonemapperMaterial->SetTexture("HDRInput", _assetRegistry->GetTexture("BloomOutput").lock());
     tonemapperMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
     const auto tonemapperPass = new BeFullscreenEffectPass();
@@ -364,8 +364,8 @@ auto MainScene::Tick(float deltaTime) -> void {
 
 auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
     const auto shader = BeShader::Create("assets/shaders/terrain.beshade", *_renderer);
-    const auto& scheme = shader->GetMaterialScheme("Main");
-    auto material = BeMaterial::Create("TerrainMat", true, scheme, *_renderer);
+    const auto& scheme = BeMaterialScheme::Create("Main", shader->GetMaterialSchemePath("Main"));;
+    auto material = BeMaterial::Create("TerrainMat", scheme, true, *_renderer);
     material->SetFloat("TerrainScale", 200.0f);
     material->SetFloat("HeightScale", 100.0f);
 

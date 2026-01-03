@@ -35,7 +35,7 @@ auto BeModel::Create(
     auto model = std::make_shared<BeModel>();
     model->Shader = usedShaderForMaterials.lock();
     model->DrawSlices.reserve(scene->mNumMeshes);
-    const auto& materialScheme = model->Shader->GetMaterialScheme("Main");
+    const auto& materialScheme = BeMaterialScheme::Create("Main", model->Shader->GetMaterialSchemePath("Main"));;
     
     std::unordered_map<uint32_t, std::shared_ptr<BeMaterial>> assimpIndexToMaterial;
     for (size_t i = 0; i < scene->mNumMeshes; ++i) {
@@ -46,7 +46,7 @@ auto BeModel::Create(
         if (it != assimpIndexToMaterial.end())
             continue;
 
-        auto material = BeMaterial::Create("mat" + std::to_string(assimpMaterialIndex), true, materialScheme, renderer);
+        auto material = BeMaterial::Create("mat" + std::to_string(assimpMaterialIndex), materialScheme, true, renderer);
         assimpIndexToMaterial[assimpMaterialIndex] = material;
 
         const auto meshMaterial = scene->mMaterials[assimpMaterialIndex];

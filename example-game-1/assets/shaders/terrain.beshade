@@ -1,13 +1,5 @@
 /*
 
-@be-material: Object
-[
-    "Model: matrix",
-    "ProjectionView: matrix",
-    "ViewerPosition: float3 = [0, 0, 0]",
-]
-@be-end
-
 @be-material: Main
 [
     "DiffuseColor: float3 = [0.5, 0.5, 0.5]",
@@ -34,7 +26,7 @@
     },
     "pixel": "PixelFunction",
     "materials": {
-        "Object": { "slot": 1 },
+        "Object": { "slot": 1, "path": "assets/shaders/objectMaterial.beshade" },
         "Main": { "slot": 2 },
     },
     "targets": {
@@ -48,12 +40,11 @@
 */
 
 #include <BeUniformBuffer.hlsli>
+#include "objectMaterial.beshade"
 
 cbuffer ModelBuffer: register(b1) {
-    row_major float4x4 _Model;
-    row_major float4x4 _ProjectionView;
-    float3 _ViewerPosition;
-}
+    StandardObjectData _Object;
+};
 
 cbuffer MaterialBuffer: register(b2) {
     float3 _DiffuseColor;
@@ -171,10 +162,10 @@ VertexOutput VertexFunction(VertexInput input) {
     float3 displacedPos = input.Position * float3(_TerrainScale, 1.0, _TerrainScale);
     displacedPos.y += terrainHeight * _HeightScale;
 
-    float4 worldPosition = mul(float4(displacedPos, 1.0), _Model);
+    float4 worldPosition = mul(float4(displacedPos, 1.0), _Object.Model);
 
     VertexOutput output;
-    output.Position = mul(worldPosition, _ProjectionView);
+    output.Position = mul(worldPosition, _Object.ProjectionView);
     output.Normal = float3(0, 0, 0); // normal is computed in hull
     output.UV = input.UV;
     output.WorldPosition = worldPosition.xyz;

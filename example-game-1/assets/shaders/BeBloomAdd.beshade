@@ -14,11 +14,11 @@
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
+    "materials": {
+        "Main": { "slot": 2 },
+    },
     "targets": {
         "BloomOutput": 0
-    },
-    "materials": {
-        "Main": 2,
     },
 }
 @be-end

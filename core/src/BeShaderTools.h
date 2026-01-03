@@ -3,10 +3,8 @@
 #include <string_view>
 #include <vector>
 #include <filesystem>
-#include <nlohmann/json.hpp>
 #include <umbrellas/access-modifiers.hpp>
-
-using Json = nlohmann::ordered_json;
+#include <umbrellas/json.h>
 
 class BeShaderTools {
     expose

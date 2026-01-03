@@ -39,87 +39,8 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                 schemePath = std::filesystem::path(pathString);
             }
             
-            auto materialScheme = BeMaterialScheme();
-            materialScheme.Name = schemeName;
-            materialScheme.Path = schemePath;
-            
-            const Json propertyArrayJson = BeShaderTools::ParseMaterialMetadata(schemeName, schemePath);
-            
-            for (const auto& propertyItemJson : propertyArrayJson) {
-                auto parsedProperty = BeShaderTools::ParseMaterialProperty(propertyItemJson);
-            
-                // extracting
-                if (parsedProperty.Type == "texture2d") {
-                    BeMaterialTextureDescriptor descriptor;
-                    descriptor.Name = parsedProperty.Name;
-                    descriptor.SlotIndex = parsedProperty.Slot;
-                    descriptor.DefaultTexturePath = parsedProperty.Default;
-                    materialScheme.Textures.push_back(descriptor);
-                }
-                else if (parsedProperty.Type == "sampler") {
-                    BeMaterialSamplerDescriptor descriptor;
-                    descriptor.Name = parsedProperty.Name;
-                    descriptor.SlotIndex = parsedProperty.Slot;
-                    materialScheme.Samplers.push_back(descriptor);
-                }
-                else if (parsedProperty.Type == "float") {
-                    BeMaterialPropertyDescriptor descriptor;
-                    descriptor.Name = parsedProperty.Name;
-                    descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float;
-                    descriptor.DefaultValue.push_back(std::stof(parsedProperty.Default));
-                    materialScheme.Properties.push_back(descriptor);
-                }
-                else if (parsedProperty.Type == "float2") {
-                    Json j = Json::parse(parsedProperty.Default, nullptr, true, true, true);
-                    const auto vec = j.get<std::vector<float>>();
-                    assert(vec.size() == 2);
-                
-                    BeMaterialPropertyDescriptor descriptor;
-                    descriptor.Name = parsedProperty.Name;
-                    descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float2;
-                    descriptor.DefaultValue = vec;
-                    materialScheme.Properties.push_back(descriptor);
-                }
-                else if (parsedProperty.Type == "float3") {
-                    Json j = Json::parse(parsedProperty.Default, nullptr, true, true, true);
-                    const auto vec = j.get<std::vector<float>>();
-                    assert(vec.size() == 3);
-                
-                    BeMaterialPropertyDescriptor descriptor;
-                    descriptor.Name = parsedProperty.Name;
-                    descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float3;
-                    descriptor.DefaultValue = vec;
-                    materialScheme.Properties.push_back(descriptor);
-                }
-                else if (parsedProperty.Type == "float4") {
-                    Json j = Json::parse(parsedProperty.Default, nullptr, true, true, true);
-                    const auto vec = j.get<std::vector<float>>();
-                    assert(vec.size() == 4);
-                
-                    BeMaterialPropertyDescriptor descriptor;
-                    descriptor.Name = parsedProperty.Name;
-                    descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float4;
-                    descriptor.DefaultValue = vec;
-                    materialScheme.Properties.push_back(descriptor);
-                }
-                else if (parsedProperty.Type == "matrix") {
-                    std::vector<float> mat = {
-                        1, 0, 0, 0,
-                        0, 1, 0, 0,
-                        0, 0, 1, 0,
-                        0, 0, 0, 1
-                    };
-                
-                    BeMaterialPropertyDescriptor descriptor;
-                    descriptor.Name = parsedProperty.Name;
-                    descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Matrix;
-                    descriptor.DefaultValue = mat;
-                    materialScheme.Properties.push_back(descriptor);
-                }
-            }
-            
-            shader->_materialSchemes[materialScheme.Name] = materialScheme;
-            shader->_materialSlots[materialScheme.Name] = schemeSlot;
+            shader->_materialSchemePaths[schemeName] = schemePath;
+            shader->_materialSlots[schemeName] = schemeSlot;
         }
     }
     
