@@ -59,6 +59,23 @@ auto MainScene::Prepare() -> void {
     .AddToRegistry(_assetRegistry)
     .BuildNoReturn(device);
 
+    _assetRegistry->IndexShaderFiles({ 
+            "assets/shaders/standard.beshade", 
+            "assets/shaders/tessellated.beshade", 
+            "assets/shaders/terrain.beshade", 
+            "assets/shaders/objectMaterial.beshade", 
+            "assets/shaders/fullscreen-vertex.beshade", 
+            "assets/shaders/directionalLight.beshade", 
+            "assets/shaders/pointLight.beshade", 
+            "assets/shaders/BeBloomAdd.beshade", 
+            "assets/shaders/BeBloomBright.beshade", 
+            "assets/shaders/BeBloomKawase.beshade", 
+            "assets/shaders/tonemapper.beshade", 
+            "assets/shaders/backbuffer.beshade", 
+        },
+        *_renderer
+    );
+    
     const auto standardShader = BeShader::Create("assets/shaders/standard.beshade", *_renderer);
     _assetRegistry->AddShader("standard", standardShader);
 

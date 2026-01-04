@@ -8,13 +8,13 @@ auto BeMaterialScheme::Create(
     
     auto propertyArrayJson = BeShaderTools::ParseMaterialMetadata(schemeName, schemePath);
     
-    auto materialScheme = Create(schemeName, propertyArrayJson);
+    auto materialScheme = CreateFromJson(schemeName, propertyArrayJson);
     materialScheme.Path = schemePath;
     
     return materialScheme;
 }
 
-auto BeMaterialScheme::Create(
+auto BeMaterialScheme::CreateFromJson(
     const std::string& name, 
     const Json& json
 ) -> BeMaterialScheme {

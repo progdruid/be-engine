@@ -1,14 +1,6 @@
 /*
 
-@be-material: Object
-[
-    "Model: matrix",
-    "ProjectionView: matrix",
-    "ViewerPosition: float3 = [0, 0, 0]",
-]
-@be-end
-
-@be-material: Main
+@be-material: tesselated-main-material-for-geometry-pass
 [
     "DiffuseColor: float3 = [0.28, 0.39, 1.0]",
     "SpecularColor: float3 = [1.0, 1.0, 1.0]",
@@ -34,8 +26,8 @@
     },
     "pixel": "PixelFunction",
     "materials": {
-        "Object": { "slot": 1, "path": "assets/shaders/objectMaterial.beshade" },
-        "Main": { "slot": 2 },
+        "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
+        "geometry-main": { "scheme": "tesselated-main-material-for-geometry-pass", "slot": 2 },
     },
     "targets": {
         "Diffuse.RGB": 0,

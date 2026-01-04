@@ -17,12 +17,12 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     auto shader = std::make_shared<BeShader>();
     shader->Path = filePath.string();
     
+    const auto header = BeShaderTools::ParseShaderMetadata(filePath);
+    
     BeShaderIncludeHandler includeHandler(
         filePath.parent_path().string(),
         StandardShaderIncludePath
     );
-    
-    const auto header = BeShaderTools::ParseShaderMetadata(filePath);
     
     if (header.contains("materials")) {
         shader->HasMaterial = true;
@@ -161,7 +161,6 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
 
     return shader;
 }
-
 
 auto BeShader::CompileBlob(
     const std::filesystem::path& filePath,
