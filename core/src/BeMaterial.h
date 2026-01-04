@@ -32,7 +32,8 @@ class BeMaterial {
     hide
     bool _isFrequentlyUsed;
     BeMaterialScheme _scheme;
-    
+    uint32_t _uniqueID;
+
     std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>> _textures;
     std::unordered_map<std::string, std::pair<ComPtr<ID3D11SamplerState>, uint8_t>> _samplers;
 
@@ -64,6 +65,7 @@ class BeMaterial {
     // interface ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
     auto GetSchemeName () const -> std::string { return _scheme.Name; }
+    auto GetUniqueID () const -> uint32_t { return _uniqueID; }
     
     auto SetFloat  (const std::string& propertyName, float value) -> void;
     auto SetFloat2 (const std::string& propertyName, glm::vec2 value) -> void;
@@ -83,7 +85,7 @@ class BeMaterial {
     auto SetSampler(const std::string& propertyName, ComPtr<ID3D11SamplerState> sampler) -> void;
     auto GetSampler(const std::string& propertyName) const -> ComPtr<ID3D11SamplerState>;
     
-    auto UpdateGPUBuffers (const ComPtr<ID3D11DeviceContext>& context) -> void;
+    auto UpdateGPUBuffers (const ComPtr<ID3D11DeviceContext>& context) -> bool;
     auto GetBuffer () const -> const ComPtr<ID3D11Buffer>& { return _cbuffer; }
     auto GetTexturePairs () const -> const std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>>& { return _textures; }
     auto GetSamplerPairs () const -> const std::unordered_map<std::string, std::pair<ComPtr<ID3D11SamplerState>, uint8_t>>& { return _samplers; }

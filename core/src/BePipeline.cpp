@@ -46,17 +46,21 @@ auto BePipeline::BindMaterialAutomatic(const std::shared_ptr<BeMaterial>& materi
 auto BePipeline::BindMaterialManual(const std::shared_ptr<BeMaterial>& material, const uint8_t materialSlot) -> void {
     const auto& buffer = material->GetBuffer();
     if (buffer != nullptr) {
-        material->UpdateGPUBuffers(_context);
+        auto updated = material->UpdateGPUBuffers(_context);
+        auto id = material->GetUniqueID();
         
-        if (HasAny(_boundShaderType, BeShaderType::Vertex)) {
+        if (HasAny(_boundShaderType, BeShaderType::Vertex) && (updated || _vertexCBufferIDCache[materialSlot] != id)) {
             _context->VSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
+            _vertexCBufferIDCache[materialSlot] = id;
         }
-        if (HasAny(_boundShaderType, BeShaderType::Tesselation)) {
+        if (HasAny(_boundShaderType, BeShaderType::Tesselation) && (updated || _tessCBufferIDCache[materialSlot] != id)) {
             _context->HSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
             _context->DSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
+            _tessCBufferIDCache[materialSlot] = id;
         }
-        if (HasAny(_boundShaderType, BeShaderType::Pixel)) {
+        if (HasAny(_boundShaderType, BeShaderType::Pixel) && (updated || _pixelCBufferIDCache[materialSlot] != id)) {
             _context->PSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
+            _pixelCBufferIDCache[materialSlot] = id;
         }
     }
 
@@ -75,8 +79,6 @@ auto BePipeline::BindMaterialManual(const std::shared_ptr<BeMaterial>& material,
             _context->PSSetSamplers(slot, 1, sampler.GetAddressOf());
         }
     }
-    
-    _boundMaterial = material;
 }
 
 auto BePipeline::Clear() -> void {
@@ -94,13 +96,15 @@ auto BePipeline::Clear() -> void {
     _boundShaderType = BeShaderType::None;
     _boundShader.reset();
     _boundShader = nullptr;
-    _boundMaterial = nullptr;
 }
 
 auto BePipeline::ClearCache() -> void {
     _vertexResCache.fill(0);
     _tessResCache.fill(0);
     _pixelResCache.fill(0);
+    _vertexCBufferIDCache.fill(0);
+    _tessCBufferIDCache.fill(0);
+    _pixelCBufferIDCache.fill(0);
 }
 
 auto BePipeline::BindMaterialTextures(const BeMaterial& material) -> void {
