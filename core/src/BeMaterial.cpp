@@ -31,6 +31,9 @@ BeMaterial::BeMaterial(
     , _isFrequentlyUsed(frequentlyUsed)
     , _scheme(std::move(descriptor))
 {
+    static uint32_t materialCount = 0;
+    _uniqueID = ++materialCount;
+    
     if (_scheme.Properties.empty())
         return;
     
@@ -172,8 +175,8 @@ auto BeMaterial::GetSampler(const std::string& propertyName) const -> ComPtr<ID3
 }
 
 
-auto BeMaterial::UpdateGPUBuffers(const ComPtr<ID3D11DeviceContext>& context) -> void {
-    if (!_cbufferDirty) return;
+auto BeMaterial::UpdateGPUBuffers(const ComPtr<ID3D11DeviceContext>& context) -> bool {
+    if (!_cbufferDirty) return false;
 
     if (_isFrequentlyUsed) {
         D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -186,6 +189,7 @@ auto BeMaterial::UpdateGPUBuffers(const ComPtr<ID3D11DeviceContext>& context) ->
     }
 
     _cbufferDirty = false;
+    return true;
 }
 
 auto BeMaterial::AssembleData() -> void {

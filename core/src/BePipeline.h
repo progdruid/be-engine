@@ -19,15 +19,17 @@ class BePipeline {
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide
     ComPtr<ID3D11DeviceContext> _context;
-    
+
     BeShaderType _boundShaderType = BeShaderType::None;
     std::shared_ptr<BeShader> _boundShader;
-    std::shared_ptr<BeMaterial> _boundMaterial;
 
     std::array<uint32_t, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> _vertexResCache;
     std::array<uint32_t, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> _tessResCache;
     std::array<uint32_t, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> _pixelResCache;
 
+    std::array<uint32_t, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT> _vertexCBufferIDCache;
+    std::array<uint32_t, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT>   _tessCBufferIDCache;
+    std::array<uint32_t, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT>  _pixelCBufferIDCache;
     
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide BePipeline() = default;
