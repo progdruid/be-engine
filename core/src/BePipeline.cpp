@@ -68,15 +68,19 @@ auto BePipeline::BindMaterialManual(const std::shared_ptr<BeMaterial>& material,
 
     const auto& samplerSlots = material->GetSamplerPairs();
     for (const auto& [sampler, slot] : samplerSlots | std::views::values) {
-        if (HasAny(_boundShaderType, BeShaderType::Vertex)) {
+        auto sampPtr = sampler.Get();
+        if (HasAny(_boundShaderType, BeShaderType::Vertex) && _vertexSamplerCache[slot] != sampPtr) {
             _context->VSSetSamplers(slot, 1, sampler.GetAddressOf());
+            _vertexSamplerCache[slot] = sampPtr;
         }
-        if (HasAny(_boundShaderType, BeShaderType::Tesselation)) {
+        if (HasAny(_boundShaderType, BeShaderType::Tesselation) && _tessSamplerCache[slot] != sampler.Get()) {
             _context->HSSetSamplers(slot, 1, sampler.GetAddressOf());
             _context->DSSetSamplers(slot, 1, sampler.GetAddressOf());
+            _tessSamplerCache[slot] = sampPtr;
         }
-        if (HasAny(_boundShaderType, BeShaderType::Pixel)) {
+        if (HasAny(_boundShaderType, BeShaderType::Pixel) && _pixelSamplerCache[slot] != sampPtr) {
             _context->PSSetSamplers(slot, 1, sampler.GetAddressOf());
+            _pixelSamplerCache[slot] = sampPtr;
         }
     }
 }
