@@ -16,21 +16,20 @@ BeGeometryPass::BeGeometryPass() = default;
 BeGeometryPass::~BeGeometryPass() = default;
 
 auto BeGeometryPass::Initialise() -> void {
-    auto objectScheme = BeMaterialScheme::CreateFromJson("Object", "assets/shaders/objectMaterial.beshade");
-    _objectMaterial = BeMaterial::Create("Object", objectScheme, true, *_renderer);
+    auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
+    _objectMaterial = BeMaterial::Create("object", objectScheme, true, *_renderer);
 }
 
 auto BeGeometryPass::Render() -> void {
     const auto context = _renderer->GetContext();
     const auto pipeline = _renderer->GetPipeline();
-    const auto registry = _renderer->GetAssetRegistry().lock();
     
     
     // Clear and set render targets
-    const auto depthResource    = registry->GetTexture(OutputDepthTextureName).lock();
-    const auto gbufferResource0 = registry->GetTexture(OutputTexture0Name).lock();
-    const auto gbufferResource1 = registry->GetTexture(OutputTexture1Name).lock();
-    const auto gbufferResource2 = registry->GetTexture(OutputTexture2Name).lock();
+    const auto depthResource    = BeAssetRegistry::GetTexture(OutputDepthTextureName).lock();
+    const auto gbufferResource0 = BeAssetRegistry::GetTexture(OutputTexture0Name).lock();
+    const auto gbufferResource1 = BeAssetRegistry::GetTexture(OutputTexture1Name).lock();
+    const auto gbufferResource2 = BeAssetRegistry::GetTexture(OutputTexture2Name).lock();
     
     context->ClearDepthStencilView(depthResource->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     context->ClearRenderTargetView(gbufferResource0->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
@@ -76,18 +75,6 @@ auto BeGeometryPass::Render() -> void {
         _objectMaterial->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
         _objectMaterial->UpdateGPUBuffers(context);
         pipeline->BindMaterialAutomatic(_objectMaterial);
-        
-        //BeObjectBufferGPU objectData(modelMatrix, _renderer->UniformData.ProjectionView, _renderer->UniformData.CameraPosition);
-        //D3D11_MAPPED_SUBRESOURCE objectMappedResource;
-        //Utils::Check << context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &objectMappedResource);
-        //memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
-        //context->Unmap(_objectBuffer.Get(), 0);
-        //context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        //context->PSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        //if (HasAny(shader->ShaderType, BeShaderType::Tesselation)) {
-        //    context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        //    context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        //}
 
         const auto & drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
         for (const auto& slice : drawSlices) {

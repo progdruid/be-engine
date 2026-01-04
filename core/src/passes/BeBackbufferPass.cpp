@@ -11,14 +11,10 @@ BeBackbufferPass::BeBackbufferPass() = default;
 BeBackbufferPass::~BeBackbufferPass() = default;
 
 auto BeBackbufferPass::Initialise() -> void {
-    const auto& device = _renderer->GetDevice();
-    const auto& registry = _renderer->GetAssetRegistry().lock();
-
-    _backbufferShader = BeShader::Create("assets/shaders/backbuffer.beshade", *_renderer);
-
-    auto backbufferScheme = BeMaterialScheme::Create("Main", _backbufferShader->GetMaterialSchemePath("Main"));
-    _backbufferMaterial = BeMaterial::Create("Backbuffer Material", backbufferScheme, false, *_renderer);
-    _backbufferMaterial->SetTexture("InputTexture", registry->GetTexture(InputTextureName).lock());
+    _backbufferShader = BeAssetRegistry::GetShader("backbuffer").lock();
+    auto scheme = BeAssetRegistry::GetMaterialScheme("backbuffer-material");
+    _backbufferMaterial = BeMaterial::Create("Backbuffer Material", scheme, false, *_renderer);
+    _backbufferMaterial->SetTexture("InputTexture", BeAssetRegistry::GetTexture(InputTextureName).lock());
     _backbufferMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
 }
 
@@ -27,7 +23,6 @@ auto BeBackbufferPass::Render() -> void {
     const auto& pipeline = _renderer->GetPipeline();
     
     // render target
-    const auto registry = _renderer->GetAssetRegistry().lock();
     auto backbufferTarget = _renderer->GetBackbufferTarget();
     auto fullClearColor = glm::vec4(ClearColor, 1.0f);
     context->ClearRenderTargetView(backbufferTarget.Get(), reinterpret_cast<FLOAT*>(&fullClearColor));

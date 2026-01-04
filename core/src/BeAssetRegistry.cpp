@@ -5,6 +5,13 @@
 #include "BeShader.h"
 #include "BeShaderTools.h"
 
+std::unordered_map<std::filesystem::path, std::string> BeAssetRegistry::_shaderSources;
+std::unordered_map<std::string, std::shared_ptr<BeShader>> BeAssetRegistry::_shaders;
+std::unordered_map<std::string, BeMaterialScheme> BeAssetRegistry::_materialSchemes;
+std::unordered_map<std::string, std::shared_ptr<BeMaterial>> BeAssetRegistry::_materials;
+std::unordered_map<std::string, std::shared_ptr<BeTexture>> BeAssetRegistry::_textures;
+std::unordered_map<std::string, std::shared_ptr<BeModel>> BeAssetRegistry::_models;
+
 auto BeAssetRegistry::IndexShaderFiles(const std::vector<std::filesystem::path>& filePaths, const BeRenderer& renderer) -> void {
     
     // collect sources

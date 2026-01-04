@@ -10,7 +10,6 @@
 #include <umbrellas/include-glm.h>
 #include <umbrellas/access-modifiers.hpp>
 
-class BeAssetRegistry;
 using Microsoft::WRL::ComPtr;
 
 class BeTexture {
@@ -30,7 +29,7 @@ class BeTexture {
     expose class Builder {
 
         hide BeTextureDescriptor _descriptor;
-        hide std::weak_ptr<BeAssetRegistry> _assetRegistry;
+        hide bool _addToRegistry = false;
 
         hide explicit Builder (std::string name);
         expose ~Builder ();
@@ -51,10 +50,10 @@ class BeTexture {
 
         hide static auto FlipVertically (uint32_t w, uint32_t h, uint8_t* data) -> void;
 
-        expose auto AddToRegistry (std::weak_ptr<BeAssetRegistry> registry) -> Builder&&;
+        expose auto AddToRegistry () -> Builder&&;
 
-        expose auto Build(ComPtr<ID3D11Device> device) -> std::shared_ptr<BeTexture>;
-        expose auto BuildNoReturn(ComPtr<ID3D11Device> device) -> void;
+        expose auto Build(const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeTexture>;
+        expose auto BuildNoReturn(const ComPtr<ID3D11Device>& device) -> void;
 
         friend class BeTexture;
     }; 

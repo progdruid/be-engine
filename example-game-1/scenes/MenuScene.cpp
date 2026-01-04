@@ -10,13 +10,11 @@
 MenuScene::MenuScene(
     BeSceneManager* sceneManager,
     const std::shared_ptr<BeRenderer>& renderer,
-    const std::shared_ptr<BeAssetRegistry>& assetRegistry,
     const std::shared_ptr<BeWindow>& window,
     const std::shared_ptr<BeInput>& input
 )
     : BaseScene(sceneManager)
     , _renderer(renderer)
-    , _assetRegistry(assetRegistry)
     , _window(window)
     , _input(input)
 {}

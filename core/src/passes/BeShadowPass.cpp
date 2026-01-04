@@ -42,7 +42,6 @@ auto BeShadowPass::Render() -> void {
 
 auto BeShadowPass::RenderDirectionalShadows() -> void {
     const auto context = _renderer->GetContext();
-    const auto registry = _renderer->GetAssetRegistry().lock();
     const auto& pipeline = _renderer->GetPipeline();
     const auto directionalLight = DirectionalLight.lock();
 
@@ -111,7 +110,6 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
 
     // get what we need
     const auto context = _renderer->GetContext();
-    const auto registry = _renderer->GetAssetRegistry().lock();
     const auto& pipeline = _renderer->GetPipeline();
     
     // sort out vertex and index buffers

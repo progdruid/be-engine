@@ -39,7 +39,7 @@ auto BePipeline::BindShader(const std::shared_ptr<BeShader>& shader, BeShaderTyp
 
 auto BePipeline::BindMaterialAutomatic(const std::shared_ptr<BeMaterial>& material) -> void {
     assert(_boundShader);
-    const uint8_t slot = _boundShader->GetMaterialSlot(material->GetSchemeName());
+    const uint8_t slot = _boundShader->GetMaterialSlotByScheme(material->GetSchemeName());
     BindMaterialManual(material, slot);
 }
 

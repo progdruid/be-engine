@@ -6,7 +6,6 @@
 
 #include "BeRenderPass.h"
 
-class BeAssetRegistry;
 class BeMaterial;
 class BeShader;
 
@@ -17,7 +16,6 @@ class BeBloomPass final : public BeRenderPass {
     std::string BloomMipTextureName;
     uint32_t BloomMipCount;
     std::string OutputTextureName;
-    std::shared_ptr<BeAssetRegistry> AssetRegistry;
     std::string DirtTextureName;
     
     hide

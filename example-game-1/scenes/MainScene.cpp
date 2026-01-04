@@ -21,12 +21,10 @@
 
 MainScene::MainScene(
     const std::shared_ptr<BeRenderer>& renderer,
-    const std::shared_ptr<BeAssetRegistry>& assetRegistry,
     const std::shared_ptr<BeWindow>& window,
     const std::shared_ptr<BeInput>& input
 )
     : _renderer(renderer)
-    , _assetRegistry(assetRegistry)
     , _window(window)
     , _input(input)
 {}
@@ -48,7 +46,7 @@ auto MainScene::Prepare() -> void {
     .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
     .FillWithColor(glm::vec4(1.f))
-    .AddToRegistry(_assetRegistry)
+    .AddToRegistry()
     .BuildNoReturn(device);
 
     BeTexture::Create("black")
@@ -56,10 +54,10 @@ auto MainScene::Prepare() -> void {
     .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
     .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
-    .AddToRegistry(_assetRegistry)
+    .AddToRegistry()
     .BuildNoReturn(device);
 
-    _assetRegistry->IndexShaderFiles({ 
+    BeAssetRegistry::IndexShaderFiles({ 
             "assets/shaders/standard.beshade", 
             "assets/shaders/tessellated.beshade", 
             "assets/shaders/terrain.beshade", 
@@ -76,12 +74,9 @@ auto MainScene::Prepare() -> void {
         *_renderer
     );
     
-    const auto standardShader = BeShader::Create("assets/shaders/standard.beshade", *_renderer);
-    _assetRegistry->AddShader("standard", standardShader);
-
-    const auto tessellatedShader = BeShader::Create("assets/shaders/tessellated.beshade", *_renderer);
-    _assetRegistry->AddShader("tessellated", tessellatedShader);
-
+    const auto standardShader = BeAssetRegistry::GetShader("standard");
+    const auto tessellatedShader = BeAssetRegistry::GetShader("tessellated");
+    
     _plane = CreatePlane(64);
     _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, *_renderer);
     _livingCube = BeModel::Create("assets/cube.glb", tessellatedShader, *_renderer);
@@ -114,7 +109,7 @@ auto MainScene::Prepare() -> void {
     .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R32_TYPELESS)
     .SetSize(_directionalLight->ShadowMapResolution, _directionalLight->ShadowMapResolution)
-    .AddToRegistry(_assetRegistry)
+    .AddToRegistry()
     .Build(device);
     _directionalLight->CalculateMatrix();
 
@@ -134,7 +129,7 @@ auto MainScene::Prepare() -> void {
             .SetFormat(DXGI_FORMAT_R32_TYPELESS)
             .SetCubemap(true)
             .SetSize(pointLight.ShadowMapResolution, pointLight.ShadowMapResolution)
-            .AddToRegistry(_assetRegistry)
+            .AddToRegistry()
             .Build(device);
 
         _pointLights.push_back(pointLight);
@@ -148,35 +143,35 @@ auto MainScene::Prepare() -> void {
     .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R32_TYPELESS)
     .SetSize(screenWidth, screenHeight)
-    .AddToRegistry(_assetRegistry)
+    .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("BaseColor")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
     .SetSize(screenWidth, screenHeight)
-    .AddToRegistry(_assetRegistry)
+    .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("WorldNormal")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
     .SetSize(screenWidth, screenHeight)
-    .AddToRegistry(_assetRegistry)
+    .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("Specular-Shininess")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
     .SetSize(screenWidth, screenHeight)
-    .AddToRegistry(_assetRegistry)
+    .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("HDR-Input")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
     .SetSize(screenWidth, screenHeight)
-    .AddToRegistry(_assetRegistry)
+    .AddToRegistry()
     .Build(device);
 
     for (int mip = 0; mip < 5; ++mip) {
@@ -188,7 +183,7 @@ auto MainScene::Prepare() -> void {
         .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
         .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
         .SetSize(mipWidth, mipHeight)
-        .AddToRegistry(_assetRegistry)
+        .AddToRegistry()
         .Build(device);
     }
 
@@ -196,19 +191,19 @@ auto MainScene::Prepare() -> void {
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
     .SetSize(screenWidth, screenHeight)
-    .AddToRegistry(_assetRegistry)
+    .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("TonemapperOutput")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
     .SetSize(screenWidth, screenHeight)
-    .AddToRegistry(_assetRegistry)
+    .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("BloomDirtTexture")
     .LoadFromFile("assets/bloom-dirt-mask.png")
-    .AddToRegistry(_assetRegistry)
+    .AddToRegistry()
     .BuildNoReturn(device);
 }
 
@@ -240,7 +235,6 @@ auto MainScene::OnLoad() -> void {
 
     const auto bloomPass = new BeBloomPass();
     _renderer->AddRenderPass(bloomPass);
-    bloomPass->AssetRegistry = _assetRegistry;
     bloomPass->InputHDRTextureName = "HDR-Input";
     bloomPass->BloomMipTextureName = "Bloom_Mip";
     bloomPass->BloomMipCount = 5;
@@ -248,9 +242,9 @@ auto MainScene::OnLoad() -> void {
     bloomPass->OutputTextureName = "BloomOutput";
 
     const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.beshade", *_renderer);
-    const auto& tonemapperScheme = BeMaterialScheme::Create("Main", tonemapperShader->GetMaterialSchemePath("Main"));;
+    const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
     const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, *_renderer);
-    tonemapperMaterial->SetTexture("HDRInput", _assetRegistry->GetTexture("BloomOutput").lock());
+    tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
     tonemapperMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     _renderer->AddRenderPass(tonemapperPass);
@@ -380,8 +374,8 @@ auto MainScene::Tick(float deltaTime) -> void {
 }
 
 auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
-    const auto shader = BeShader::Create("assets/shaders/terrain.beshade", *_renderer);
-    const auto& scheme = BeMaterialScheme::Create("Main", shader->GetMaterialSchemePath("Main"));;
+    const auto shader = BeAssetRegistry::GetShader("terrain").lock();
+    const auto& scheme = BeAssetRegistry::GetMaterialScheme("terrain-main-material-for-geometry-pass");
     auto material = BeMaterial::Create("TerrainMat", scheme, true, *_renderer);
     material->SetFloat("TerrainScale", 200.0f);
     material->SetFloat("HeightScale", 100.0f);

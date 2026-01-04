@@ -12,7 +12,6 @@
 #include "BeBuffers.h"
 
 class BeWindow;
-class BeAssetRegistry;
 class BePipeline;
 class BeRenderPass;
 class BeShader;
@@ -44,7 +43,6 @@ class BeRenderer {
     uint32_t _width;
     uint32_t _height;
     HWND _hwnd;
-    std::weak_ptr<BeAssetRegistry> _assetRegistry;
     
     // dx11 core components
     ComPtr<ID3D11Device> _device;
@@ -75,8 +73,7 @@ class BeRenderer {
     explicit BeRenderer(
         uint32_t width,
         uint32_t height,
-        HWND window,
-        std::weak_ptr<BeAssetRegistry> registry
+        HWND window
     );
     ~BeRenderer();
     
@@ -94,7 +91,6 @@ class BeRenderer {
     [[nodiscard]] auto GetDevice() const -> ComPtr<ID3D11Device> { return _device; }
     [[nodiscard]] auto GetContext() const -> ComPtr<ID3D11DeviceContext> { return _context; }
     [[nodiscard]] auto GetPipeline() const -> std::shared_ptr<BePipeline> { return _pipeline; }
-    [[nodiscard]] auto GetAssetRegistry() const -> std::weak_ptr<BeAssetRegistry> { return _assetRegistry; }
     [[nodiscard]] auto GetPointSampler() const -> ComPtr<ID3D11SamplerState> { return _pointSampler; }
     [[nodiscard]] auto GetPostProcessLinearClampSampler() const -> ComPtr<ID3D11SamplerState> { return _postProcessLinearClampSampler; }
     [[nodiscard]] auto GetBackbufferTarget() const -> ComPtr<ID3D11RenderTargetView> { return _backbufferTarget; }

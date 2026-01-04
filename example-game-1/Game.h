@@ -11,7 +11,6 @@ class BeWindow;
 class BeRenderer;
 class BeInput;
 class BeCamera;
-class BeAssetRegistry;
 class BeLightingPass;
 class BeScene;
 class BeTexture;
@@ -30,7 +29,6 @@ class Game {
     hide std::shared_ptr<BeRenderer> _renderer;
     hide std::shared_ptr<BeInput> _input;
     hide std::shared_ptr<BeCamera> _camera;
-    hide std::shared_ptr<BeAssetRegistry> _assetRegistry;
     
     hide std::unique_ptr<BeSceneManager> _sceneManager; 
     

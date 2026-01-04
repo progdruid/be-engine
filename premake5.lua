@@ -150,6 +150,7 @@ project "misc-configuration"
         "premake5.lua",
         ".gitignore",
         "README.md",
+        "CLAUDE.md",
         "*DotSettings*"
     }
 

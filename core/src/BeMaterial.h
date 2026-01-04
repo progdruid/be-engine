@@ -15,8 +15,6 @@ class BeRenderer;
 class BeTexture;
 using Microsoft::WRL::ComPtr;
 
-class BeAssetRegistry;
-
 class BeMaterial {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
@@ -61,7 +59,7 @@ class BeMaterial {
     );
 
     hide
-    auto InitialiseSlotMaps(const BeRenderer& renderer) -> void;
+    auto InitialiseSlotMaps() -> void;
 
     // interface ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose

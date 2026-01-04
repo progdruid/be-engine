@@ -11,16 +11,14 @@ BeBloomPass::BeBloomPass() = default;
 BeBloomPass::~BeBloomPass() = default;
 
 auto BeBloomPass::Initialise() -> void {
-    const auto registry = _renderer->GetAssetRegistry().lock();
-
-    _brightShader = BeShader::Create("assets/shaders/BeBloomBright.beshade", *_renderer);
-    auto brightScheme = BeMaterialScheme::Create("Main", _brightShader->GetMaterialSchemePath("Main"));
+    _brightShader = BeAssetRegistry::GetShader("BeBloomBright").lock();
+    auto brightScheme = BeAssetRegistry::GetMaterialScheme("bright-material");
     _brightMaterial = BeMaterial::Create("Bright Pass Material", brightScheme, false, *_renderer);
-    _brightMaterial->SetTexture("HDRInput", registry->GetTexture(InputHDRTextureName).lock());
+    _brightMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture(InputHDRTextureName).lock());
     _brightMaterial->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
 
-    _kawaseShader = BeShader::Create("assets/shaders/BeBloomKawase.beshade", *_renderer);
-    auto kawaseScheme = BeMaterialScheme::Create("Main", _kawaseShader->GetMaterialSchemePath("Main"));;
+    _kawaseShader = BeAssetRegistry::GetShader("BeBloomKawase").lock();
+    auto kawaseScheme = BeAssetRegistry::GetMaterialScheme("kawase-material");;
 
     // Create downsample materials for each mip level (1 to size-1)
     _downsampleMaterials.resize(BloomMipCount);
@@ -32,7 +30,7 @@ auto BeBloomPass::Initialise() -> void {
             *_renderer
         );
 
-        const auto sourceMip = registry->GetTexture(BloomMipTextureName+std::to_string(mipTarget - 1)).lock();
+        const auto sourceMip = BeAssetRegistry::GetTexture(BloomMipTextureName+std::to_string(mipTarget - 1)).lock();
 
         const auto texelSizeX = 1.0f / sourceMip->Width;
         const auto texelSizeY = 1.0f / sourceMip->Height;
@@ -57,8 +55,8 @@ auto BeBloomPass::Initialise() -> void {
             *_renderer
         );
 
-        const auto sourceMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget + 1)).lock();
-        const auto targetMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
+        const auto sourceMip = BeAssetRegistry::GetTexture(BloomMipTextureName + std::to_string(mipTarget + 1)).lock();
+        const auto targetMip = BeAssetRegistry::GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
 
         const auto texelSizeX = 1.0f / targetMip->Width;
         const auto texelSizeY = 1.0f / targetMip->Height;
@@ -74,12 +72,12 @@ auto BeBloomPass::Initialise() -> void {
         _upsampleMaterials[mipTarget] = mat;
     }
 
-    _addShader = BeShader::Create("assets/shaders/BeBloomAdd.beshade", *_renderer);
-    const auto& addScheme = BeMaterialScheme::Create("Main", _addShader->GetMaterialSchemePath("Main"));;
+    _addShader = BeAssetRegistry::GetShader("BeBloomAdd").lock();
+    const auto& addScheme = BeAssetRegistry::GetMaterialScheme("add-material");
     _addMaterial = BeMaterial::Create("Add Pass Material", addScheme, false, *_renderer);
-    _addMaterial->SetTexture("HDRInput", registry->GetTexture(InputHDRTextureName).lock());
-    _addMaterial->SetTexture("BloomInput", registry->GetTexture(BloomMipTextureName + "0").lock());
-    _addMaterial->SetTexture("DirtTexture", registry->GetTexture(DirtTextureName).lock());
+    _addMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture(InputHDRTextureName).lock());
+    _addMaterial->SetTexture("BloomInput", BeAssetRegistry::GetTexture(BloomMipTextureName + "0").lock());
+    _addMaterial->SetTexture("DirtTexture", BeAssetRegistry::GetTexture(DirtTextureName).lock());
     _addMaterial->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
 }
 
@@ -92,10 +90,9 @@ auto BeBloomPass::Render() -> void {
 
 auto BeBloomPass::RenderBrightPass() const -> void {
     const auto context = _renderer->GetContext();
-    const auto registry = _renderer->GetAssetRegistry().lock();
     const auto pipeline = _renderer->GetPipeline();
     
-    const auto bloomMip0  = registry->GetTexture(BloomMipTextureName + "0").lock();
+    const auto bloomMip0  = BeAssetRegistry::GetTexture(BloomMipTextureName + "0").lock();
 
     // targets
     context->ClearRenderTargetView(bloomMip0->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
@@ -116,7 +113,6 @@ auto BeBloomPass::RenderBrightPass() const -> void {
 
 auto BeBloomPass::RenderDownsamplePasses() -> void {
     const auto context = _renderer->GetContext();
-    const auto registry = _renderer->GetAssetRegistry().lock();
     const auto& pipeline = _renderer->GetPipeline();
     
     uint32_t numberOfPreviousViewports = 1;
@@ -126,7 +122,7 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
     pipeline->BindShader(_kawaseShader, BeShaderType::Vertex | BeShaderType::Pixel);
     
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
-        const auto targetMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
+        const auto targetMip = BeAssetRegistry::GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
 
         // viewport
         D3D11_VIEWPORT viewport = {};
@@ -156,7 +152,6 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
 
 auto BeBloomPass::RenderUpsamplePasses() -> void {
     const auto context = _renderer->GetContext();
-    const auto registry = _renderer->GetAssetRegistry().lock();
     const auto& pipeline = _renderer->GetPipeline();
     
     uint32_t numberOfPreviousViewports = 1;
@@ -180,7 +175,7 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
     pipeline->BindShader(_kawaseShader, BeShaderType::Vertex | BeShaderType::Pixel);
 
     for (int32_t mipTarget = BloomMipCount - 2; mipTarget >= 0; --mipTarget) {
-        const auto targetMip = registry->GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
+        const auto targetMip = BeAssetRegistry::GetTexture(BloomMipTextureName + std::to_string(mipTarget)).lock();
         
         D3D11_VIEWPORT viewport = {};
         viewport.Width = static_cast<float>(targetMip->Width);
@@ -207,10 +202,9 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
 
 auto BeBloomPass::RenderAddPass() const -> void {
     const auto context = _renderer->GetContext();
-    const auto registry = _renderer->GetAssetRegistry().lock();
     const auto& pipeline = _renderer->GetPipeline();
     
-    const auto outputTexture = registry->GetTexture(OutputTextureName).lock();
+    const auto outputTexture = BeAssetRegistry::GetTexture(OutputTextureName).lock();
     context->ClearRenderTargetView(outputTexture->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->OMSetRenderTargets(1, outputTexture->GetRTV().GetAddressOf(), nullptr);
 
