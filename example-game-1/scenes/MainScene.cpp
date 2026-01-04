@@ -311,13 +311,23 @@ auto MainScene::OnLoad() -> void {
 auto MainScene::Tick(float deltaTime) -> void {
     constexpr float moveSpeed = 5.0f;
     float speed = moveSpeed * deltaTime;
-    if (_input->GetKey(GLFW_KEY_LEFT_SHIFT)) speed *= 2.0f;
+    if (_input->GetKey(GLFW_KEY_LEFT_SHIFT) || (_input->IsGamepadConnected() && _input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) speed *= 2.0f;
     if (_input->GetKey(GLFW_KEY_W)) _camera->Position += _camera->GetFront() * speed;
     if (_input->GetKey(GLFW_KEY_S)) _camera->Position -= _camera->GetFront() * speed;
     if (_input->GetKey(GLFW_KEY_D)) _camera->Position -= _camera->GetRight() * speed;
     if (_input->GetKey(GLFW_KEY_A)) _camera->Position += _camera->GetRight() * speed;
     if (_input->GetKey(GLFW_KEY_E)) _camera->Position += glm::vec3(0, 1, 0) * speed;
     if (_input->GetKey(GLFW_KEY_Q)) _camera->Position -= glm::vec3(0, 1, 0) * speed;
+
+    // Gamepad movement
+    if (_input->IsGamepadConnected()) {
+        const glm::vec2 leftStick = _input->GetGamepadLeftStick();
+        _camera->Position += _camera->GetFront() * (leftStick.y * speed);
+        _camera->Position -= _camera->GetRight() * (leftStick.x * speed);
+
+        const float verticalInput = _input->GetGamepadRightTrigger() - _input->GetGamepadLeftTrigger();
+        _camera->Position += glm::vec3(0, 1, 0) * (verticalInput * speed);
+    }
 
     bool captureMouse = false;
     if (_input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
@@ -330,6 +340,16 @@ auto MainScene::Tick(float deltaTime) -> void {
         _camera->Pitch = glm::clamp(_camera->Pitch, -89.0f, 89.0f);
     }
     _input->SetMouseCapture(captureMouse);
+
+    // Gamepad camera look
+    if (_input->IsGamepadConnected()) {
+        const glm::vec2 rightStick = _input->GetGamepadRightStick();
+        constexpr float gamepadCameraSens = 100.0f;
+
+        _camera->Yaw   -= rightStick.x * gamepadCameraSens * deltaTime;
+        _camera->Pitch += rightStick.y * gamepadCameraSens * deltaTime;
+        _camera->Pitch = glm::clamp(_camera->Pitch, -89.0f, 89.0f);
+    }
 
     const glm::vec2 scrollDelta = _input->GetScrollDelta();
     if (scrollDelta.y != 0.0f) {

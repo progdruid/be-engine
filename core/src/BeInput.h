@@ -30,6 +30,19 @@ class BeInput {
 
     bool _isMouseCaptured;
 
+    std::unordered_map<int, bool> _currentGamepadButtons;
+    std::unordered_map<int, bool> _previousGamepadButtons;
+
+    glm::vec2 _currentGamepadLeftStick;
+    glm::vec2 _currentGamepadRightStick;
+    float _currentGamepadLeftTrigger;
+    float _currentGamepadRightTrigger;
+
+    glm::vec2 _previousGamepadLeftStick;
+    glm::vec2 _previousGamepadRightStick;
+    float _previousGamepadLeftTrigger;
+    float _previousGamepadRightTrigger;
+
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
     explicit BeInput(GLFWwindow* windowHandle);
@@ -55,9 +68,21 @@ class BeInput {
     auto SetMouseCapture(bool capture) -> void;
     [[nodiscard]] auto IsMouseCaptured() const -> bool;
 
+    [[nodiscard]] auto GetGamepadButton(int button) const -> bool;
+    [[nodiscard]] auto GetGamepadButtonDown(int button) const -> bool;
+    [[nodiscard]] auto GetGamepadButtonUp(int button) const -> bool;
+
+    [[nodiscard]] auto GetGamepadLeftStick() const -> glm::vec2;
+    [[nodiscard]] auto GetGamepadRightStick() const -> glm::vec2;
+    [[nodiscard]] auto GetGamepadLeftTrigger() const -> float;
+    [[nodiscard]] auto GetGamepadRightTrigger() const -> float;
+
+    [[nodiscard]] auto IsGamepadConnected() const -> bool;
+
     // internal ////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide
     auto UpdateKeyStates() -> void;
     auto UpdateMouseButtonStates() -> void;
     auto UpdateMousePosition() -> void;
+    auto UpdateGamepadStates() -> void;
 };
