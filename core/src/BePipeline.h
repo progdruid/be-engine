@@ -31,6 +31,10 @@ class BePipeline {
     std::array<uint32_t, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT>   _tessCBufferIDCache;
     std::array<uint32_t, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT>  _pixelCBufferIDCache;
     
+    std::array<ID3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT> _vertexSamplerCache;
+    std::array<ID3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT>   _tessSamplerCache;
+    std::array<ID3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT>  _pixelSamplerCache;
+    
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide BePipeline() = default;
     expose ~BePipeline() = default;
