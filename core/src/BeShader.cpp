@@ -27,20 +27,16 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     if (header.contains("materials")) {
         shader->HasMaterial = true;
         const auto& materialLinksJson = header.at("materials");
-        
+
         for (const auto& materialLinkJson : materialLinksJson.items()) {
-            
-            auto schemeName = std::string(materialLinkJson.key());
+
+            auto linkName = std::string(materialLinkJson.key());
+            auto schemeName = std::string(materialLinkJson.value()["scheme"]);
             auto schemeSlot = uint8_t(materialLinkJson.value()["slot"]);
-            auto schemePath = filePath;
-            if (materialLinkJson.value().contains("path")) {
-                auto pathString = std::string(materialLinkJson.value()["path"]);
-                assert(std::filesystem::exists(pathString));
-                schemePath = std::filesystem::path(pathString);
-            }
-            
-            shader->_materialSchemePaths[schemeName] = schemePath;
-            shader->_materialSlots[schemeName] = schemeSlot;
+
+            shader->_materialSchemeNames[linkName] = schemeName;
+            shader->_materialSlots[linkName] = schemeSlot;
+            shader->_materialSlotsByScheme[schemeName] = schemeSlot;
         }
     }
     

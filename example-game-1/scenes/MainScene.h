@@ -12,7 +12,6 @@
 class BeWindow;
 class BeInput;
 class BeCamera;
-class BeAssetRegistry;
 class BeRenderer;
 struct BeModel;
 struct BePointLight;
@@ -37,7 +36,6 @@ class MainScene : public BaseScene {
     hide
     entt::registry _registry;
     std::shared_ptr<BeRenderer> _renderer;
-    std::shared_ptr<BeAssetRegistry> _assetRegistry;
     std::shared_ptr<BeWindow> _window;
     std::shared_ptr<BeCamera> _camera;
     std::shared_ptr<BeInput> _input;
@@ -49,7 +47,6 @@ class MainScene : public BaseScene {
     expose
     MainScene(
         const std::shared_ptr<BeRenderer>& renderer,
-        const std::shared_ptr<BeAssetRegistry>& assetRegistry,
         const std::shared_ptr<BeWindow>& window,
         const std::shared_ptr<BeInput>& input
     );

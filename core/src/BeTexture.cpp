@@ -88,20 +88,20 @@ auto BeTexture::Builder::FlipVertically(const uint32_t w, const uint32_t h, uint
     delete[] tempRow;
 }
 
-auto BeTexture::Builder::AddToRegistry(std::weak_ptr<BeAssetRegistry> registry) -> Builder&& { _assetRegistry = registry; return std::move(*this); }
+auto BeTexture::Builder::AddToRegistry() -> Builder&& { _addToRegistry = true; return std::move(*this); }
 
 
-auto BeTexture::Builder::Build(ComPtr<ID3D11Device> device) -> std::shared_ptr<BeTexture> {
+auto BeTexture::Builder::Build(const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeTexture> {
     std::shared_ptr<BeTexture> resource(new BeTexture(device, _descriptor));
-    if (!_assetRegistry.expired())
-        _assetRegistry.lock()->AddTexture(_descriptor.Name, resource);
+    if (_addToRegistry)
+        BeAssetRegistry::AddTexture(_descriptor.Name, resource);
     return resource;
 }
 
-auto BeTexture::Builder::BuildNoReturn(ComPtr<ID3D11Device> device) -> void {
+auto BeTexture::Builder::BuildNoReturn(const ComPtr<ID3D11Device>& device) -> void {
     const std::shared_ptr<BeTexture> resource(new BeTexture(device, _descriptor));
-    if (!_assetRegistry.expired())
-        _assetRegistry.lock()->AddTexture(_descriptor.Name, resource);
+    if (_addToRegistry)
+        BeAssetRegistry::AddTexture(_descriptor.Name, resource);
 }
 
 

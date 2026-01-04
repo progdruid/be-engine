@@ -4,7 +4,6 @@
 #include <glfw/glfw3.h>
 
 #include "BeWindow.h"
-#include "BeAssetRegistry.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
 
@@ -21,8 +20,7 @@ auto Game::Run() -> int {
     _height = 1080;
     
     _window = std::make_shared<BeWindow>(_width, _height, "be: example game 1");
-    _assetRegistry = std::make_shared<BeAssetRegistry>();
-    _renderer = std::make_shared<BeRenderer>(_width, _height, _window->GetHwnd(), _assetRegistry);
+    _renderer = std::make_shared<BeRenderer>(_width, _height, _window->GetHwnd());
     _renderer->LaunchDevice();
     
     _input = std::make_unique<BeInput>(_window->GetGlfwWindow());
@@ -37,8 +35,8 @@ auto Game::Run() -> int {
 auto Game::SetupScenes() -> void {
     _sceneManager = std::make_unique<BeSceneManager>();
 
-    auto menuScene = std::make_unique<MenuScene>(_sceneManager.get(), _renderer, _assetRegistry, _window, _input);
-    auto mainScene = std::make_unique<MainScene>(_renderer, _assetRegistry, _window, _input);
+    auto menuScene = std::make_unique<MenuScene>(_sceneManager.get(), _renderer, _window, _input);
+    auto mainScene = std::make_unique<MainScene>(_renderer, _window, _input);
 
     _sceneManager->RegisterScene("menu", std::move(menuScene));
     _sceneManager->RegisterScene("main", std::move(mainScene));

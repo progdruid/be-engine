@@ -12,8 +12,6 @@ class BeMaterial;
 class BeRenderer;
 using Microsoft::WRL::ComPtr;
 
-class BeAssetRegistry;
-
 struct BeFullVertex {
     glm::vec3 Position;                 // 0
     glm::vec3 Normal;                   // 12

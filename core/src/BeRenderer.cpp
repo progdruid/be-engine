@@ -8,7 +8,6 @@
 #include "BePipeline.h"
 #include "passes/BeRenderPass.h"
 #include "BeShader.h"
-#include "BeWindow.h"
 #include "Utils.h"
 
 auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
@@ -45,13 +44,11 @@ auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
 BeRenderer::BeRenderer(
     uint32_t width,
     uint32_t height,
-    HWND window,
-    std::weak_ptr<BeAssetRegistry> registry
+    HWND window
 )
     : _width(width)
     , _height(height)
     , _hwnd(window)
-    , _assetRegistry(std::move(registry))
 {}
 
 BeRenderer::~BeRenderer() = default;

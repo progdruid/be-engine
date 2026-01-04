@@ -35,8 +35,8 @@ auto BeModel::Create(
     auto model = std::make_shared<BeModel>();
     model->Shader = usedShaderForMaterials.lock();
     model->DrawSlices.reserve(scene->mNumMeshes);
-    const auto& materialScheme = BeMaterialScheme::Create("Main", model->Shader->GetMaterialSchemePath("Main"));;
-    
+    const auto& materialScheme = BeAssetRegistry::GetMaterialScheme(model->Shader->GetMaterialSchemeName("geometry-main"));
+
     std::unordered_map<uint32_t, std::shared_ptr<BeMaterial>> assimpIndexToMaterial;
     for (size_t i = 0; i < scene->mNumMeshes; ++i) {
         const auto mesh = scene->mMeshes[i];
@@ -145,7 +145,6 @@ auto BeModel::LoadTextureFromAssimpPath(
 )
     -> std::shared_ptr<BeTexture> {
     const auto device = renderer.GetDevice();
-    const auto registry = renderer.GetAssetRegistry().lock();
 
     static int tempCount = -1;
     tempCount++;
@@ -165,7 +164,7 @@ auto BeModel::LoadTextureFromAssimpPath(
         }
         return builder
             .LoadFromFile(path)
-            .AddToRegistry(registry)
+            .AddToRegistry()
             .Build(device);
     }
 
@@ -180,7 +179,7 @@ auto BeModel::LoadTextureFromAssimpPath(
         if (!decoded) throw std::runtime_error("Failed to decode embedded texture");
 
         const auto & resource = builder
-            .SetSize(w, h).FillFromMemory(decoded).AddToRegistry(registry).Build(device);
+            .SetSize(w, h).FillFromMemory(decoded).AddToRegistry().Build(device);
         stbi_image_free(decoded);
         return resource;
     }
@@ -196,7 +195,7 @@ auto BeModel::LoadTextureFromAssimpPath(
         converted[i * 4 + 3] = srcData[i * 4 + 3]; // A
     }
     const auto & resource = builder
-        .SetSize(aiTex->mWidth, aiTex->mHeight).FillFromMemory(converted).AddToRegistry(registry).Build(device);
+        .SetSize(aiTex->mWidth, aiTex->mHeight).FillFromMemory(converted).AddToRegistry().Build(device);
     free(converted);
     return resource;
 }

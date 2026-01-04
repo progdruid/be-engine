@@ -17,7 +17,7 @@ auto BeMaterial::Create(
 )
     -> std::shared_ptr<BeMaterial> {
     auto material = std::make_shared<BeMaterial>(std::string(name), frequentlyUsed, scheme, renderer);
-    material->InitialiseSlotMaps(renderer);
+    material->InitialiseSlotMaps();
     return material;
 }
 
@@ -60,9 +60,9 @@ BeMaterial::BeMaterial(
 //BeMaterial::BeMaterial() = default;
 BeMaterial::~BeMaterial() = default;
 
-auto BeMaterial::InitialiseSlotMaps(const BeRenderer& renderer) -> void {
+auto BeMaterial::InitialiseSlotMaps() -> void {
     for (const auto& property : _scheme.Textures) {
-        auto texWeak = renderer.GetAssetRegistry().lock()->GetTexture(property.DefaultTexturePath);
+        auto texWeak = BeAssetRegistry::GetTexture(property.DefaultTexturePath);
         auto texture = texWeak.lock();
         assert(texture && ("Texture not found in registry: " + property.DefaultTexturePath).c_str());
 

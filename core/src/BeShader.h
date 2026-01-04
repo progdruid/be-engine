@@ -71,19 +71,23 @@ class BeShader {
     expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
     
     expose bool HasMaterial = false;
-    hide std::unordered_map<std::string, std::filesystem::path> _materialSchemePaths;
+    hide std::unordered_map<std::string, std::string> _materialSchemeNames;
     hide std::unordered_map<std::string, uint8_t> _materialSlots;
-    
+    hide std::unordered_map<std::string, uint8_t> _materialSlotsByScheme;
+
     // lifecycle ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose BeShader() = default;
     expose ~BeShader() = default;
-    
+
     // interface ///////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose auto GetMaterialSchemePath (const std::string& name) const -> std::filesystem::path {
-        return _materialSchemePaths.at(name);
+    expose auto GetMaterialSchemeName (const std::string& linkName) const -> std::string {
+        return _materialSchemeNames.at(linkName);
     }
-    expose auto GetMaterialSlot (const std::string& name) const -> uint8_t {
-        return _materialSlots.at(name);
+    expose auto GetMaterialSlot (const std::string& linkName) const -> uint8_t {
+        return _materialSlots.at(linkName);
+    }
+    expose auto GetMaterialSlotByScheme (const std::string& schemeName) const -> uint8_t {
+        return _materialSlotsByScheme.at(schemeName);
     }
 };
 

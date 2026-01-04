@@ -14,12 +14,11 @@ auto BeFullscreenEffectPass::Initialise() -> void {}
 auto BeFullscreenEffectPass::Render() -> void {
     const auto& pipeline = _renderer->GetPipeline();
     const auto context = _renderer->GetContext();
-    const auto registry = _renderer->GetAssetRegistry().lock();
     
     // render targets
     std::vector<ID3D11RenderTargetView*> renderTargets;
     for (const auto& outputTextureName : OutputTextureNames) {
-        const auto resource = registry->GetTexture(outputTextureName).lock();
+        const auto resource = BeAssetRegistry::GetTexture(outputTextureName).lock();
         renderTargets.push_back(resource->GetRTV().Get());
     }
     context->OMSetRenderTargets(renderTargets.size(), renderTargets.data(), nullptr);
