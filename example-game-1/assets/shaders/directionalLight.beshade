@@ -1,6 +1,6 @@
 /*
 
-@be-material: Main
+@be-material: directional-light-material
 [
     "HasShadowMap: float = 0",
     "Direction: float3 = [0, 0, 0]",
@@ -25,7 +25,7 @@
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "materials": {
-        "Main": { "slot": 2 },
+        "main": { "scheme": "directional-light-material", "slot": 2 },
     },
     "targets": {
         "LightHDR": 0

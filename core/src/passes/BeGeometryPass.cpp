@@ -16,7 +16,7 @@ BeGeometryPass::BeGeometryPass() = default;
 BeGeometryPass::~BeGeometryPass() = default;
 
 auto BeGeometryPass::Initialise() -> void {
-    auto objectScheme = BeMaterialScheme::Create("Object", "assets/shaders/objectMaterial.beshade");
+    auto objectScheme = BeMaterialScheme::CreateFromJson("Object", "assets/shaders/objectMaterial.beshade");
     _objectMaterial = BeMaterial::Create("Object", objectScheme, true, *_renderer);
 }
 

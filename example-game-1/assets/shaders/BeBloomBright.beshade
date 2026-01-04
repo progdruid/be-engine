@@ -1,6 +1,6 @@
 /*
 
-@be-material: Main
+@be-material: bright-material
 [
     "Threshold: float = 0.75",
     "Intensity: float = 17.0",
@@ -18,7 +18,7 @@
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "materials": {
-        "Main": { "slot": 2 },
+        "main": { "scheme": "bright-material", "slot": 2 },
     },
     "targets": {
         "BloomMip": 0

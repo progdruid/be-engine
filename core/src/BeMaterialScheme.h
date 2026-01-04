@@ -37,7 +37,7 @@ class BeMaterialScheme {
         const std::string& schemeName,
         const std::filesystem::path& schemePath
     ) -> BeMaterialScheme;
-    expose static auto Create (
+    expose static auto CreateFromJson (
         const std::string& name, 
         const Json& json
     ) -> BeMaterialScheme;

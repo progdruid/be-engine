@@ -1,6 +1,6 @@
 /*
 
-@be-material: Main
+@be-material: terrain-main-material-for-geometry-pass
 [
     "DiffuseColor: float3 = [0.5, 0.5, 0.5]",
     "SpecularColor: float3 = [-0.2, -0.2, -0.1]", 
@@ -26,8 +26,8 @@
     },
     "pixel": "PixelFunction",
     "materials": {
-        "Object": { "slot": 1, "path": "assets/shaders/objectMaterial.beshade" },
-        "Main": { "slot": 2 },
+        "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
+        "geometry-main": { "scheme": "terrain-main-material-for-geometry-pass", "slot": 2 },
     },
     "targets": {
         "Diffuse.RGB": 0,

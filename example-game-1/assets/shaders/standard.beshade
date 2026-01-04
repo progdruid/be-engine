@@ -1,7 +1,7 @@
 
 /*
 
-@be-material: Main
+@be-material: standard-material-for-geometry-pass
 [
     "DiffuseColor: float3 = [1.0, 1.0, 1.0]",
     "SpecularColor: float3 = [1.0, 1.0, 1.0]",
@@ -22,8 +22,8 @@
     "vertexLayout": ["position", "normal", "uv0"],
     "pixel": "PixelFunction",
     "materials": {
-        "Object": { "slot": 1, "path": "assets/shaders/objectMaterial.beshade" },
-        "Main": { "slot": 2 },
+        "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
+        "geometry-main": { "scheme": "standard-material-for-geometry-pass", "slot": 2 },
     },
     "targets": {
         "Diffuse.RGB": 0,

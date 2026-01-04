@@ -1,7 +1,7 @@
 
 /*
 
-@be-material: Object
+@be-material: object-material-for-geometry-pass
 [
     "Model: matrix",
     "ProjectionView: matrix",

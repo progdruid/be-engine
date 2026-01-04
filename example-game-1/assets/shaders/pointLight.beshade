@@ -1,6 +1,6 @@
 /*
 
-@be-material: Main
+@be-material: point-light-material
 [
     "Position: float3 = [0, 0, 0]",
     "Radius: float = 0",
@@ -26,7 +26,7 @@
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "materials": {
-        "Main": { "slot": 2 },
+        "main": { "scheme": "point-light-material", "slot": 2 },
     },
     "targets": {
         "LightHDR": 0
