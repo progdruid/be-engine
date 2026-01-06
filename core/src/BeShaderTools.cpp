@@ -37,7 +37,7 @@ auto BeShaderTools::ParseMaterialProperty(const std::string& text) -> ParsedMate
     return result;
 }
 
-auto BeShaderTools::ParseFor(const std::string& src, const std::string& target) -> Json {
+auto BeShaderTools::ParseFor(const std::string& src, const std::string& target) -> std::pair<Json, std::string> {
     const auto& startTag = target;
     const auto& endTag = std::string("@be-end");
     
@@ -49,7 +49,11 @@ auto BeShaderTools::ParseFor(const std::string& src, const std::string& target) 
     if (endPos == std::string::npos) return metadata;
     
     auto jsonStart = src.find('\n', startPos);
-    if (jsonStart == std::string::npos || jsonStart >= endPos) return metadata;
+    be_assert(jsonStart != std::string::npos && jsonStart < endPos);
+    
+    auto nameStart = startPos + target.length();
+    auto nameToken = std::string(BeShaderTools::Trim(src.substr(nameStart, jsonStart - nameStart), " \t\n\r"));
+    
     jsonStart++; // Move past newline
     
     auto jsonContent = src.substr(jsonStart, endPos - jsonStart);
@@ -64,7 +68,7 @@ auto BeShaderTools::ParseFor(const std::string& src, const std::string& target) 
         throw std::runtime_error("Failed to parse shader header JSON: " + std::string(msg));
     }
     
-    return metadata;
+    return {metadata, nameToken};
 }
 
 auto BeShaderTools::Take(const std::string_view str, const size_t start, const size_t end) -> std::string_view {

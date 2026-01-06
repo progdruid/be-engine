@@ -57,22 +57,21 @@ auto MainScene::Prepare() -> void {
     .AddToRegistry()
     .BuildNoReturn(device);
 
+    BeAssetRegistry::InjectRenderer(_renderer);
     BeAssetRegistry::IndexShaderFiles({ 
-            "assets/shaders/standard.beshade", 
-            "assets/shaders/tessellated.beshade", 
-            "assets/shaders/terrain.beshade", 
-            "assets/shaders/objectMaterial.beshade", 
-            "assets/shaders/fullscreen-vertex.beshade", 
-            "assets/shaders/directionalLight.beshade", 
-            "assets/shaders/pointLight.beshade", 
-            "assets/shaders/BeBloomAdd.beshade", 
-            "assets/shaders/BeBloomBright.beshade", 
-            "assets/shaders/BeBloomKawase.beshade", 
-            "assets/shaders/tonemapper.beshade", 
-            "assets/shaders/backbuffer.beshade", 
-        },
-        *_renderer
-    );
+        "assets/shaders/standard.beshade", 
+        "assets/shaders/tessellated.beshade", 
+        "assets/shaders/terrain.beshade", 
+        "assets/shaders/objectMaterial.beshade", 
+        "assets/shaders/fullscreen-vertex.beshade", 
+        "assets/shaders/directionalLight.beshade", 
+        "assets/shaders/pointLight.beshade", 
+        "assets/shaders/BeBloomAdd.beshade", 
+        "assets/shaders/BeBloomBright.beshade", 
+        "assets/shaders/BeBloomKawase.beshade", 
+        "assets/shaders/tonemapper.beshade", 
+        "assets/shaders/backbuffer.beshade", 
+    });
     
     const auto standardShader = BeAssetRegistry::GetShader("standard");
     const auto tessellatedShader = BeAssetRegistry::GetShader("tessellated");

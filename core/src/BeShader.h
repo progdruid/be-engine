@@ -67,7 +67,7 @@ class BeShader {
     
     
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose std::string Path;
+    expose std::string Name;
     expose BeShaderType ShaderType = BeShaderType::None;
     expose D3D11_PRIMITIVE_TOPOLOGY Topology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
     expose ComPtr<ID3D11InputLayout> ComputedInputLayout;

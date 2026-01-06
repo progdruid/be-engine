@@ -5,14 +5,17 @@
 #include "BeShader.h"
 #include "BeShaderTools.h"
 
+std::weak_ptr<BeRenderer> BeAssetRegistry::_renderer;
+
 std::unordered_map<std::filesystem::path, std::string> BeAssetRegistry::_shaderSources;
+
 std::unordered_map<std::string, std::shared_ptr<BeShader>> BeAssetRegistry::_shaders;
 std::unordered_map<std::string, BeMaterialScheme> BeAssetRegistry::_materialSchemes;
 std::unordered_map<std::string, std::shared_ptr<BeMaterial>> BeAssetRegistry::_materials;
 std::unordered_map<std::string, std::shared_ptr<BeTexture>> BeAssetRegistry::_textures;
 std::unordered_map<std::string, std::shared_ptr<BeModel>> BeAssetRegistry::_models;
 
-auto BeAssetRegistry::IndexShaderFiles(const std::vector<std::filesystem::path>& filePaths, const BeRenderer& renderer) -> void {
+auto BeAssetRegistry::IndexShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void {
     
     // collect sources
     auto sourcesToIndex = std::vector<std::pair<std::filesystem::path, std::string>>();
@@ -77,9 +80,7 @@ auto BeAssetRegistry::IndexShaderFiles(const std::vector<std::filesystem::path>&
         if (src.find("@be-shader:") == std::string::npos) 
             continue;
         
-        auto shader = BeShader::Create(path, renderer);
-        
-        auto shaderName_Temporary = path.stem().string();
-        _shaders[shaderName_Temporary] = shader;
+        auto shader = BeShader::Create(path, *_renderer.lock());
+        _shaders[shader->Name] = shader;
     }
 }

@@ -19,7 +19,7 @@
 ]
 @be-end
 
-@be-shader:
+@be-shader: directional-light
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",

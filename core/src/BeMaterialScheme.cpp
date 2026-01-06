@@ -1,20 +1,6 @@
 #include "BeMaterialScheme.h"
 
 
-auto BeMaterialScheme::Create(
-    const std::string& schemeName,
-    const std::filesystem::path& schemePath
-) -> BeMaterialScheme {
-    
-    const auto src = BeShaderTools::ReadFile(schemePath);
-    const auto propertyArrayJson = BeShaderTools::ParseFor(src, "@be-material: " + schemeName);
-    
-    auto materialScheme = CreateFromJson(schemeName, propertyArrayJson);
-    materialScheme.Path = schemePath;
-    
-    return materialScheme;
-}
-
 auto BeMaterialScheme::CreateFromJson(
     const std::string& name, 
     const Json& json

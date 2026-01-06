@@ -9,7 +9,7 @@
 ]
 @be-end
 
-@be-shader:
+@be-shader: bloom-add
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",

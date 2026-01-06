@@ -12,7 +12,7 @@
 @be-end
 
 
-@be-shader:
+@be-shader: bloom-bright
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
