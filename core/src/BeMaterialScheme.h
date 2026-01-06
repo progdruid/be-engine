@@ -33,10 +33,6 @@ struct BeMaterialSamplerDescriptor {
 };
 
 class BeMaterialScheme {
-    expose static auto Create (
-        const std::string& schemeName,
-        const std::filesystem::path& schemePath
-    ) -> BeMaterialScheme;
     expose static auto CreateFromJson (
         const std::string& name, 
         const Json& json
@@ -44,7 +40,6 @@ class BeMaterialScheme {
     
     expose 
     std::string Name;
-    std::filesystem::path Path;
     std::vector<BeMaterialPropertyDescriptor> Properties;
     std::vector<BeMaterialTextureDescriptor> Textures;
     std::vector<BeMaterialSamplerDescriptor> Samplers;

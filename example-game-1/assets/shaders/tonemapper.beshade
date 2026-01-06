@@ -7,7 +7,7 @@
 ]
 @be-end
 
-@be-shader:
+@be-shader: tonemapper
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",

@@ -30,7 +30,7 @@ void BeLightingPass::Initialise() {
 
     Utils::Check << device->CreateBlendState(&lightingBlendDesc, _lightingBlendState.GetAddressOf());
     
-    _directionalLightShader = BeAssetRegistry::GetShader( "directionalLight").lock();
+    _directionalLightShader = BeAssetRegistry::GetShader( "directional-light").lock();
     const auto& directionalScheme = BeAssetRegistry::GetMaterialScheme("directional-light-material");;
     _directionalLightMaterial = BeMaterial::Create("DirectionalLightMaterial", directionalScheme, true, *_renderer);
     _directionalLightMaterial->SetTexture("Depth", BeAssetRegistry::GetTexture(InputDepthTextureName).lock());
@@ -39,7 +39,7 @@ void BeLightingPass::Initialise() {
     _directionalLightMaterial->SetTexture("Specular_Shininess", BeAssetRegistry::GetTexture(InputTexture2Name).lock());
     _directionalLightMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
     
-    _pointLightShader = BeAssetRegistry::GetShader("pointLight").lock();
+    _pointLightShader = BeAssetRegistry::GetShader("point-light").lock();
     const auto& pointScheme = BeAssetRegistry::GetMaterialScheme("point-light-material");
     _pointLightMaterial = BeMaterial::Create("PointLightMaterial", pointScheme, true, *_renderer);
     _pointLightMaterial->SetTexture("Depth", BeAssetRegistry::GetTexture(InputDepthTextureName).lock());

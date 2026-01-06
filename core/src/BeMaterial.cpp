@@ -90,7 +90,7 @@ auto BeMaterial::SetFloat2(const std::string& propertyName, glm::vec2 value) -> 
     memcpy(_bufferData.data() + offset, &value, sizeof(glm::vec2));
     _cbufferDirty = true;
 }
-
+    
 auto BeMaterial::SetFloat3(const std::string& propertyName, glm::vec3 value) -> void {
     assert(_propertyOffsets.contains(propertyName));
     const uint32_t offset = _propertyOffsets.at(propertyName);

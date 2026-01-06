@@ -15,7 +15,7 @@
 ]
 @be-end
 
-@be-shader:
+@be-shader: terrain
 {
     "topology": "patch-list-3",
     "vertex": "VertexFunction",

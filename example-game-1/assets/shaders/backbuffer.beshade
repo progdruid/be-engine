@@ -7,7 +7,7 @@
 ]
 @be-end
 
-@be-shader:
+@be-shader: backbuffer
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",

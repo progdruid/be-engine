@@ -20,11 +20,10 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     
     const auto& device = renderer.GetDevice();
     auto shader = std::make_shared<BeShader>();
-    shader->Path = filePath.string();
     
     auto src = BeShaderTools::ReadFile(filePath);
-    auto header = BeShaderTools::ParseFor(src, "@be-shader:");
-    
+    auto [header, shaderName] = BeShaderTools::ParseFor(src, "@be-shader:");
+    shader->Name = shaderName;
     
     BeShaderIncludeHandler includeHandler(
         filePath.parent_path().string(),
@@ -84,7 +83,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     if (header.contains("vertex")) {
         shader->ShaderType = BeShaderType::Vertex;
 
-        std::string vertexFunctionName = header.at("vertex");
+        auto vertexFunctionName = std::string(header.at("vertex"));
         auto result = CompileBlob(src, vertexFunctionName.c_str(), "vs_5_0", &includeHandler);
         be_assert(result, shaderErrMsgLambda(result.error(), "vertex"));
         auto blob = result.value();
@@ -92,9 +91,9 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
 
         //input layout
         if (header.contains("vertexLayout")) {
-            Json vertexLayoutJson = header["vertexLayout"];
+            auto vertexLayoutJson = header["vertexLayout"];
 
-            std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout;
+            auto inputLayout = std::vector<D3D11_INPUT_ELEMENT_DESC>();
             inputLayout.reserve(vertexLayoutJson.size());
 
             for (const std::string vertexSemanticName : vertexLayoutJson) {
@@ -126,7 +125,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                     {"uv2",     56},
                 };
 
-                D3D11_INPUT_ELEMENT_DESC elementDesc;
+                auto elementDesc = D3D11_INPUT_ELEMENT_DESC();
                 elementDesc.SemanticIndex = 0;
                 elementDesc.InputSlot = 0;
                 elementDesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
@@ -150,9 +149,9 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     if (header.contains("tesselation")) {
         shader->ShaderType = shader->ShaderType | BeShaderType::Tesselation;
 
-        const Json& tesselation = header.at("tesselation");
-        std::string hullFunctionName = tesselation.at("hull");
-        std::string domainFunctionName = tesselation.at("domain");
+        auto& tesselation = header.at("tesselation");
+        auto hullFunctionName = std::string(tesselation.at("hull"));
+        auto domainFunctionName = std::string(tesselation.at("domain"));
 
 
         auto hullResult = CompileBlob(src, hullFunctionName.c_str(), "hs_5_0", &includeHandler);

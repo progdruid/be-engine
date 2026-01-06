@@ -20,7 +20,7 @@
 ]
 @be-end
 
-@be-shader:
+@be-shader: point-light
 {
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",

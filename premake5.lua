@@ -125,7 +125,7 @@ project "toolkit"
     includedirs {
         "%{prj.location}",
         "core/src",
-        "vendor"
+        "vendor",
     }
     libdirs { "vendor/glfw/lib-vc2022", "vendor/Assimp/lib/x64" }
     links {
@@ -194,8 +194,9 @@ project "example-game-1"
         "core/src/shaders",
         "toolkit",
         "%{prj.location}",
-        "vendor/Assimp/include",
         "vendor",
+        "vendor/Assimp/include",
+        "vendor/libassert/%{cfg.buildcfg}/include",
     }
 
     links { "core", "toolkit" }
