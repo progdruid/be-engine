@@ -63,16 +63,29 @@ project "core"
         "%{prj.location}/src",
         "%{prj.location}/src/shaders",
         "vendor/Assimp/include",
+        "vendor/libassert/install/%{cfg.buildcfg}/include",
         "vendor"
     }
-    libdirs { "vendor/glfw/lib-vc2022", "vendor/Assimp/lib/x64" }
-    links { 
-        "glfw3", 
-        "d3d11", 
-        "dxgi", 
-        "d3dcompiler", 
-        "assimp-vc143-mt" 
+    libdirs {
+        "vendor/glfw/lib-vc2022",
+        "vendor/Assimp/lib/x64",
+        "vendor/libassert/install/%{cfg.buildcfg}/lib"
     }
+    links {
+        "glfw3",
+        "assimp-vc143-mt",
+        
+        -- directx 11
+        "d3d11",
+        "dxgi",
+        "d3dcompiler",
+        
+        -- libassert
+        "assert",
+        "cpptrace",
+        "dbghelp"
+    }
+    defines { "LIBASSERT_STATIC_DEFINE" }
 
     filter { "files:**.hlsl" }
         buildaction "None"
@@ -88,7 +101,7 @@ project "core"
         optimize "Full"
 
     filter { "toolset:msc*", "language:C++" }
-        buildoptions { "/Zc:__cplusplus" }
+        buildoptions { "/Zc:__cplusplus /Zc:preprocessor" }
 
     filter {}
 
@@ -138,7 +151,7 @@ project "toolkit"
         optimize "Full"
 
     filter { "toolset:msc*", "language:C++" }
-        buildoptions { "/Zc:__cplusplus" }
+        buildoptions { "/Zc:__cplusplus /Zc:preprocessor" }
 
     filter {}
 
@@ -207,7 +220,7 @@ project "example-game-1"
         optimize "Full"
 
     filter { "toolset:msc*", "language:C++" }
-        buildoptions { "/Zc:__cplusplus" }
+        buildoptions { "/Zc:__cplusplus /Zc:preprocessor" }
 
     filter {}
     
@@ -256,13 +269,13 @@ project "example-game-1"
 --        symbols "On"
 --        defines { "DEBUG" }
 --        optimize "Off"
-
-    filter "configurations:Release"
-        symbols "Off"
-        defines { "NDEBUG" }
-        optimize "Full"
-
-    filter { "toolset:msc*", "language:C++" }
-        buildoptions { "/Zc:__cplusplus" }
-
-    filter {}
+--
+--    filter "configurations:Release"
+--        symbols "Off"
+--        defines { "NDEBUG" }
+--        optimize "Full"
+--
+--    filter { "toolset:msc*", "language:C++" }
+--        buildoptions { "/Zc:__cplusplus /Zc:preprocessor" }
+--
+--    filter {}

@@ -51,7 +51,7 @@ class BeShader {
     expose static auto Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader>;
     
     hide static auto CompileBlob (
-        const std::filesystem::path& filePath,
+        const std::string& src,
         const char* entrypointName,
         const char* target,
         BeShaderIncludeHandler* includeHandler

@@ -135,20 +135,20 @@ auto BeTexture::GetMipViewport(const uint32_t mip) const -> const D3D11_VIEWPORT
 auto BeTexture::GetSRV() const -> ComPtr<ID3D11ShaderResourceView> { return _srv; }
 auto BeTexture::GetDSV() const -> ComPtr<ID3D11DepthStencilView> { return _dsv; }
 auto BeTexture::GetRTV(const uint32_t mip) const -> ComPtr<ID3D11RenderTargetView> {
-    assert(mip < _mipRTVs.size(), "Mip out of bounds of mip rtv array");
+    assert(mip < _mipRTVs.size() && "Mip out of bounds of mip rtv array");
     return _mipRTVs[mip];
 }
 
 auto BeTexture::GetCubemapDSV(const uint32_t faceIndex) -> ComPtr<ID3D11DepthStencilView> {
-    assert(IsCubemap, "Resource is not a cubemap");
-    assert(faceIndex < 6, "Face index out of bounds");
+    assert(IsCubemap && "Resource is not a cubemap");
+    assert(faceIndex < 6 && "Face index out of bounds");
     return _cubemapDSVs[faceIndex];
 }
 
 auto BeTexture::GetCubemapRTV(const uint32_t faceIndex, const uint32_t mip) -> ComPtr<ID3D11RenderTargetView> {
-    assert(IsCubemap, "Resource is not a cubemap");
-    assert(faceIndex < 6, "Face index out of bounds");
-    assert(mip < _cubemapMipRTVs[faceIndex].size(), "Mip out of bounds of cubemap's mip rtv array");
+    assert(IsCubemap && "Resource is not a cubemap");
+    assert(faceIndex < 6 && "Face index out of bounds");
+    assert(mip < _cubemapMipRTVs[faceIndex].size() && "Mip out of bounds of cubemap's mip rtv array");
     return _cubemapMipRTVs[faceIndex][mip];
 }
 

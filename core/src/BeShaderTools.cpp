@@ -2,31 +2,16 @@
 
 #include <fstream>
 
-auto BeShaderTools::ParseShaderMetadata(const std::filesystem::path& pathToShader) -> Json {
-    assert(std::filesystem::exists(pathToShader));
+#include "umbrellas/include-libassert.h"
+
+auto BeShaderTools::ReadFile(const std::filesystem::path& path) -> std::string {
+    be_assert(std::filesystem::exists(path), "file does not exist", path);
     
-    auto file = std::ifstream(pathToShader);
+    auto file = std::ifstream(path);
     auto buffer = std::stringstream();
     buffer << file.rdbuf();
     auto src = buffer.str();
-    auto header = ParseFor(src, "@be-shader:");
-    
-    return header;
-}
-
-auto BeShaderTools::ParseMaterialMetadata(
-    const std::string& materialSchemeName,
-    const std::filesystem::path& pathToMaterial
-) -> Json {
-    assert(std::filesystem::exists(pathToMaterial));
-    
-    const auto file = std::ifstream(pathToMaterial);
-    auto buffer = std::stringstream();
-    buffer << file.rdbuf();
-    const auto src = buffer.str();
-    const auto header = ParseFor(src, "@be-material: " + materialSchemeName);
-    
-    return header;
+    return src;
 }
 
 auto BeShaderTools::ParseMaterialProperty(const std::string& text) -> ParsedMaterialProperty {
