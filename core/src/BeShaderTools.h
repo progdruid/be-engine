@@ -8,8 +8,7 @@
 
 class BeShaderTools {
     expose
-    static auto ParseShaderMetadata(const std::filesystem::path& pathToShader) -> Json;
-    static auto ParseMaterialMetadata(const std::string& materialSchemeName, const std::filesystem::path& pathToMaterial) -> Json;
+    static auto ReadFile (const std::filesystem::path& path) -> std::string;
 
     struct ParsedMaterialProperty {
         std::string Name;

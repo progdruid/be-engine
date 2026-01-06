@@ -8,16 +8,23 @@
 #include "BeShaderIncludeHandler.hpp"
 #include "BeShaderTools.h"
 #include "Utils.h"
+#include <umbrellas/include-libassert.h>
 
 std::string BeShader::StandardShaderIncludePath = "src/shaders/";
 
 auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader> {
-    assert(std::filesystem::exists(filePath));
+    be_assert(
+        std::filesystem::exists(filePath), 
+        "Shader file doesn't exist: " + filePath.string()
+    );
+    
     const auto& device = renderer.GetDevice();
     auto shader = std::make_shared<BeShader>();
     shader->Path = filePath.string();
     
-    const auto header = BeShaderTools::ParseShaderMetadata(filePath);
+    auto src = BeShaderTools::ReadFile(filePath);
+    auto header = BeShaderTools::ParseFor(src, "@be-shader:");
+    
     
     BeShaderIncludeHandler includeHandler(
         filePath.parent_path().string(),
@@ -62,7 +69,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         shader->ShaderType = BeShaderType::Vertex;
 
         std::string vertexFunctionName = header.at("vertex");
-        ComPtr<ID3DBlob> blob = CompileBlob(filePath, vertexFunctionName.c_str(), "vs_5_0", &includeHandler);
+        ComPtr<ID3DBlob> blob = CompileBlob(src, vertexFunctionName.c_str(), "vs_5_0", &includeHandler);
         Utils::Check << device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->VertexShader);
 
         //input layout
@@ -128,8 +135,8 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         const Json& tesselation = header.at("tesselation");
         std::string hullFunctionName = tesselation.at("hull");
         std::string domainFunctionName = tesselation.at("domain");
-        ComPtr<ID3DBlob> hullBlob = CompileBlob(filePath, hullFunctionName.c_str(), "hs_5_0", &includeHandler);
-        ComPtr<ID3DBlob> domainBlob = CompileBlob(filePath, domainFunctionName.c_str(), "ds_5_0", &includeHandler);
+        ComPtr<ID3DBlob> hullBlob = CompileBlob(src, hullFunctionName.c_str(), "hs_5_0", &includeHandler);
+        ComPtr<ID3DBlob> domainBlob = CompileBlob(src, domainFunctionName.c_str(), "ds_5_0", &includeHandler);
         Utils::Check << device->CreateHullShader(hullBlob->GetBufferPointer(), hullBlob->GetBufferSize(), nullptr, &shader->HullShader);
         Utils::Check << device->CreateDomainShader(domainBlob->GetBufferPointer(), domainBlob->GetBufferSize(), nullptr, &shader->DomainShader);
     }
@@ -139,7 +146,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         shader->ShaderType = shader->ShaderType | BeShaderType::Pixel;
 
         std::string pixelFunctionName = header.at("pixel");
-        ComPtr<ID3DBlob> blob = CompileBlob(filePath, pixelFunctionName.c_str(), "ps_5_0", &includeHandler);
+        ComPtr<ID3DBlob> blob = CompileBlob(src, pixelFunctionName.c_str(), "ps_5_0", &includeHandler);
         Utils::Check << device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->PixelShader);
 
         Json targets = header.at("targets");
@@ -159,15 +166,17 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
 }
 
 auto BeShader::CompileBlob(
-    const std::filesystem::path& filePath,
+    const std::string& src,
     const char* entrypointName,
     const char* target,
-    BeShaderIncludeHandler* includeHandler)
--> ComPtr<ID3DBlob> {
+    BeShaderIncludeHandler* includeHandler
+) -> ComPtr<ID3DBlob> {
 
     ComPtr<ID3DBlob> shaderBlob, errorBlob;
-    const auto result = D3DCompileFromFile(
-        filePath.wstring().c_str(),
+    const auto result = D3DCompile(
+        src.c_str(),
+        src.length(),
+        nullptr,
         nullptr,
         includeHandler,
         entrypointName,
