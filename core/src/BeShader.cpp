@@ -48,7 +48,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     }
     
     {
-        assert(header.contains("topology"));
+        be_assert(header.contains("topology"), "", filePath);
         const auto& topology = header.at("topology");
 
         if (topology == "triangle-list") {
@@ -61,15 +61,33 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
             shader->Topology = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
         }
         else {
-            assert(false && "Unsupported topology");
+            be_assert(false, "Unsupported topology", filePath);
         }
     }
+    
+    auto shaderErrMsgLambda = [&](const std::pair<HRESULT, ComPtr<ID3DBlob>>& err, const std::string& shaderStage) -> std::string {
+        auto hrText = std::string (BeShaderTools::Trim(Utils::HResultToStr(err.first), " \n\r\t"));
+        auto dxText = std::string("D3D Compiler didn't produce an error message.");
+        if (err.second) {
+            dxText = std::string (static_cast<const char*>(err.second->GetBufferPointer()) );
+        }
+        return 
+        "1. Shader compilation error. \n"
+        "2. Path to shader: " + filePath.string() + "\n"
+        "3. Shader stage that failed: " + shaderStage + "\n"
+        "4. HRESULT: " + hrText + "\n"
+        "5. Compiler output: " + dxText + "\n"
+        "\n"
+        "Source code:\n\n" + src + "\n\n Source code end.";
+    };
     
     if (header.contains("vertex")) {
         shader->ShaderType = BeShaderType::Vertex;
 
         std::string vertexFunctionName = header.at("vertex");
-        ComPtr<ID3DBlob> blob = CompileBlob(src, vertexFunctionName.c_str(), "vs_5_0", &includeHandler);
+        auto result = CompileBlob(src, vertexFunctionName.c_str(), "vs_5_0", &includeHandler);
+        be_assert(result, shaderErrMsgLambda(result.error(), "vertex"));
+        auto blob = result.value();
         Utils::Check << device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->VertexShader);
 
         //input layout
@@ -135,18 +153,26 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         const Json& tesselation = header.at("tesselation");
         std::string hullFunctionName = tesselation.at("hull");
         std::string domainFunctionName = tesselation.at("domain");
-        ComPtr<ID3DBlob> hullBlob = CompileBlob(src, hullFunctionName.c_str(), "hs_5_0", &includeHandler);
-        ComPtr<ID3DBlob> domainBlob = CompileBlob(src, domainFunctionName.c_str(), "ds_5_0", &includeHandler);
+
+
+        auto hullResult = CompileBlob(src, hullFunctionName.c_str(), "hs_5_0", &includeHandler);
+        be_assert(hullResult, shaderErrMsgLambda(hullResult.error(), "hull"));
+        auto domainResult = CompileBlob(src, domainFunctionName.c_str(), "ds_5_0", &includeHandler); 
+        be_assert(domainResult, shaderErrMsgLambda(domainResult.error(), "domain"));
+        ComPtr<ID3DBlob> hullBlob = hullResult.value();
+        ComPtr<ID3DBlob> domainBlob = domainResult.value();
         Utils::Check << device->CreateHullShader(hullBlob->GetBufferPointer(), hullBlob->GetBufferSize(), nullptr, &shader->HullShader);
         Utils::Check << device->CreateDomainShader(domainBlob->GetBufferPointer(), domainBlob->GetBufferSize(), nullptr, &shader->DomainShader);
     }
     
     if (header.contains("pixel")) {
-        assert(header.contains("targets"));
+        be_assert(header.contains("targets"), "", filePath);
         shader->ShaderType = shader->ShaderType | BeShaderType::Pixel;
 
         std::string pixelFunctionName = header.at("pixel");
-        ComPtr<ID3DBlob> blob = CompileBlob(src, pixelFunctionName.c_str(), "ps_5_0", &includeHandler);
+        auto result = CompileBlob(src, pixelFunctionName.c_str(), "ps_5_0", &includeHandler);
+        be_assert(result, shaderErrMsgLambda(result.error(), "pixel"));
+        auto blob = result.value();
         Utils::Check << device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->PixelShader);
 
         Json targets = header.at("targets");
@@ -154,8 +180,8 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
             const std::string& targetName = target.key();
             uint32_t targetSlot = target.value().get<uint32_t>();
             
-            assert(!shader->PixelTargets.contains(targetName));
-            assert(!shader->PixelTargetsInverse.contains(targetSlot));
+            be_assert(!shader->PixelTargets.contains(targetName), "", filePath);
+            be_assert(!shader->PixelTargetsInverse.contains(targetSlot), "", filePath);
 
             shader->PixelTargets[targetName] = targetSlot;
             shader->PixelTargetsInverse[targetSlot] = targetName;
@@ -170,8 +196,13 @@ auto BeShader::CompileBlob(
     const char* entrypointName,
     const char* target,
     BeShaderIncludeHandler* includeHandler
-) -> ComPtr<ID3DBlob> {
-
+) -> 
+std::expected <
+    ComPtr<ID3DBlob>, 
+    std::pair<HRESULT, ComPtr<ID3DBlob>>
+> 
+{
+    
     ComPtr<ID3DBlob> shaderBlob, errorBlob;
     const auto result = D3DCompile(
         src.c_str(),
@@ -185,12 +216,8 @@ auto BeShader::CompileBlob(
         &shaderBlob,
         &errorBlob);
     if (FAILED(result)) {
-        if (errorBlob) {
-            std::string errorMsg(static_cast<const char*>(errorBlob->GetBufferPointer()), errorBlob->GetBufferSize());
-            throw std::runtime_error("Shader compilation error: " + errorMsg);
-        } else {
-            Utils::ThrowIfFailed(result);
-        }
+        auto err = std::pair<HRESULT, ComPtr<ID3DBlob>>(result, errorBlob);
+        return std::unexpected(err);
     }
     
     return shaderBlob;

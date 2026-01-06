@@ -13,7 +13,23 @@
 #include <comdef.h>
 
 namespace Utils {
-  
+    inline auto HResultToStr(const HRESULT hr) -> std::string {
+        LPSTR messageBuffer = nullptr;
+        DWORD size = FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+            nullptr,
+            hr,
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            (LPSTR)&messageBuffer,
+            0,
+            nullptr
+        );
+    
+        std::string message(messageBuffer, size);
+        LocalFree(messageBuffer);
+        return message;
+    }
+    
     struct com_exception : public std::exception {
     private:
         HRESULT _hr;

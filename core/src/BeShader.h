@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <d3d11.h>
+#include <expected>
 #include <filesystem>
 #include <string>
 #include <unordered_map>
@@ -50,12 +51,19 @@ class BeShader {
     expose static std::string StandardShaderIncludePath;
     expose static auto Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader>;
     
+    /// @brief: What a hairy function, compiles shader source code
+    /// @return std::expected. 
+    /// @return On success: shader blob as ComPtr<ID3DBlob>. 
+    /// @return On error: std::pair with HRESULT and error blob as ComPtr<ID3DBlob>.
     hide static auto CompileBlob (
         const std::string& src,
         const char* entrypointName,
         const char* target,
         BeShaderIncludeHandler* includeHandler
-    ) -> ComPtr<ID3DBlob>;
+    ) -> std::expected<
+        ComPtr<ID3DBlob>, 
+        std::pair <HRESULT, ComPtr<ID3DBlob>>
+    >;
     
     
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////

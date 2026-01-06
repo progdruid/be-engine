@@ -43,7 +43,7 @@ workspace "be"
 project "core"
     kind "StaticLib"
     language "C++"
-    cppdialect "C++20"
+    cppdialect "C++23"
     location "core"
 
     targetdir ("%{prj.location}/bin/%{cfg.architecture}/%{cfg.buildcfg}")
@@ -63,13 +63,13 @@ project "core"
         "%{prj.location}/src",
         "%{prj.location}/src/shaders",
         "vendor/Assimp/include",
-        "vendor/libassert/install/%{cfg.buildcfg}/include",
+        "vendor/libassert/%{cfg.buildcfg}/include",
         "vendor"
     }
     libdirs {
         "vendor/glfw/lib-vc2022",
         "vendor/Assimp/lib/x64",
-        "vendor/libassert/install/%{cfg.buildcfg}/lib"
+        "vendor/libassert/%{cfg.buildcfg}/lib"
     }
     links {
         "glfw3",
@@ -109,7 +109,7 @@ project "core"
 project "toolkit"
     kind "StaticLib"
     language "C++"
-    cppdialect "C++20"
+    cppdialect "C++23"
     location "toolkit"
 
     targetdir ("%{prj.location}/bin/%{cfg.architecture}/%{cfg.buildcfg}")
@@ -172,7 +172,7 @@ project "misc-configuration"
 project "example-game-1"
     kind "ConsoleApp"
     language "C++"
-    cppdialect "C++20"
+    cppdialect "C++23"
 
     location "example-game-1"
 
@@ -228,7 +228,7 @@ project "example-game-1"
 --project "example-quick-start"
 --    kind "ConsoleApp"
 --    language "C++"
---    cppdialect "C++20"
+--    cppdialect "C++23"
 --
 --    location "example-quick-start"
 --
