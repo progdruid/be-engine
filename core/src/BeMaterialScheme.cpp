@@ -24,6 +24,7 @@ auto BeMaterialScheme::CreateFromJson(
             auto descriptor = BeMaterialSamplerDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.SlotIndex = parsedProperty.Slot;
+            descriptor.DefaultSamplerDescString = parsedProperty.Default;
             materialScheme.Samplers.push_back(descriptor);
         }
         else if (parsedProperty.Type == "float") {

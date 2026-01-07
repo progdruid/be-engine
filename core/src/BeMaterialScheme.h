@@ -30,6 +30,7 @@ struct BeMaterialTextureDescriptor {
 struct BeMaterialSamplerDescriptor {
     std::string Name;
     uint8_t SlotIndex;
+    std::string DefaultSamplerDescString;
 };
 
 class BeMaterialScheme {

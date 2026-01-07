@@ -37,7 +37,7 @@ void BeLightingPass::Initialise() {
     _directionalLightMaterial->SetTexture("Diffuse", BeAssetRegistry::GetTexture(InputTexture0Name).lock());
     _directionalLightMaterial->SetTexture("WorldNormal", BeAssetRegistry::GetTexture(InputTexture1Name).lock());
     _directionalLightMaterial->SetTexture("Specular_Shininess", BeAssetRegistry::GetTexture(InputTexture2Name).lock());
-    _directionalLightMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
+    //_directionalLightMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
     
     _pointLightShader = BeAssetRegistry::GetShader("point-light").lock();
     const auto& pointScheme = BeAssetRegistry::GetMaterialScheme("point-light-material");
@@ -46,7 +46,7 @@ void BeLightingPass::Initialise() {
     _pointLightMaterial->SetTexture("Diffuse", BeAssetRegistry::GetTexture(InputTexture0Name).lock());
     _pointLightMaterial->SetTexture("WorldNormal", BeAssetRegistry::GetTexture(InputTexture1Name).lock());
     _pointLightMaterial->SetTexture("Specular_Shininess", BeAssetRegistry::GetTexture(InputTexture2Name).lock());
-    _pointLightMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
+    //_pointLightMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
 }
 
 auto BeLightingPass::Render() -> void {

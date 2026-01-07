@@ -55,8 +55,6 @@ class BeRenderer {
     std::shared_ptr<BePipeline> _pipeline = nullptr;
 
     ComPtr<ID3D11Buffer> _uniformBuffer;
-    ComPtr<ID3D11SamplerState> _pointSampler;
-    ComPtr<ID3D11SamplerState> _postProcessLinearClampSampler;
     ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
 
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
@@ -91,8 +89,6 @@ class BeRenderer {
     [[nodiscard]] auto GetDevice() const -> ComPtr<ID3D11Device> { return _device; }
     [[nodiscard]] auto GetContext() const -> ComPtr<ID3D11DeviceContext> { return _context; }
     [[nodiscard]] auto GetPipeline() const -> std::shared_ptr<BePipeline> { return _pipeline; }
-    [[nodiscard]] auto GetPointSampler() const -> ComPtr<ID3D11SamplerState> { return _pointSampler; }
-    [[nodiscard]] auto GetPostProcessLinearClampSampler() const -> ComPtr<ID3D11SamplerState> { return _postProcessLinearClampSampler; }
     [[nodiscard]] auto GetBackbufferTarget() const -> ComPtr<ID3D11RenderTargetView> { return _backbufferTarget; }
 
     [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }

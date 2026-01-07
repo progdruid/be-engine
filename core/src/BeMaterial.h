@@ -82,7 +82,7 @@ class BeMaterial {
     auto SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void;
     auto GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture>;
 
-    auto SetSampler(const std::string& propertyName, ComPtr<ID3D11SamplerState> sampler) -> void;
+    auto SetSampler(const std::string& propertyName, const ComPtr<ID3D11SamplerState>& sampler) -> void;
     auto GetSampler(const std::string& propertyName) const -> ComPtr<ID3D11SamplerState>;
     
     auto UpdateGPUBuffers (const ComPtr<ID3D11DeviceContext>& context) -> bool;

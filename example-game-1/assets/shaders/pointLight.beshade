@@ -16,7 +16,7 @@
     "Specular_Shininess: texture2d(3) = black",
     "PointLightShadowMap: texture2d(4) = black",
 
-    "InputSampler: sampler(0)"
+    "InputSampler: sampler(0) = point-clamp"
 ]
 @be-end
 

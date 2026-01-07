@@ -1,9 +1,11 @@
 #pragma once
 
 #include <cassert>
+#include <d3d11.h>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <wrl/client.h>
 
 #include "BeMaterialScheme.h"
 #include "umbrellas/include-libassert.h"
@@ -14,6 +16,8 @@ class BeShader;
 class BeMaterial;
 struct BeModel;
 
+using Microsoft::WRL::ComPtr;
+
 class BeAssetRegistry {
     
     hide
@@ -23,6 +27,7 @@ class BeAssetRegistry {
     
     static std::unordered_map<std::string, std::shared_ptr<BeShader>> _shaders;
     static std::unordered_map<std::string, BeMaterialScheme> _materialSchemes;
+    static std::unordered_map<std::string, ComPtr<ID3D11SamplerState>> _samplers;
     static std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _materials;
     static std::unordered_map<std::string, std::shared_ptr<BeTexture>> _textures;
     static std::unordered_map<std::string, std::shared_ptr<BeModel>> _models;
@@ -46,6 +51,8 @@ class BeAssetRegistry {
 
     static auto GetMaterialScheme(std::string_view name) -> BeMaterialScheme { be_assert(_materialSchemes.contains(std::string(name))); return _materialSchemes.at(std::string(name)); }
     static auto HasMaterialScheme(std::string_view name) -> bool { return _materialSchemes.contains(std::string(name)); }
+    
+    static auto GetSampler (std::string_view samplerDescString) -> ComPtr<ID3D11SamplerState>;
     
     // Material
     static auto AddMaterial(std::string_view name, std::shared_ptr<BeMaterial> material) -> void { _materials[std::string(name)] = material; }
