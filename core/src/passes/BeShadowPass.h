@@ -7,6 +7,7 @@
 
 #include "BeRenderPass.h"
 
+class BeMaterial;
 struct BePointLight;
 struct BeDirectionalLight;
 
@@ -17,7 +18,7 @@ class BeShadowPass final : public BeRenderPass {
     std::span<BePointLight> PointLights;
 
     hide
-    ComPtr<ID3D11Buffer> _objectBuffer;
+    std::shared_ptr<BeMaterial> _objectMaterial;
     
     expose
     explicit BeShadowPass() = default;
