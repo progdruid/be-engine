@@ -75,7 +75,7 @@ auto BeModel::Create(
             material->SetFloat("Shininess", shininess);
         }
 
-        material->SetSampler("InputSampler", renderer.GetPointSampler());
+        material->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
     }
 
     for (const auto & material : assimpIndexToMaterial | std::views::values) {

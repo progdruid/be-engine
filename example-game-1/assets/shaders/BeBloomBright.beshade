@@ -7,7 +7,7 @@
     "Knee: float = 1.25",
 
     "HDRInput: texture2d(0) = black",
-    "InputSampler: sampler(0)",
+    "InputSampler: sampler(0) = linear-clamp",
 ]
 @be-end
 

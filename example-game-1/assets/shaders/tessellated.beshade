@@ -11,7 +11,7 @@
     "AnimationSpeed: float = 1.5",
     "NoiseFrequency: float = 30.0",
 
-    "InputSampler: sampler(0)",
+    "InputSampler: sampler(0) = point-clamp",
 ]
 @be-end
 

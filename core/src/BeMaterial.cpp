@@ -73,7 +73,9 @@ auto BeMaterial::InitialiseSlotMaps() -> void {
     }
 
     for (const auto& property : _scheme.Samplers) {
-        _samplers[property.Name] = { nullptr, property.SlotIndex };
+        auto sampler = BeAssetRegistry::GetSampler(property.DefaultSamplerDescString);
+        be_assert(sampler, "Invalid behaviour: BeAssetRegistry::GetSampler returned nullptr. This should never happen");
+        _samplers[property.Name] = { sampler, property.SlotIndex };
     }
 }
 
@@ -164,7 +166,9 @@ auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::share
     return _textures.at(propertyName).first;
 }
 
-auto BeMaterial::SetSampler(const std::string& propertyName, ComPtr<ID3D11SamplerState> sampler) -> void {
+
+
+auto BeMaterial::SetSampler(const std::string& propertyName, const ComPtr<ID3D11SamplerState>& sampler) -> void {
     assert(_samplers.contains(propertyName));
     _samplers.at(propertyName).first = sampler;
 }

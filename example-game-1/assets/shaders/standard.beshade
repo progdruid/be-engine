@@ -10,7 +10,8 @@
     "DiffuseTexture: texture2d(0) = white",
     "SpecularTexture: texture2d(1) = black",
 
-    "InputSampler: sampler(0)",
+    "InputSampler: sampler(0) = linear-clamp",
+    //"InputSampler: sampler(0) = point-clamp",
 ]
 @be-end
 

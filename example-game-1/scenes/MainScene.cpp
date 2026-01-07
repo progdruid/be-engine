@@ -244,7 +244,7 @@ auto MainScene::OnLoad() -> void {
     const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
     const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, *_renderer);
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
-    tonemapperMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
+    //tonemapperMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     _renderer->AddRenderPass(tonemapperPass);
     tonemapperPass->OutputTextureNames = {"TonemapperOutput"};

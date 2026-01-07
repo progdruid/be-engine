@@ -2,159 +2,136 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Build System
+## Building and Development
 
-This project uses Premake5 to generate Visual Studio solutions:
-- Generate VS2022 solution: `./premake5 vs2022`
-- Generate VS2019 solution: `./premake5 vs2019`
-- Clean generated files: `./premake5 clean`
-
-After generating the solution, build using Visual Studio or MSBuild. The premake5.exe executable is included in the repository root.
-
-## Project Structure
-
-The workspace contains three main projects:
-
-### core (Static Library)
-The main engine library (`core/src/`) containing:
-- Rendering system (Direct3D 11)
-- Asset management (models, textures, materials, shaders)
-- Core engine components (window, input, camera)
-- Custom `.beshade` shader format
-
-### toolkit (Static Library)
-Higher-level utilities built on top of core (`toolkit/`):
-- Scene management system (`scenes/BeSceneManager.h`)
-- EnTT integration for entity-component system
-- ImGui integration
-
-### example-game-1 (Executable)
-Example game project demonstrating engine usage:
-- Links against both `core` and `toolkit`
-- Custom game scenes in `example-game-1/scenes/`
-- Assets in `example-game-1/assets/`
-- Entry point: `example-game-1/main.cpp`, game logic in `Game.cpp`
-
-## Architecture Overview
-
-### Rendering Pipeline
-The engine uses a deferred rendering architecture with a multi-pass system:
-
-1. **BeRenderer**: Central renderer managing the D3D11 device, context, and render passes
-   - Owns shared vertex/index buffers for all models (batched geometry)
-   - Maintains `_drawEntries` submitted each frame via `SubmitDrawEntry()`
-   - Executes render passes in sequence via `AddRenderPass()` and `Render()`
-
-2. **BeRenderPass**: Base class for all render passes (core/src/passes/BeRenderPass.h)
-   - GeometryPass: Renders scene to G-buffer (diffuse, normals, specular)
-   - ShadowPass: Generates shadow maps
-   - LightingPass: Deferred lighting calculations
-   - BloomPass: HDR bloom effect (bright extraction + Kawase blur)
-   - BackbufferPass: Final output with tonemapping
-
-3. **BePipeline**: Manages render targets and intermediate textures for the deferred pipeline
-
-### Material System
-The engine features a custom material system with two key components:
-
-1. **BeMaterialScheme**: Defines the structure of a material type
-   - Created from `.beshade` files via `@be-material:` blocks
-   - Specifies properties (float, float2-4, matrix), textures, and samplers
-   - Materials reference schemes by name
-
-2. **BeMaterial**: Instances of material schemes with actual values
-   - Automatically manages constant buffers for properties
-   - Properties marked dirty and uploaded to GPU via `UpdateGPUBuffers()`
-   - Can be "frequently used" for optimization
-
-### Shader System (.beshade files)
-Custom shader format combining HLSL with metadata:
-
-- `@be-material:` blocks define material schemes (properties, textures, samplers with defaults)
-- `@be-shader:` blocks define shader metadata (topology, entry points, vertex layout, render targets)
-- Shaders can declare multiple material slots with different schemes (e.g., `geometry-object` at slot 1, `geometry-main` at slot 2)
-- `#include` directives supported for sharing material definitions between shaders (e.g., `#include "objectMaterial.beshade"`)
-- Standard HLSL code follows the metadata blocks
-
-**Material Lookup System**:
-- **Link names** (e.g., "geometry-main") map to **scheme names** (e.g., "standard-material-for-geometry-pass")
-- Use `BeShader::GetMaterialSchemeName(linkName)` to get scheme name from link name
-- Use `BeShader::GetMaterialSlotByScheme(schemeName)` for slot lookup (used by `BindMaterialAutomatic`)
-- Access material schemes via `BeAssetRegistry::GetMaterialScheme(schemeName)` - never use `BeMaterialScheme::Create`
-
-### Asset Management
-**BeAssetRegistry** is a static service (all methods and members are static, no instantiation):
-- Call `IndexShaderFiles(filePaths, renderer)` to scan `.beshade` files - auto-registers shaders and material schemes
-- Assets accessed via static methods: `GetShader()`, `GetMaterialScheme()`, `GetTexture()`, etc.
-- All `Get*()` methods assert if asset not found - use `Has*()` to check existence first
-- Static member variables declared in .h must be defined in BeAssetRegistry.cpp (C++ requirement)
-
-### Model Loading
-**BeModel** represents 3D geometry:
-- Loads via Assimp (supports common formats: FBX, OBJ, etc.)
-- Contains `DrawSlices` (sub-meshes with materials), vertices, indices
-- Models registered with renderer via `RegisterModels()` then baked into shared buffers via `BakeModels()`
-- Each DrawSlice references a BeMaterial
-
-### Scene System (toolkit)
-**BeSceneManager** manages game scenes:
-- Scenes registered via `RegisterScene(name, unique_ptr<BeScene>)`
-- Scene changes requested via `RequestSceneChange()`, applied via `ApplyPendingSceneChange()`
-- Active scene accessible via `GetActiveScene()` with optional type-safe template version
-
-## Key Dependencies
-- **Direct3D 11**: Graphics API (Windows only)
-- **GLFW**: Window and input handling
-- **GLM**: Math library
-- **Assimp**: Model loading
-- **nlohmann/json**: JSON parsing (for material schemes)
-- **stb_image**: Image loading
-- **EnTT**: Entity-component system (in toolkit)
-- **ImGui**: Debug UI (in toolkit)
-
-## Access Modifiers
-The codebase uses custom access modifier macros from `umbrellas/access-modifiers.hpp`:
-- `expose`: Public members/methods
-- `hide`: Private members/methods
-- `protect`: Protected members/methods
-
-These replace standard C++ `public:`/`private:`/`protected:` keywords for a different code style.
-
-## Important Build Details
-- Language: C++20
-- Platform: Windows x64
-- Configurations: Debug and Release
-- Post-build steps copy shaders and assets to output directory
-- Assimp DLL copied to executable directory
-
-## Common Patterns
-
-### Creating and Using Materials
-```cpp
-// Material scheme automatically registered when shaders indexed
-auto scheme = BeAssetRegistry::GetMaterialScheme("standard-material-for-geometry-pass");
-auto material = BeMaterial::Create("myMaterial", scheme, false, renderer);
-material->SetFloat3("DiffuseColor", glm::vec3(1.0, 0.5, 0.2));
-material->SetTexture("DiffuseTexture", myTexture);
-BeAssetRegistry::AddMaterial("myMaterial", material);
+**Clean and Generate Visual Studio 2022 project files:**
+```bash
+./premake5 vs2022
 ```
 
-### Submitting Draw Calls
-```cpp
-BeRenderer::DrawEntry entry;
-entry.Position = glm::vec3(0, 0, 0);
-entry.Scale = glm::vec3(1, 1, 1);
-entry.Model = myModel;
-entry.CastShadows = true;
-renderer->SubmitDrawEntry(entry);
+**Clean generated project files:**
+```bash
+./premake5 clean
 ```
 
-### Setting Up Render Pipeline
-```cpp
-renderer->AddRenderPass(new BeGeometryPass());
-renderer->AddRenderPass(new BeShadowPass());
-renderer->AddRenderPass(new BeLightingPass());
-renderer->AddRenderPass(new BeBloomPass());
-renderer->AddRenderPass(new BeBackbufferPass());
-renderer->InitialisePasses();
-```
+After generating, open `be.sln` in Visual Studio 2022. The solution contains:
+- `core` - Static library with the graphics engine (C++23)
+- `toolkit` - Static library with utilities (scene management, ImGui integration)
+- `example-game-1` - Example executable demonstrating engine usage
+- `misc-configuration` - Non-buildable project containing configuration files
+
+## Project Architecture
+
+### Core Engine (`core/src`)
+
+The engine is a **deferred rendering DirectX 11 graphics engine** built with modern C++ (C++23).
+
+**Key Components:**
+
+1. **Rendering System**
+   - `BeRenderer` - Main renderer class managing D3D11 device, swapchain, and render passes
+   - `BePipeline` - GPU pipeline state management, shader binding, and resource caching
+   - `BeRenderPass` - Base class for deferred rendering passes (geometry, lighting, shadow, bloom, etc.)
+   - Deferred lighting pipeline: GeometryPass → ShadowPass → LightingPass → BloomPass → Backbuffer
+
+2. **Shader System**
+   - `BeShader` - Wraps D3D11 shader objects (vertex, hull, domain, pixel)
+   - Custom `.beshade` shader format with metadata for materials and texture slots
+   - `BeShaderIncludeHandler` - Manages shader include resolution and compilation
+   - `BeShaderTools` - Utilities for shader compilation and error reporting
+   - Shaders use HLSL with include files in `core/src/shaders/`
+
+3. **Material System**
+   - `BeMaterial` - Defines material properties and texture bindings
+   - `BeMaterialScheme` - Schema for material layout and properties
+   - Materials can be bound to material slots in shaders for dynamic property updates
+
+4. **Model and Asset Management**
+   - `BeModel` - Loaded 3D models using Assimp (supports FBX, OBJ, etc.)
+   - `BeAssetRegistry` - Caches loaded models and textures to prevent duplicate loading
+   - Models are baked into draw slices for efficient rendering
+
+5. **Texture System**
+   - `BeTexture` - Wraps D3D11 textures, supports various formats
+   - Textures loaded via Assimp or directly from disk (DDS, PNG, etc.)
+   - Supports standard texture slots for diffuse, normal, roughness, metallic, etc.
+
+6. **Camera and Input**
+   - `BeCamera` - View/projection matrices, frustum culling
+   - `BeInput` - Keyboard and mouse input handling
+
+7. **Buffers**
+   - `BeBuffers.h` - CPU-to-GPU constant buffer definitions
+   - Shared vertex and index buffers for efficient batching
+   - Uniform buffer for camera, lighting, and global render state
+
+### Toolkit (`toolkit`)
+
+**Scene System:**
+- `BeSceneManager` - Manages multiple scenes with deferred scene switching
+- `BeScene` - Base class for scenes; override `OnLoad()` and `OnUnload()`
+
+**ImGui Integration:**
+- `BeImGuiPass` - Render pass for immediate-mode UI overlays
+- Accepts UI callback function for drawing UI each frame
+
+**EnTT Integration:**
+- Entity Component System (ECS) available in `toolkit/entt/`
+
+## Key Design Patterns
+
+1. **Access Modifiers Umbrella** (`umbrellas/access-modifiers.hpp`)
+   - Uses custom macros: `expose`, `hide`, `protect` for semantic clarity
+   - `expose` = public API, `hide` = private implementation, `protect` = protected for inheritance
+
+2. **Deferred Rendering Pipeline**
+   - Render passes execute in sequence: each writes to intermediate targets
+   - `BeRenderer::Render()` calls each pass in order
+   - Draw entries submitted per-frame; passes consume and process them
+
+3. **Shader Binding Cache**
+   - `BePipeline` maintains resource and constant buffer caches to avoid redundant D3D11 calls
+   - Separate caches for vertex, tessellation, and pixel shader stages
+
+4. **Asset Caching**
+   - `BeAssetRegistry` prevents reloading duplicate models/textures
+   - Critical for performance in larger projects
+
+## Common Development Tasks
+
+**Adding a new render pass:**
+1. Create header in `core/src/passes/BeXxxPass.h` inheriting from `BeRenderPass`
+2. Implement `Initialise()` and `Render()` methods
+3. Use `_renderer` to access device, pipeline, and draw entries
+4. Register in game setup: `renderer->AddRenderPass(new MyPass())`
+
+**Adding a new shader:**
+1. Create `.beshade` or `.hlsl` file in `core/src/shaders/`
+2. Use `BeShader::Create(path, renderer)` to load and compile
+3. Bind to pipeline: `pipeline->BindShader(shader, BeShaderType::All)`
+4. Define vertex semantics using `BeVertexElementDescriptor`
+
+**Creating a new scene:**
+1. Inherit from `BeScene`
+2. Implement `OnLoad()` to set up models, lights, cameras
+3. Register with scene manager: `sceneManager->RegisterScene("name", std::make_unique<MyScene>())`
+
+## Dependencies
+
+- **DirectX 11** - Graphics API
+- **GLFW3** - Window management
+- **Assimp** - Model loading
+- **GLM** - Math library
+- **libassert** - Assertion/debugging (static linking)
+- **nlohmann/json** - JSON parsing for shader metadata
+- **ImGui** - UI toolkit (in toolkit/)
+- **EnTT** - Entity Component System (in toolkit/)
+
+## Important Notes
+
+- **C++23 required** - Uses modern C++ features (concepts, expected, etc.)
+- **Windows-only** - Direct3D 11 is Windows-specific
+- **64-bit target** - Architecture set to x86_64
+- **Static linking** - libassert is statically linked; copy appropriate config binaries during build
+- **Shader compilation errors** are reported with file/line info via libassert
+- **Debug vs Release** - Debug has full symbols and no optimization; Release is fully optimized

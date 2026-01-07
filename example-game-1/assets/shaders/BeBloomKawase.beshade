@@ -6,7 +6,7 @@
     "PassRadius: float = 0.5",
 
     "BloomMipInput: texture2d(0) = black",
-    "InputSampler: sampler(0)",
+    "InputSampler: sampler(0) = linear-clamp",
 ]
 @be-end
 

@@ -15,7 +15,7 @@ auto BeBloomPass::Initialise() -> void {
     auto brightScheme = BeAssetRegistry::GetMaterialScheme("bright-material");
     _brightMaterial = BeMaterial::Create("Bright Pass Material", brightScheme, false, *_renderer);
     _brightMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture(InputHDRTextureName).lock());
-    _brightMaterial->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
+    //_brightMaterial->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
 
     _kawaseShader = BeAssetRegistry::GetShader("bloom-kawase").lock();
     auto kawaseScheme = BeAssetRegistry::GetMaterialScheme("kawase-material");;
@@ -40,7 +40,7 @@ auto BeBloomPass::Initialise() -> void {
         mat->SetFloat2("TexelSize", glm::vec2(texelSizeX, texelSizeY));
         mat->SetFloat("PassRadius", passRadius);
         mat->SetTexture("BloomMipInput", sourceMip);
-        mat->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
+        //mat->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
         mat->UpdateGPUBuffers(_renderer->GetContext().Get());
 
         _downsampleMaterials[mipTarget] = mat;
@@ -66,7 +66,7 @@ auto BeBloomPass::Initialise() -> void {
         mat->SetFloat2("TexelSize", glm::vec2(texelSizeX, texelSizeY));
         mat->SetFloat("PassRadius", upsampleRadius);
         mat->SetTexture("BloomMipInput", sourceMip);
-        mat->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
+        //mat->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
         mat->UpdateGPUBuffers(_renderer->GetContext().Get());
 
         _upsampleMaterials[mipTarget] = mat;
@@ -78,7 +78,7 @@ auto BeBloomPass::Initialise() -> void {
     _addMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture(InputHDRTextureName).lock());
     _addMaterial->SetTexture("BloomInput", BeAssetRegistry::GetTexture(BloomMipTextureName + "0").lock());
     _addMaterial->SetTexture("DirtTexture", BeAssetRegistry::GetTexture(DirtTextureName).lock());
-    _addMaterial->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
+    //_addMaterial->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
 }
 
 auto BeBloomPass::Render() -> void {
