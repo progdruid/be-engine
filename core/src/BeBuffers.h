@@ -34,18 +34,6 @@ struct alignas(16) BeUniformBufferGPU {
 };
 
 
-struct alignas(16) BeObjectBufferGPU {
-    glm::mat4x4 Model;
-    glm::mat4x4 ViewProjection;
-    glm::vec3 ViewerPosition;
-    
-    explicit BeObjectBufferGPU(const glm::mat4x4& model, const glm::mat4x4& viewProjection, const glm::vec3& viewerPosition) {
-        Model = model;
-        ViewProjection = viewProjection;
-        ViewerPosition = viewerPosition;
-    }
-};
-
 struct BeDirectionalLight {
     // Light properties (for lighting pass)
     glm::vec3 Direction;
@@ -69,21 +57,6 @@ struct BeDirectionalLight {
         const glm::vec3 lightPos = -Direction * ShadowCameraDistance;
         const glm::mat4 lightView = glm::lookAtLH(lightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         ViewProjection = lightOrtho * lightView;
-    }
-};
-
-struct alignas(16) BeDirectionalLightLightingBufferGPU {
-    glm::vec4 Direction;
-    glm::vec3 Color;
-    float Power;
-    glm::mat4x4 ViewProjection;
-    float TexelSize;
-    explicit BeDirectionalLightLightingBufferGPU(const BeDirectionalLight& light) {
-        Direction = glm::vec4(light.Direction, 0.0f);
-        Color = light.Color;
-        Power = light.Power;
-        ViewProjection = light.ViewProjection;
-        TexelSize = 1.0f / light.ShadowMapResolution;
     }
 };
 

@@ -4,18 +4,15 @@
 #include <scope_guard/scope_guard.hpp>
 
 #include "BeAssetRegistry.h"
+#include "BeMaterial.h"
 #include "BeModel.h"
 #include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
 
 auto BeShadowPass::Initialise() -> void {
-    D3D11_BUFFER_DESC objectBufferDescriptor = {};
-    objectBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    objectBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
-    objectBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    objectBufferDescriptor.ByteWidth = sizeof(BeObjectBufferGPU);
-    Utils::Check << _renderer->GetDevice()->CreateBuffer(&objectBufferDescriptor, nullptr, &_objectBuffer);
+    auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
+    _objectMaterial = BeMaterial::Create("object", objectScheme, true, *_renderer);
 }
 
 auto BeShadowPass::Render() -> void {
@@ -80,17 +77,12 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
             glm::mat4_cast(entry.Rotation) *
             glm::scale(glm::mat4(1.0f), entry.Scale);
         
-        BeObjectBufferGPU objectData(modelMatrix, directionalLight->ViewProjection, glm::vec3(0.f));
-        D3D11_MAPPED_SUBRESOURCE objectMappedResource;
-        Utils::Check << context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &objectMappedResource);
-        memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
-        context->Unmap(_objectBuffer.Get(), 0);
-        context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        if (HasAny(entry.Model->Shader->ShaderType, BeShaderType::Tesselation)) {
-            context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-            context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-        }
-
+        _objectMaterial->SetMatrix("Model", modelMatrix);
+        _objectMaterial->SetMatrix("ProjectionView", directionalLight->ViewProjection);
+        _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
+        _objectMaterial->UpdateGPUBuffers(context);
+        pipeline->BindMaterialAutomatic(_objectMaterial);
+        
         const auto & drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
         for (const auto& slice : drawSlices) {
             pipeline->BindMaterialAutomatic(slice.Material);
@@ -99,11 +91,6 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
 
         pipeline->Clear();
     }
-    
-    context->VSSetConstantBuffers(1, 2, Utils::NullBuffers);
-    context->HSSetConstantBuffers(1, 2, Utils::NullBuffers);
-    context->DSSetConstantBuffers(1, 2, Utils::NullBuffers);
-    
 }
 
 auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void {
@@ -152,17 +139,12 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
                 glm::translate(glm::mat4(1.0f), entry.Position) *
                 glm::mat4_cast(entry.Rotation) *
                 glm::scale(glm::mat4(1.0f), entry.Scale);
-
-            BeObjectBufferGPU objectData(modelMatrix, faceViewProj, pointLight.Position);
-            D3D11_MAPPED_SUBRESOURCE objectMappedResource;
-            Utils::Check << context->Map(_objectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &objectMappedResource);
-            memcpy(objectMappedResource.pData, &objectData, sizeof(BeObjectBufferGPU));
-            context->Unmap(_objectBuffer.Get(), 0);
-            context->VSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-            if (HasAny(entry.Model->Shader->ShaderType, BeShaderType::Tesselation)) {
-                context->HSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-                context->DSSetConstantBuffers(1, 1, _objectBuffer.GetAddressOf());
-            }
+            
+            _objectMaterial->SetMatrix("Model", modelMatrix);
+            _objectMaterial->SetMatrix("ProjectionView", faceViewProj);
+            _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
+            _objectMaterial->UpdateGPUBuffers(context);
+            pipeline->BindMaterialAutomatic(_objectMaterial);
             
             // draw
             const auto& drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
