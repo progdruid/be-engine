@@ -31,6 +31,8 @@ newaction {
     end
 }
 
+
+
 -- workspace and project definitions
 workspace "be"
     configurations { "Debug", "Release" }
@@ -38,6 +40,7 @@ workspace "be"
     architecture "x86_64"
     location "."
     startproject "example-quick-start"
+
 
 -- core
 project "core"
@@ -62,14 +65,14 @@ project "core"
     includedirs {
         "%{prj.location}/src",
         "%{prj.location}/src/shaders",
-        "vendor/Assimp/include",
         "vendor/libassert/%{cfg.buildcfg}/include",
+        "vendor/Assimp/include",
         "vendor"
     }
     libdirs {
         "vendor/glfw/lib-vc2022",
-        "vendor/Assimp/lib/x64",
-        "vendor/libassert/%{cfg.buildcfg}/lib"
+        "vendor/libassert/%{cfg.buildcfg}/lib",
+        "vendor/Assimp/lib/x64"
     }
     links {
         "glfw3",
@@ -85,6 +88,7 @@ project "core"
         "cpptrace",
         "dbghelp"
     }
+
     defines { "LIBASSERT_STATIC_DEFINE" }
 
     filter { "files:**.hlsl" }
@@ -104,6 +108,7 @@ project "core"
         buildoptions { "/Zc:__cplusplus /Zc:preprocessor" }
 
     filter {}
+
 
 -- toolkit
 project "toolkit"
@@ -126,6 +131,8 @@ project "toolkit"
         "%{prj.location}",
         "core/src",
         "vendor",
+        "vendor/libassert/%{cfg.buildcfg}/include",
+        "vendor/Assimp/include",
     }
     libdirs { "vendor/glfw/lib-vc2022", "vendor/Assimp/lib/x64" }
     links {

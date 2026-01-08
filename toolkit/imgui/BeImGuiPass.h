@@ -3,7 +3,7 @@
 #include <functional>
 #include <memory>
 
-#include "passes/BeRenderPass.h"
+#include "BeRenderPass.h"
 
 class BeWindow;
 

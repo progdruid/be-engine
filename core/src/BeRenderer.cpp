@@ -6,7 +6,7 @@
 
 #include "BeModel.h"
 #include "BePipeline.h"
-#include "passes/BeRenderPass.h"
+#include "BeRenderPass.h"
 #include "BeShader.h"
 #include "Utils.h"
 
