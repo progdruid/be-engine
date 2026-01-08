@@ -57,9 +57,7 @@ auto MainScene::Prepare() -> void {
 
     BeAssetRegistry::InjectRenderer(_renderer);
     BeAssetRegistry::IndexShaderFiles({ 
-        "assets/shaders/standard.beshade", 
-        "assets/shaders/tessellated.beshade", 
-        "assets/shaders/terrain.beshade", 
+        "assets/shaders/standard.beshade",
         "assets/shaders/objectMaterial.beshade", 
         "assets/shaders/fullscreen-vertex.beshade", 
         "assets/shaders/directionalLight.beshade", 
@@ -72,20 +70,14 @@ auto MainScene::Prepare() -> void {
     });
     
     const auto standardShader = BeAssetRegistry::GetShader("standard");
-    const auto tessellatedShader = BeAssetRegistry::GetShader("tessellated");
     
-    _plane = CreatePlane(64);
-    _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, *_renderer);
-    _cube = BeModel::Create("assets/cube.glb", tessellatedShader, *_renderer);
+    _cube = BeModel::Create("assets/cube.glb", standardShader, *_renderer);
     _cube->Materials[0]->SetFloat3("DiffuseColor", glm::vec3(0.28, 0.39, 1.0));
-    _macintosh = BeModel::Create("assets/model.fbx", standardShader, *_renderer);
-    _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, *_renderer);
-    _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, *_renderer);
     _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *_renderer);
-    _anvil->DrawSlices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
+    _anvil->Materials[0]->SetFloat3("SpecularColor", glm::vec3(1.0f));
 
     const std::vector<std::shared_ptr<BeModel>> models {
-        _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil
+        _cube, _anvil
     };
     _renderer->RegisterModels(models);
 
@@ -197,11 +189,6 @@ auto MainScene::Prepare() -> void {
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
-
-    BeTexture::Create("BloomDirtTexture")
-    .LoadFromFile("assets/bloom-dirt-mask.png")
-    .AddToRegistry()
-    .BuildNoReturn(device);
 }
 
 auto MainScene::OnLoad() -> void {
@@ -230,6 +217,10 @@ auto MainScene::OnLoad() -> void {
     lightingPass->InputTexture2Name = "Specular-Shininess";
     lightingPass->OutputTextureName = "HDR-Input";
 
+    BeTexture::Create("BloomDirtTexture")
+    .LoadFromFile("assets/bloom-dirt-mask.png")
+    .AddToRegistry()
+    .BuildNoReturn(_renderer->GetDevice());
     const auto bloomPass = new BeBloomPass();
     _renderer->AddRenderPass(bloomPass);
     bloomPass->InputHDRTextureName = "HDR-Input";
@@ -242,7 +233,6 @@ auto MainScene::OnLoad() -> void {
     const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
     const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, *_renderer);
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
-    //tonemapperMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     _renderer->AddRenderPass(tonemapperPass);
     tonemapperPass->OutputTextureNames = {"TonemapperOutput"};
@@ -257,50 +247,19 @@ auto MainScene::OnLoad() -> void {
     _renderer->InitialisePasses();
     
     auto entity = _registry.create();
-    _registry.emplace<NameComponent>(entity, "Macintosh");
-    _registry.emplace<TransformComponent>(entity, glm::vec3(0, 0, -6.9), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(1.f));
-    _registry.emplace<RenderComponent>(entity, _macintosh, true);
-
-    entity = _registry.create();
-    _registry.emplace<NameComponent>(entity, "Plane");
-    _registry.emplace<TransformComponent>(entity, glm::vec3(0, 0, 0), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(1.f));
-    _registry.emplace<RenderComponent>(entity, _plane, false);
-    
-    entity = _registry.create();
-    _registry.emplace<NameComponent>(entity, "LivingCube");
-    _registry.emplace<TransformComponent>(entity, glm::vec3(0, 10, 0), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(2.f));
+    _registry.emplace<NameComponent>(entity, "Cube");
+    _registry.emplace<TransformComponent>(entity, glm::vec3(0, 0, 0), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(2.f));
     _registry.emplace<RenderComponent>(entity, _cube, true);
-    
-    entity = _registry.create();
-    _registry.emplace<NameComponent>(entity, "Pagoda");
-    _registry.emplace<TransformComponent>(entity, glm::vec3(0, 0, 8), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(0.2f));
-    _registry.emplace<RenderComponent>(entity, _pagoda, true);
-    
-    entity = _registry.create();
-    _registry.emplace<NameComponent>(entity, "WitchItems");
-    _registry.emplace<TransformComponent>(entity, glm::vec3(-3, 2, 5), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(3.f));
-    _registry.emplace<RenderComponent>(entity, _witchItems, true);
     
     entity = _registry.create();
     _registry.emplace<NameComponent>(entity, "Anvil1");
     _registry.emplace<TransformComponent>(entity, glm::vec3(7, 0, 5), glm::quat(glm::vec3(0, glm::radians(90.f), 0)), glm::vec3(0.2f));
     _registry.emplace<RenderComponent>(entity, _anvil, true);
     
-    entity = _registry.create();
-    _registry.emplace<NameComponent>(entity, "Anvil2");
-    _registry.emplace<TransformComponent>(entity, glm::vec3(-7, 0, -3), glm::quat(glm::vec3(0, glm::radians(-90.f), 0)), glm::vec3(0.2f));
-    _registry.emplace<RenderComponent>(entity, _anvil, true);
-    
-    entity = _registry.create();
-    _registry.emplace<NameComponent>(entity, "Anvil3");
-    _registry.emplace<TransformComponent>(entity, glm::vec3(-17, -10, -3), glm::quat(glm::vec3(0, glm::radians(-90.f), 0)), glm::vec3(1.0f));
-    _registry.emplace<RenderComponent>(entity, _anvil, true);
-    
-    entity = _registry.create();
-    _registry.emplace<NameComponent>(entity, "Disks");
-    _registry.emplace<TransformComponent>(entity, glm::vec3(7.5f, 1, -4), glm::quat(glm::vec3(0, glm::radians(150.f), 0)), glm::vec3(1.f));
-    _registry.emplace<RenderComponent>(entity, _disks, true);
-
+    //entity = _registry.create();
+    //_registry.emplace<NameComponent>(entity, "Pagoda");
+    //_registry.emplace<TransformComponent>(entity, glm::vec3(0, 0, 8), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(0.2f));
+    //_registry.emplace<RenderComponent>(entity, _pagoda, true);
     
 }
 
@@ -390,64 +349,6 @@ auto MainScene::Tick(float deltaTime) -> void {
     });
 }
 
-auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
-    const auto shader = BeAssetRegistry::GetShader("terrain").lock();
-    const auto& scheme = BeAssetRegistry::GetMaterialScheme("terrain-main-material-for-geometry-pass");
-    auto material = BeMaterial::Create("TerrainMat", scheme, true, *_renderer);
-    material->SetFloat("TerrainScale", 200.0f);
-    material->SetFloat("HeightScale", 100.0f);
 
-    auto model = std::make_shared<BeModel>();
-    model->Shader = shader;
-    model->Materials.push_back(material);
-
-    const float cellSize = 1.0f / (verticesPerSide - 1);
-
-    model->FullVertices.reserve(verticesPerSide * verticesPerSide);
-    for (int y = 0; y < verticesPerSide; ++y) {
-        for (int x = 0; x < verticesPerSide; ++x) {
-            BeFullVertex vertex{};
-
-            float posX = x * cellSize - 0.5f;
-            float posZ = y * cellSize - 0.5f;
-
-            vertex.Position = {-posX, 0.0f, posZ};
-            vertex.Normal = {0.0f, 1.0f, 0.0f};
-            vertex.Color = {1.0f, 1.0f, 1.0f, 1.0f};
-            vertex.UV0 = {x * cellSize, y * cellSize};
-
-            model->FullVertices.push_back(vertex);
-        }
-    }
-
-    size_t quadsPerSide = verticesPerSide - 1;
-    model->Indices.reserve(quadsPerSide * quadsPerSide * 6);
-
-    for (int y = 0; y < quadsPerSide; ++y) {
-        for (int x = 0; x < quadsPerSide; ++x) {
-            uint32_t topLeft = y * verticesPerSide + x;
-            uint32_t topRight = y * verticesPerSide + (x + 1);
-            uint32_t bottomLeft = (y + 1) * verticesPerSide + x;
-            uint32_t bottomRight = (y + 1) * verticesPerSide + (x + 1);
-
-            model->Indices.push_back(topLeft);
-            model->Indices.push_back(topRight);
-            model->Indices.push_back(bottomLeft);
-
-            model->Indices.push_back(topRight);
-            model->Indices.push_back(bottomRight);
-            model->Indices.push_back(bottomLeft);
-        }
-    }
-
-    BeDrawSlice slice{};
-    slice.IndexCount = static_cast<uint32_t>(model->Indices.size());
-    slice.StartIndexLocation = 0;
-    slice.BaseVertexLocation = 0;
-    slice.Material = material;
-    model->DrawSlices.push_back(slice);
-
-    return model;
-}
 
 

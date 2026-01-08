@@ -42,7 +42,7 @@ class MainScene : public BaseScene {
     std::shared_ptr<BeDirectionalLight> _directionalLight;
     std::vector<BePointLight> _pointLights;
 
-    std::shared_ptr<BeModel> _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil;
+    std::shared_ptr<BeModel> _cube, _anvil;
 
     expose
     MainScene(
@@ -58,7 +58,4 @@ class MainScene : public BaseScene {
     
     auto GetRegistry() -> entt::registry& { return _registry; }
     auto GetCamera() -> std::shared_ptr<BeCamera> { return _camera; }
-    
-private:
-    auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel>;
 };
