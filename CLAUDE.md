@@ -100,7 +100,7 @@ The engine is a **deferred rendering DirectX 11 graphics engine** built with mod
 ## Common Development Tasks
 
 **Adding a new render pass:**
-1. Create header in `core/src/passes/BeXxxPass.h` inheriting from `BeRenderPass`
+1. Create header in `toolkit/basic-renderer/BeXxxPass.h` inheriting from `BeRenderPass`
 2. Implement `Initialise()` and `Render()` methods
 3. Use `_renderer` to access device, pipeline, and draw entries
 4. Register in game setup: `renderer->AddRenderPass(new MyPass())`

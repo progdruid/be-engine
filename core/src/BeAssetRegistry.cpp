@@ -96,7 +96,12 @@ auto BeAssetRegistry::GetSampler(std::string_view samplerDescString) -> ComPtr<I
     }
 
     auto tokens = BeShaderTools::Split(samplerDescString, "-");
-    be_assert(tokens.size() == 2 || tokens.size() == 3, "Invalid samplerDescString. Expected format: filter-address[-cmp]", tokens.size());
+    be_assert(
+        tokens.size() == 2 || tokens.size() == 3, 
+        "Invalid samplerDescString. Expected format: filter-address[-cmp]", 
+        samplerDescString, 
+        tokens.size()
+    );
 
     auto filterToken = std::string(tokens[0]);
     auto addressToken = std::string(tokens[1]);
