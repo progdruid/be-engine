@@ -4,6 +4,7 @@
 #include <scope_guard/scope_guard.hpp>
 
 #include "BeAssetRegistry.h"
+#include "BeBRPSubmissionBuffer.h"
 #include "BeMaterial.h"
 #include "BeModel.h"
 #include "BePipeline.h"
@@ -23,36 +24,45 @@ auto BeShadowPass::Render() -> void {
     context->RSGetViewports(&numViewports,  &previousViewport);
     SCOPE_EXIT { context->RSSetViewports(1, &previousViewport); };
 
-    if (DirectionalLight.lock()->CastsShadows) {
-        Utils::BeDebugAnnotation directionalLightAnnotation(context, "Directional Light Shadows");
-        RenderDirectionalShadows();
+    const auto& submissionBuffer = *SubmissionBuffer.lock();
+    
+    const auto& sunLights = submissionBuffer.GetSunLightEntries();
+    for (size_t i = 0; i < sunLights.size(); ++i) {
+        if (!sunLights[i].CastsShadows)
+            continue;
+        
+        Utils::BeDebugAnnotation directionalLightAnnotation(context, "Directional Light Shadows " + std::to_string(i));
+        RenderDirectionalShadows(sunLights[0], submissionBuffer);
     }
 
-    for (size_t i = 0; i < PointLights.size(); i++) {
-        if (!PointLights[i].CastsShadows)
+    const auto& pointLights = submissionBuffer.GetPointLightEntries();
+    for (size_t i = 0; i < pointLights.size(); i++) {
+        if (!pointLights[i].CastsShadows)
             continue;
 
         Utils::BeDebugAnnotation pointLightAnnotation(context, "Point Light Shadows " + std::to_string(i));
-        RenderPointLightShadows(PointLights[i]);
+        RenderPointLightShadows(pointLights[i], submissionBuffer);
     }
 }
 
-auto BeShadowPass::RenderDirectionalShadows() -> void {
-    const auto context = _renderer->GetContext();
+auto BeShadowPass::RenderDirectionalShadows(
+    const BeBRPSunLightEntry& sunLight,
+    const BeBRPSubmissionBuffer& submissionBuffer
+) const -> void {
+    const auto& context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-    const auto directionalLight = DirectionalLight.lock();
-
+    
     // sort out viewport
     D3D11_VIEWPORT viewport = {};
-    viewport.Width = directionalLight->ShadowMapResolution;
-    viewport.Height = directionalLight->ShadowMapResolution;
+    viewport.Width = sunLight.ShadowMapResolution;
+    viewport.Height = sunLight.ShadowMapResolution;
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     context->RSSetViewports(1, &viewport);
 
     // sort out render target
-    context->OMSetRenderTargets(0, Utils::NullRTVs, directionalLight->ShadowMap->GetDSV().Get());
-    context->ClearDepthStencilView(directionalLight->ShadowMap->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    context->OMSetRenderTargets(0, Utils::NullRTVs, sunLight.ShadowMap.lock()->GetDSV().Get());
+    context->ClearDepthStencilView(sunLight.ShadowMap.lock()->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     SCOPE_EXIT { context->OMSetRenderTargets(0, nullptr, nullptr); };
 
     // Set vertex and index buffers
@@ -65,7 +75,7 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
         context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
     };
 
-    const auto& entries = _renderer->GetDrawEntries();
+    const auto& entries = submissionBuffer.GetGeometryEntries();
     for (const auto& entry : entries) {
         if (!entry.CastShadows)
             continue;
@@ -78,7 +88,7 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
             glm::scale(glm::mat4(1.0f), entry.Scale);
         
         _objectMaterial->SetMatrix("Model", modelMatrix);
-        _objectMaterial->SetMatrix("ProjectionView", directionalLight->ViewProjection);
+        _objectMaterial->SetMatrix("ProjectionView", sunLight.ViewProjection);
         _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
         _objectMaterial->UpdateGPUBuffers(context);
         pipeline->BindMaterialAutomatic(_objectMaterial);
@@ -93,10 +103,12 @@ auto BeShadowPass::RenderDirectionalShadows() -> void {
     }
 }
 
-auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> void {
-
+auto BeShadowPass::RenderPointLightShadows(
+    const BeBRPPointLightEntry& pointLight, 
+    const BeBRPSubmissionBuffer& submissionBuffer
+) const -> void {
     // get what we need
-    const auto context = _renderer->GetContext();
+    const auto& context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
     
     // sort out vertex and index buffers
@@ -120,14 +132,14 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
     // render each face
     for (int face = 0; face < 6; face++) {
         // sort out render target
-        auto cubemapDSV = pointLight.ShadowMap->GetCubemapDSV(face);
+        auto cubemapDSV = pointLight.ShadowMap.lock()->GetCubemapDSV(face);
         context->ClearDepthStencilView(cubemapDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
         context->OMSetRenderTargets(0, nullptr, cubemapDSV.Get());
 
         const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
         // for each object
-        const auto& entries = _renderer->GetDrawEntries();
+        const auto& entries = submissionBuffer.GetGeometryEntries();
         for (const auto& entry : entries) {
             if (!entry.CastShadows)
                 continue;
@@ -160,7 +172,10 @@ auto BeShadowPass::RenderPointLightShadows(const BePointLight& pointLight) -> vo
     context->OMSetRenderTargets(0, nullptr, nullptr);
 }
 
-auto BeShadowPass::CalculatePointLightFaceViewProjection(const BePointLight& pointLight, const int faceIndex) -> glm::mat4 {
+auto BeShadowPass::CalculatePointLightFaceViewProjection(
+    const BeBRPPointLightEntry& pointLight, 
+    const int faceIndex
+) const -> glm::mat4 {
     static constexpr std::array<glm::vec3, 6> Forwards = {
         glm::vec3(1, 0, 0),
         glm::vec3(-1, 0, 0),

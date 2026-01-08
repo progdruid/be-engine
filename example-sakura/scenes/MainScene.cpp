@@ -12,12 +12,12 @@
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "BeWindow.h"
-#include "basic-pipeline/BeBackbufferPass.h"
-#include "basic-pipeline/BeBloomPass.h"
-#include "basic-pipeline/BeFullscreenEffectPass.h"
-#include "basic-pipeline/BeGeometryPass.h"
-#include "basic-pipeline/BeLightingPass.h"
-#include "basic-pipeline/BeShadowPass.h"
+#include "basic-render-pipeline/BeBackbufferPass.h"
+#include "basic-render-pipeline/BeBloomPass.h"
+#include "basic-render-pipeline/BeFullscreenEffectPass.h"
+#include "basic-render-pipeline/BeGeometryPass.h"
+#include "basic-render-pipeline/BeLightingPass.h"
+#include "basic-render-pipeline/BeShadowPass.h"
 
 MainScene::MainScene(
     const std::shared_ptr<BeRenderer>& renderer,
@@ -30,7 +30,8 @@ MainScene::MainScene(
 {}
 
 auto MainScene::Prepare() -> void {
-
+    _submissionBuffer = std::make_shared<BeBRPSubmissionBuffer>();
+    
     _camera = std::make_unique<BeCamera>(); 
     _camera->Width = _window->GetWidth();
     _camera->Height = _window->GetHeight();
@@ -82,48 +83,6 @@ auto MainScene::Prepare() -> void {
     _renderer->RegisterModels(models);
 
     _renderer->UniformData.AmbientColor = glm::vec3(0.1f);
-
-    _directionalLight = std::make_shared<BeDirectionalLight>();
-    _directionalLight->Direction = glm::normalize(glm::vec3(-0.8f, -1.0f, -0.8f));
-    _directionalLight->Color = glm::vec3(0.7f, 0.7f, 0.99);
-    _directionalLight->Power = (1.0f / 0.7f) * 0.7f;
-    _directionalLight->CastsShadows = true;
-    _directionalLight->ShadowMapResolution = 4096;
-    _directionalLight->ShadowCameraDistance = 100.0f;
-    _directionalLight->ShadowMapWorldSize = 60.0f;
-    _directionalLight->ShadowNearPlane = 0.1f;
-    _directionalLight->ShadowFarPlane = 400.0f;
-    _directionalLight->ShadowMap =
-    BeTexture::Create("DirectionalLightShadowMap")
-    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
-    .SetSize(_directionalLight->ShadowMapResolution, _directionalLight->ShadowMapResolution)
-    .AddToRegistry()
-    .Build(device);
-    _directionalLight->CalculateMatrix();
-
-    for (uint32_t i = 0; i < 4; ++i) {
-        BePointLight pointLight;
-
-        pointLight.Radius = 20.0f;
-        pointLight.Color = glm::vec3(0.99f, 0.8f, 0.6f);
-        pointLight.Power = (1.0f / 0.7f) * 2.7f;
-        pointLight.CastsShadows = true;
-        pointLight.ShadowMapResolution = 2048;
-        pointLight.ShadowNearPlane = 0.1f;
-
-        pointLight.ShadowMap =
-            BeTexture::Create("PointLight" + std::to_string(i) + "_ShadowMap")
-            .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-            .SetFormat(DXGI_FORMAT_R32_TYPELESS)
-            .SetCubemap(true)
-            .SetSize(pointLight.ShadowMapResolution, pointLight.ShadowMapResolution)
-            .AddToRegistry()
-            .Build(device);
-
-        _pointLights.push_back(pointLight);
-    }
-
 
     const uint32_t screenWidth = _window->GetWidth();
     const uint32_t screenHeight = _window->GetHeight();
@@ -192,16 +151,17 @@ auto MainScene::Prepare() -> void {
 }
 
 auto MainScene::OnLoad() -> void {
+    const auto& device = _renderer->GetDevice();
     
     _renderer->ClearPasses();
 
     const auto shadowPass = new BeShadowPass();
     _renderer->AddRenderPass(shadowPass);
-    shadowPass->DirectionalLight = _directionalLight;
-    shadowPass->PointLights = _pointLights;
+    shadowPass->SubmissionBuffer = _submissionBuffer;
 
     const auto geometryPass = new BeGeometryPass();
     _renderer->AddRenderPass(geometryPass);
+    geometryPass->SubmissionBuffer = _submissionBuffer;
     geometryPass->OutputDepthTexture = BeAssetRegistry::GetTexture("DepthStencil");
     geometryPass->OutputTexture0 = BeAssetRegistry::GetTexture("BaseColor");
     geometryPass->OutputTexture1 = BeAssetRegistry::GetTexture("WorldNormal");
@@ -209,8 +169,7 @@ auto MainScene::OnLoad() -> void {
 
     const auto lightingPass = new BeLightingPass();
     _renderer->AddRenderPass(lightingPass);
-    lightingPass->DirectionalLight = _directionalLight;
-    lightingPass->PointLights = _pointLights;
+    lightingPass->SubmissionBuffer = _submissionBuffer;
     lightingPass->InputDepthTexture = BeAssetRegistry::GetTexture("DepthStencil");
     lightingPass->InputTexture0 = BeAssetRegistry::GetTexture("BaseColor");
     lightingPass->InputTexture1 = BeAssetRegistry::GetTexture("WorldNormal");
@@ -266,7 +225,56 @@ auto MainScene::OnLoad() -> void {
     //_registry.emplace<NameComponent>(entity, "Pagoda");
     //_registry.emplace<TransformComponent>(entity, glm::vec3(0, 0, 8), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(0.2f));
     //_registry.emplace<RenderComponent>(entity, _pagoda, true);
+ 
+    entity = _registry.create();
+    _registry.emplace<NameComponent>(entity, "Moon");
+    _registry.emplace<TransformComponent>(entity, TransformComponent {
+        .Position = glm::vec3(0), 
+        .Rotation = glm::quat(glm::vec3(glm::radians(30.f), glm::radians(30.f), 0.f)),
+        .Scale = glm::vec3(1.f) 
+    });
+    _registry.emplace<SunLightComponent>(entity, SunLightComponent {
+        .Color = glm::vec3(0.7f, 0.7f, 0.99),
+        .Power = (1.0f / 0.7f) * 0.7f,
+        .CastsShadows = true,
+        .ShadowMapResolution = 4096,
+        .ShadowCameraDistance = 100.0f,
+        .ShadowMapWorldSize = 60.0f,
+        .ShadowNearPlane = 0.1f,
+        .ShadowFarPlane = 400.0f,
+        .ShadowMap = 
+            BeTexture::Create("SunLightShadowMap")
+            .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
+            .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+            .SetSize(4096, 4096)
+            .AddToRegistry()
+            .Build(device)
+    });
     
+    // point lights
+    for (uint32_t i = 0; i < 4; ++i) {
+        auto pointLight = PointLightComponent();
+        pointLight.Radius = 20.0f;
+        pointLight.Color = glm::vec3(0.99f, 0.8f, 0.6f);
+        pointLight.Power = (1.0f / 0.7f) * 2.7f;
+        pointLight.CastsShadows = true;
+        pointLight.ShadowMapResolution = 2048;
+        pointLight.ShadowNearPlane = 0.1f;
+
+        pointLight.ShadowMap =
+            BeTexture::Create("PointLight" + std::to_string(i) + "_ShadowMap")
+            .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
+            .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+            .SetCubemap(true)
+            .SetSize(pointLight.ShadowMapResolution, pointLight.ShadowMapResolution)
+            .AddToRegistry()
+            .Build(device);
+
+        entity = _registry.create();
+        _registry.emplace<NameComponent>(entity, "PointLight_" + std::to_string(i));
+        _registry.emplace<TransformComponent>(entity);
+        _registry.emplace<PointLightComponent>(entity, pointLight);
+    }
 }
 
 
@@ -332,26 +340,65 @@ auto MainScene::Tick(float deltaTime) -> void {
         if (angle > glm::two_pi<float>())
             angle -= glm::two_pi<float>();
 
-        for (int i = 0; i < _pointLights.size(); ++i) {
+        const auto pointLights = _registry.view<TransformComponent, PointLightComponent>();
+        auto i = size_t(0);
+        for (const auto& pointLight : pointLights) {
             constexpr float radius = 13.0f;
 
-            const auto add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(_pointLights.size()));
+            const auto add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(pointLights.size_hint()));
             const auto rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
             const auto pos = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
 
-            _pointLights[i].Position = pos;
+            auto& transform = _registry.get<TransformComponent>(pointLight);
+            transform.Position = pos;
+            
+            i++;
         }
     }
 
-    const auto renderView = _registry.view<TransformComponent, RenderComponent>();
-    renderView.each([this](auto& transform, auto& render) {
-        _renderer->SubmitDrawEntry(BeRenderer::DrawEntry{
+    _submissionBuffer->ClearEntries();
+    const auto geometryView = _registry.view<TransformComponent, RenderComponent>();
+    geometryView.each([this](auto& transform, auto& render) {
+        _submissionBuffer->SubmitGeometry(BeBRPGeometryEntry{
             .Position = transform.Position,
             .Rotation = transform.Rotation,
             .Scale = transform.Scale,
             .Model = render.Model,
             .CastShadows = render.CastShadows,
         });
+    });
+    
+    const auto sunView = _registry.view<TransformComponent, SunLightComponent>();
+    sunView.each([this](auto& transform, auto& sunLight) {
+        auto entry = BeBRPSunLightEntry{
+            .Direction = {-1, -1, 0},
+            .Color = sunLight.Color,
+            .Power = sunLight.Power,
+            .CastsShadows = sunLight.CastsShadows,
+            .ShadowMapResolution = sunLight.ShadowMapResolution,
+            .ShadowCameraDistance = sunLight.ShadowCameraDistance,
+            .ShadowMapWorldSize = sunLight.ShadowMapWorldSize,
+            .ShadowNearPlane = sunLight.ShadowNearPlane,
+            .ShadowFarPlane = sunLight.ShadowFarPlane,
+            .ShadowMap = sunLight.ShadowMap
+        };
+        entry.CalculateMatrix();
+        _submissionBuffer->SubmitSunLight(entry);
+    });
+    
+    const auto pointLightView = _registry.view<TransformComponent, PointLightComponent>();
+    pointLightView.each([this](auto& transform, auto& pointLight) {
+        auto entry = BeBRPPointLightEntry{
+            .Position = transform.Position,
+            .Radius = pointLight.Radius,
+            .Color = pointLight.Color,
+            .Power = pointLight.Power,
+            .CastsShadows = pointLight.CastsShadows,
+            .ShadowMapResolution = pointLight.ShadowMapResolution,
+            .ShadowNearPlane = pointLight.ShadowNearPlane,
+            .ShadowMap = pointLight.ShadowMap
+        };
+        _submissionBuffer->SubmitPointLight(entry);
     });
 }
 

@@ -9,6 +9,10 @@
 #include "entt/entt.hpp"
 #include "BaseScene.h"
 
+class BeTexture;
+struct BeBRPPointLightEntry;
+struct BeBRPSunLightEntry;
+class BeBRPSubmissionBuffer;
 class BeWindow;
 class BeInput;
 class BeCamera;
@@ -32,18 +36,43 @@ struct NameComponent {
     std::string Name;
 };
 
+struct SunLightComponent {
+    // light
+    glm::vec3 Color;
+    float Power;
+    
+    // shadow
+    bool CastsShadows = true;
+    uint32_t ShadowMapResolution;
+    float ShadowCameraDistance;
+    float ShadowMapWorldSize;
+    float ShadowNearPlane;
+    float ShadowFarPlane;
+    std::weak_ptr<BeTexture> ShadowMap;
+};
+
+struct PointLightComponent {
+    float Radius;
+    glm::vec3 Color;
+    float Power;
+
+    bool CastsShadows = false;
+    uint32_t ShadowMapResolution = 1024;
+    float ShadowNearPlane = 0.1f; // far plane is radius
+    std::weak_ptr<BeTexture> ShadowMap; 
+};
+
 class MainScene : public BaseScene {
     hide
     entt::registry _registry;
+    std::shared_ptr<BeBRPSubmissionBuffer> _submissionBuffer;
     std::shared_ptr<BeRenderer> _renderer;
     std::shared_ptr<BeWindow> _window;
     std::shared_ptr<BeCamera> _camera;
     std::shared_ptr<BeInput> _input;
-    std::shared_ptr<BeDirectionalLight> _directionalLight;
-    std::vector<BePointLight> _pointLights;
-
+    
     std::shared_ptr<BeModel> _cube, _anvil;
-
+    
     expose
     MainScene(
         const std::shared_ptr<BeRenderer>& renderer,

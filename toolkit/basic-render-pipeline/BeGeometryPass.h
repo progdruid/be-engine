@@ -4,12 +4,16 @@
 
 #include "BeRenderPass.h"
 
+class BeBRPSubmissionBuffer;
 class BeTexture;
 class BeMaterial;
 class BeShader;
 
 class BeGeometryPass final : public BeRenderPass {
+    
     expose
+    std::weak_ptr<BeBRPSubmissionBuffer> SubmissionBuffer;
+    
     std::weak_ptr<BeTexture> OutputTexture0;
     std::weak_ptr<BeTexture> OutputTexture1;
     std::weak_ptr<BeTexture> OutputTexture2;

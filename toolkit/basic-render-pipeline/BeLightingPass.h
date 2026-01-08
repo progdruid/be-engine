@@ -5,6 +5,7 @@
 
 #include "BeRenderPass.h"
 
+class BeBRPSubmissionBuffer;
 class BeTexture;
 struct BePointLight;
 struct BeDirectionalLight;
@@ -14,8 +15,7 @@ class BeRenderer;
 
 class BeLightingPass final : public BeRenderPass {
     expose
-    std::weak_ptr<BeDirectionalLight> DirectionalLight;
-    std::span<const BePointLight> PointLights;
+    std::weak_ptr<BeBRPSubmissionBuffer> SubmissionBuffer;
 
     std::weak_ptr<BeTexture> InputTexture0;
     std::weak_ptr<BeTexture> InputTexture1;

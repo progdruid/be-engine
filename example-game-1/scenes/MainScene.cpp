@@ -12,12 +12,12 @@
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "BeWindow.h"
-#include "basic-pipeline/BeBackbufferPass.h"
-#include "basic-pipeline/BeBloomPass.h"
-#include "basic-pipeline/BeFullscreenEffectPass.h"
-#include "basic-pipeline/BeGeometryPass.h"
-#include "basic-pipeline/BeLightingPass.h"
-#include "basic-pipeline/BeShadowPass.h"
+#include "basic-render-pipeline/BeBackbufferPass.h"
+#include "basic-render-pipeline/BeBloomPass.h"
+#include "basic-render-pipeline/BeFullscreenEffectPass.h"
+#include "basic-render-pipeline/BeGeometryPass.h"
+#include "basic-render-pipeline/BeLightingPass.h"
+#include "basic-render-pipeline/BeShadowPass.h"
 
 MainScene::MainScene(
     const std::shared_ptr<BeRenderer>& renderer,

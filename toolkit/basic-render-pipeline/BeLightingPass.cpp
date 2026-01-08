@@ -4,6 +4,7 @@
 #include <umbrellas/include-glm.h>
 
 #include "BeAssetRegistry.h"
+#include "BeBRPSubmissionBuffer.h"
 #include "BeMaterial.h"
 #include "BePipeline.h"
 #include "BeRenderer.h"
@@ -48,6 +49,7 @@ void BeLightingPass::Initialise() {
 }
 
 auto BeLightingPass::Render() -> void {
+    const auto& submissionBuffer = *SubmissionBuffer.lock();
     const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
     
@@ -63,23 +65,24 @@ auto BeLightingPass::Render() -> void {
     // directional light
     pipeline->BindShader(_directionalLightShader, BeShaderType::Vertex | BeShaderType::Pixel);
         
-    const auto sunLight = DirectionalLight.lock();
-    _directionalLightMaterial->SetFloat("HasShadowMap", sunLight->CastsShadows ? 1.0f : 0.0f);
-    _directionalLightMaterial->SetFloat3("Direction", sunLight->Direction);
-    _directionalLightMaterial->SetFloat3("Color", sunLight->Color);
-    _directionalLightMaterial->SetFloat("Power", sunLight->Power);
-    _directionalLightMaterial->SetMatrix("ProjectionView", sunLight->ViewProjection);
-    _directionalLightMaterial->SetFloat("TexelSize", 1.0f / sunLight->ShadowMapResolution);
-    _directionalLightMaterial->SetTexture("ShadowMap", sunLight->ShadowMap);
+    const auto& sunLight = submissionBuffer.GetSunLightEntries()[0];
+    _directionalLightMaterial->SetFloat("HasShadowMap", sunLight.CastsShadows ? 1.0f : 0.0f);
+    _directionalLightMaterial->SetFloat3("Direction", sunLight.Direction);
+    _directionalLightMaterial->SetFloat3("Color", sunLight.Color);
+    _directionalLightMaterial->SetFloat("Power", sunLight.Power);
+    _directionalLightMaterial->SetMatrix("ProjectionView", sunLight.ViewProjection);
+    _directionalLightMaterial->SetFloat("TexelSize", 1.0f / sunLight.ShadowMapResolution);
+    _directionalLightMaterial->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
     pipeline->BindMaterialAutomatic(_directionalLightMaterial);
-        
+    
     context->Draw(4, 0);
+    _directionalLightMaterial->SetTexture("ShadowMap", nullptr);
     pipeline->Clear();
 
 
     // point lights
     pipeline->BindShader(_pointLightShader, BeShaderType::Vertex | BeShaderType::Pixel);
-    for (const auto& pointLight : PointLights) {
+    for (const auto& pointLight : submissionBuffer.GetPointLightEntries()) {
         _pointLightMaterial->SetFloat3("Position", pointLight.Position);
         _pointLightMaterial->SetFloat("Radius", pointLight.Radius);
         _pointLightMaterial->SetFloat3("Color", pointLight.Color);
@@ -87,10 +90,13 @@ auto BeLightingPass::Render() -> void {
         _pointLightMaterial->SetFloat("HasShadowMap", pointLight.CastsShadows ? 1.0f : 0.0f);
         _pointLightMaterial->SetFloat("ShadowMapResolution", pointLight.ShadowMapResolution);
         _pointLightMaterial->SetFloat("ShadowNearPlane", pointLight.ShadowNearPlane);
-        _pointLightMaterial->SetTexture("PointLightShadowMap", pointLight.ShadowMap);
+        // TODO: super uncool, material shouldnt own anything ideally. or should it?
+        _pointLightMaterial->SetTexture("PointLightShadowMap", pointLight.ShadowMap.lock()); 
         pipeline->BindMaterialAutomatic(_pointLightMaterial);
     
         context->Draw(4, 0);
     }
+    
+    _pointLightMaterial->SetTexture("PointLightShadowMap", nullptr);
     pipeline->Clear();
 }

@@ -68,7 +68,7 @@ auto Game::MainLoop() -> void {
             activeScene->Tick(dt);
         }
 
-        _sceneManager->ApplyPendingSceneChange();
         _renderer->Render();
+        _sceneManager->ApplyPendingSceneChange();
     }
 }

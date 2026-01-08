@@ -5,6 +5,7 @@
 #include <umbrellas/include-glm.h>
 
 #include "BeAssetRegistry.h"
+#include "BeBRPSubmissionBuffer.h"
 #include "BeMaterial.h"
 #include "BeModel.h"
 #include "BePipeline.h"
@@ -57,7 +58,7 @@ auto BeGeometryPass::Render() -> void {
 
     
     // Draw all objects
-    const auto& entries = _renderer->GetDrawEntries();
+    const auto& entries = SubmissionBuffer.lock()->GetGeometryEntries();
     for (const auto& entry : entries) {
         const auto shader = entry.Model->Shader;
         assert(shader);
