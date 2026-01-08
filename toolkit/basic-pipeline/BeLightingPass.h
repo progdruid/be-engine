@@ -5,6 +5,7 @@
 
 #include "BeRenderPass.h"
 
+class BeTexture;
 struct BePointLight;
 struct BeDirectionalLight;
 class BeMaterial;
@@ -16,11 +17,11 @@ class BeLightingPass final : public BeRenderPass {
     std::weak_ptr<BeDirectionalLight> DirectionalLight;
     std::span<const BePointLight> PointLights;
 
-    std::string InputTexture0Name;
-    std::string InputTexture1Name;
-    std::string InputTexture2Name;
-    std::string InputDepthTextureName;
-    std::string OutputTextureName;
+    std::weak_ptr<BeTexture> InputTexture0;
+    std::weak_ptr<BeTexture> InputTexture1;
+    std::weak_ptr<BeTexture> InputTexture2;
+    std::weak_ptr<BeTexture> InputDepthTexture;
+    std::weak_ptr<BeTexture> OutputTexture;
     
     hide
     ComPtr<ID3D11BlendState> _lightingBlendState;

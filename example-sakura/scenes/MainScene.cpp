@@ -202,20 +202,20 @@ auto MainScene::OnLoad() -> void {
 
     const auto geometryPass = new BeGeometryPass();
     _renderer->AddRenderPass(geometryPass);
-    geometryPass->OutputDepthTextureName = "DepthStencil";
-    geometryPass->OutputTexture0Name = "BaseColor";
-    geometryPass->OutputTexture1Name = "WorldNormal";
-    geometryPass->OutputTexture2Name = "Specular-Shininess";
+    geometryPass->OutputDepthTexture = BeAssetRegistry::GetTexture("DepthStencil");
+    geometryPass->OutputTexture0 = BeAssetRegistry::GetTexture("BaseColor");
+    geometryPass->OutputTexture1 = BeAssetRegistry::GetTexture("WorldNormal");
+    geometryPass->OutputTexture2 = BeAssetRegistry::GetTexture("Specular-Shininess");
 
     const auto lightingPass = new BeLightingPass();
     _renderer->AddRenderPass(lightingPass);
     lightingPass->DirectionalLight = _directionalLight;
     lightingPass->PointLights = _pointLights;
-    lightingPass->InputDepthTextureName = "DepthStencil";
-    lightingPass->InputTexture0Name = "BaseColor";
-    lightingPass->InputTexture1Name = "WorldNormal";
-    lightingPass->InputTexture2Name = "Specular-Shininess";
-    lightingPass->OutputTextureName = "HDR-Input";
+    lightingPass->InputDepthTexture = BeAssetRegistry::GetTexture("DepthStencil");
+    lightingPass->InputTexture0 = BeAssetRegistry::GetTexture("BaseColor");
+    lightingPass->InputTexture1 = BeAssetRegistry::GetTexture("WorldNormal");
+    lightingPass->InputTexture2 = BeAssetRegistry::GetTexture("Specular-Shininess");
+    lightingPass->OutputTexture = BeAssetRegistry::GetTexture("HDR-Input");
 
     BeTexture::Create("BloomDirtTexture")
     .LoadFromFile("assets/bloom-dirt-mask.png")
@@ -223,11 +223,17 @@ auto MainScene::OnLoad() -> void {
     .BuildNoReturn(_renderer->GetDevice());
     const auto bloomPass = new BeBloomPass();
     _renderer->AddRenderPass(bloomPass);
-    bloomPass->InputHDRTextureName = "HDR-Input";
-    bloomPass->BloomMipTextureName = "Bloom_Mip";
+    bloomPass->InputHDRTexture = BeAssetRegistry::GetTexture("HDR-Input");
+    bloomPass->BloomMipTextures = {
+        BeAssetRegistry::GetTexture("Bloom_Mip0"),
+        BeAssetRegistry::GetTexture("Bloom_Mip1"),
+        BeAssetRegistry::GetTexture("Bloom_Mip2"),
+        BeAssetRegistry::GetTexture("Bloom_Mip3"),
+        BeAssetRegistry::GetTexture("Bloom_Mip4"),
+    };
     bloomPass->BloomMipCount = 5;
-    bloomPass->DirtTextureName = "BloomDirtTexture";
-    bloomPass->OutputTextureName = "BloomOutput";
+    bloomPass->DirtTexture = BeAssetRegistry::GetTexture("BloomDirtTexture");
+    bloomPass->OutputTexture = BeAssetRegistry::GetTexture("BloomOutput");
 
     const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.beshade", *_renderer);
     const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
@@ -241,7 +247,7 @@ auto MainScene::OnLoad() -> void {
 
     const auto backbufferPass = new BeBackbufferPass();
     _renderer->AddRenderPass(backbufferPass);
-    backbufferPass->InputTextureName = "TonemapperOutput";
+    backbufferPass->InputTexture = BeAssetRegistry::GetTexture("TonemapperOutput");
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
     
     _renderer->InitialisePasses();
