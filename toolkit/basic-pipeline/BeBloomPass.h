@@ -6,17 +6,18 @@
 
 #include "BeRenderPass.h"
 
+class BeTexture;
 class BeMaterial;
 class BeShader;
 
 class BeBloomPass final : public BeRenderPass {
     
     expose
-    std::string InputHDRTextureName;
-    std::string BloomMipTextureName;
+    std::weak_ptr<BeTexture> InputHDRTexture;
+    std::vector<std::weak_ptr<BeTexture>> BloomMipTextures;
     uint32_t BloomMipCount;
-    std::string OutputTextureName;
-    std::string DirtTextureName;
+    std::weak_ptr<BeTexture> OutputTexture;
+    std::weak_ptr<BeTexture> DirtTexture;
     
     hide
     std::shared_ptr<BeShader> _brightShader;

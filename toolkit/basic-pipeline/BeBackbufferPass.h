@@ -5,6 +5,7 @@
 
 #include "BeRenderPass.h"
 
+class BeTexture;
 class BeMaterial;
 class BeShader;
 
@@ -13,7 +14,7 @@ class BeBackbufferPass final : public BeRenderPass {
 public:
     glm::vec3 ClearColor;
 
-    std::string InputTextureName;
+    std::weak_ptr <BeTexture> InputTexture;
     
 private:
     std::shared_ptr<BeShader> _backbufferShader = nullptr;

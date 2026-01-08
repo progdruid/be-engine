@@ -33,27 +33,25 @@ void BeLightingPass::Initialise() {
     _directionalLightShader = BeAssetRegistry::GetShader( "directional-light").lock();
     const auto& directionalScheme = BeAssetRegistry::GetMaterialScheme("directional-light-material");;
     _directionalLightMaterial = BeMaterial::Create("DirectionalLightMaterial", directionalScheme, true, *_renderer);
-    _directionalLightMaterial->SetTexture("Depth", BeAssetRegistry::GetTexture(InputDepthTextureName).lock());
-    _directionalLightMaterial->SetTexture("Diffuse", BeAssetRegistry::GetTexture(InputTexture0Name).lock());
-    _directionalLightMaterial->SetTexture("WorldNormal", BeAssetRegistry::GetTexture(InputTexture1Name).lock());
-    _directionalLightMaterial->SetTexture("Specular_Shininess", BeAssetRegistry::GetTexture(InputTexture2Name).lock());
-    //_directionalLightMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
+    _directionalLightMaterial->SetTexture("Depth", InputDepthTexture.lock());
+    _directionalLightMaterial->SetTexture("Diffuse", InputTexture0.lock());
+    _directionalLightMaterial->SetTexture("WorldNormal", InputTexture1.lock());
+    _directionalLightMaterial->SetTexture("Specular_Shininess", InputTexture2.lock());
     
     _pointLightShader = BeAssetRegistry::GetShader("point-light").lock();
     const auto& pointScheme = BeAssetRegistry::GetMaterialScheme("point-light-material");
     _pointLightMaterial = BeMaterial::Create("PointLightMaterial", pointScheme, true, *_renderer);
-    _pointLightMaterial->SetTexture("Depth", BeAssetRegistry::GetTexture(InputDepthTextureName).lock());
-    _pointLightMaterial->SetTexture("Diffuse", BeAssetRegistry::GetTexture(InputTexture0Name).lock());
-    _pointLightMaterial->SetTexture("WorldNormal", BeAssetRegistry::GetTexture(InputTexture1Name).lock());
-    _pointLightMaterial->SetTexture("Specular_Shininess", BeAssetRegistry::GetTexture(InputTexture2Name).lock());
-    //_pointLightMaterial->SetSampler("InputSampler", _renderer->GetPointSampler());
+    _pointLightMaterial->SetTexture("Depth", InputDepthTexture.lock());
+    _pointLightMaterial->SetTexture("Diffuse", InputTexture0.lock());
+    _pointLightMaterial->SetTexture("WorldNormal", InputTexture1.lock());
+    _pointLightMaterial->SetTexture("Specular_Shininess", InputTexture2.lock());
 }
 
 auto BeLightingPass::Render() -> void {
     const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
     
-    const auto lightingResource  = BeAssetRegistry::GetTexture(OutputTextureName).lock();
+    const auto lightingResource  = OutputTexture.lock();
     context->ClearRenderTargetView(lightingResource->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->OMSetRenderTargets(1, lightingResource->GetRTV().GetAddressOf(), nullptr);
     context->OMSetBlendState(_lightingBlendState.Get(), nullptr, 0xFFFFFFFF);

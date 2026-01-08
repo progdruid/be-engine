@@ -26,10 +26,10 @@ auto BeGeometryPass::Render() -> void {
     
     
     // Clear and set render targets
-    const auto depthResource    = BeAssetRegistry::GetTexture(OutputDepthTextureName).lock();
-    const auto gbufferResource0 = BeAssetRegistry::GetTexture(OutputTexture0Name).lock();
-    const auto gbufferResource1 = BeAssetRegistry::GetTexture(OutputTexture1Name).lock();
-    const auto gbufferResource2 = BeAssetRegistry::GetTexture(OutputTexture2Name).lock();
+    const auto depthResource    = OutputDepthTexture.lock();
+    const auto gbufferResource0 = OutputTexture0.lock();
+    const auto gbufferResource1 = OutputTexture1.lock();
+    const auto gbufferResource2 = OutputTexture2.lock();
     
     context->ClearDepthStencilView(depthResource->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     context->ClearRenderTargetView(gbufferResource0->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
