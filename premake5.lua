@@ -209,7 +209,7 @@ project "example-game-1"
     links { "core", "toolkit" }
 
     postbuildcommands {
-        "{COPY} %{wks.location}/core/src/shaders %{cfg.targetdir}/standardShaders",
+        "{COPY} %{wks.location}/core/src/shaders %{cfg.targetdir}/src/shaders",
         "{COPY} %{prj.location}/assets %{cfg.targetdir}/assets",
         "{COPY} %{wks.location}/vendor/Assimp/bin/x64/assimp-vc143-mt.dll %{cfg.targetdir}"
     }

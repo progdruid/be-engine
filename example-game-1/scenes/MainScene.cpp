@@ -38,9 +38,7 @@ auto MainScene::Prepare() -> void {
     _camera->FarPlane = 200.0f;
     
     const auto device = _renderer->GetDevice();
-
-    BeShader::StandardShaderIncludePath = "standardShaders/";
-
+    
     BeTexture::Create("white")
     .SetSize(1, 1)
     .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)

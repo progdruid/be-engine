@@ -203,11 +203,11 @@ auto BeMaterial::AssembleData() -> void {
         constexpr uint32_t registerSizeBytes = 16;
 
         static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> SizeMap = {
-            {BeMaterialPropertyDescriptor::Type::Float,  1 * sizeof(float)},
-            {BeMaterialPropertyDescriptor::Type::Float2, 2 * sizeof(float)},
-            {BeMaterialPropertyDescriptor::Type::Float3, 3 * sizeof(float)},
-            {BeMaterialPropertyDescriptor::Type::Float4, 4 * sizeof(float)},
-            {BeMaterialPropertyDescriptor::Type::Matrix, 16 * sizeof(float)},
+            {BeMaterialPropertyDescriptor::Type::Float,  uint32_t(1 * sizeof(float))},
+            {BeMaterialPropertyDescriptor::Type::Float2, uint32_t(2 * sizeof(float))},
+            {BeMaterialPropertyDescriptor::Type::Float3, uint32_t(3 * sizeof(float))},
+            {BeMaterialPropertyDescriptor::Type::Float4, uint32_t(4 * sizeof(float))},
+            {BeMaterialPropertyDescriptor::Type::Matrix, uint32_t(16 * sizeof(float))},
         };
         
         const uint32_t elementSizeBytes = SizeMap.at(property.PropertyType);
