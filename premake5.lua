@@ -57,7 +57,6 @@ project "core"
         "%{prj.location}/src/**.c",
         "%{prj.location}/src/**.h",
         "%{prj.location}/src/**.hpp",
-        "%{prj.location}/src/**.beshade",
         "%{prj.location}/src/**.hlsl",
         "%{prj.location}/src/**.hlsli",
     }
@@ -191,7 +190,6 @@ project "example-game-1"
         "%{prj.location}/**.cpp",
         "%{prj.location}/**.h",
         "%{prj.location}/**.hpp",
-        "%{prj.location}/assets/**.beshade",
         "%{prj.location}/assets/**.hlsl",
         "%{prj.location}/assets/**.hlsli",
     }
@@ -231,8 +229,8 @@ project "example-game-1"
         buildoptions { "/Zc:__cplusplus /Zc:preprocessor" }
 
     filter {}
-    
-    
+
+
 
 -- example sakura
 project "example-sakura"
@@ -250,7 +248,6 @@ project "example-sakura"
         "%{prj.location}/**.cpp",
         "%{prj.location}/**.h",
         "%{prj.location}/**.hpp",
-        "%{prj.location}/assets/**.beshade",
         "%{prj.location}/assets/**.hlsl",
         "%{prj.location}/assets/**.hlsli",
     }

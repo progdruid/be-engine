@@ -1,5 +1,6 @@
 #include "BePipeline.h"
 
+#include "BeAssetRegistry.h"
 #include "BeMaterial.h"
 #include "BeTexture.h"
 
@@ -67,13 +68,13 @@ auto BePipeline::BindMaterialManual(const std::shared_ptr<BeMaterial>& material,
     BindMaterialTextures(*material);
 
     const auto& samplerSlots = material->GetSamplerPairs();
-    for (const auto& [sampler, slot] : samplerSlots | std::views::values) {
+    for (auto& [sampler, slot] : samplerSlots | std::views::values) {
         auto sampPtr = sampler.Get();
         if (HasAny(_boundShaderType, BeShaderType::Vertex) && _vertexSamplerCache[slot] != sampPtr) {
             _context->VSSetSamplers(slot, 1, sampler.GetAddressOf());
             _vertexSamplerCache[slot] = sampPtr;
         }
-        if (HasAny(_boundShaderType, BeShaderType::Tesselation) && _tessSamplerCache[slot] != sampler.Get()) {
+        if (HasAny(_boundShaderType, BeShaderType::Tesselation) && _tessSamplerCache[slot] != sampPtr) {
             _context->HSSetSamplers(slot, 1, sampler.GetAddressOf());
             _context->DSSetSamplers(slot, 1, sampler.GetAddressOf());
             _tessSamplerCache[slot] = sampPtr;
