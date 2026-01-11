@@ -38,6 +38,7 @@ struct NameComponent {
 
 struct SunLightComponent {
     // light
+    glm::vec3 Direction;
     glm::vec3 Color;
     float Power;
     
@@ -59,8 +60,15 @@ struct PointLightComponent {
     bool CastsShadows = false;
     uint32_t ShadowMapResolution = 1024;
     float ShadowNearPlane = 0.1f; // far plane is radius
-    std::weak_ptr<BeTexture> ShadowMap; 
+    std::weak_ptr<BeTexture> ShadowMap;
 };
+
+template<typename... Components>
+auto CreateEntity(entt::registry& registry, Components&&... components) -> entt::entity {
+    auto entity = registry.create();
+    (registry.emplace<std::decay_t<Components>>(entity, std::forward<Components>(components)), ...);
+    return entity;
+}
 
 class MainScene : public BaseScene {
     hide

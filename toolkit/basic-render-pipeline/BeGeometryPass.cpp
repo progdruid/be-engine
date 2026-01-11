@@ -65,13 +65,8 @@ auto BeGeometryPass::Render() -> void {
         
         pipeline->BindShader(shader, BeShaderType::All);
         SCOPE_EXIT { pipeline->Clear(); };
-
-        const glm::mat4x4 modelMatrix =
-            glm::translate(glm::mat4(1.0f), entry.Position) *
-            glm::mat4_cast(entry.Rotation) *
-            glm::scale(glm::mat4(1.0f), entry.Scale);
         
-        _objectMaterial->SetMatrix("Model", modelMatrix);
+        _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", _renderer->UniformData.ProjectionView);
         _objectMaterial->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
         _objectMaterial->UpdateGPUBuffers(context);

@@ -70,7 +70,7 @@ auto BeLightingPass::Render() -> void {
     _directionalLightMaterial->SetFloat3("Direction", sunLight.Direction);
     _directionalLightMaterial->SetFloat3("Color", sunLight.Color);
     _directionalLightMaterial->SetFloat("Power", sunLight.Power);
-    _directionalLightMaterial->SetMatrix("ProjectionView", sunLight.ViewProjection);
+    _directionalLightMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
     _directionalLightMaterial->SetFloat("TexelSize", 1.0f / sunLight.ShadowMapResolution);
     _directionalLightMaterial->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
     pipeline->BindMaterialAutomatic(_directionalLightMaterial);
