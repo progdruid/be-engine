@@ -8,11 +8,15 @@ class BeTexture;
 struct BeModel;
 
 struct BeBRPGeometryEntry {
-    glm::vec3 Position = {0.f, 0.f, 0.f};
-    glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
-    glm::vec3 Scale = {1.f, 1.f, 1.f};
-    std::shared_ptr<BeModel> Model = nullptr;
-    bool CastShadows = true;
+    glm::mat4 ModelMatrix;
+    std::shared_ptr<BeModel> Model;
+    bool CastShadows;
+    
+    static auto CalculateModelMatrix(
+        glm::vec3 pos,
+        glm::quat rot,
+        glm::vec3 scale
+    ) -> glm::mat4; 
 };
 
 struct BeBRPSunLightEntry {
@@ -22,35 +26,29 @@ struct BeBRPSunLightEntry {
     float Power;
 
     // Shadow map properties (for shadow pass)
-    bool CastsShadows = true;
+    bool CastsShadows;
+    glm::mat4 ShadowViewProjection;
     uint32_t ShadowMapResolution;
-    float ShadowCameraDistance;
-    float ShadowMapWorldSize;
-    float ShadowNearPlane;
-    float ShadowFarPlane;
     std::weak_ptr<BeTexture> ShadowMap;
-
-    glm::mat4 ViewProjection;
-
-    auto CalculateMatrix() -> void {
-        const float halfSize = ShadowMapWorldSize * 0.5f;
-        const glm::mat4 lightOrtho = glm::orthoLH_ZO(-halfSize, halfSize, -halfSize, halfSize, ShadowNearPlane, ShadowFarPlane);
-        const glm::vec3 lightPos = -Direction * ShadowCameraDistance;
-        const glm::mat4 lightView = glm::lookAtLH(lightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        ViewProjection = lightOrtho * lightView;
-    }
+    
+    static auto CalculateViewProj(
+        glm::vec3 direction,    
+        float shadowCameraDistance,
+        float shadowMapWorldSize,
+        float shadowNearPlane,
+        float shadowFarPlane
+    ) -> glm::mat4;
 };
 
 struct BeBRPPointLightEntry {
-    expose
     glm::vec3 Position;
     float Radius;
     glm::vec3 Color;
     float Power;
 
-    bool CastsShadows = false;
-    uint32_t ShadowMapResolution = 1024;
-    float ShadowNearPlane = 0.1f; // far plane is radius
+    bool CastsShadows;
+    uint32_t ShadowMapResolution;
+    float ShadowNearPlane;
     std::weak_ptr<BeTexture> ShadowMap; 
 };
 

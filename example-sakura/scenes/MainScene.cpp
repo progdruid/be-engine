@@ -211,74 +211,74 @@ auto MainScene::OnLoad() -> void {
     
     _renderer->InitialisePasses();
     
-    auto entity = _registry.create();
-    _registry.emplace<NameComponent>(entity, "Cube");
-    _registry.emplace<TransformComponent>(entity, glm::vec3(0, 0, 0), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(2.f));
-    _registry.emplace<RenderComponent>(entity, _cube, true);
     
-    entity = _registry.create();
-    _registry.emplace<NameComponent>(entity, "Anvil1");
-    _registry.emplace<TransformComponent>(entity, glm::vec3(7, 0, 5), glm::quat(glm::vec3(0, glm::radians(90.f), 0)), glm::vec3(0.2f));
-    _registry.emplace<RenderComponent>(entity, _anvil, true);
-    
-    //entity = _registry.create();
-    //_registry.emplace<NameComponent>(entity, "Pagoda");
-    //_registry.emplace<TransformComponent>(entity, glm::vec3(0, 0, 8), glm::quat(glm::vec3(0, 0, 0)), glm::vec3(0.2f));
-    //_registry.emplace<RenderComponent>(entity, _pagoda, true);
- 
-    entity = _registry.create();
-    _registry.emplace<NameComponent>(entity, "Moon");
-    _registry.emplace<TransformComponent>(entity, TransformComponent {
-        .Position = glm::vec3(0), 
-        .Rotation = glm::quat(glm::vec3(glm::radians(30.f), glm::radians(30.f), 0.f)),
-        .Scale = glm::vec3(1.f) 
-    });
-    _registry.emplace<SunLightComponent>(entity, SunLightComponent {
-        .Color = glm::vec3(0.7f, 0.7f, 0.99),
-        .Power = (1.0f / 0.7f) * 0.7f,
-        .CastsShadows = true,
-        .ShadowMapResolution = 4096,
-        .ShadowCameraDistance = 100.0f,
-        .ShadowMapWorldSize = 60.0f,
-        .ShadowNearPlane = 0.1f,
-        .ShadowFarPlane = 400.0f,
-        .ShadowMap = 
-            BeTexture::Create("SunLightShadowMap")
-            .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-            .SetFormat(DXGI_FORMAT_R32_TYPELESS)
-            .SetSize(4096, 4096)
-            .AddToRegistry()
-            .Build(device)
-    });
-    
-    // point lights
+    CreateEntity(_registry
+        ,NameComponent { .Name = "Cube" }
+        ,TransformComponent { .Position = glm::vec3(0), .Rotation = glm::quat(), .Scale = glm::vec3(2) }
+        ,RenderComponent { .Model = _cube, .CastShadows = true }
+    );
+
+    CreateEntity(_registry
+        ,NameComponent { .Name = "Anvil1" }
+        ,RenderComponent { .Model = _anvil }
+        ,TransformComponent { 
+            .Position = {7, 0, 5}, 
+            .Rotation = glm::quat(glm::vec3(0, glm::radians(90.f), 0)), 
+            .Scale = glm::vec3(0.2f), 
+        }
+    );
+
+    CreateEntity(_registry
+        ,NameComponent { .Name = "Moon" }
+        ,SunLightComponent {
+            .Direction = { -1, -1, 0 },
+            .Color = glm::vec3(0.7f, 0.7f, 0.99),
+            .Power = (1.0f / 0.7f) * 0.7f,
+            .CastsShadows = true,
+            .ShadowMapResolution = 4096,
+            .ShadowCameraDistance = 100.0f,
+            .ShadowMapWorldSize = 60.0f,
+            .ShadowNearPlane = 0.1f,
+            .ShadowFarPlane = 400.0f,
+            .ShadowMap = BeTexture::Create("SunLightShadowMap")
+                .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
+                .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+                .SetSize(4096, 4096)
+                .AddToRegistry()
+                .Build(device)
+        }
+    );
+
     for (uint32_t i = 0; i < 4; ++i) {
-        auto pointLight = PointLightComponent();
-        pointLight.Radius = 20.0f;
-        pointLight.Color = glm::vec3(0.99f, 0.8f, 0.6f);
-        pointLight.Power = (1.0f / 0.7f) * 2.7f;
-        pointLight.CastsShadows = true;
-        pointLight.ShadowMapResolution = 2048;
-        pointLight.ShadowNearPlane = 0.1f;
-
-        pointLight.ShadowMap =
-            BeTexture::Create("PointLight" + std::to_string(i) + "_ShadowMap")
-            .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-            .SetFormat(DXGI_FORMAT_R32_TYPELESS)
-            .SetCubemap(true)
-            .SetSize(pointLight.ShadowMapResolution, pointLight.ShadowMapResolution)
-            .AddToRegistry()
-            .Build(device);
-
-        entity = _registry.create();
-        _registry.emplace<NameComponent>(entity, "PointLight_" + std::to_string(i));
-        _registry.emplace<TransformComponent>(entity);
-        _registry.emplace<PointLightComponent>(entity, pointLight);
+        CreateEntity(_registry
+            ,NameComponent { .Name = "PointLight_" + std::to_string(i) }
+            ,TransformComponent {}
+            ,PointLightComponent {
+                .Radius = 20.0f,
+                .Color = glm::vec3(0.99f, 0.8f, 0.6f),
+                .Power = (1.0f / 0.7f) * 2.7f,
+                .CastsShadows = true,
+                .ShadowMapResolution = 2048,
+                .ShadowNearPlane = 0.1f,
+                .ShadowMap = 
+                    BeTexture::Create("PointLight" + std::to_string(i) + "_ShadowMap")
+                    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
+                    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+                    .SetCubemap(true)
+                    .SetSize(2048, 2048)
+                    .AddToRegistry()
+                    .Build(device)
+            }
+        );
     }
 }
 
 
 auto MainScene::Tick(float deltaTime) -> void {
+    static const auto GeometryView = _registry.view<TransformComponent, RenderComponent>();
+    static const auto SunView = _registry.view<SunLightComponent>();
+    static const auto PointLightView = _registry.view<TransformComponent, PointLightComponent>();
+    
     constexpr float moveSpeed = 5.0f;
     float speed = moveSpeed * deltaTime;
     if (_input->GetKey(GLFW_KEY_LEFT_SHIFT) || (_input->IsGamepadConnected() && _input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) speed *= 2.0f;
@@ -340,16 +340,13 @@ auto MainScene::Tick(float deltaTime) -> void {
         if (angle > glm::two_pi<float>())
             angle -= glm::two_pi<float>();
 
-        const auto pointLights = _registry.view<TransformComponent, PointLightComponent>();
         auto i = size_t(0);
-        for (const auto& pointLight : pointLights) {
+        for (const auto [entity, transform, _] : PointLightView.each()) {
             constexpr float radius = 13.0f;
 
-            const auto add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(pointLights.size_hint()));
+            const auto add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(PointLightView.size_hint()));
             const auto rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
             const auto pos = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
-
-            auto& transform = _registry.get<TransformComponent>(pointLight);
             transform.Position = pos;
             
             i++;
@@ -357,37 +354,39 @@ auto MainScene::Tick(float deltaTime) -> void {
     }
 
     _submissionBuffer->ClearEntries();
-    const auto geometryView = _registry.view<TransformComponent, RenderComponent>();
-    geometryView.each([this](auto& transform, auto& render) {
-        _submissionBuffer->SubmitGeometry(BeBRPGeometryEntry{
-            .Position = transform.Position,
-            .Rotation = transform.Rotation,
-            .Scale = transform.Scale,
-            .Model = render.Model,
-            .CastShadows = render.CastShadows,
-        });
-    });
+    for (const auto [entity, transform, render] : GeometryView.each()) {
+        auto entry = BeBRPGeometryEntry();
+        entry.Model = render.Model;
+        entry.CastShadows = render.CastShadows;
+        entry.ModelMatrix = BeBRPGeometryEntry::CalculateModelMatrix(
+            transform.Position,
+            transform.Rotation,
+            transform.Scale
+        );
+        
+        _submissionBuffer->SubmitGeometry(entry);
+    }
     
-    const auto sunView = _registry.view<TransformComponent, SunLightComponent>();
-    sunView.each([this](auto& transform, auto& sunLight) {
-        auto entry = BeBRPSunLightEntry{
-            .Direction = {-1, -1, 0},
-            .Color = sunLight.Color,
-            .Power = sunLight.Power,
-            .CastsShadows = sunLight.CastsShadows,
-            .ShadowMapResolution = sunLight.ShadowMapResolution,
-            .ShadowCameraDistance = sunLight.ShadowCameraDistance,
-            .ShadowMapWorldSize = sunLight.ShadowMapWorldSize,
-            .ShadowNearPlane = sunLight.ShadowNearPlane,
-            .ShadowFarPlane = sunLight.ShadowFarPlane,
-            .ShadowMap = sunLight.ShadowMap
-        };
-        entry.CalculateMatrix();
+    for (const auto [entity, sunLight] : SunView.each()) {
+        auto entry = BeBRPSunLightEntry();
+        entry.Direction = sunLight.Direction;
+        entry.Color = sunLight.Color;
+        entry.Power = sunLight.Power;
+        entry.CastsShadows = sunLight.CastsShadows;
+        entry.ShadowMapResolution = sunLight.ShadowMapResolution;
+        entry.ShadowMap = sunLight.ShadowMap;
+        entry.ShadowViewProjection = BeBRPSunLightEntry::CalculateViewProj(
+            entry.Direction,
+            sunLight.ShadowCameraDistance,
+            sunLight.ShadowMapWorldSize,
+            sunLight.ShadowNearPlane,
+            sunLight.ShadowFarPlane
+        );
+        
         _submissionBuffer->SubmitSunLight(entry);
-    });
+    }
     
-    const auto pointLightView = _registry.view<TransformComponent, PointLightComponent>();
-    pointLightView.each([this](auto& transform, auto& pointLight) {
+    for (const auto [entity, transform, pointLight] : PointLightView.each()) {
         auto entry = BeBRPPointLightEntry{
             .Position = transform.Position,
             .Radius = pointLight.Radius,
@@ -399,7 +398,7 @@ auto MainScene::Tick(float deltaTime) -> void {
             .ShadowMap = pointLight.ShadowMap
         };
         _submissionBuffer->SubmitPointLight(entry);
-    });
+    };
 }
 
 

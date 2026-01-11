@@ -82,13 +82,8 @@ auto BeShadowPass::RenderDirectionalShadows(
 
         pipeline->BindShader(entry.Model->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
         
-        const glm::mat4x4 modelMatrix =
-            glm::translate(glm::mat4(1.0f), entry.Position) *
-            glm::mat4_cast(entry.Rotation) *
-            glm::scale(glm::mat4(1.0f), entry.Scale);
-        
-        _objectMaterial->SetMatrix("Model", modelMatrix);
-        _objectMaterial->SetMatrix("ProjectionView", sunLight.ViewProjection);
+        _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
+        _objectMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
         _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
         _objectMaterial->UpdateGPUBuffers(context);
         pipeline->BindMaterialAutomatic(_objectMaterial);
@@ -146,13 +141,7 @@ auto BeShadowPass::RenderPointLightShadows(
 
             pipeline->BindShader(entry.Model->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
             
-            // model matrix
-            const glm::mat4x4 modelMatrix =
-                glm::translate(glm::mat4(1.0f), entry.Position) *
-                glm::mat4_cast(entry.Rotation) *
-                glm::scale(glm::mat4(1.0f), entry.Scale);
-            
-            _objectMaterial->SetMatrix("Model", modelMatrix);
+            _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
             _objectMaterial->SetMatrix("ProjectionView", faceViewProj);
             _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
             _objectMaterial->UpdateGPUBuffers(context);
