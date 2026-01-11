@@ -37,7 +37,7 @@ The renderer uses a pass-based architecture:
 - `BeRenderer` - Main DirectX 11 renderer, manages device/context/swapchain and render passes
 - `BeRenderPass` - Abstract base class for render passes (Initialise/Render virtual methods)
 - `BePipeline` - Shader/material binding state management with caching
-- `BeShader` - Shader compilation and management, reads `.beshade` files
+- `BeShader` - Shader compilation and management, reads `.hlsl` files
 - `BeTexture` - Texture creation with builder pattern, supports render targets and cubemaps
 - `BeMaterial` / `BeMaterialScheme` - Material system with typed parameters
 - `BeModel` - 3D model loading via Assimp
@@ -54,7 +54,7 @@ Located in `toolkit/basic-render-pipeline/`, implements a deferred rendering pip
 - `BeBackbufferPass` - Final composite to swapchain
 - `BeBRPSubmissionBuffer` - Collects geometry and light submissions per frame
 
-### Shader Format (.beshade)
+### Shader Format (.hlsl)
 
 Custom shader format combining HLSL with JSON metadata in comments:
 ```hlsl

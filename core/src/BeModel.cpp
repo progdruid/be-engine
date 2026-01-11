@@ -74,8 +74,6 @@ auto BeModel::Create(
         if (meshMaterial->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
             material->SetFloat("Shininess", shininess);
         }
-
-        material->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
     }
 
     for (const auto & material : assimpIndexToMaterial | std::views::values) {

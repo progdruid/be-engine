@@ -57,18 +57,18 @@ auto MainScene::Prepare() -> void {
 
     BeAssetRegistry::InjectRenderer(_renderer);
     BeAssetRegistry::IndexShaderFiles({ 
-        "assets/shaders/standard.beshade", 
-        "assets/shaders/tessellated.beshade", 
-        "assets/shaders/terrain.beshade", 
-        "assets/shaders/objectMaterial.beshade", 
-        "assets/shaders/fullscreen-vertex.beshade", 
-        "assets/shaders/directionalLight.beshade", 
-        "assets/shaders/pointLight.beshade", 
-        "assets/shaders/BeBloomAdd.beshade", 
-        "assets/shaders/BeBloomBright.beshade", 
-        "assets/shaders/BeBloomKawase.beshade", 
-        "assets/shaders/tonemapper.beshade", 
-        "assets/shaders/backbuffer.beshade", 
+        "assets/shaders/standard.hlsl", 
+        "assets/shaders/tessellated.hlsl", 
+        "assets/shaders/terrain.hlsl", 
+        "assets/shaders/objectMaterial.hlsl", 
+        "assets/shaders/fullscreen-vertex.hlsl", 
+        "assets/shaders/directionalLight.hlsl", 
+        "assets/shaders/pointLight.hlsl", 
+        "assets/shaders/BeBloomAdd.hlsl", 
+        "assets/shaders/BeBloomBright.hlsl", 
+        "assets/shaders/BeBloomKawase.hlsl", 
+        "assets/shaders/tonemapper.hlsl", 
+        "assets/shaders/backbuffer.hlsl", 
     });
     
     const auto standardShader = BeAssetRegistry::GetShader("standard");
@@ -243,7 +243,7 @@ auto MainScene::OnLoad() -> void {
     bloomPass->DirtTexture = BeAssetRegistry::GetTexture("BloomDirtTexture");
     bloomPass->OutputTexture = BeAssetRegistry::GetTexture("BloomOutput");
 
-    const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.beshade", *_renderer);
+    const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.hlsl", *_renderer);
     const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
     const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, *_renderer);
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());

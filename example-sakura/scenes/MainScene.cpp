@@ -58,27 +58,37 @@ auto MainScene::Prepare() -> void {
 
     BeAssetRegistry::InjectRenderer(_renderer);
     BeAssetRegistry::IndexShaderFiles({ 
-        "assets/shaders/standard.beshade",
-        "assets/shaders/objectMaterial.beshade", 
-        "assets/shaders/fullscreen-vertex.beshade", 
-        "assets/shaders/directionalLight.beshade", 
-        "assets/shaders/pointLight.beshade", 
-        "assets/shaders/BeBloomAdd.beshade", 
-        "assets/shaders/BeBloomBright.beshade", 
-        "assets/shaders/BeBloomKawase.beshade", 
-        "assets/shaders/tonemapper.beshade", 
-        "assets/shaders/backbuffer.beshade", 
+        "assets/shaders/objectMaterial.hlsl", 
+        "assets/shaders/standard.hlsl",
+        "assets/shaders/checkerboard.hlsl",
+        "assets/shaders/fullscreen-vertex.hlsl", 
+        "assets/shaders/directionalLight.hlsl", 
+        "assets/shaders/pointLight.hlsl", 
+        "assets/shaders/BeBloomAdd.hlsl", 
+        "assets/shaders/BeBloomBright.hlsl", 
+        "assets/shaders/BeBloomKawase.hlsl", 
+        "assets/shaders/tonemapper.hlsl", 
+        "assets/shaders/backbuffer.hlsl", 
     });
     
     const auto standardShader = BeAssetRegistry::GetShader("standard");
+    const auto checkerboardShader = BeAssetRegistry::GetShader("checkerboard");
     
-    _cube = BeModel::Create("assets/cube.glb", standardShader, *_renderer);
-    _cube->Materials[0]->SetFloat3("DiffuseColor", glm::vec3(0.28, 0.39, 1.0));
+    _cube = BeModel::Create("assets/cube.glb", checkerboardShader, *_renderer);
+    _cube->Materials[0]->SetTexture("DiffuseTexture", 
+        BeTexture::Create("Checkerboard")
+        .LoadFromFile("assets/checkerboard.png")
+        .AddToRegistry()
+        .Build(device)
+    );  
     _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *_renderer);
     _anvil->Materials[0]->SetFloat3("SpecularColor", glm::vec3(1.0f));
+    _anvil->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
 
+    _sakura = BeModel::Create("assets/stylized_sakura_tree.glb", standardShader, *_renderer);
+    
     const std::vector<std::shared_ptr<BeModel>> models {
-        _cube, _anvil
+        _cube, _anvil, _sakura
     };
     _renderer->RegisterModels(models);
 
@@ -179,7 +189,7 @@ auto MainScene::OnLoad() -> void {
     BeTexture::Create("BloomDirtTexture")
     .LoadFromFile("assets/bloom-dirt-mask.png")
     .AddToRegistry()
-    .BuildNoReturn(_renderer->GetDevice());
+    .BuildNoReturn(device);
     const auto bloomPass = new BeBloomPass();
     _renderer->AddRenderPass(bloomPass);
     bloomPass->InputHDRTexture = BeAssetRegistry::GetTexture("HDR-Input");
@@ -194,7 +204,7 @@ auto MainScene::OnLoad() -> void {
     bloomPass->DirtTexture = BeAssetRegistry::GetTexture("BloomDirtTexture");
     bloomPass->OutputTexture = BeAssetRegistry::GetTexture("BloomOutput");
 
-    const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.beshade", *_renderer);
+    const auto tonemapperShader = BeAssetRegistry::GetShader("tonemapper");
     const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
     const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, *_renderer);
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
@@ -214,7 +224,7 @@ auto MainScene::OnLoad() -> void {
     
     CreateEntity(_registry
         ,NameComponent { .Name = "Cube" }
-        ,TransformComponent { .Position = glm::vec3(0), .Rotation = glm::quat(), .Scale = glm::vec3(2) }
+        ,TransformComponent { .Position = glm::vec3(25, 0, -25), .Rotation = glm::quat(), .Scale = glm::vec3(50, 1, 50) }
         ,RenderComponent { .Model = _cube, .CastShadows = true }
     );
 
@@ -225,6 +235,16 @@ auto MainScene::OnLoad() -> void {
             .Position = {7, 0, 5}, 
             .Rotation = glm::quat(glm::vec3(0, glm::radians(90.f), 0)), 
             .Scale = glm::vec3(0.2f), 
+        }
+    );
+    
+    CreateEntity(_registry
+        ,NameComponent { .Name = "Sakura" }
+        ,RenderComponent { .Model = _sakura }
+        ,TransformComponent { 
+            .Position = {0, -4, 0}, 
+            .Rotation = glm::quat(glm::vec3(glm::radians(-90.f), 0, 0)), 
+            .Scale = glm::vec3(5.0f), 
         }
     );
 

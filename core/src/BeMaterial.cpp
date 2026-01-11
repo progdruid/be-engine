@@ -66,10 +66,12 @@ BeMaterial::~BeMaterial() = default;
 auto BeMaterial::InitialiseSlotMaps() -> void {
     for (const auto& property : _scheme.Textures) {
         auto texWeak = BeAssetRegistry::GetTexture(property.DefaultTexturePath);
-        auto texture = texWeak.lock();
-        assert(texture && ("Texture not found in registry: " + property.DefaultTexturePath).c_str());
+        be_assert(
+            !texWeak.expired(), 
+            "Texture not found in registry: " + property.DefaultTexturePath
+        );
 
-        _textures[property.Name] = {texture, property.SlotIndex};
+        _textures[property.Name] = {texWeak.lock(), property.SlotIndex};
     }
 
     for (const auto& property : _scheme.Samplers) {

@@ -24,7 +24,7 @@ auto BeFullscreenEffectPass::Render() -> void {
     context->OMSetRenderTargets(renderTargets.size(), renderTargets.data(), nullptr);
 
     // shaders
-    pipeline->BindShader(Shader, BeShaderType::Vertex | BeShaderType::Pixel);
+    pipeline->BindShader(Shader.lock(), BeShaderType::Vertex | BeShaderType::Pixel);
     if (Material) {
         pipeline->BindMaterialAutomatic(Material);
     }
