@@ -6,9 +6,11 @@
     "DiffuseColor: float3 = [1.0, 1.0, 1.0]",
     "SpecularColor: float3 = [1.0, 1.0, 1.0]",
     "Shininess: float = 0.0",
+    "EmissiveColor: float3 = [0.0, 0.0, 0.0]",
 
     "DiffuseTexture: texture2d(0) = white",
     "SpecularTexture: texture2d(1) = black",
+    "EmissiveTexture: texture2d(2) = white",
 
     "InputSampler: sampler(0) = linear-clamp",
     //"InputSampler: sampler(0) = point-clamp",
@@ -29,7 +31,8 @@
     "targets": {
         "Diffuse.RGB": 0,
         "WorldNormal.XYZ": 1,
-        "Specular.RGB_Shininess.A": 2
+        "Specular.RGB_Shininess.A": 2,
+        "Emissive.RGB": 3,
     }
 }
 @be-end
@@ -46,11 +49,13 @@ cbuffer MaterialBuffer: register(b2) {
     float3 _DiffuseColor;
     float3 _SpecularColor;
     float _Shininess;
+    float3 _EmissiveColor;
 };
 
 SamplerState DefaultSampler : register(s0);
 Texture2D DiffuseTexture : register(t0);
 Texture2D Specular : register(t1);
+Texture2D EmissiveTexture : register(t2);
 
 struct VertexInput {
     float3 Position : POSITION;
@@ -68,6 +73,7 @@ struct PixelOutput {
     float3 DiffuseRGB : SV_Target0;
     float4 WorldNormalXYZ_UnusedA : SV_Target1;
     float4 SpecularRGB_ShininessA : SV_Target2;
+    float3 EmissiveRGB : SV_Target3;
 };
 
 VertexOutput VertexFunction(VertexInput input) {
@@ -83,15 +89,17 @@ VertexOutput VertexFunction(VertexInput input) {
 
 PixelOutput PixelFunction(VertexOutput input) {
     float4 diffuseColor = DiffuseTexture.Sample(DefaultSampler, input.UV);
-    float4 specularColor = Specular.Sample(DefaultSampler, input.UV);
     if (diffuseColor.a < 0.5) discard;
-
+    float4 specularColor = Specular.Sample(DefaultSampler, input.UV);
+    float3 emissiveColor = EmissiveTexture.Sample(DefaultSampler, input.UV);
+    
     PixelOutput output;
     output.DiffuseRGB = diffuseColor.rgb * _DiffuseColor;
     output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
     output.WorldNormalXYZ_UnusedA.w = 1.0;
     output.SpecularRGB_ShininessA.rgb = specularColor.rgb * _SpecularColor;
     output.SpecularRGB_ShininessA.a = _Shininess / 2048.0;
+    output.EmissiveRGB = emissiveColor.rgb * _EmissiveColor;
     
     return output;
 };

@@ -127,6 +127,18 @@ auto BeRenderer::LaunchDevice() -> void {
     depthStencilStateDescriptor.StencilEnable = false;
     Utils::Check << _device->CreateDepthStencilState(&depthStencilStateDescriptor, _defaultDepthStencilState.GetAddressOf());
     _context->OMSetDepthStencilState(_defaultDepthStencilState.Get(), 1);
+
+    D3D11_RASTERIZER_DESC rasterDesc = {};
+    rasterDesc.FillMode = D3D11_FILL_SOLID;
+    rasterDesc.CullMode = D3D11_CULL_BACK;
+    rasterDesc.FrontCounterClockwise = FALSE;
+    rasterDesc.DepthClipEnable = TRUE;
+    Utils::Check << _device->CreateRasterizerState(&rasterDesc, _rasterizerCullBack.GetAddressOf());
+
+    rasterDesc.CullMode = D3D11_CULL_NONE;
+    Utils::Check << _device->CreateRasterizerState(&rasterDesc, _rasterizerCullNone.GetAddressOf());
+
+    _context->RSSetState(_rasterizerCullBack.Get());
 }
 
 auto BeRenderer::AddRenderPass(BeRenderPass* renderPass) -> void {

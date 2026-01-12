@@ -26,6 +26,7 @@ struct BeDrawSlice {
     uint32_t StartIndexLocation;
     int32_t BaseVertexLocation;
     std::shared_ptr<BeMaterial> Material = nullptr;
+    bool TwoSided = false;
 };
 
 struct BeModel {

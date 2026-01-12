@@ -64,6 +64,7 @@ auto MainScene::Prepare() -> void {
         "assets/shaders/fullscreen-vertex.hlsl", 
         "assets/shaders/directionalLight.hlsl", 
         "assets/shaders/pointLight.hlsl", 
+        "assets/shaders/emissive-add.hlsl",
         "assets/shaders/BeBloomAdd.hlsl", 
         "assets/shaders/BeBloomBright.hlsl", 
         "assets/shaders/BeBloomKawase.hlsl", 
@@ -80,15 +81,23 @@ auto MainScene::Prepare() -> void {
         .LoadFromFile("assets/checkerboard.png")
         .AddToRegistry()
         .Build(device)
-    );  
+    ); 
+    
+    _emissiveCube = BeModel::Create("assets/cube.glb", standardShader, *_renderer);
+    _emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.99f, 0.8f, 0.6f) * 1.7f);
+    
     _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *_renderer);
     _anvil->Materials[0]->SetFloat3("SpecularColor", glm::vec3(1.0f));
     _anvil->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
 
-    _sakura = BeModel::Create("assets/stylized_sakura_tree.glb", standardShader, *_renderer);
+    _sakura = BeModel::Create("assets/sakura/scene.gltf", standardShader, *_renderer);
+    _sakura->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("linear-wrap"));
+    
+    _sakura2 = BeModel::Create("assets/stylized_sakura_tree.glb", standardShader, *_renderer);
+    //_sakura2->Materials[0]
     
     const std::vector<std::shared_ptr<BeModel>> models {
-        _cube, _anvil, _sakura
+        _cube, _anvil, _sakura, _sakura2, _emissiveCube
     };
     _renderer->RegisterModels(models);
 
@@ -125,6 +134,13 @@ auto MainScene::Prepare() -> void {
     .AddToRegistry()
     .Build(device);
 
+    BeTexture::Create("Emissive")
+    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
+    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetSize(screenWidth, screenHeight)
+    .AddToRegistry()
+    .Build(device);
+    
     BeTexture::Create("HDR-Input")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
@@ -176,6 +192,7 @@ auto MainScene::OnLoad() -> void {
     geometryPass->OutputTexture0 = BeAssetRegistry::GetTexture("BaseColor");
     geometryPass->OutputTexture1 = BeAssetRegistry::GetTexture("WorldNormal");
     geometryPass->OutputTexture2 = BeAssetRegistry::GetTexture("Specular-Shininess");
+    geometryPass->OutputTexture3 = BeAssetRegistry::GetTexture("Emissive");
 
     const auto lightingPass = new BeLightingPass();
     _renderer->AddRenderPass(lightingPass);
@@ -184,6 +201,7 @@ auto MainScene::OnLoad() -> void {
     lightingPass->InputTexture0 = BeAssetRegistry::GetTexture("BaseColor");
     lightingPass->InputTexture1 = BeAssetRegistry::GetTexture("WorldNormal");
     lightingPass->InputTexture2 = BeAssetRegistry::GetTexture("Specular-Shininess");
+    lightingPass->InputTexture3 = BeAssetRegistry::GetTexture("Emissive");
     lightingPass->OutputTexture = BeAssetRegistry::GetTexture("HDR-Input");
 
     BeTexture::Create("BloomDirtTexture")
@@ -224,7 +242,7 @@ auto MainScene::OnLoad() -> void {
     
     CreateEntity(_registry
         ,NameComponent { .Name = "Cube" }
-        ,TransformComponent { .Position = glm::vec3(25, 0, -25), .Rotation = glm::quat(), .Scale = glm::vec3(50, 1, 50) }
+        ,TransformComponent { .Position = glm::vec3(15, -30, -15), .Rotation = glm::quat(), .Scale = glm::vec3(30) }
         ,RenderComponent { .Model = _cube, .CastShadows = true }
     );
 
@@ -232,18 +250,28 @@ auto MainScene::OnLoad() -> void {
         ,NameComponent { .Name = "Anvil1" }
         ,RenderComponent { .Model = _anvil }
         ,TransformComponent { 
-            .Position = {7, 0, 5}, 
-            .Rotation = glm::quat(glm::vec3(0, glm::radians(90.f), 0)), 
+            .Position = {0, 0, 0}, 
+            .Rotation = glm::quat(glm::vec3(0, 45_rad, 0)), 
             .Scale = glm::vec3(0.2f), 
         }
     );
     
+    //CreateEntity(_registry
+    //    ,NameComponent { .Name = "Sakura" }
+    //    ,RenderComponent { .Model = _sakura }
+    //    ,TransformComponent { 
+    //        .Position = {-7.5, 0, 0}, 
+    //        .Rotation = glm::quat(glm::vec3(0, 45.0_rad, 0)), 
+    //        .Scale = glm::vec3(0.7f), 
+    //    }
+    //);
+    
     CreateEntity(_registry
-        ,NameComponent { .Name = "Sakura" }
-        ,RenderComponent { .Model = _sakura }
+        ,NameComponent { .Name = "Sakura2" }
+        ,RenderComponent { .Model = _sakura2 }
         ,TransformComponent { 
-            .Position = {0, -4, 0}, 
-            .Rotation = glm::quat(glm::vec3(glm::radians(-90.f), 0, 0)), 
+            .Position = {-3.f, -5.5, 2}, 
+            .Rotation = glm::quat(glm::vec3(0, 45.0_rad, 0)), 
             .Scale = glm::vec3(5.0f), 
         }
     );
@@ -251,7 +279,7 @@ auto MainScene::OnLoad() -> void {
     CreateEntity(_registry
         ,NameComponent { .Name = "Moon" }
         ,SunLightComponent {
-            .Direction = { -1, -1, 0 },
+            .Direction = { -1, -1, -1 },
             .Color = glm::vec3(0.7f, 0.7f, 0.99),
             .Power = (1.0f / 0.7f) * 0.7f,
             .CastsShadows = true,
@@ -272,12 +300,12 @@ auto MainScene::OnLoad() -> void {
     for (uint32_t i = 0; i < 4; ++i) {
         CreateEntity(_registry
             ,NameComponent { .Name = "PointLight_" + std::to_string(i) }
-            ,TransformComponent {}
+            ,TransformComponent { .Scale = glm::vec3(0.5f) }
             ,PointLightComponent {
                 .Radius = 20.0f,
                 .Color = glm::vec3(0.99f, 0.8f, 0.6f),
                 .Power = (1.0f / 0.7f) * 2.7f,
-                .CastsShadows = true,
+                .CastsShadows = false,
                 .ShadowMapResolution = 2048,
                 .ShadowNearPlane = 0.1f,
                 .ShadowMap = 
@@ -288,6 +316,31 @@ auto MainScene::OnLoad() -> void {
                     .SetSize(2048, 2048)
                     .AddToRegistry()
                     .Build(device)
+            }
+            ,RenderComponent {
+                .Model = _emissiveCube,
+                .CastShadows = false,
+            }
+        );
+    }
+    
+    srand(time(0));
+    for (uint32_t i = 0; i < 100; ++i) {
+        auto randFloat = [](float min, float max) -> float {
+            float random = float(rand()) / float(RAND_MAX);
+            return min + random * (max - min);
+        };
+        
+        auto x = randFloat(-50.f, 50.f);
+        auto y = randFloat(30.f, 60.f);
+        auto z = randFloat(-50.f, 50.f);
+        
+        CreateEntity(_registry
+            ,NameComponent { .Name = "Star_" + std::to_string(i) }
+            ,TransformComponent { .Position = glm::vec3(x, y, z), .Scale = glm::vec3(0.1f) }
+            ,RenderComponent {
+                .Model = _emissiveCube,
+                .CastShadows = false,
             }
         );
     }

@@ -90,8 +90,16 @@ auto BeShadowPass::RenderDirectionalShadows(
         
         const auto & drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
         for (const auto& slice : drawSlices) {
+            if (slice.TwoSided) {
+                context->RSSetState(_renderer->GetRasterizerCullNone().Get());
+            }
+
             pipeline->BindMaterialAutomatic(slice.Material);
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
+
+            if (slice.TwoSided) {
+                context->RSSetState(_renderer->GetRasterizerCullBack().Get());
+            }
         }
 
         pipeline->Clear();
@@ -150,10 +158,18 @@ auto BeShadowPass::RenderPointLightShadows(
             // draw
             const auto& drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
             for (const auto& slice : drawSlices) {
+                if (slice.TwoSided) {
+                    context->RSSetState(_renderer->GetRasterizerCullNone().Get());
+                }
+
                 pipeline->BindMaterialAutomatic(slice.Material);
                 context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
+
+                if (slice.TwoSided) {
+                    context->RSSetState(_renderer->GetRasterizerCullBack().Get());
+                }
             }
-            
+
             pipeline->Clear();
         }
     }

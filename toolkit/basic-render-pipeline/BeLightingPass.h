@@ -20,6 +20,7 @@ class BeLightingPass final : public BeRenderPass {
     std::weak_ptr<BeTexture> InputTexture0;
     std::weak_ptr<BeTexture> InputTexture1;
     std::weak_ptr<BeTexture> InputTexture2;
+    std::weak_ptr<BeTexture> InputTexture3;
     std::weak_ptr<BeTexture> InputDepthTexture;
     std::weak_ptr<BeTexture> OutputTexture;
     
@@ -30,6 +31,8 @@ class BeLightingPass final : public BeRenderPass {
     std::shared_ptr<BeMaterial> _directionalLightMaterial;
     std::shared_ptr<BeShader> _pointLightShader;
     std::shared_ptr<BeMaterial> _pointLightMaterial;
+    std::shared_ptr<BeShader> _emissiveAddShader;
+    std::shared_ptr<BeMaterial> _emissiveMaterial;
     
     expose
     explicit BeLightingPass();

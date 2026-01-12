@@ -1,0 +1,11 @@
+Model Information:
+* title:	sakura
+* source:	https://sketchfab.com/3d-models/sakura-c562e993e5ba411f8edd4b65ef0069d0
+* author:	dimal965 (https://sketchfab.com/dimal965)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "sakura" (https://sketchfab.com/3d-models/sakura-c562e993e5ba411f8edd4b65ef0069d0) by dimal965 (https://sketchfab.com/dimal965) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

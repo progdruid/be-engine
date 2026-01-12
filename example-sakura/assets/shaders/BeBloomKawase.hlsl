@@ -1,6 +1,6 @@
 /*
 
-@be-material: kawase-material
+@be-material: bloom-kawase-material
 [
     "TexelSize: float2 = [0.001, 0.001]",
     "PassRadius: float = 0.5",
@@ -16,7 +16,7 @@
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "materials": {
-        "main": { "scheme": "kawase-material", "slot": 2 },
+        "main": { "scheme": "bloom-kawase-material", "slot": 2 },
     },
     "targets": {
         "BloomMipOutput": 0
