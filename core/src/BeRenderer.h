@@ -56,6 +56,8 @@ class BeRenderer {
 
     ComPtr<ID3D11Buffer> _uniformBuffer;
     ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
+    ComPtr<ID3D11RasterizerState> _rasterizerCullBack;
+    ComPtr<ID3D11RasterizerState> _rasterizerCullNone;
 
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
@@ -93,6 +95,8 @@ class BeRenderer {
 
     [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }
     [[nodiscard]] auto GetHeight () const -> uint32_t { return _height; }
+    [[nodiscard]] auto GetRasterizerCullBack () const -> ComPtr<ID3D11RasterizerState> { return _rasterizerCullBack; }
+    [[nodiscard]] auto GetRasterizerCullNone () const -> ComPtr<ID3D11RasterizerState> { return _rasterizerCullNone; }
 
     expose
     auto SetModels(const std::vector<std::shared_ptr<BeModel>>& models) -> void;

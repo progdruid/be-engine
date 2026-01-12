@@ -17,6 +17,7 @@ class BeGeometryPass final : public BeRenderPass {
     std::weak_ptr<BeTexture> OutputTexture0;
     std::weak_ptr<BeTexture> OutputTexture1;
     std::weak_ptr<BeTexture> OutputTexture2;
+    std::weak_ptr<BeTexture> OutputTexture3;
     std::weak_ptr<BeTexture> OutputDepthTexture;
 
     hide 

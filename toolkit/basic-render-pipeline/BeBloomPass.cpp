@@ -12,13 +12,13 @@ BeBloomPass::~BeBloomPass() = default;
 
 auto BeBloomPass::Initialise() -> void {
     _brightShader = BeAssetRegistry::GetShader("bloom-bright").lock();
-    auto brightScheme = BeAssetRegistry::GetMaterialScheme("bright-material");
+    auto brightScheme = BeAssetRegistry::GetMaterialScheme("bloom-bright-material");
     _brightMaterial = BeMaterial::Create("Bright Pass Material", brightScheme, false, *_renderer);
     _brightMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
     //_brightMaterial->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
 
     _kawaseShader = BeAssetRegistry::GetShader("bloom-kawase").lock();
-    auto kawaseScheme = BeAssetRegistry::GetMaterialScheme("kawase-material");;
+    auto kawaseScheme = BeAssetRegistry::GetMaterialScheme("bloom-kawase-material");;
 
     // Create downsample materials for each mip level (1 to size-1)
     _downsampleMaterials.resize(BloomMipCount);
@@ -71,7 +71,7 @@ auto BeBloomPass::Initialise() -> void {
     }
 
     _addShader = BeAssetRegistry::GetShader("bloom-add").lock();
-    const auto& addScheme = BeAssetRegistry::GetMaterialScheme("add-material");
+    const auto& addScheme = BeAssetRegistry::GetMaterialScheme("bloom-add-material");
     _addMaterial = BeMaterial::Create("Add Pass Material", addScheme, false, *_renderer);
     _addMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
     _addMaterial->SetTexture("BloomInput", BloomMipTextures[0].lock());

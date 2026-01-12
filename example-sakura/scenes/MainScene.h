@@ -79,7 +79,7 @@ class MainScene : public BaseScene {
     std::shared_ptr<BeCamera> _camera;
     std::shared_ptr<BeInput> _input;
     
-    std::shared_ptr<BeModel> _cube, _anvil, _sakura;
+    std::shared_ptr<BeModel> _cube, _anvil, _sakura, _sakura2, _emissiveCube;
     
     expose
     MainScene(

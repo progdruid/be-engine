@@ -1,9 +1,9 @@
 /*
 
-@be-material: bright-material
+@be-material: bloom-bright-material
 [
-    "Threshold: float = 0.75",
-    "Intensity: float = 17.0",
+    "Threshold: float = 0.9",
+    "Intensity: float = 10.0",
     "Knee: float = 1.25",
 
     "HDRInput: texture2d(0) = black",
@@ -18,7 +18,7 @@
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "materials": {
-        "main": { "scheme": "bright-material", "slot": 2 },
+        "main": { "scheme": "bloom-bright-material", "slot": 2 },
     },
     "targets": {
         "BloomMip": 0

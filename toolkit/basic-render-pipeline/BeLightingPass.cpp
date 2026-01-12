@@ -46,6 +46,11 @@ void BeLightingPass::Initialise() {
     _pointLightMaterial->SetTexture("Diffuse", InputTexture0.lock());
     _pointLightMaterial->SetTexture("WorldNormal", InputTexture1.lock());
     _pointLightMaterial->SetTexture("Specular_Shininess", InputTexture2.lock());
+    
+    _emissiveAddShader = BeAssetRegistry::GetShader("emissive-add").lock();
+    const auto& emissiveScheme = BeAssetRegistry::GetMaterialScheme("emissive-add-material");
+    _emissiveMaterial = BeMaterial::Create("EmissiveMaterial", emissiveScheme, false, *_renderer);
+    _emissiveMaterial->SetTexture("InputEmissive", InputTexture3.lock());
 }
 
 auto BeLightingPass::Render() -> void {
@@ -98,5 +103,12 @@ auto BeLightingPass::Render() -> void {
     }
     
     _pointLightMaterial->SetTexture("PointLightShadowMap", nullptr);
+    pipeline->Clear();
+    
+    
+    // emissive add
+    pipeline->BindShader(_emissiveAddShader, BeShaderType::Vertex | BeShaderType::Pixel);
+    pipeline->BindMaterialAutomatic(_emissiveMaterial);
+    context->Draw(4, 0);
     pipeline->Clear();
 }

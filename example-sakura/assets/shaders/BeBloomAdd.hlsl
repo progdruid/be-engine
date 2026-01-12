@@ -1,6 +1,6 @@
 /*
 
-@be-material: add-material
+@be-material: bloom-add-material
 [
     "HDRInput: texture2d(0) = black",
     "BloomInput: texture2d(1) = black",
@@ -15,7 +15,7 @@
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "materials": {
-        "main": { "scheme": "add-material", "slot": 2 },
+        "main": { "scheme": "bloom-add-material", "slot": 2 },
     },
     "targets": {
         "BloomOutput": 0

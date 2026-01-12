@@ -2,6 +2,8 @@
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
+#include <assimp/scene.h>
+#include <unordered_set>
 
 #include "stb_image/stb_image.h"
 
@@ -20,6 +22,7 @@ auto BeModel::Create(
     constexpr auto flags = (
         aiProcess_Triangulate |
         aiProcess_GenNormals |
+        aiProcess_PreTransformVertices |
         aiProcess_JoinIdenticalVertices |
         aiProcess_ImproveCacheLocality |
         aiProcess_CalcTangentSpace |
@@ -38,6 +41,7 @@ auto BeModel::Create(
     const auto& materialScheme = BeAssetRegistry::GetMaterialScheme(model->Shader->GetMaterialSchemeName("geometry-main"));
 
     std::unordered_map<uint32_t, std::shared_ptr<BeMaterial>> assimpIndexToMaterial;
+    std::unordered_set<uint32_t> assimpIndexToTwoSided;
     for (size_t i = 0; i < scene->mNumMeshes; ++i) {
         const auto mesh = scene->mMeshes[i];
         const auto assimpMaterialIndex = mesh->mMaterialIndex;
@@ -50,7 +54,12 @@ auto BeModel::Create(
         assimpIndexToMaterial[assimpMaterialIndex] = material;
 
         const auto meshMaterial = scene->mMaterials[assimpMaterialIndex];
-        
+
+        int twoSided = 0;
+        if (meshMaterial->Get(AI_MATKEY_TWOSIDED, twoSided) == AI_SUCCESS) {
+            assimpIndexToTwoSided.emplace(assimpMaterialIndex);
+        }
+
         aiString texPath;
         constexpr int diffuseTexIndex = 0;
         if (meshMaterial->GetTexture(aiTextureType_DIFFUSE, diffuseTexIndex, &texPath) == AI_SUCCESS) {
@@ -126,6 +135,7 @@ auto BeModel::Create(
             .StartIndexLocation = indexOffset,
             .BaseVertexLocation = vertexOffset,
             .Material = assimpIndexToMaterial.at(mesh->mMaterialIndex),
+            .TwoSided = assimpIndexToTwoSided.contains(mesh->mMaterialIndex),
         });
 
         vertexOffset += mesh->mNumVertices;

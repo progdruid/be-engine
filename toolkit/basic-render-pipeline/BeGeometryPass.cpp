@@ -31,19 +31,22 @@ auto BeGeometryPass::Render() -> void {
     const auto gbufferResource0 = OutputTexture0.lock();
     const auto gbufferResource1 = OutputTexture1.lock();
     const auto gbufferResource2 = OutputTexture2.lock();
+    const auto gbufferResource3 = OutputTexture3.lock();
     
     context->ClearDepthStencilView(depthResource->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     context->ClearRenderTargetView(gbufferResource0->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->ClearRenderTargetView(gbufferResource1->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
     context->ClearRenderTargetView(gbufferResource2->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
+    context->ClearRenderTargetView(gbufferResource3->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
 
-    ID3D11RenderTargetView* gbufferRTVs[3] = {
+    ID3D11RenderTargetView* gbufferRTVs[4] = {
         gbufferResource0->GetRTV().Get(),
         gbufferResource1->GetRTV().Get(),
-        gbufferResource2->GetRTV().Get()
+        gbufferResource2->GetRTV().Get(),
+        gbufferResource3->GetRTV().Get()
     };
-    context->OMSetRenderTargets(3, gbufferRTVs, depthResource->GetDSV().Get());
-    SCOPE_EXIT { context->OMSetRenderTargets(3, Utils::NullRTVs, nullptr); };
+    context->OMSetRenderTargets(4, gbufferRTVs, depthResource->GetDSV().Get());
+    SCOPE_EXIT { context->OMSetRenderTargets(4, Utils::NullRTVs, nullptr); };
 
     
     // Set vertex and index buffers
@@ -74,8 +77,16 @@ auto BeGeometryPass::Render() -> void {
 
         const auto & drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
         for (const auto& slice : drawSlices) {
+            if (slice.TwoSided) {
+                context->RSSetState(_renderer->GetRasterizerCullNone().Get());
+            }
+
             pipeline->BindMaterialAutomatic(slice.Material);
             context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
+
+            if (slice.TwoSided) {
+                context->RSSetState(_renderer->GetRasterizerCullBack().Get());
+            }
         }
     }
 }
