@@ -1,0 +1,11 @@
+Model Information:
+* title:	Honeydew Melons
+* source:	https://sketchfab.com/3d-models/honeydew-melons-a74a316479b84817b3b269480bd6dd80
+* author:	Omar Faruq Tawsif (https://sketchfab.com/omarfaruqtawsif32)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Honeydew Melons" (https://sketchfab.com/3d-models/honeydew-melons-a74a316479b84817b3b269480bd6dd80) by Omar Faruq Tawsif (https://sketchfab.com/omarfaruqtawsif32) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

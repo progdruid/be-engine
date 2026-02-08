@@ -56,7 +56,7 @@ auto BeModel::Create(
         const auto meshMaterial = scene->mMaterials[assimpMaterialIndex];
 
         int twoSided = 0;
-        if (meshMaterial->Get(AI_MATKEY_TWOSIDED, twoSided) == AI_SUCCESS) {
+        if (meshMaterial->Get(AI_MATKEY_TWOSIDED, twoSided) == AI_SUCCESS && twoSided) {
             assimpIndexToTwoSided.emplace(assimpMaterialIndex);
         }
 

@@ -1,0 +1,11 @@
+Model Information:
+* title:	"Pickles" 3d version of Hyuna Lee's illustration
+* source:	https://sketchfab.com/3d-models/pickles-3d-version-of-hyuna-lees-illustration-7b81fa2a3b33403fb47d451b24c78ffe
+* author:	Omar Faruq Tawsif (https://sketchfab.com/omarfaruqtawsif32)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on ""Pickles" 3d version of Hyuna Lee's illustration" (https://sketchfab.com/3d-models/pickles-3d-version-of-hyuna-lees-illustration-7b81fa2a3b33403fb47d451b24c78ffe) by Omar Faruq Tawsif (https://sketchfab.com/omarfaruqtawsif32) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

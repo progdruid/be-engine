@@ -4,30 +4,21 @@
 #include <scenes/BeSceneManager.h>
 
 #include "BeRenderer.h"
+#include "Game.h"
 #include "imgui/BeImGuiPass.h"
 #include "imgui/imgui.h"
 
-MenuScene::MenuScene(
-    BeSceneManager* sceneManager,
-    const std::shared_ptr<BeRenderer>& renderer,
-    const std::shared_ptr<BeWindow>& window,
-    const std::shared_ptr<BeInput>& input
-)
-    : BaseScene(sceneManager)
-    , _renderer(renderer)
-    , _window(window)
-    , _input(input)
-{}
+MenuScene::MenuScene(Game* game) : BaseScene(game) {}
 
 auto MenuScene::OnLoad() -> void {
 
-    _renderer->ClearPasses();
+    GameIns->Renderer->ClearPasses();
 
-    auto imguiPass = new BeImGuiPass(_window);
-    _renderer->AddRenderPass(imguiPass);
+    auto imguiPass = new BeImGuiPass(GameIns->Window);
+    GameIns->Renderer->AddRenderPass(imguiPass);
     imguiPass->SetUICallback([this](){RunUI();});
 
-    _renderer->InitialisePasses();
+    GameIns->Renderer->InitialisePasses();
 }
 
 auto MenuScene::RunUI() -> void {
@@ -63,7 +54,7 @@ auto MenuScene::RunUI() -> void {
     ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
 
     if (ImGui::Button("Play", ImVec2(buttonWidth, 50))) {
-        _sceneManager->RequestSceneChange("main");
+        GameIns->SceneManager->RequestSceneChange("showcase");
     }
 
     ImGui::PopStyleVar();

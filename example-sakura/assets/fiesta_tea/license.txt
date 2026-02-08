@@ -1,0 +1,11 @@
+Model Information:
+* title:	Fiesta tea
+* source:	https://sketchfab.com/3d-models/fiesta-tea-8bde490c80444157b4545471d067423c
+* author:	Omar Faruq Tawsif (https://sketchfab.com/omarfaruqtawsif32)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Fiesta tea" (https://sketchfab.com/3d-models/fiesta-tea-8bde490c80444157b4545471d067423c) by Omar Faruq Tawsif (https://sketchfab.com/omarfaruqtawsif32) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

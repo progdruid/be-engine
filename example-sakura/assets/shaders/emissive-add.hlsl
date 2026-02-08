@@ -31,3 +31,6 @@ float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
     float3 emissiveColor = InputEmissive.Sample(InputSampler, input.UV).rgb;
     return emissiveColor;
 }
+
+
+

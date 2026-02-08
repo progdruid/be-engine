@@ -194,7 +194,7 @@ auto BeTexture::CreateTexture2DResources(ComPtr<ID3D11Device> device, const uint
         rtvDesc.Format = Format;
         rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 
-        for (int mip = 0; mip < Mips; ++mip) {
+        for (uint32_t mip = 0; mip < Mips; ++mip) {
             rtvDesc.Texture2D.MipSlice = mip;
             Utils::Check << device->CreateRenderTargetView(_texture.Get(), &rtvDesc, _mipRTVs[mip].GetAddressOf());
         }
@@ -269,7 +269,7 @@ auto BeTexture::CreateCubemapResources(ComPtr<ID3D11Device> device, const uint8_
             rtvDesc.Texture2DArray.FirstArraySlice = face;
             rtvDesc.Texture2DArray.ArraySize = 1;
 
-            for (int mip = 0; mip < Mips; ++mip) {
+            for (uint32_t mip = 0; mip < Mips; ++mip) {
                 rtvDesc.Texture2DArray.MipSlice = mip;
                 Utils::Check << device->CreateRenderTargetView(_texture.Get(), &rtvDesc, _cubemapMipRTVs[face][mip].GetAddressOf());
             }
@@ -280,7 +280,7 @@ auto BeTexture::CreateCubemapResources(ComPtr<ID3D11Device> device, const uint8_
 
 auto BeTexture::CreateMipViewports() -> void {
     _mipViewports.resize(Mips);
-    for (int i = 0; i < Mips; ++i) {
+    for (uint32_t i = 0; i < Mips; ++i) {
         auto& viewport = _mipViewports[i];
         viewport.Width = static_cast<float>(Width >> i);
         viewport.Height = static_cast<float>(Height >> i);
