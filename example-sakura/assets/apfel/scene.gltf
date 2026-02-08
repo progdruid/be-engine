@@ -1,0 +1,343 @@
+{
+  "accessors": [
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 484,
+      "max": [
+        0.8655403852462769,
+        0.8431588411331177,
+        1.0565595626831055
+      ],
+      "min": [
+        -0.8553261160850525,
+        -0.839336633682251,
+        -0.7201255559921265
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 5808,
+      "componentType": 5126,
+      "count": 484,
+      "max": [
+        0.9994792342185974,
+        0.9983951449394226,
+        0.9980418086051941
+      ],
+      "min": [
+        -0.9956698417663574,
+        -0.9996455311775208,
+        -0.9998878240585327
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 484,
+      "max": [
+        0.9877079129219055,
+        0.9897911548614502
+      ],
+      "min": [
+        0.35529059171676636,
+        0.11465075612068176
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 2424,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 11616,
+      "componentType": 5126,
+      "count": 55,
+      "max": [
+        4.419732093811035,
+        3.271606922149658,
+        3.4823107719421387
+      ],
+      "min": [
+        -4.419732093811035,
+        -3.569025993347168,
+        0.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 12276,
+      "componentType": 5126,
+      "count": 55,
+      "max": [
+        0.9985537528991699,
+        0.0,
+        1.0
+      ],
+      "min": [
+        -0.9985537528991699,
+        -1.0,
+        -1.3492160633177264e-07
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 3872,
+      "componentType": 5126,
+      "count": 55,
+      "max": [
+        0.35317811369895935,
+        0.9727922677993774
+      ],
+      "min": [
+        0.006646794266998768,
+        0.020269662141799927
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 9696,
+      "componentType": 5125,
+      "count": 204,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "Omar Faruq Tawsif (https://sketchfab.com/omarfaruqtawsif32)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/apfel-9b6677816f4a42c29fd732ff590f2451",
+      "title": "apfel !"
+    },
+    "generator": "Sketchfab-16.59.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 10512,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 4312,
+      "byteOffset": 10512,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 12936,
+      "byteOffset": 14824,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 27760,
+      "uri": "scene.bin"
+    }
+  ],
+  "extensionsUsed": [
+    "KHR_materials_unlit"
+  ],
+  "images": [
+    {
+      "uri": "textures/apple_painting_baseColor.jpeg"
+    }
+  ],
+  "materials": [
+    {
+      "extensions": {
+        "KHR_materials_unlit": {}
+      },
+      "name": "apple_painting",
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.0
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Cube_apple painting_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Plane_apple painting_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 5,
+            "POSITION": 4,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "matrix": [
+        0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.009999999776482582,
+        0.0,
+        0.0,
+        -0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "1c56a95f6fc94ca59da37d80c50be6d7.fbx"
+    },
+    {
+      "children": [
+        3,
+        5
+      ],
+      "name": "RootNode"
+    },
+    {
+      "children": [
+        4
+      ],
+      "matrix": [
+        -95.10024883380711,
+        -10.117636961411035,
+        -29.216024610905823,
+        0.0,
+        -30.061407867033225,
+        8.165026152873324,
+        95.02444754300721,
+        0.0,
+        -7.228732576677574,
+        99.15123438716759,
+        -10.80646430220344,
+        0.0,
+        -7.316169261932373,
+        8.713555335998535,
+        0.5394596457481384,
+        1.0
+      ],
+      "name": "Cube"
+    },
+    {
+      "mesh": 0,
+      "name": "Cube_apple painting_0"
+    },
+    {
+      "children": [
+        6
+      ],
+      "matrix": [
+        98.44373331162151,
+        7.435705273728388e-07,
+        -17.57359871142901,
+        0.0,
+        -17.573598711428822,
+        1.9337981016498418e-05,
+        -98.44373331161967,
+        0.0,
+        2.666380599647411e-06,
+        99.99999999999814,
+        1.916770256960021e-05,
+        0.0,
+        -38.244503021240234,
+        -63.201141357421875,
+        -117.30206298828125,
+        1.0
+      ],
+      "name": "Plane"
+    },
+    {
+      "mesh": 1,
+      "name": "Plane_apple painting_0"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9728,
+      "minFilter": 9728,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    }
+  ]
+}

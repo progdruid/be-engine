@@ -27,6 +27,7 @@ class BeInput {
     glm::vec2 _previousMousePosition;
 
     glm::vec2 _scrollDelta;
+    glm::vec2 _frameScrollDelta;
 
     bool _isMouseCaptured;
 

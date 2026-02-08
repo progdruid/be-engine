@@ -16,14 +16,14 @@ Game::~Game() = default;
 
 
 auto Game::Run() -> int {
-    _width = 1920;
-    _height = 1080;
+    Width = 1920;
+    Height = 1080;
     
-    _window = std::make_shared<BeWindow>(_width, _height, "be: example game 1");
-    _renderer = std::make_shared<BeRenderer>(_width, _height, _window->GetHwnd());
-    _renderer->LaunchDevice();
+    Window = std::make_shared<BeWindow>(Width, Height, "be: example game 1");
+    Renderer = std::make_shared<BeRenderer>(Width, Height, Window->GetHwnd());
+    Renderer->LaunchDevice();
     
-    _input = std::make_unique<BeInput>(_window->GetGlfwWindow());
+    Input = std::make_unique<BeInput>(Window->GetGlfwWindow());
     
     SetupScenes();
 
@@ -33,42 +33,42 @@ auto Game::Run() -> int {
 }
 
 auto Game::SetupScenes() -> void {
-    _sceneManager = std::make_unique<BeSceneManager>();
+    SceneManager = std::make_unique<BeSceneManager>();
 
-    auto menuScene = std::make_unique<MenuScene>(_sceneManager.get(), _renderer, _window, _input);
-    auto mainScene = std::make_unique<MainScene>(_renderer, _window, _input);
+    auto menuScene = std::make_unique<MenuScene>(SceneManager.get(), Renderer, Window, Input);
+    auto mainScene = std::make_unique<MainScene>(Renderer, Window, Input);
 
-    _sceneManager->RegisterScene("menu", std::move(menuScene));
-    _sceneManager->RegisterScene("main", std::move(mainScene));
+    SceneManager->RegisterScene("menu", std::move(menuScene));
+    SceneManager->RegisterScene("main", std::move(mainScene));
 
-    _sceneManager->GetScene<MenuScene>("menu")->Prepare();
-    _sceneManager->GetScene<MainScene>("main")->Prepare();
+    SceneManager->GetScene<MenuScene>("menu")->Prepare();
+    SceneManager->GetScene<MainScene>("main")->Prepare();
 
-    _renderer->BakeModels();
+    Renderer->BakeModels();
 
-    _sceneManager->RequestSceneChange("menu");
-    _sceneManager->ApplyPendingSceneChange();
+    SceneManager->RequestSceneChange("menu");
+    SceneManager->ApplyPendingSceneChange();
 }
 
 auto Game::MainLoop() -> void {
     double lastTime = glfwGetTime();
 
-    while (!_window->ShouldClose()) {
-        _window->PollEvents();
-        _input->Update();
+    while (!Window->ShouldClose()) {
+        Window->PollEvents();
+        Input->Update();
 
         const double now = glfwGetTime();
         const float dt = static_cast<float>(now - lastTime);
         lastTime = now;
 
-        _renderer->UniformData.Time = now;
+        Renderer->UniformData.Time = now;
 
-        const auto activeScene = _sceneManager->GetActiveScene<BaseScene>();
+        const auto activeScene = SceneManager->GetActiveScene<BaseScene>();
         if (activeScene) {
             activeScene->Tick(dt);
         }
 
-        _sceneManager->ApplyPendingSceneChange();
-        _renderer->Render();
+        SceneManager->ApplyPendingSceneChange();
+        Renderer->Render();
     }
 }

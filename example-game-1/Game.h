@@ -23,14 +23,14 @@ struct BePointLight;
 
 class Game {
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    hide uint32_t _width;
-    hide uint32_t _height;
-    hide std::shared_ptr<BeWindow> _window;
-    hide std::shared_ptr<BeRenderer> _renderer;
-    hide std::shared_ptr<BeInput> _input;
+    hide uint32_t Width;
+    hide uint32_t Height;
+    hide std::shared_ptr<BeWindow> Window;
+    hide std::shared_ptr<BeRenderer> Renderer;
+    hide std::shared_ptr<BeInput> Input;
     hide std::shared_ptr<BeCamera> _camera;
     
-    hide std::unique_ptr<BeSceneManager> _sceneManager; 
+    hide std::unique_ptr<BeSceneManager> SceneManager; 
     
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose Game();

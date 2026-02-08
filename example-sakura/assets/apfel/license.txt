@@ -1,0 +1,11 @@
+Model Information:
+* title:	apfel !
+* source:	https://sketchfab.com/3d-models/apfel-9b6677816f4a42c29fd732ff590f2451
+* author:	Omar Faruq Tawsif (https://sketchfab.com/omarfaruqtawsif32)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "apfel !" (https://sketchfab.com/3d-models/apfel-9b6677816f4a42c29fd732ff590f2451) by Omar Faruq Tawsif (https://sketchfab.com/omarfaruqtawsif32) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
