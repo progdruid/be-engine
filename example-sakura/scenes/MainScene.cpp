@@ -20,6 +20,7 @@
 #include "basic-render-pipeline/BeGeometryPass.h"
 #include "basic-render-pipeline/BeLightingPass.h"
 #include "basic-render-pipeline/BeShadowPass.h"
+#include "scenes/BeSceneManager.h"
 
 MainScene::MainScene(Game* game) : BaseScene(game) {}
 
@@ -323,6 +324,11 @@ auto MainScene::OnLoad() -> void {
 
 
 auto MainScene::Tick(float deltaTime) -> void {
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        GameIns->SceneManager->RequestSceneChange("menu");
+    }
+    
+    
     static const auto GeometryView = _registry.view<TransformComponent, RenderComponent>();
     static const auto SunView = _registry.view<SunLightComponent>();
     static const auto PointLightView = _registry.view<TransformComponent, PointLightComponent>();

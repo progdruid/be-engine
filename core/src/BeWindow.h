@@ -18,13 +18,15 @@ class BeWindow {
     int _width;
     int _height;
     std::string _title;
+    bool _fullscreen;
 
     //lifetime//////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
     explicit BeWindow(
         int width,
         int height,
-        const std::string& title = "Window"
+        const std::string& title = "Window",
+        bool fullscreen = false
     );
     ~BeWindow();
 
@@ -40,6 +42,7 @@ class BeWindow {
     //interface/////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
     auto PollEvents() -> void;
+    auto RequestClose() -> void;
 
     [[nodiscard]] auto ShouldClose() const -> bool;
     [[nodiscard]] auto GetHwnd() const -> HWND;
@@ -47,6 +50,7 @@ class BeWindow {
     [[nodiscard]] auto GetWidth() const -> int { return _width; }
     [[nodiscard]] auto GetHeight() const -> int { return _height; }
     [[nodiscard]] auto GetTitle() const -> const std::string& { return _title; }
+    [[nodiscard]] auto IsFullscreen() const -> bool { return _fullscreen; }
 
     hide auto SetupErrorCallback() -> void;
 };
