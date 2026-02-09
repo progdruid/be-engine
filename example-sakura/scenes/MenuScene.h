@@ -17,7 +17,7 @@ class MenuScene : public BaseScene {
 
     auto Prepare() -> void override {}
     auto OnLoad() -> void override;
-    auto Tick(float deltaTime) -> void override {}
+    auto Tick(float deltaTime) -> void override;
 
     auto RunUI() -> void;
 };

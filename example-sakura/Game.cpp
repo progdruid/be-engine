@@ -23,7 +23,10 @@ auto Game::Run() -> int {
     Width = 1920;
     Height = 1080;
     
-    Window = std::make_shared<BeWindow>(Width, Height, "be: example game 1");
+    //Window = std::make_shared<BeWindow>(Width, Height, "be: example game 1");
+    Window = std::make_shared<BeWindow>(0, 0, "be: example sakura", true);
+    Width = Window->GetWidth();
+    Height = Window->GetHeight();
     Renderer = std::make_shared<BeRenderer>(Width, Height, Window->GetHwnd());
     Renderer->LaunchDevice();
     SubmissionBuffer = std::make_shared<BeBRPSubmissionBuffer>();

@@ -1,9 +1,12 @@
 #include "MenuScene.h"
 
 #include <iostream>
+#include <glfw/glfw3.h>
 #include <scenes/BeSceneManager.h>
 
+#include "BeInput.h"
 #include "BeRenderer.h"
+#include "BeWindow.h"
 #include "Game.h"
 #include "imgui/BeImGuiPass.h"
 #include "imgui/imgui.h"
@@ -19,6 +22,12 @@ auto MenuScene::OnLoad() -> void {
     imguiPass->SetUICallback([this](){RunUI();});
 
     GameIns->Renderer->InitialisePasses();
+}
+
+auto MenuScene::Tick(float deltaTime) -> void {
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        GameIns->Window->RequestClose();
+    }
 }
 
 auto MenuScene::RunUI() -> void {

@@ -18,6 +18,7 @@
 #include "basic-render-pipeline/BeGeometryPass.h"
 #include "basic-render-pipeline/BeLightingPass.h"
 #include "basic-render-pipeline/BeShadowPass.h"
+#include "scenes/BeSceneManager.h"
 
 LowPolyShowcaseScene::LowPolyShowcaseScene(Game* game) : BaseScene(game) {}
 LowPolyShowcaseScene::~LowPolyShowcaseScene() = default;
@@ -232,6 +233,10 @@ auto LowPolyShowcaseScene::LoadPasses() -> void {
 
 
 void LowPolyShowcaseScene::Tick(float deltaTime) {
+
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        GameIns->SceneManager->RequestSceneChange("menu");
+    }
 
     // Toggle between cameras with [C]
     if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
