@@ -17,8 +17,8 @@ namespace {
     }
 }
 
-BeWindow::BeWindow(int width, int height, const std::string& title, bool fullscreen)
-    : _window(nullptr), _hwnd(nullptr), _width(width), _height(height), _title(title), _fullscreen(fullscreen) {
+BeWindow::BeWindow(int width, int height, const std::string& title, BeWindowMode mode)
+    : _window(nullptr), _hwnd(nullptr), _width(width), _height(height), _title(title), _mode(mode) {
 
     SetupErrorCallback();
 
@@ -30,14 +30,26 @@ BeWindow::BeWindow(int width, int height, const std::string& title, bool fullscr
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     GLFWmonitor* monitor = nullptr;
-    if (fullscreen) {
-        monitor = glfwGetPrimaryMonitor();
-        if (monitor) {
-            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-            if (mode) {
-                // Use monitor resolution if width/height are 0 or use provided dimensions
-                _width = (width > 0) ? width : mode->width;
-                _height = (height > 0) ? height : mode->height;
+    GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
+
+    if (mode == BeWindowMode::Fullscreen) {
+        // Exclusive fullscreen
+        monitor = primaryMonitor;
+        if (primaryMonitor) {
+            const GLFWvidmode* videoMode = glfwGetVideoMode(primaryMonitor);
+            if (videoMode) {
+                _width = (width > 0) ? width : videoMode->width;
+                _height = (height > 0) ? height : videoMode->height;
+            }
+        }
+    } else if (mode == BeWindowMode::BorderlessFullscreen) {
+        // Borderless windowed fullscreen
+        glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+        if (primaryMonitor) {
+            const GLFWvidmode* videoMode = glfwGetVideoMode(primaryMonitor);
+            if (videoMode) {
+                _width = videoMode->width;
+                _height = videoMode->height;
             }
         }
     }
@@ -46,6 +58,11 @@ BeWindow::BeWindow(int width, int height, const std::string& title, bool fullscr
     if (!_window) {
         glfwTerminate();
         throw std::runtime_error("Failed to create GLFW window");
+    }
+
+    // Position borderless fullscreen window at (0, 0)
+    if (mode == BeWindowMode::BorderlessFullscreen) {
+        glfwSetWindowPos(_window, 0, 0);
     }
 
     _hwnd = glfwGetWin32Window(_window);
@@ -61,7 +78,7 @@ BeWindow::~BeWindow() {
 
 BeWindow::BeWindow(BeWindow&& other) noexcept
     : _window(other._window), _hwnd(other._hwnd), _width(other._width),
-      _height(other._height), _title(std::move(other._title)), _fullscreen(other._fullscreen) {
+      _height(other._height), _title(std::move(other._title)), _mode(other._mode) {
     other._window = nullptr;
     other._hwnd = nullptr;
 }
@@ -70,7 +87,7 @@ BeWindow& BeWindow::operator=(BeWindow&& other) noexcept {
     if (this != &other) {
         _height = other._height;
         _title = std::move(other._title);
-        _fullscreen = other._fullscreen;
+        _mode = other._mode;
 
         if (_window) {
             glfwDestroyWindow(_window);

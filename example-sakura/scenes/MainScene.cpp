@@ -154,7 +154,10 @@ auto MainScene::Prepare() -> void {
 
 auto MainScene::OnLoad() -> void {
     const auto& device = GameIns->Renderer->GetDevice();
-    
+
+    // Clear all entities from previous load
+    _registry.clear();
+
     GameIns->Renderer->ClearPasses();
 
     const auto shadowPass = new BeShadowPass();
@@ -264,7 +267,7 @@ auto MainScene::OnLoad() -> void {
             .ShadowMapWorldSize = 60.0f,
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
-            .ShadowMap = BeTexture::Create("SunLightShadowMap")
+            .ShadowMap = BeTexture::Create("MainScene_SunLightShadowMap")
                 .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
                 .SetFormat(DXGI_FORMAT_R32_TYPELESS)
                 .SetSize(4096, 4096)
@@ -284,8 +287,8 @@ auto MainScene::OnLoad() -> void {
                 .CastsShadows = false,
                 .ShadowMapResolution = 2048,
                 .ShadowNearPlane = 0.1f,
-                .ShadowMap = 
-                    BeTexture::Create("PointLight" + std::to_string(i) + "_ShadowMap")
+                .ShadowMap =
+                    BeTexture::Create("MainScene_PointLight" + std::to_string(i) + "_ShadowMap")
                     .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
                     .SetFormat(DXGI_FORMAT_R32_TYPELESS)
                     .SetCubemap(true)
