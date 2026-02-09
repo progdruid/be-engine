@@ -53,7 +53,14 @@ auto MenuScene::RunUI() -> void {
     auto windowWidth = ImGui::GetWindowWidth();
     ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
 
-    if (ImGui::Button("Play", ImVec2(buttonWidth, 50))) {
+    if (ImGui::Button("Main", ImVec2(buttonWidth, 50))) {
+        GameIns->SceneManager->RequestSceneChange("main");
+    }
+    
+    ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
+    ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.6f);
+    
+    if (ImGui::Button("Showcase", ImVec2(buttonWidth, 50))) {
         GameIns->SceneManager->RequestSceneChange("showcase");
     }
 
