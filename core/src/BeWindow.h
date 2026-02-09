@@ -10,6 +10,12 @@ struct HWND__;
 // ReSharper disable once CppInconsistentNaming
 using HWND = HWND__*;
 
+enum class BeWindowMode {
+    Windowed,
+    Fullscreen,
+    BorderlessFullscreen
+};
+
 class BeWindow {
     //fields////////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide
@@ -18,7 +24,7 @@ class BeWindow {
     int _width;
     int _height;
     std::string _title;
-    bool _fullscreen;
+    BeWindowMode _mode;
 
     //lifetime//////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
@@ -26,7 +32,7 @@ class BeWindow {
         int width,
         int height,
         const std::string& title = "Window",
-        bool fullscreen = false
+        BeWindowMode mode = BeWindowMode::Windowed
     );
     ~BeWindow();
 
@@ -50,7 +56,7 @@ class BeWindow {
     [[nodiscard]] auto GetWidth() const -> int { return _width; }
     [[nodiscard]] auto GetHeight() const -> int { return _height; }
     [[nodiscard]] auto GetTitle() const -> const std::string& { return _title; }
-    [[nodiscard]] auto IsFullscreen() const -> bool { return _fullscreen; }
+    [[nodiscard]] auto GetWindowMode() const -> BeWindowMode { return _mode; }
 
     hide auto SetupErrorCallback() -> void;
 };

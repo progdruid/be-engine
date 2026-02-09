@@ -189,7 +189,7 @@ auto LowPolyShowcaseScene::CreateObjects() -> void {
             .ShadowMapWorldSize = 60.0f,
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
-            .ShadowMap = BeTexture::Create("SunLightShadowMap")
+            .ShadowMap = BeTexture::Create("ShowcaseScene_SunLightShadowMap")
                 .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
                 .SetFormat(DXGI_FORMAT_R32_TYPELESS)
                 .SetSize(4096, 4096)
