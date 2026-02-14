@@ -35,8 +35,8 @@ auto Game::Run() -> int {
 auto Game::SetupScenes() -> void {
     SceneManager = std::make_unique<BeSceneManager>();
 
-    auto menuScene = std::make_unique<MenuScene>(SceneManager.get(), Renderer, Window, Input);
-    auto mainScene = std::make_unique<MainScene>(Renderer, Window, Input);
+    auto menuScene = std::make_unique<MenuScene>(this);
+    auto mainScene = std::make_unique<MainScene>(this);
 
     SceneManager->RegisterScene("menu", std::move(menuScene));
     SceneManager->RegisterScene("main", std::move(mainScene));

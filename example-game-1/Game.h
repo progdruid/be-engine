@@ -2,35 +2,23 @@
 
 #include <memory>
 #include <vector>
+#include <umbrellas/access-modifiers.hpp>
 
-#include "BeRenderer.h"
-#include "umbrellas/access-modifiers.hpp"
-
+class BeBRPSubmissionBuffer;
 class BeSceneManager;
-class BeWindow;
-class BeRenderer;
 class BeInput;
-class BeCamera;
-class BeLightingPass;
-class BeScene;
-class BeTexture;
-class BeMaterial;
-class BeShader;
-class BeRenderPass;
-struct BeModel;
-struct BeDirectionalLight;
-struct BePointLight;
+class BeRenderer;
+class BeWindow;
 
 class Game {
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    hide uint32_t Width;
-    hide uint32_t Height;
-    hide std::shared_ptr<BeWindow> Window;
-    hide std::shared_ptr<BeRenderer> Renderer;
-    hide std::shared_ptr<BeInput> Input;
-    hide std::shared_ptr<BeCamera> _camera;
-    
-    hide std::unique_ptr<BeSceneManager> SceneManager; 
+    expose uint32_t Width;
+    expose uint32_t Height;
+    expose std::shared_ptr<BeWindow> Window;
+    expose std::shared_ptr<BeRenderer> Renderer;
+    expose std::shared_ptr<BeInput> Input;
+    expose std::unique_ptr<BeSceneManager> SceneManager; 
+    expose std::shared_ptr<BeBRPSubmissionBuffer> SubmissionBuffer;
     
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose Game();
@@ -40,7 +28,6 @@ class Game {
     expose auto Run() -> int;
 
     // private logic ///////////////////////////////////////////////////////////////////////////////////////////////////
-    hide auto SetupCamera(int width, int height) -> void;
     hide auto SetupScenes() -> void;
     hide auto MainLoop() -> void;
 };

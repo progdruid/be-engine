@@ -12,6 +12,7 @@
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "BeWindow.h"
+#include "Game.h"
 #include "basic-render-pipeline/BeBackbufferPass.h"
 #include "basic-render-pipeline/BeBloomPass.h"
 #include "basic-render-pipeline/BeFullscreenEffectPass.h"
@@ -19,25 +20,17 @@
 #include "basic-render-pipeline/BeLightingPass.h"
 #include "basic-render-pipeline/BeShadowPass.h"
 
-MainScene::MainScene(
-    const std::shared_ptr<BeRenderer>& renderer,
-    const std::shared_ptr<BeWindow>& window,
-    const std::shared_ptr<BeInput>& input
-)
-    : _renderer(renderer)
-    , _window(window)
-    , _input(input)
-{}
+MainScene::MainScene(Game* game) : BaseScene(game){}
 
 auto MainScene::Prepare() -> void {
 
     _camera = std::make_unique<BeCamera>(); 
-    _camera->Width = _window->GetWidth();
-    _camera->Height = _window->GetHeight();
+    _camera->Width = GameIns->Window->GetWidth();
+    _camera->Height = GameIns->Window->GetHeight();
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
     
-    const auto device = _renderer->GetDevice();
+    const auto device = GameIns->Renderer->GetDevice();
     
     BeTexture::Create("white")
     .SetSize(1, 1)
@@ -55,7 +48,7 @@ auto MainScene::Prepare() -> void {
     .AddToRegistry()
     .BuildNoReturn(device);
 
-    BeAssetRegistry::InjectRenderer(_renderer);
+    BeAssetRegistry::InjectRenderer(GameIns->Renderer);
     BeAssetRegistry::IndexShaderFiles({ 
         "assets/shaders/standard.hlsl", 
         "assets/shaders/tessellated.hlsl", 
@@ -75,21 +68,21 @@ auto MainScene::Prepare() -> void {
     const auto tessellatedShader = BeAssetRegistry::GetShader("tessellated");
     
     _plane = CreatePlane(64);
-    _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, *_renderer);
-    _cube = BeModel::Create("assets/cube.glb", tessellatedShader, *_renderer);
+    _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, *GameIns->Renderer);
+    _cube = BeModel::Create("assets/cube.glb", tessellatedShader, *GameIns->Renderer);
     _cube->Materials[0]->SetFloat3("DiffuseColor", glm::vec3(0.28, 0.39, 1.0));
-    _macintosh = BeModel::Create("assets/model.fbx", standardShader, *_renderer);
-    _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, *_renderer);
-    _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, *_renderer);
-    _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *_renderer);
+    _macintosh = BeModel::Create("assets/model.fbx", standardShader, *GameIns->Renderer);
+    _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, *GameIns->Renderer);
+    _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, *GameIns->Renderer);
+    _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
     _anvil->DrawSlices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
 
     const std::vector<std::shared_ptr<BeModel>> models {
         _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil
     };
-    _renderer->RegisterModels(models);
+    GameIns->Renderer->RegisterModels(models);
 
-    _renderer->UniformData.AmbientColor = glm::vec3(0.1f);
+    GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
 
     _directionalLight = std::make_shared<BeDirectionalLight>();
     _directionalLight->Direction = glm::normalize(glm::vec3(-0.8f, -1.0f, -0.8f));
@@ -133,8 +126,8 @@ auto MainScene::Prepare() -> void {
     }
 
 
-    const uint32_t screenWidth = _window->GetWidth();
-    const uint32_t screenHeight = _window->GetHeight();
+    const uint32_t screenWidth = GameIns->Window->GetWidth();
+    const uint32_t screenHeight = GameIns->Window->GetHeight();
     
     BeTexture::Create("DepthStencil")
     .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
@@ -201,24 +194,23 @@ auto MainScene::Prepare() -> void {
 
 auto MainScene::OnLoad() -> void {
     
-    _renderer->ClearPasses();
+    GameIns->Renderer->ClearPasses();
 
     const auto shadowPass = new BeShadowPass();
-    _renderer->AddRenderPass(shadowPass);
-    shadowPass->DirectionalLight = _directionalLight;
-    shadowPass->PointLights = _pointLights;
+    GameIns->Renderer->AddRenderPass(shadowPass);
+    shadowPass->SubmissionBuffer = GameIns->SubmissionBuffer;
 
     const auto geometryPass = new BeGeometryPass();
-    _renderer->AddRenderPass(geometryPass);
+    GameIns->Renderer->AddRenderPass(geometryPass);
+    geometryPass->SubmissionBuffer = GameIns->SubmissionBuffer;
     geometryPass->OutputDepthTexture = BeAssetRegistry::GetTexture("DepthStencil");
     geometryPass->OutputTexture0 = BeAssetRegistry::GetTexture("BaseColor");
     geometryPass->OutputTexture1 = BeAssetRegistry::GetTexture("WorldNormal");
     geometryPass->OutputTexture2 = BeAssetRegistry::GetTexture("Specular-Shininess");
 
     const auto lightingPass = new BeLightingPass();
-    _renderer->AddRenderPass(lightingPass);
-    lightingPass->DirectionalLight = _directionalLight;
-    lightingPass->PointLights = _pointLights;
+    GameIns->Renderer->AddRenderPass(lightingPass);
+    lightingPass->SubmissionBuffer = GameIns->SubmissionBuffer;
     lightingPass->InputDepthTexture = BeAssetRegistry::GetTexture("DepthStencil");
     lightingPass->InputTexture0 = BeAssetRegistry::GetTexture("BaseColor");
     lightingPass->InputTexture1 = BeAssetRegistry::GetTexture("WorldNormal");
@@ -228,9 +220,9 @@ auto MainScene::OnLoad() -> void {
     BeTexture::Create("BloomDirtTexture")
     .LoadFromFile("assets/bloom-dirt-mask.png")
     .AddToRegistry()
-    .BuildNoReturn(_renderer->GetDevice());
+    .BuildNoReturn(GameIns->Renderer->GetDevice());
     const auto bloomPass = new BeBloomPass();
-    _renderer->AddRenderPass(bloomPass);
+    GameIns->Renderer->AddRenderPass(bloomPass);
     bloomPass->InputHDRTexture = BeAssetRegistry::GetTexture("HDR-Input");
     bloomPass->BloomMipTextures = {
         BeAssetRegistry::GetTexture("Bloom_Mip0"),
@@ -243,22 +235,22 @@ auto MainScene::OnLoad() -> void {
     bloomPass->DirtTexture = BeAssetRegistry::GetTexture("BloomDirtTexture");
     bloomPass->OutputTexture = BeAssetRegistry::GetTexture("BloomOutput");
 
-    const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.hlsl", *_renderer);
+    const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.hlsl", *GameIns->Renderer);
     const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
-    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, *_renderer);
+    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, *GameIns->Renderer);
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
     const auto tonemapperPass = new BeFullscreenEffectPass();
-    _renderer->AddRenderPass(tonemapperPass);
+    GameIns->Renderer->AddRenderPass(tonemapperPass);
     tonemapperPass->OutputTextureNames = {"TonemapperOutput"};
     tonemapperPass->Shader = tonemapperShader;
     tonemapperPass->Material = tonemapperMaterial;
 
     const auto backbufferPass = new BeBackbufferPass();
-    _renderer->AddRenderPass(backbufferPass);
+    GameIns->Renderer->AddRenderPass(backbufferPass);
     backbufferPass->InputTexture = BeAssetRegistry::GetTexture("TonemapperOutput");
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
     
-    _renderer->InitialisePasses();
+    GameIns->Renderer->InitialisePasses();
     
     auto entity = _registry.create();
     _registry.emplace<NameComponent>(entity, "Macintosh");
@@ -312,39 +304,39 @@ auto MainScene::OnLoad() -> void {
 auto MainScene::Tick(float deltaTime) -> void {
     constexpr float moveSpeed = 5.0f;
     float speed = moveSpeed * deltaTime;
-    if (_input->GetKey(GLFW_KEY_LEFT_SHIFT) || (_input->IsGamepadConnected() && _input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) speed *= 2.0f;
-    if (_input->GetKey(GLFW_KEY_W)) _camera->Position += _camera->GetFront() * speed;
-    if (_input->GetKey(GLFW_KEY_S)) _camera->Position -= _camera->GetFront() * speed;
-    if (_input->GetKey(GLFW_KEY_D)) _camera->Position -= _camera->GetRight() * speed;
-    if (_input->GetKey(GLFW_KEY_A)) _camera->Position += _camera->GetRight() * speed;
-    if (_input->GetKey(GLFW_KEY_E)) _camera->Position += glm::vec3(0, 1, 0) * speed;
-    if (_input->GetKey(GLFW_KEY_Q)) _camera->Position -= glm::vec3(0, 1, 0) * speed;
+    if (GameIns->Input->GetKey(GLFW_KEY_LEFT_SHIFT) || (GameIns->Input->IsGamepadConnected() && GameIns->Input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) speed *= 2.0f;
+    if (GameIns->Input->GetKey(GLFW_KEY_W)) _camera->Position += _camera->GetFront() * speed;
+    if (GameIns->Input->GetKey(GLFW_KEY_S)) _camera->Position -= _camera->GetFront() * speed;
+    if (GameIns->Input->GetKey(GLFW_KEY_D)) _camera->Position -= _camera->GetRight() * speed;
+    if (GameIns->Input->GetKey(GLFW_KEY_A)) _camera->Position += _camera->GetRight() * speed;
+    if (GameIns->Input->GetKey(GLFW_KEY_E)) _camera->Position += glm::vec3(0, 1, 0) * speed;
+    if (GameIns->Input->GetKey(GLFW_KEY_Q)) _camera->Position -= glm::vec3(0, 1, 0) * speed;
 
     // Gamepad movement
-    if (_input->IsGamepadConnected()) {
-        const glm::vec2 leftStick = _input->GetGamepadLeftStick();
+    if (GameIns->Input->IsGamepadConnected()) {
+        const glm::vec2 leftStick = GameIns->Input->GetGamepadLeftStick();
         _camera->Position += _camera->GetFront() * (leftStick.y * speed);
         _camera->Position -= _camera->GetRight() * (leftStick.x * speed);
 
-        const float verticalInput = _input->GetGamepadRightTrigger() - _input->GetGamepadLeftTrigger();
+        const float verticalInput = GameIns->Input->GetGamepadRightTrigger() - GameIns->Input->GetGamepadLeftTrigger();
         _camera->Position += glm::vec3(0, 1, 0) * (verticalInput * speed);
     }
 
     bool captureMouse = false;
-    if (_input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
+    if (GameIns->Input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
         constexpr float mouseSens = 0.1f;
 
         captureMouse = true;
-        const glm::vec2 mouseDelta = _input->GetMouseDelta();
+        const glm::vec2 mouseDelta = GameIns->Input->GetMouseDelta();
         _camera->Yaw   -= mouseDelta.x * mouseSens;
         _camera->Pitch -= mouseDelta.y * mouseSens;
         _camera->Pitch = glm::clamp(_camera->Pitch, -89.0f, 89.0f);
     }
-    _input->SetMouseCapture(captureMouse);
+    GameIns->Input->SetMouseCapture(captureMouse);
 
     // Gamepad camera look
-    if (_input->IsGamepadConnected()) {
-        const glm::vec2 rightStick = _input->GetGamepadRightStick();
+    if (GameIns->Input->IsGamepadConnected()) {
+        const glm::vec2 rightStick = GameIns->Input->GetGamepadRightStick();
         constexpr float gamepadCameraSens = 100.0f;
 
         _camera->Yaw   -= rightStick.x * gamepadCameraSens * deltaTime;
@@ -352,7 +344,7 @@ auto MainScene::Tick(float deltaTime) -> void {
         _camera->Pitch = glm::clamp(_camera->Pitch, -89.0f, 89.0f);
     }
 
-    const glm::vec2 scrollDelta = _input->GetScrollDelta();
+    const glm::vec2 scrollDelta = GameIns->Input->GetScrollDelta();
     if (scrollDelta.y != 0.0f) {
         _camera->Fov -= scrollDelta.y;
         _camera->Fov = glm::clamp(_camera->Fov, 20.0f, 90.0f);
@@ -360,9 +352,9 @@ auto MainScene::Tick(float deltaTime) -> void {
 
     {
         _camera->Update();
-        _renderer->UniformData.NearFarPlane = {_camera->NearPlane, _camera->FarPlane};
-        _renderer->UniformData.ProjectionView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
-        _renderer->UniformData.CameraPosition = _camera->Position;
+        GameIns->Renderer->UniformData.NearFarPlane = {_camera->NearPlane, _camera->FarPlane};
+        GameIns->Renderer->UniformData.ProjectionView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
+        GameIns->Renderer->UniformData.CameraPosition = _camera->Position;
     }
 
     {
@@ -384,7 +376,7 @@ auto MainScene::Tick(float deltaTime) -> void {
 
     const auto renderView = _registry.view<TransformComponent, RenderComponent>();
     renderView.each([this](auto& transform, auto& render) {
-        _renderer->SubmitDrawEntry(BeRenderer::DrawEntry{
+        GameIns->Renderer->SubmitDrawEntry(BeRenderer::DrawEntry{
             .Position = transform.Position,
             .Rotation = transform.Rotation,
             .Scale = transform.Scale,
@@ -397,7 +389,7 @@ auto MainScene::Tick(float deltaTime) -> void {
 auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
     const auto shader = BeAssetRegistry::GetShader("terrain").lock();
     const auto& scheme = BeAssetRegistry::GetMaterialScheme("terrain-main-material-for-geometry-pass");
-    auto material = BeMaterial::Create("TerrainMat", scheme, true, *_renderer);
+    auto material = BeMaterial::Create("TerrainMat", scheme, true, *GameIns->Renderer);
     material->SetFloat("TerrainScale", 200.0f);
     material->SetFloat("HeightScale", 100.0f);
 
