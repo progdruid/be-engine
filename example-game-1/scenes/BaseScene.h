@@ -2,15 +2,15 @@
 
 #include <scenes/BeScene.h>
 
-class BeSceneManager;
+class Game;
 
 class BaseScene : public BeScene {
-protected:
-    BeSceneManager* _sceneManager = nullptr;
 
-public:
-    BaseScene(BeSceneManager* sceneManager = nullptr) : _sceneManager(sceneManager) {}
-    virtual ~BaseScene() = default;
+    protect Game* GameIns = nullptr;
+
+    expose
+    explicit BaseScene(Game* game) : GameIns(game) {}
+    ~BaseScene() override = default;
 
     virtual auto Prepare() -> void {}
     virtual auto Tick(float deltaTime) -> void {}
