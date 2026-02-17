@@ -91,21 +91,13 @@ auto BeBloomPass::RenderBrightPass() const -> void {
     
     const auto bloomMip0  = BloomMipTextures[0].lock();
 
-    // targets
-    context->ClearRenderTargetView(bloomMip0->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
-    context->OMSetRenderTargets(1, bloomMip0->GetRTV().GetAddressOf(), nullptr);
-
-    // shaders
+    pipeline->BindTargets({ bloomMip0 }, nullptr, false);
     pipeline->BindShader(_brightShader, BeShaderType::Vertex | BeShaderType::Pixel);
     pipeline->BindMaterialAutomatic(_brightMaterial);
-    
-    // draw
-    context->Draw(4, 0);
+    pipeline->Draw(4, 0);
 
-    // clear
     pipeline->Clear();
-    context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
-    
+    pipeline->ClearTargets();
 }
 
 auto BeBloomPass::RenderDownsamplePasses() -> void {
@@ -129,22 +121,16 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
         viewport.MaxDepth = 1.0f;
         context->RSSetViewports(1, &viewport);
 
-        // target
-        context->ClearRenderTargetView(targetMip->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
-        context->OMSetRenderTargets(1, targetMip->GetRTV().GetAddressOf(), nullptr);
-
-        // material
+        pipeline->BindTargets({ targetMip }, nullptr, false);
         pipeline->BindMaterialAutomatic(_downsampleMaterials[mipTarget]);
         
-        // draw
-        context->Draw(4, 0);
+        pipeline->Draw(4, 0);
 
-        context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
+        pipeline->ClearTargets();
     }
 
     pipeline->Clear();
     context->RSSetViewports(1, &previousViewport);
-    context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
 }
 
 auto BeBloomPass::RenderUpsamplePasses() -> void {
@@ -180,20 +166,19 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
         context->RSSetViewports(1, &viewport);
-        context->OMSetRenderTargets(1, targetMip->GetRTV().GetAddressOf(), nullptr);
-
+        
+        pipeline->BindTargets({ targetMip }, nullptr, false);
         pipeline->BindMaterialAutomatic(_upsampleMaterials[mipTarget]);
 
-        context->Draw(4, 0);
+        pipeline->Draw(4, 0);
 
-        context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
+        pipeline->ClearTargets();
     }
 
     context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     if (additiveBlendState) additiveBlendState->Release();
 
     pipeline->Clear();
-    context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
     context->RSSetViewports(1, &previousViewport);
 }
 
@@ -201,15 +186,12 @@ auto BeBloomPass::RenderAddPass() const -> void {
     const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
     
-    const auto outputTexture = OutputTexture.lock();
-    context->ClearRenderTargetView(outputTexture->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
-    context->OMSetRenderTargets(1, outputTexture->GetRTV().GetAddressOf(), nullptr);
-
+    pipeline->BindTargets({ OutputTexture }, nullptr, false);
     pipeline->BindShader(_addShader, BeShaderType::Vertex | BeShaderType::Pixel);
     pipeline->BindMaterialAutomatic(_addMaterial);
     
-    context->Draw(4, 0);
+    pipeline->Draw(4, 0);
 
     pipeline->Clear();
-    context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);   
+    pipeline->ClearTargets();
 }

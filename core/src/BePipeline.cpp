@@ -2,6 +2,7 @@
 
 #include "BeAssetRegistry.h"
 #include "BeMaterial.h"
+#include "BeModel.h"
 #include "BeTexture.h"
 
 auto BePipeline::Create(const ComPtr<ID3D11DeviceContext>& context)-> std::shared_ptr<BePipeline> {
@@ -135,4 +136,59 @@ auto BePipeline::BindMaterialTextures(const BeMaterial& material) -> void {
             _pixelResCache[slot] = id;
         }
     }
+}
+
+auto BePipeline::BindTargets(
+    const std::vector<std::weak_ptr<BeTexture>>& renderTargets,
+    const BeTexture* depthTarget,
+    bool clearRTVs
+) const -> void {
+    //rtvs
+    std::vector<ID3D11RenderTargetView*> rtvs;
+    rtvs.reserve(renderTargets.size());
+    for (const auto& renderTarget : renderTargets) {
+        auto rtv = renderTarget.lock()->GetRTV().Get();
+        if (clearRTVs)
+            _context->ClearRenderTargetView(rtv, glm::value_ptr(glm::vec4(0.0f)));
+        rtvs.push_back(rtv);
+    }
+
+    //dsv
+    ID3D11DepthStencilView* dsv = nullptr;
+    if (depthTarget != nullptr) {
+        dsv = depthTarget->GetDSV().Get();
+        _context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    }
+
+    _context->OMSetRenderTargets(rtvs.size(), rtvs.data(), dsv);
+}
+
+auto BePipeline::ClearTargets() const -> void {
+    _context->OMSetRenderTargets(0, nullptr, nullptr);
+}
+
+auto BePipeline::ResetTarget(const std::shared_ptr<BeTexture>& texture) const -> void {
+    be_assert(
+        texture->BindFlags & D3D11_BIND_RENDER_TARGET,
+        "trying to reset a texture that is not a render target. "
+        "only render targets can be reset. ",
+        texture->BindFlags
+    );
+    
+    _context->ClearRenderTargetView(
+        texture->GetRTV().Get(),
+        glm::value_ptr(glm::vec4(0.0f))
+    );
+}
+
+auto BePipeline::Draw(uint32_t vertexCount, uint32_t startVertexLocation) const -> void {
+    _context->Draw(vertexCount, startVertexLocation);
+}
+
+auto BePipeline::DrawSlice(const BeDrawSlice& slice) const -> void {
+    _context->DrawIndexed(
+        slice.IndexCount,
+        slice.StartIndexLocation,
+        slice.BaseVertexLocation
+    );
 }

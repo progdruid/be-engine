@@ -32,7 +32,7 @@ auto BeBackbufferPass::Render() -> void {
     pipeline->BindMaterialAutomatic( _backbufferMaterial);
 
     // draw
-    context->Draw(4, 0);
+    pipeline->Draw(4, 0);
 
     // clear
     pipeline->Clear();

@@ -6,6 +6,8 @@
 
 #include "BeShader.h"
 
+struct BeDrawSlice;
+class BeTexture;
 class BeMaterial;
 using Microsoft::WRL::ComPtr;
 
@@ -53,4 +55,17 @@ class BePipeline {
     
     hide
     auto BindMaterialTextures (const BeMaterial& material) -> void;
+
+    expose
+    auto BindTargets (
+        const std::vector<std::weak_ptr<BeTexture>>& renderTargets,
+        const BeTexture* depthTarget,
+        bool clearRTVs = false
+    ) const -> void;
+    auto ClearTargets () const -> void;
+    auto ResetTarget (const std::shared_ptr<BeTexture>& texture) const -> void;
+    
+    expose
+    auto Draw(uint32_t vertexCount, uint32_t startVertexLocation) const -> void;
+    auto DrawSlice(const BeDrawSlice& slice) const -> void;
 };
