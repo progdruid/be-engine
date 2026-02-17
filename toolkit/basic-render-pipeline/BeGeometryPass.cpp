@@ -21,33 +21,14 @@ auto BeGeometryPass::Initialise() -> void {
     _objectMaterial = BeMaterial::Create("object", objectScheme, true, *_renderer);
 }
 
-auto BeGeometryPass::Render() -> void {
+auto BeGeometryPass::Render() -> void
+{
     const auto context = _renderer->GetContext();
     const auto pipeline = _renderer->GetPipeline();
     const auto submissionBuffer = SubmissionBuffer.lock();
-    
-    // Clear and set render targets
-    const auto depthResource    = OutputDepthTexture.lock();
-    const auto gbufferResource0 = OutputTexture0.lock();
-    const auto gbufferResource1 = OutputTexture1.lock();
-    const auto gbufferResource2 = OutputTexture2.lock();
-    const auto gbufferResource3 = OutputTexture3.lock();
-    
-    context->ClearDepthStencilView(depthResource->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-    context->ClearRenderTargetView(gbufferResource0->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
-    context->ClearRenderTargetView(gbufferResource1->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
-    context->ClearRenderTargetView(gbufferResource2->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
-    context->ClearRenderTargetView(gbufferResource3->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
 
-    ID3D11RenderTargetView* gbufferRTVs[4] = {
-        gbufferResource0->GetRTV().Get(),
-        gbufferResource1->GetRTV().Get(),
-        gbufferResource2->GetRTV().Get(),
-        gbufferResource3->GetRTV().Get()
-    };
-    context->OMSetRenderTargets(4, gbufferRTVs, depthResource->GetDSV().Get());
-    SCOPE_EXIT { context->OMSetRenderTargets(4, Utils::NullRTVs, nullptr); };
-
+    pipeline->BindTargets({ OutputTexture0, OutputTexture1, OutputTexture2, OutputTexture3 }, OutputDepthTexture.lock().get(), true);
+    SCOPE_EXIT { pipeline->ClearTargets(); };
     
     // Set vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
@@ -82,7 +63,7 @@ auto BeGeometryPass::Render() -> void {
             }
 
             pipeline->BindMaterialAutomatic(slice.Material);
-            context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
+            pipeline->DrawSlice(slice);
 
             if (slice.TwoSided) {
                 context->RSSetState(_renderer->GetRasterizerCullBack().Get());

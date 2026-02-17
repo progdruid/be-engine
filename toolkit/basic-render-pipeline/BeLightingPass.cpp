@@ -58,12 +58,10 @@ auto BeLightingPass::Render() -> void {
     const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
     
-    const auto lightingResource  = OutputTexture.lock();
-    context->ClearRenderTargetView(lightingResource->GetRTV().Get(), glm::value_ptr(glm::vec4(0.0f)));
-    context->OMSetRenderTargets(1, lightingResource->GetRTV().GetAddressOf(), nullptr);
+    pipeline->BindTargets({ OutputTexture }, nullptr, true);
     context->OMSetBlendState(_lightingBlendState.Get(), nullptr, 0xFFFFFFFF);
     SCOPE_EXIT {
-        context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
+        pipeline->ClearTargets();
         context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     };
 
@@ -80,7 +78,7 @@ auto BeLightingPass::Render() -> void {
     _directionalLightMaterial->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
     pipeline->BindMaterialAutomatic(_directionalLightMaterial);
     
-    context->Draw(4, 0);
+    pipeline->Draw(4, 0);
     _directionalLightMaterial->SetTexture("ShadowMap", nullptr);
     pipeline->Clear();
 
@@ -99,7 +97,7 @@ auto BeLightingPass::Render() -> void {
         _pointLightMaterial->SetTexture("PointLightShadowMap", pointLight.ShadowMap.lock()); 
         pipeline->BindMaterialAutomatic(_pointLightMaterial);
     
-        context->Draw(4, 0);
+        pipeline->Draw(4, 0);
     }
     
     _pointLightMaterial->SetTexture("PointLightShadowMap", nullptr);
@@ -109,6 +107,6 @@ auto BeLightingPass::Render() -> void {
     // emissive add
     pipeline->BindShader(_emissiveAddShader, BeShaderType::Vertex | BeShaderType::Pixel);
     pipeline->BindMaterialAutomatic(_emissiveMaterial);
-    context->Draw(4, 0);
+    pipeline->Draw(4, 0);
     pipeline->Clear();
 }

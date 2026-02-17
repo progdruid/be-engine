@@ -208,7 +208,7 @@ auto MainScene::OnLoad() -> void {
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     GameIns->Renderer->AddRenderPass(tonemapperPass);
-    tonemapperPass->OutputTextureNames = {"TonemapperOutput"};
+    tonemapperPass->OutputTextures = { BeAssetRegistry::GetTexture("TonemapperOutput") };
     tonemapperPass->Shader = tonemapperShader;
     tonemapperPass->Material = tonemapperMaterial;
 
@@ -329,7 +329,9 @@ auto MainScene::OnLoad() -> void {
 
 auto MainScene::Tick(float deltaTime) -> void {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        GameIns->Input->SetMouseCapture(false);
         GameIns->SceneManager->RequestSceneChange("menu");
+        return;
     }
     
     
