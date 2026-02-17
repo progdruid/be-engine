@@ -58,13 +58,6 @@ class BeRenderer {
     ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
     ComPtr<ID3D11RasterizerState> _rasterizerCullBack;
     ComPtr<ID3D11RasterizerState> _rasterizerCullNone;
-
-    ComPtr<ID3D11Buffer> _sharedVertexBuffer;
-    ComPtr<ID3D11Buffer> _sharedIndexBuffer;
-    std::unordered_map<BeModel*, std::vector<BeDrawSlice>> _modelDrawSlices;
-    std::vector<DrawEntry> _drawEntries;
-
-    std::vector<std::shared_ptr<BeModel>> _registeredModels;
     
     std::vector<BeRenderPass*> _passes;
 
@@ -97,16 +90,4 @@ class BeRenderer {
     [[nodiscard]] auto GetHeight () const -> uint32_t { return _height; }
     [[nodiscard]] auto GetRasterizerCullBack () const -> ComPtr<ID3D11RasterizerState> { return _rasterizerCullBack; }
     [[nodiscard]] auto GetRasterizerCullNone () const -> ComPtr<ID3D11RasterizerState> { return _rasterizerCullNone; }
-
-    expose
-    auto SetModels(const std::vector<std::shared_ptr<BeModel>>& models) -> void;
-    auto RegisterModels(const std::vector<std::shared_ptr<BeModel>>& models) -> void;
-    auto BakeModels() -> void;
-    auto GetDrawSlicesForModel(const std::shared_ptr<BeModel>& model) -> const std::vector<BeDrawSlice>& { return _modelDrawSlices.at(model.get()); }
-
-    auto SubmitDrawEntry(const DrawEntry& entry) -> void { _drawEntries.push_back(entry); }
-    auto GetDrawEntries() -> std::vector<DrawEntry>& { return _drawEntries; }
-    
-    auto GetShaderVertexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedVertexBuffer; }
-    auto GetShaderIndexBuffer() -> ComPtr<ID3D11Buffer> { return _sharedIndexBuffer; }
 };

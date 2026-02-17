@@ -145,20 +145,17 @@ auto LowPolyShowcaseScene::LoadModels() -> void {
     skycube->Materials[0]->SetFloat3("DiffuseColor", HexColor("#FAC8CD"));
     BeAssetRegistry::AddModel("skycube", skycube);
     
-    auto models = std::vector<std::shared_ptr<BeModel>> {
-        skycube, 
-        ramen,          //1
-        stillLife,      //2
-        fiestaTea,      //3
-        honeydew_melons,//4
-        hunger_games,   //5
-        pickles,        //6
-        watermelons,    //7
-        apfel,          //8
-        eggplant,       //9
-        tomatoes        //0
-    };
-    GameIns->Renderer->RegisterModels(models);
+    GameIns->SubmissionBuffer->RegisterModel(skycube);
+    GameIns->SubmissionBuffer->RegisterModel(ramen);
+    GameIns->SubmissionBuffer->RegisterModel(stillLife);
+    GameIns->SubmissionBuffer->RegisterModel(fiestaTea);
+    GameIns->SubmissionBuffer->RegisterModel(honeydew_melons);
+    GameIns->SubmissionBuffer->RegisterModel(hunger_games);
+    GameIns->SubmissionBuffer->RegisterModel(pickles);
+    GameIns->SubmissionBuffer->RegisterModel(watermelons);
+    GameIns->SubmissionBuffer->RegisterModel(apfel);
+    GameIns->SubmissionBuffer->RegisterModel(eggplant);
+    GameIns->SubmissionBuffer->RegisterModel(tomatoes);
 }
 
 auto LowPolyShowcaseScene::CreateObjects() -> void {

@@ -29,11 +29,12 @@ auto Game::Run() -> int {
     Height = Window->GetHeight();
     Renderer = std::make_shared<BeRenderer>(Width, Height, Window->GetHwnd());
     Renderer->LaunchDevice();
-    SubmissionBuffer = std::make_shared<BeBRPSubmissionBuffer>();
+    const auto device = Renderer->GetDevice();
     
+    SubmissionBuffer = std::make_shared<BeBRPSubmissionBuffer>();
+    SubmissionBuffer->Init(device);
     Input = std::make_unique<BeInput>(Window->GetGlfwWindow());
     
-    const auto device = Renderer->GetDevice();
     
     BeAssetRegistry::InjectRenderer(Renderer);
     
@@ -74,7 +75,7 @@ auto Game::SetupScenes() -> void {
     SceneManager->GetScene<BaseScene>("main")->Prepare();
     SceneManager->GetScene<BaseScene>("showcase")->Prepare();
     
-    Renderer->BakeModels();
+    SubmissionBuffer->BakeModels();
 
     SceneManager->RequestSceneChange("menu");
     SceneManager->ApplyPendingSceneChange();

@@ -194,67 +194,6 @@ auto BeRenderer::Render() -> void {
     _context->PSSetConstantBuffers(0, 1, emptyBuffers);
 
     _pipeline->ClearCache();
-    _drawEntries.clear();
-    
     _swapchain->Present(1, 0);
-}
-
-auto BeRenderer::SetModels(const std::vector<std::shared_ptr<BeModel>>& models) -> void {
-    //vbo + ibo
-    size_t totalVerticesNumber = 0;
-    size_t totalIndicesNumber = 0;
-    size_t totalDrawSlices = 0;
-    for (const auto& model : models) {
-        totalVerticesNumber += model->FullVertices.size();
-        totalIndicesNumber += model->Indices.size();
-        totalDrawSlices += model->DrawSlices.size();
-    }
-
-    std::vector<BeFullVertex> fullVertices;
-    std::vector<uint32_t> indices;
-    fullVertices.reserve(totalVerticesNumber);
-    indices.reserve(totalIndicesNumber);
-    for (auto& model : models) {
-        fullVertices.insert(fullVertices.end(), model->FullVertices.begin(), model->FullVertices.end());
-        indices.insert(indices.end(), model->Indices.begin(), model->Indices.end());
-
-        auto & drawSlices = _modelDrawSlices[model.get()];
-        
-        for (auto slice : model->DrawSlices) {
-            slice.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - model->FullVertices.size());
-            slice.StartIndexLocation += static_cast<uint32_t>(indices.size() - model->Indices.size());
-            
-            drawSlices.push_back(slice);
-        }
-    }
-    
-    D3D11_BUFFER_DESC vertexBufferDescriptor = {};
-    vertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    vertexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
-    vertexBufferDescriptor.ByteWidth = static_cast<UINT>(fullVertices.size() * sizeof(BeFullVertex));
-    D3D11_SUBRESOURCE_DATA vertexData = {};
-    vertexData.pSysMem = fullVertices.data();
-    Utils::Check << _device->CreateBuffer(&vertexBufferDescriptor, &vertexData, &_sharedVertexBuffer);
-    
-    D3D11_BUFFER_DESC indexBufferDescriptor = {};
-    indexBufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    indexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
-    indexBufferDescriptor.ByteWidth = static_cast<UINT>(indices.size() * sizeof(uint32_t));
-    D3D11_SUBRESOURCE_DATA indexData = {};
-    indexData.pSysMem = indices.data();
-    Utils::Check << _device->CreateBuffer(&indexBufferDescriptor, &indexData, &_sharedIndexBuffer);
-}
-
-auto BeRenderer::RegisterModels(const std::vector<std::shared_ptr<BeModel>>& models) -> void {
-    _registeredModels.insert(_registeredModels.end(), models.begin(), models.end());
-}
-
-auto BeRenderer::BakeModels() -> void {
-    // This forces RegisterModels to be compiled
-    if (false) {
-        std::vector<std::shared_ptr<BeModel>> temp;
-        RegisterModels(temp);
-    }
-    SetModels(_registeredModels);
 }
 
