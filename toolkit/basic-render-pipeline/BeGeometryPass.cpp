@@ -24,7 +24,7 @@ auto BeGeometryPass::Initialise() -> void {
 auto BeGeometryPass::Render() -> void {
     const auto context = _renderer->GetContext();
     const auto pipeline = _renderer->GetPipeline();
-    
+    const auto submissionBuffer = SubmissionBuffer.lock();
     
     // Clear and set render targets
     const auto depthResource    = OutputDepthTexture.lock();
@@ -52,8 +52,8 @@ auto BeGeometryPass::Render() -> void {
     // Set vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
     uint32_t offset = 0;
-    context->IASetVertexBuffers(0, 1, _renderer->GetShaderVertexBuffer().GetAddressOf(), &stride, &offset);
-    context->IASetIndexBuffer(_renderer->GetShaderIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+    context->IASetVertexBuffers(0, 1, submissionBuffer->GetSharedVertexBuffer().GetAddressOf(), &stride, &offset);
+    context->IASetIndexBuffer(submissionBuffer->GetSharedIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
     SCOPE_EXIT {
         context->IASetVertexBuffers(0, 1, Utils::NullBuffers, &stride, &offset);
         context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
@@ -75,7 +75,7 @@ auto BeGeometryPass::Render() -> void {
         _objectMaterial->UpdateGPUBuffers(context);
         pipeline->BindMaterialAutomatic(_objectMaterial);
 
-        const auto & drawSlices = _renderer->GetDrawSlicesForModel(entry.Model);
+        const auto & drawSlices = submissionBuffer->GetDrawSlicesForModel(entry.Model);
         for (const auto& slice : drawSlices) {
             if (slice.TwoSided) {
                 context->RSSetState(_renderer->GetRasterizerCullNone().Get());

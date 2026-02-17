@@ -6,6 +6,7 @@
 #include "BeWindow.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
+#include "basic-render-pipeline/BeBRPSubmissionBuffer.h"
 
 #include "scenes/BeSceneManager.h"
 #include "scenes/MenuScene.h"
@@ -44,7 +45,7 @@ auto Game::SetupScenes() -> void {
     SceneManager->GetScene<MenuScene>("menu")->Prepare();
     SceneManager->GetScene<MainScene>("main")->Prepare();
 
-    Renderer->BakeModels();
+    SubmissionBuffer->BakeModels();
 
     SceneManager->RequestSceneChange("menu");
     SceneManager->ApplyPendingSceneChange();

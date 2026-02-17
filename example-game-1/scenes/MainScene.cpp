@@ -77,10 +77,13 @@ auto MainScene::Prepare() -> void {
     _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
     _anvil->DrawSlices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
 
-    const std::vector<std::shared_ptr<BeModel>> models {
-        _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil
-    };
-    GameIns->Renderer->RegisterModels(models);
+    GameIns->SubmissionBuffer->RegisterModel(_plane);
+    GameIns->SubmissionBuffer->RegisterModel(_witchItems);
+    GameIns->SubmissionBuffer->RegisterModel(_cube);
+    GameIns->SubmissionBuffer->RegisterModel(_macintosh);
+    GameIns->SubmissionBuffer->RegisterModel(_pagoda);
+    GameIns->SubmissionBuffer->RegisterModel(_disks);
+    GameIns->SubmissionBuffer->RegisterModel(_anvil);
 
     GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
 
@@ -376,13 +379,13 @@ auto MainScene::Tick(float deltaTime) -> void {
 
     const auto renderView = _registry.view<TransformComponent, RenderComponent>();
     renderView.each([this](auto& transform, auto& render) {
-        GameIns->Renderer->SubmitDrawEntry(BeRenderer::DrawEntry{
-            .Position = transform.Position,
-            .Rotation = transform.Rotation,
-            .Scale = transform.Scale,
-            .Model = render.Model,
-            .CastShadows = render.CastShadows,
-        });
+        //GameIns->SubmissionBuffer->SubmitGeometry(BeBRPGeometryEntry{
+        //    .Position = transform.Position,
+        //    .Rotation = transform.Rotation,
+        //    .Scale = transform.Scale,
+        //    .Model = render.Model,
+        //    .CastShadows = render.CastShadows,
+        //});
     });
 }
 

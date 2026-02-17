@@ -72,10 +72,11 @@ auto MainScene::Prepare() -> void {
     _sakura2 = BeModel::Create("assets/stylized_sakura_tree.glb", standardShader, *GameIns->Renderer);
     //_sakura2->Materials[0]
     
-    const std::vector<std::shared_ptr<BeModel>> models {
-        _cube, _anvil, _sakura, _sakura2, _emissiveCube
-    };
-    GameIns->Renderer->RegisterModels(models);
+    GameIns->SubmissionBuffer->RegisterModel(_cube);
+    GameIns->SubmissionBuffer->RegisterModel(_anvil);
+    GameIns->SubmissionBuffer->RegisterModel(_sakura);
+    GameIns->SubmissionBuffer->RegisterModel(_sakura2);
+    GameIns->SubmissionBuffer->RegisterModel(_emissiveCube);
 
     GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
 
