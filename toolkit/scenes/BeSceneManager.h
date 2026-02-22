@@ -4,7 +4,8 @@
 #include <unordered_map>
 #include <string>
 #include <concepts>
-#include <cassert>
+#include <typeinfo>
+#include <umbrellas/include-libassert.h>
 
 class BeScene;
 
@@ -24,7 +25,12 @@ public:
 
     template<std::derived_from<BeScene> T>
     auto GetActiveScene() -> T* {
-        assert(dynamic_cast<T*>(_activeScene) != nullptr);
+        be_assert(
+            dynamic_cast<T*>(_activeScene) != nullptr,
+            "active scene type mismatch: requested " + 
+            std::string(libassert::pretty_type_name<T>()) + 
+            ", got " + typeid(*_activeScene).name()
+        );
         return static_cast<T*>(_activeScene);
     }
 
@@ -34,7 +40,12 @@ public:
     template<std::derived_from<BeScene> T>
     auto GetScene(const std::string& name) -> T* {
         auto scene = GetScene(name);
-        assert(dynamic_cast<T*>(scene) != nullptr);
+        be_assert(
+            dynamic_cast<T*>(scene) != nullptr,
+            "scene type mismatch for '" + name + 
+            "': requested " + std::string(libassert::pretty_type_name<T>()) + 
+            ", got " + typeid(*scene).name()
+        );
         return static_cast<T*>(scene);
     }
 };

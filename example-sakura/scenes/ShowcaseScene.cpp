@@ -1,7 +1,9 @@
-#include "LowPolyShowcaseScene.h"
+#include "ShowcaseScene.h"
 
 #include <glfw/glfw3.h>
 
+#include "OrbitCameraController.h"
+#include "FreeCameraController.h"
 #include "BeAssetRegistry.h"
 #include "BeCamera.h"
 #include "BeInput.h"
@@ -20,25 +22,18 @@
 #include "basic-render-pipeline/BeShadowPass.h"
 #include "scenes/BeSceneManager.h"
 
-LowPolyShowcaseScene::LowPolyShowcaseScene(Game* game) : BaseScene(game) {}
-LowPolyShowcaseScene::~LowPolyShowcaseScene() = default;
+ShowcaseScene::ShowcaseScene(Game* game) : BaseScene(game) {}
+ShowcaseScene::~ShowcaseScene() = default;
 
-void LowPolyShowcaseScene::Prepare() {
+void ShowcaseScene::Prepare() {
 
-    // Showcase camera (default)
-    _showcaseCamera = std::make_shared<BeCamera>();
-    _showcaseCamera->Width = GameIns->Window->GetWidth();
-    _showcaseCamera->Height = GameIns->Window->GetHeight();
-    _showcaseCamera->NearPlane = 0.1f;
-    _showcaseCamera->FarPlane = 200.0f;
-
-    // Free control camera
-    _freeCamera = std::make_shared<BeCamera>();
-    _freeCamera->Width = GameIns->Window->GetWidth();
-    _freeCamera->Height = GameIns->Window->GetHeight();
-    _freeCamera->NearPlane = 0.1f;
-    _freeCamera->FarPlane = 200.0f;
-    _freeCamera->Position = {0, 0, -5};
+    _camera = std::make_shared<BeCamera>();
+    _camera->Width = GameIns->Window->GetWidth();
+    _camera->Height = GameIns->Window->GetHeight();
+    _camera->NearPlane = 0.1f;
+    _camera->FarPlane = 200.0f;
+    _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
+    _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
     
     BeAssetRegistry::IndexShaderFiles({ 
         "assets/shaders/objectMaterial.hlsl", 
@@ -59,43 +54,43 @@ void LowPolyShowcaseScene::Prepare() {
     LoadModels();
     CreateObjects();
     
-    GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1);
+    GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
 }
 
-auto LowPolyShowcaseScene::CreateTargetTextures() -> void {
+auto ShowcaseScene::CreateTargetTextures() -> void {
     const uint32_t screenWidth = GameIns->Window->GetWidth();
     const uint32_t screenHeight = GameIns->Window->GetHeight();
     const auto device = GameIns->Renderer->GetDevice();
     
-    BeTexture::Create("LP_DepthStencil")
+    BeTexture::Create("S_DepthStencil")
     .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R32_TYPELESS)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
-    BeTexture::Create("LP_BaseColor")
+    BeTexture::Create("S_BaseColor")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
-    BeTexture::Create("LP_WorldNormal")
+    BeTexture::Create("S_WorldNormal")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
-    BeTexture::Create("LP_Specular-Shininess")
+    BeTexture::Create("S_Specular-Shininess")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
-    BeTexture::Create("LP_Emissive")
+    BeTexture::Create("S_Emissive")
     .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
     .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
     .SetSize(screenWidth, screenHeight)
@@ -104,7 +99,7 @@ auto LowPolyShowcaseScene::CreateTargetTextures() -> void {
 }
 
 
-auto LowPolyShowcaseScene::LoadModels() -> void {
+auto ShowcaseScene::LoadModels() -> void {
     auto device = GameIns->Renderer->GetDevice();
     
     auto standardShader = BeAssetRegistry::GetShader("standard");
@@ -158,7 +153,7 @@ auto LowPolyShowcaseScene::LoadModels() -> void {
     GameIns->SubmissionBuffer->RegisterModel(tomatoes);
 }
 
-auto LowPolyShowcaseScene::CreateObjects() -> void {
+auto ShowcaseScene::CreateObjects() -> void {
     
     auto device = GameIns->Renderer->GetDevice();
     
@@ -197,11 +192,11 @@ auto LowPolyShowcaseScene::CreateObjects() -> void {
 }
 
 
-void LowPolyShowcaseScene::OnLoad() {
+void ShowcaseScene::OnLoad() {
     LoadPasses();
 }
 
-auto LowPolyShowcaseScene::LoadPasses() -> void {
+auto ShowcaseScene::LoadPasses() -> void {
     const auto& device = GameIns->Renderer->GetDevice();
     
     GameIns->Renderer->ClearPasses();
@@ -213,15 +208,15 @@ auto LowPolyShowcaseScene::LoadPasses() -> void {
     const auto geometryPass = new BeGeometryPass();
     GameIns->Renderer->AddRenderPass(geometryPass);
     geometryPass->SubmissionBuffer = GameIns->SubmissionBuffer;
-    geometryPass->OutputDepthTexture = BeAssetRegistry::GetTexture("LP_DepthStencil");
-    geometryPass->OutputTexture0 = BeAssetRegistry::GetTexture("LP_BaseColor");
-    geometryPass->OutputTexture1 = BeAssetRegistry::GetTexture("LP_WorldNormal");
-    geometryPass->OutputTexture2 = BeAssetRegistry::GetTexture("LP_Specular-Shininess");
-    geometryPass->OutputTexture3 = BeAssetRegistry::GetTexture("LP_Emissive");
+    geometryPass->OutputDepthTexture = BeAssetRegistry::GetTexture("S_DepthStencil");
+    geometryPass->OutputTexture0 = BeAssetRegistry::GetTexture("S_BaseColor");
+    geometryPass->OutputTexture1 = BeAssetRegistry::GetTexture("S_WorldNormal");
+    geometryPass->OutputTexture2 = BeAssetRegistry::GetTexture("S_Specular-Shininess");
+    geometryPass->OutputTexture3 = BeAssetRegistry::GetTexture("S_Emissive");
 
     const auto backbufferPass = new BeBackbufferPass();
     GameIns->Renderer->AddRenderPass(backbufferPass);
-    backbufferPass->InputTexture = BeAssetRegistry::GetTexture("LP_BaseColor");
+    backbufferPass->InputTexture = BeAssetRegistry::GetTexture("S_BaseColor");
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
     
     GameIns->Renderer->InitialisePasses();
@@ -229,19 +224,10 @@ auto LowPolyShowcaseScene::LoadPasses() -> void {
 
 
 
-void LowPolyShowcaseScene::Tick(float deltaTime) {
+void ShowcaseScene::Tick(float deltaTime) {
 
     if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
         GameIns->SceneManager->RequestSceneChange("menu");
-    }
-
-    // Toggle between cameras with [C]
-    if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
-        _useShowcaseCamera = !_useShowcaseCamera;
-        
-        _freeCamera->Position = _showcaseCamera->Position;
-        _freeCamera->Yaw = _showcaseCamera->Yaw;
-        _freeCamera->Pitch = _showcaseCamera->Pitch;
     }
     
     if (GameIns->Input->GetKeyDown(GLFW_KEY_1)) {
@@ -275,12 +261,22 @@ void LowPolyShowcaseScene::Tick(float deltaTime) {
         ChangeShowcase("tomatoes", "#E4FDE1", TransformComponent { .Position = {0.f, 1.f, 0.f}, .Scale = glm::vec3(2.f) });
     }
 
-    // Update the appropriate camera
-    if (_useShowcaseCamera) {
-        UpdateShowcaseCamera(deltaTime);
-    } else {
-        UpdateFreeCamera(deltaTime);
+    // Toggle between cameras with [C]
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
+        _useOrbitCamera = !_useOrbitCamera;
     }
+    
+    // Update the appropriate camera controller
+    if (_useOrbitCamera) {
+        GameIns->Input->SetMouseCapture(false);
+        _orbitCameraController->Update(deltaTime, GameIns->Input->GetScrollDelta().y);
+    } else {
+        _freeCameraController->Update(deltaTime, GameIns->Input.get());
+    }
+
+    GameIns->Renderer->UniformData.NearFarPlane = {_camera->NearPlane, _camera->FarPlane};
+    GameIns->Renderer->UniformData.ProjectionView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
+    GameIns->Renderer->UniformData.CameraPosition = _camera->Position;
 
     static const auto GeometryView = _registry.view<TransformComponent, RenderComponent>();
     static const auto SunView = _registry.view<SunLightComponent>();
@@ -319,7 +315,7 @@ void LowPolyShowcaseScene::Tick(float deltaTime) {
     }
 }
 
-auto LowPolyShowcaseScene::ChangeShowcase(
+auto ShowcaseScene::ChangeShowcase(
     const std::string& modelName, 
     const std::string& hxcolor,
     const TransformComponent& adjustedTransform
@@ -337,91 +333,3 @@ auto LowPolyShowcaseScene::ChangeShowcase(
     }
 }
 
-auto LowPolyShowcaseScene::UpdateFreeCamera(float deltaTime) -> void {
-
-    constexpr float moveSpeed = 5.0f;
-    float speed = moveSpeed * deltaTime;
-    if (GameIns->Input->GetKey(GLFW_KEY_LEFT_SHIFT) || (GameIns->Input->IsGamepadConnected() && GameIns->Input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) speed *= 2.0f;
-    if (GameIns->Input->GetKey(GLFW_KEY_W)) _freeCamera->Position += _freeCamera->GetFront() * speed;
-    if (GameIns->Input->GetKey(GLFW_KEY_S)) _freeCamera->Position -= _freeCamera->GetFront() * speed;
-    if (GameIns->Input->GetKey(GLFW_KEY_D)) _freeCamera->Position -= _freeCamera->GetRight() * speed;
-    if (GameIns->Input->GetKey(GLFW_KEY_A)) _freeCamera->Position += _freeCamera->GetRight() * speed;
-    if (GameIns->Input->GetKey(GLFW_KEY_E)) _freeCamera->Position += glm::vec3(0, 1, 0) * speed;
-    if (GameIns->Input->GetKey(GLFW_KEY_Q)) _freeCamera->Position -= glm::vec3(0, 1, 0) * speed;
-
-    // Gamepad movement
-    if (GameIns->Input->IsGamepadConnected()) {
-        const glm::vec2 leftStick = GameIns->Input->GetGamepadLeftStick();
-        _freeCamera->Position += _freeCamera->GetFront() * (leftStick.y * speed);
-        _freeCamera->Position -= _freeCamera->GetRight() * (leftStick.x * speed);
-
-        const float verticalInput = GameIns->Input->GetGamepadRightTrigger() - GameIns->Input->GetGamepadLeftTrigger();
-        _freeCamera->Position += glm::vec3(0, 1, 0) * (verticalInput * speed);
-    }
-
-    bool captureMouse = false;
-    if (GameIns->Input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
-        constexpr float mouseSens = 0.1f;
-
-        captureMouse = true;
-        const glm::vec2 mouseDelta = GameIns->Input->GetMouseDelta();
-        _freeCamera->Yaw   -= mouseDelta.x * mouseSens;
-        _freeCamera->Pitch -= mouseDelta.y * mouseSens;
-        _freeCamera->Pitch = glm::clamp(_freeCamera->Pitch, -89.0f, 89.0f);
-    }
-    GameIns->Input->SetMouseCapture(captureMouse);
-
-    // Gamepad camera look
-    if (GameIns->Input->IsGamepadConnected()) {
-        const glm::vec2 rightStick = GameIns->Input->GetGamepadRightStick();
-        constexpr float gamepadCameraSens = 100.0f;
-
-        _freeCamera->Yaw   -= rightStick.x * gamepadCameraSens * deltaTime;
-        _freeCamera->Pitch += rightStick.y * gamepadCameraSens * deltaTime;
-        _freeCamera->Pitch = glm::clamp(_freeCamera->Pitch, -89.0f, 89.0f);
-    }
-
-    const glm::vec2 scrollDelta = GameIns->Input->GetScrollDelta();
-    if (scrollDelta.y != 0.0f) {
-        _freeCamera->Fov -= scrollDelta.y;
-        _freeCamera->Fov = glm::clamp(_freeCamera->Fov, 20.0f, 90.0f);
-    }
-
-    _freeCamera->Update();
-    GameIns->Renderer->UniformData.NearFarPlane = {_freeCamera->NearPlane, _freeCamera->FarPlane};
-    GameIns->Renderer->UniformData.ProjectionView = _freeCamera->GetProjectionMatrix() * _freeCamera->GetViewMatrix();
-    GameIns->Renderer->UniformData.CameraPosition = _freeCamera->Position;
-}
-
-auto LowPolyShowcaseScene::UpdateShowcaseCamera(float deltaTime) -> void {
-
-    GameIns->Input->SetMouseCapture(false);
-
-    static float orbitAngle = 0.0f;
-    static float orbitPitch = glm::radians(45.f);
-    static float orbitRadius = 7.0f;
-    constexpr float orbitSpeed = 0.3f; // radians per second
-    constexpr float scrollSpeed = 1.f;
-    constexpr glm::vec3 lookTarget = { 0.f, 2.f, 0.f };
-
-    orbitAngle += orbitSpeed * deltaTime;
-
-    orbitRadius = glm::max(orbitRadius + scrollSpeed * -GameIns->Input->GetScrollDelta().y, 0.5f);
-    
-    _showcaseCamera->Position = lookTarget + glm::vec3(
-        glm::cos(orbitAngle) * orbitRadius,
-        glm::sin(orbitPitch) * orbitRadius,
-        glm::sin(orbitAngle) * orbitRadius
-    );
-
-    // Look at origin
-    const glm::vec3 lookDir = glm::normalize(lookTarget - _showcaseCamera->Position);
-
-    _showcaseCamera->Yaw = glm::degrees(glm::atan(lookDir.z, lookDir.x));
-    _showcaseCamera->Pitch = glm::degrees(glm::asin(lookDir.y));
-
-    _showcaseCamera->Update();
-    GameIns->Renderer->UniformData.NearFarPlane = {_showcaseCamera->NearPlane, _showcaseCamera->FarPlane};
-    GameIns->Renderer->UniformData.ProjectionView = _showcaseCamera->GetProjectionMatrix() * _showcaseCamera->GetViewMatrix();
-    GameIns->Renderer->UniformData.CameraPosition = _showcaseCamera->Position;
-}
