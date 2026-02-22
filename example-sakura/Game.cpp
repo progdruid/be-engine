@@ -11,9 +11,9 @@
 #include "basic-render-pipeline/BeBRPSubmissionBuffer.h"
 
 #include "scenes/BeSceneManager.h"
-#include "scenes/LowPolyShowcaseScene.h"
+#include "scenes/ShowcaseScene.h"
 #include "scenes/MenuScene.h"
-#include "scenes/MainScene.h"
+#include "scenes/SakuraScene.h"
 
 Game::Game() = default;
 Game::~Game() = default;
@@ -64,15 +64,15 @@ auto Game::SetupScenes() -> void {
     SceneManager = std::make_unique<BeSceneManager>();
 
     auto menuScene = std::make_unique<MenuScene>(this);
-    auto mainScene = std::make_unique<MainScene>(this);
-    auto showcase  = std::make_unique<LowPolyShowcaseScene>(this); 
+    auto mainScene = std::make_unique<SakuraScene>(this);
+    auto showcase  = std::make_unique<ShowcaseScene>(this); 
     
     SceneManager->RegisterScene("menu", std::move(menuScene));
-    SceneManager->RegisterScene("main", std::move(mainScene));
+    SceneManager->RegisterScene("sakura", std::move(mainScene));
     SceneManager->RegisterScene("showcase", std::move(showcase));
     
     SceneManager->GetScene<BaseScene>("menu")->Prepare();
-    SceneManager->GetScene<BaseScene>("main")->Prepare();
+    SceneManager->GetScene<BaseScene>("sakura")->Prepare();
     SceneManager->GetScene<BaseScene>("showcase")->Prepare();
     
     SubmissionBuffer->BakeModels();

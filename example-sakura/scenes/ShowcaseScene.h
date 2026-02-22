@@ -9,35 +9,36 @@
 struct TransformComponent;
 class BeInput;
 class BeCamera;
+class OrbitCameraController;
+class FreeCameraController;
 class BeWindow;
 class BeRenderer;
 class BeBRPSubmissionBuffer;
 
-class LowPolyShowcaseScene : public BaseScene {
+class ShowcaseScene : public BaseScene {
     hide
     entt::registry _registry;
-    std::shared_ptr<BeCamera> _showcaseCamera;
-    std::shared_ptr<BeCamera> _freeCamera;
-    bool _useShowcaseCamera = true;
-    
+    std::shared_ptr<BeCamera> _camera;
+    std::unique_ptr<OrbitCameraController> _orbitCameraController;
+    std::unique_ptr<FreeCameraController> _freeCameraController;
+    bool _useOrbitCamera = true;
+
     expose
-    explicit LowPolyShowcaseScene(Game* game);
-    ~LowPolyShowcaseScene() override;
-    
+    explicit ShowcaseScene(Game* game);
+    ~ShowcaseScene() override;
+
     auto Prepare() -> void override;
     auto CreateTargetTextures() -> void;
     auto LoadModels () -> void;
     auto CreateObjects() -> void;
-    
+
     auto OnLoad() -> void override;
     auto LoadPasses() -> void;
-    
+
     auto Tick(float deltaTime) -> void override;
     auto ChangeShowcase (
-        const std::string& modelName, 
-        const std::string& hxcolor, 
+        const std::string& modelName,
+        const std::string& hxcolor,
         const TransformComponent& adjustedTransform
     ) -> void;
-    auto UpdateFreeCamera(float deltaTime) -> void;
-    auto UpdateShowcaseCamera(float deltaTime) -> void;
 };

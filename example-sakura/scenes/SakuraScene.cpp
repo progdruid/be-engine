@@ -1,8 +1,10 @@
 
-#include "MainScene.h"
+#include "SakuraScene.h"
 
 #include <glfw/glfw3.h>
 
+#include "OrbitCameraController.h"
+#include "FreeCameraController.h"
 #include "BeAssetRegistry.h"
 #include "BeCamera.h"
 #include "BeInput.h"
@@ -22,14 +24,16 @@
 #include "basic-render-pipeline/BeShadowPass.h"
 #include "scenes/BeSceneManager.h"
 
-MainScene::MainScene(Game* game) : BaseScene(game) {}
+SakuraScene::SakuraScene(Game* game) : BaseScene(game) {}
 
-auto MainScene::Prepare() -> void {
-    _camera = std::make_unique<BeCamera>(); 
+auto SakuraScene::Prepare() -> void {
+    _camera = std::make_unique<BeCamera>();
     _camera->Width = GameIns->Window->GetWidth();
     _camera->Height = GameIns->Window->GetHeight();
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
+    _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
+    _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
     
     const auto device = GameIns->Renderer->GetDevice();
 
@@ -153,7 +157,7 @@ auto MainScene::Prepare() -> void {
     .Build(device);
 }
 
-auto MainScene::OnLoad() -> void {
+auto SakuraScene::OnLoad() -> void {
     const auto& device = GameIns->Renderer->GetDevice();
 
     // Clear all entities from previous load
@@ -268,7 +272,7 @@ auto MainScene::OnLoad() -> void {
             .ShadowMapWorldSize = 60.0f,
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
-            .ShadowMap = BeTexture::Create("MainScene_SunLightShadowMap")
+            .ShadowMap = BeTexture::Create("SakuraScene_SunLightShadowMap")
                 .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
                 .SetFormat(DXGI_FORMAT_R32_TYPELESS)
                 .SetSize(4096, 4096)
@@ -289,7 +293,7 @@ auto MainScene::OnLoad() -> void {
                 .ShadowMapResolution = 2048,
                 .ShadowNearPlane = 0.1f,
                 .ShadowMap =
-                    BeTexture::Create("MainScene_PointLight" + std::to_string(i) + "_ShadowMap")
+                    BeTexture::Create("SakuraScene_PointLight" + std::to_string(i) + "_ShadowMap")
                     .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
                     .SetFormat(DXGI_FORMAT_R32_TYPELESS)
                     .SetCubemap(true)
@@ -327,72 +331,34 @@ auto MainScene::OnLoad() -> void {
 }
 
 
-auto MainScene::Tick(float deltaTime) -> void {
+auto SakuraScene::Tick(float deltaTime) -> void {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
         GameIns->Input->SetMouseCapture(false);
         GameIns->SceneManager->RequestSceneChange("menu");
         return;
     }
-    
-    
+
+
     static const auto GeometryView = _registry.view<TransformComponent, RenderComponent>();
     static const auto SunView = _registry.view<SunLightComponent>();
     static const auto PointLightView = _registry.view<TransformComponent, PointLightComponent>();
-    
-    constexpr float moveSpeed = 5.0f;
-    float speed = moveSpeed * deltaTime;
-    if (GameIns->Input->GetKey(GLFW_KEY_LEFT_SHIFT) || (GameIns->Input->IsGamepadConnected() && GameIns->Input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) speed *= 2.0f;
-    if (GameIns->Input->GetKey(GLFW_KEY_W)) _camera->Position += _camera->GetFront() * speed;
-    if (GameIns->Input->GetKey(GLFW_KEY_S)) _camera->Position -= _camera->GetFront() * speed;
-    if (GameIns->Input->GetKey(GLFW_KEY_D)) _camera->Position -= _camera->GetRight() * speed;
-    if (GameIns->Input->GetKey(GLFW_KEY_A)) _camera->Position += _camera->GetRight() * speed;
-    if (GameIns->Input->GetKey(GLFW_KEY_E)) _camera->Position += glm::vec3(0, 1, 0) * speed;
-    if (GameIns->Input->GetKey(GLFW_KEY_Q)) _camera->Position -= glm::vec3(0, 1, 0) * speed;
 
-    // Gamepad movement
-    if (GameIns->Input->IsGamepadConnected()) {
-        const glm::vec2 leftStick = GameIns->Input->GetGamepadLeftStick();
-        _camera->Position += _camera->GetFront() * (leftStick.y * speed);
-        _camera->Position -= _camera->GetRight() * (leftStick.x * speed);
-
-        const float verticalInput = GameIns->Input->GetGamepadRightTrigger() - GameIns->Input->GetGamepadLeftTrigger();
-        _camera->Position += glm::vec3(0, 1, 0) * (verticalInput * speed);
+    // Toggle between cameras with [C]
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
+        _useOrbitCamera = !_useOrbitCamera;
     }
 
-    bool captureMouse = false;
-    if (GameIns->Input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
-        constexpr float mouseSens = 0.1f;
+    // Update the appropriate camera controller
+    if (_useOrbitCamera) {
+        GameIns->Input->SetMouseCapture(false);
+        _orbitCameraController->Update(deltaTime, GameIns->Input->GetScrollDelta().y);
+    } else {
+        _freeCameraController->Update(deltaTime, GameIns->Input.get());
+    }
 
-        captureMouse = true;
-        const glm::vec2 mouseDelta = GameIns->Input->GetMouseDelta();
-        _camera->Yaw   -= mouseDelta.x * mouseSens;
-        _camera->Pitch -= mouseDelta.y * mouseSens;
-        _camera->Pitch = glm::clamp(_camera->Pitch, -89.0f, 89.0f);
-    }
-    GameIns->Input->SetMouseCapture(captureMouse);
-
-    // Gamepad camera look
-    if (GameIns->Input->IsGamepadConnected()) {
-        const glm::vec2 rightStick = GameIns->Input->GetGamepadRightStick();
-        constexpr float gamepadCameraSens = 100.0f;
-
-        _camera->Yaw   -= rightStick.x * gamepadCameraSens * deltaTime;
-        _camera->Pitch += rightStick.y * gamepadCameraSens * deltaTime;
-        _camera->Pitch = glm::clamp(_camera->Pitch, -89.0f, 89.0f);
-    }
-    
-    const glm::vec2 scrollDelta = GameIns->Input->GetScrollDelta();
-    if (scrollDelta.y != 0.0f) {
-        _camera->Fov -= scrollDelta.y;
-        _camera->Fov = glm::clamp(_camera->Fov, 20.0f, 90.0f);
-    }
-    
-    {
-        _camera->Update();
-        GameIns->Renderer->UniformData.NearFarPlane = {_camera->NearPlane, _camera->FarPlane};
-        GameIns->Renderer->UniformData.ProjectionView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
-        GameIns->Renderer->UniformData.CameraPosition = _camera->Position;
-    }
+    GameIns->Renderer->UniformData.NearFarPlane = {_camera->NearPlane, _camera->FarPlane};
+    GameIns->Renderer->UniformData.ProjectionView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
+    GameIns->Renderer->UniformData.CameraPosition = _camera->Position;
 
     {
         static float angle = 0.0f;

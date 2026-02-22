@@ -62,8 +62,8 @@ auto MenuScene::RunUI() -> void {
     auto windowWidth = ImGui::GetWindowWidth();
     ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
 
-    if (ImGui::Button("Main", ImVec2(buttonWidth, 50))) {
-        GameIns->SceneManager->RequestSceneChange("main");
+    if (ImGui::Button("Sakura", ImVec2(buttonWidth, 50))) {
+        GameIns->SceneManager->RequestSceneChange("sakura");
     }
     
     ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
