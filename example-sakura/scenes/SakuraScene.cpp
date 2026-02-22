@@ -235,7 +235,7 @@ auto SakuraScene::OnLoad() -> void {
         ,RenderComponent { .Model = _anvil }
         ,TransformComponent { 
             .Position = {0, 0, 0}, 
-            .Rotation = glm::quat(glm::vec3(0, 45_rad, 0)), 
+            .Rotation = glm::quat(glm::vec3(0, 0_rad, 0)), 
             .Scale = glm::vec3(0.2f), 
         }
     );
@@ -351,7 +351,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     // Update the appropriate camera controller
     if (_useOrbitCamera) {
         GameIns->Input->SetMouseCapture(false);
-        _orbitCameraController->Update(deltaTime, GameIns->Input->GetScrollDelta().y);
+        _orbitCameraController->Update(deltaTime, GameIns->Input.get());
     } else {
         _freeCameraController->Update(deltaTime, GameIns->Input.get());
     }

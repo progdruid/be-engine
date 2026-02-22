@@ -1,6 +1,9 @@
 #include "OrbitCameraController.h"
 
+#include <glfw/glfw3.h>
+
 #include "BeCamera.h"
+#include "BeInput.h"
 
 OrbitCameraController::OrbitCameraController(
     BeCamera* camera,
@@ -14,15 +17,24 @@ OrbitCameraController::OrbitCameraController(
     , _orbitRadius(initialRadius)
 {}
 
-auto OrbitCameraController::Update(float deltaTime, float scrollDeltaY) -> void {
-    _orbitAngle += OrbitSpeed * deltaTime;
+auto OrbitCameraController::Update(float deltaTime, BeInput* input) -> void {
+    if (input->GetKeyDown(GLFW_KEY_RIGHT)) SpeedMultiplier += SpeedStep;
+    if (input->GetKeyDown(GLFW_KEY_LEFT))  SpeedMultiplier -= SpeedStep;
+    if (input->GetKeyDown(GLFW_KEY_SPACE)) SpeedMultiplier = 0;
+    if (input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
+        constexpr float pitchSensitivity = 0.005f;
+        _orbitPitch += input->GetMouseDelta().y * pitchSensitivity;
+        _orbitPitch = glm::clamp(_orbitPitch, glm::radians(-89.0f), glm::radians(89.0f));
+    }
 
-    _orbitRadius = glm::max(_orbitRadius + ScrollSpeed * -scrollDeltaY, MinRadius);
+    _orbitAngle += OrbitSpeed * SpeedMultiplier * deltaTime;
+
+    _orbitRadius = glm::max(_orbitRadius + ScrollSpeed * -input->GetScrollDelta().y, MinRadius);
 
     _camera->Position = _lookTarget + glm::vec3(
-        glm::cos(_orbitAngle) * _orbitRadius,
+        glm::cos(_orbitAngle) * glm::cos(_orbitPitch) * _orbitRadius,
         glm::sin(_orbitPitch) * _orbitRadius,
-        glm::sin(_orbitAngle) * _orbitRadius
+        glm::sin(_orbitAngle) * glm::cos(_orbitPitch) * _orbitRadius
     );
 
     const glm::vec3 lookDir = glm::normalize(_lookTarget - _camera->Position);
