@@ -269,7 +269,7 @@ void ShowcaseScene::Tick(float deltaTime) {
     // Update the appropriate camera controller
     if (_useOrbitCamera) {
         GameIns->Input->SetMouseCapture(false);
-        _orbitCameraController->Update(deltaTime, GameIns->Input->GetScrollDelta().y);
+        _orbitCameraController->Update(deltaTime, GameIns->Input.get());
     } else {
         _freeCameraController->Update(deltaTime, GameIns->Input.get());
     }
