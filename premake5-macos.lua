@@ -21,5 +21,6 @@ include "premake-core.lua"
 include "premake-core-macos.lua"
 include "premake-toolkit.lua"
 include "premake-misc-configuration.lua"
-include "premake-example-game-1.lua"
-include "premake-example-sakura.lua"
+include "premake-example-metal-test.lua"
+-- include "premake-example-game-1.lua"   -- DX11 only
+-- include "premake-example-sakura.lua"   -- DX11 only
