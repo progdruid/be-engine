@@ -6,11 +6,12 @@
 
 #define GLFW_INCLUDE_NONE
 #define GLFW_EXPOSE_NATIVE_COCOA
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
+#include <glfw/glfw3.h>
+#include <glfw/glfw3native.h>
 
 #include <cmath>
 #include <iostream>
+#include <vector>
 #include <umbrellas/include-glm.h>
 
 static const char* shaderSource = R"(

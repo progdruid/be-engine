@@ -21,6 +21,13 @@ project "example-metal-test"
         "/usr/local/include",
     }
 
+    sysincludedirs {
+        "core/src",
+        "vendor",
+        "/opt/homebrew/include",
+        "/usr/local/include",
+    }
+
     libdirs {
         "/opt/homebrew/lib",
         "/usr/local/lib",
