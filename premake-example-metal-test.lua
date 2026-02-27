@@ -21,13 +21,6 @@ project "example-metal-test"
         "/usr/local/include",
     }
 
-    sysincludedirs {
-        "core/src",
-        "vendor",
-        "/opt/homebrew/include",
-        "/usr/local/include",
-    }
-
     libdirs {
         "/opt/homebrew/lib",
         "/usr/local/lib",
@@ -53,6 +46,10 @@ project "example-metal-test"
     buildoptions {
         "-std=c++23",
         "-fobjc-arc",
+        "-isystem ../core/src",
+        "-isystem ../vendor",
+        "-isystem /opt/homebrew/include",
+        "-isystem /usr/local/include",
     }
 
     filter "configurations:Debug"
