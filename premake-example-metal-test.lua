@@ -38,7 +38,7 @@ project "example-metal-test"
     }
 
     xcodebuildsettings {
-        ["INFOPLIST_FILE"] = "$(SRCROOT)/example-metal-test/Info.plist",
+        ["INFOPLIST_FILE"] = "$(SRCROOT)/Info.plist",
         ["CODE_SIGN_IDENTITY"] = "-",
         ["PRODUCT_BUNDLE_IDENTIFIER"] = "com.be-engine.metal-test",
     }
