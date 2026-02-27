@@ -37,6 +37,12 @@ project "example-metal-test"
         "CoreVideo.framework",
     }
 
+    xcodebuildsettings {
+        ["INFOPLIST_FILE"] = "$(SRCROOT)/example-metal-test/Info.plist",
+        ["CODE_SIGN_IDENTITY"] = "-",
+        ["PRODUCT_BUNDLE_IDENTIFIER"] = "com.be-engine.metal-test",
+    }
+
     buildoptions {
         "-std=c++23",
         "-fobjc-arc",
