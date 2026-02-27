@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <umbrellas/access-modifiers.hpp>
 
-enum class GalFormat : uint32_t {
+enum class RhiFormat : uint32_t {
     Unknown = 0,
     R8G8B8A8_UNORM,
     R8G8B8A8_UNORM_SRGB,
@@ -19,14 +19,14 @@ enum class GalFormat : uint32_t {
     D24_UNORM_S8_UINT,
 };
 
-enum class GalTopology : uint8_t {
+enum class RhiTopology : uint8_t {
     Undefined = 0,
     TriangleList,
     TriangleStrip,
     PatchList3,
 };
 
-enum class GalBindFlags : uint32_t {
+enum class RhiBindFlags : uint32_t {
     None = 0,
     ShaderResource  = 1 << 0,
     RenderTarget    = 1 << 1,
@@ -36,33 +36,33 @@ enum class GalBindFlags : uint32_t {
     IndexBuffer     = 1 << 5,
 };
 
-enum class GalBufferUsage : uint8_t {
+enum class RhiBufferUsage : uint8_t {
     Default = 0,
     Dynamic,
     Immutable,
     Staging,
 };
 
-enum class GalFilter : uint8_t {
+enum class RhiFilter : uint8_t {
     Point = 0,
     Linear,
     Anisotropic,
 };
 
-enum class GalAddressMode : uint8_t {
+enum class RhiAddressMode : uint8_t {
     Wrap = 0,
     Clamp,
     Mirror,
     Border,
 };
 
-enum class GalCullMode : uint8_t {
+enum class RhiCullMode : uint8_t {
     None = 0,
     Back,
     Front,
 };
 
-enum class GalComparisonFunc : uint8_t {
+enum class RhiComparisonFunc : uint8_t {
     Never = 0,
     Less,
     Equal,
@@ -73,7 +73,7 @@ enum class GalComparisonFunc : uint8_t {
     Always,
 };
 
-struct GalViewport {
+struct RhiViewport {
     float X = 0;
     float Y = 0;
     float Width = 0;
@@ -82,14 +82,14 @@ struct GalViewport {
     float MaxDepth = 1;
 };
 
-constexpr auto operator|(GalBindFlags a, GalBindFlags b) -> GalBindFlags {
-    return static_cast<GalBindFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+constexpr auto operator|(RhiBindFlags a, RhiBindFlags b) -> RhiBindFlags {
+    return static_cast<RhiBindFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 }
 
-constexpr auto operator&(GalBindFlags a, GalBindFlags b) -> GalBindFlags {
-    return static_cast<GalBindFlags>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+constexpr auto operator&(RhiBindFlags a, RhiBindFlags b) -> RhiBindFlags {
+    return static_cast<RhiBindFlags>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
 }
 
-constexpr auto HasFlag(GalBindFlags value, GalBindFlags flag) -> bool {
+constexpr auto HasFlag(RhiBindFlags value, RhiBindFlags flag) -> bool {
     return (static_cast<uint32_t>(value) & static_cast<uint32_t>(flag)) != 0;
 }

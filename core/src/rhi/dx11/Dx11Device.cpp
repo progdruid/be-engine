@@ -1,21 +1,21 @@
 #include "Dx11Device.h"
 #include "Dx11Buffer.h"
 #include "Dx11Sampler.h"
-#include "../GalFormatConverter.h"
+#include "../RhiFormatConverter.h"
 
-auto Dx11Device::CreateBuffer(const GalBufferDesc& desc, const void* initialData) -> std::shared_ptr<IGalBuffer> {
+auto Dx11Device::CreateBuffer(const RhiBufferDesc& desc, const void* initialData) -> std::shared_ptr<RhiBuffer> {
     D3D11_BUFFER_DESC d3dDesc = {};
     d3dDesc.ByteWidth = desc.ByteWidth;
-    d3dDesc.BindFlags = GalFormatConverter::ToD3DBindFlags(desc.BindFlags);
+    d3dDesc.BindFlags = RhiFormatConverter::ToD3DBindFlags(desc.BindFlags);
 
     switch (desc.Usage) {
-        case GalBufferUsage::Dynamic:
+        case RhiBufferUsage::Dynamic:
             d3dDesc.Usage = D3D11_USAGE_DYNAMIC;
             break;
-        case GalBufferUsage::Immutable:
+        case RhiBufferUsage::Immutable:
             d3dDesc.Usage = D3D11_USAGE_IMMUTABLE;
             break;
-        case GalBufferUsage::Staging:
+        case RhiBufferUsage::Staging:
             d3dDesc.Usage = D3D11_USAGE_STAGING;
             break;
         default:
@@ -40,28 +40,28 @@ auto Dx11Device::CreateBuffer(const GalBufferDesc& desc, const void* initialData
     return std::make_shared<Dx11Buffer>(buffer, desc.ByteWidth, desc.Usage, desc.BindFlags);
 }
 
-auto Dx11Device::CreateSampler(const GalSamplerDesc& desc) -> std::shared_ptr<IGalSampler> {
+auto Dx11Device::CreateSampler(const RhiSamplerDesc& desc) -> std::shared_ptr<RhiSampler> {
     D3D11_SAMPLER_DESC d3dDesc = {};
 
     if (desc.UseComparison) {
         switch (desc.Filter) {
-            case GalFilter::Point:       d3dDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT; break;
-            case GalFilter::Anisotropic: d3dDesc.Filter = D3D11_FILTER_COMPARISON_ANISOTROPIC; break;
+            case RhiFilter::Point:       d3dDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT; break;
+            case RhiFilter::Anisotropic: d3dDesc.Filter = D3D11_FILTER_COMPARISON_ANISOTROPIC; break;
             default:                     d3dDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR; break;
         }
     } else {
         switch (desc.Filter) {
-            case GalFilter::Point:       d3dDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT; break;
-            case GalFilter::Anisotropic: d3dDesc.Filter = D3D11_FILTER_ANISOTROPIC; break;
+            case RhiFilter::Point:       d3dDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT; break;
+            case RhiFilter::Anisotropic: d3dDesc.Filter = D3D11_FILTER_ANISOTROPIC; break;
             default:                     d3dDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; break;
         }
     }
 
-    auto toAddress = [](GalAddressMode mode) -> D3D11_TEXTURE_ADDRESS_MODE {
+    auto toAddress = [](RhiAddressMode mode) -> D3D11_TEXTURE_ADDRESS_MODE {
         switch (mode) {
-            case GalAddressMode::Clamp:  return D3D11_TEXTURE_ADDRESS_CLAMP;
-            case GalAddressMode::Mirror: return D3D11_TEXTURE_ADDRESS_MIRROR;
-            case GalAddressMode::Border: return D3D11_TEXTURE_ADDRESS_BORDER;
+            case RhiAddressMode::Clamp:  return D3D11_TEXTURE_ADDRESS_CLAMP;
+            case RhiAddressMode::Mirror: return D3D11_TEXTURE_ADDRESS_MIRROR;
+            case RhiAddressMode::Border: return D3D11_TEXTURE_ADDRESS_BORDER;
             default:                     return D3D11_TEXTURE_ADDRESS_WRAP;
         }
     };
@@ -74,16 +74,16 @@ auto Dx11Device::CreateSampler(const GalSamplerDesc& desc) -> std::shared_ptr<IG
     d3dDesc.MinLOD = desc.MinLOD;
     d3dDesc.MaxLOD = desc.MaxLOD;
 
-    auto toComparison = [](GalComparisonFunc func) -> D3D11_COMPARISON_FUNC {
+    auto toComparison = [](RhiComparisonFunc func) -> D3D11_COMPARISON_FUNC {
         switch (func) {
-            case GalComparisonFunc::Never:        return D3D11_COMPARISON_NEVER;
-            case GalComparisonFunc::Less:         return D3D11_COMPARISON_LESS;
-            case GalComparisonFunc::Equal:        return D3D11_COMPARISON_EQUAL;
-            case GalComparisonFunc::LessEqual:    return D3D11_COMPARISON_LESS_EQUAL;
-            case GalComparisonFunc::Greater:      return D3D11_COMPARISON_GREATER;
-            case GalComparisonFunc::NotEqual:     return D3D11_COMPARISON_NOT_EQUAL;
-            case GalComparisonFunc::GreaterEqual: return D3D11_COMPARISON_GREATER_EQUAL;
-            case GalComparisonFunc::Always:       return D3D11_COMPARISON_ALWAYS;
+            case RhiComparisonFunc::Never:        return D3D11_COMPARISON_NEVER;
+            case RhiComparisonFunc::Less:         return D3D11_COMPARISON_LESS;
+            case RhiComparisonFunc::Equal:        return D3D11_COMPARISON_EQUAL;
+            case RhiComparisonFunc::LessEqual:    return D3D11_COMPARISON_LESS_EQUAL;
+            case RhiComparisonFunc::Greater:      return D3D11_COMPARISON_GREATER;
+            case RhiComparisonFunc::NotEqual:     return D3D11_COMPARISON_NOT_EQUAL;
+            case RhiComparisonFunc::GreaterEqual: return D3D11_COMPARISON_GREATER_EQUAL;
+            case RhiComparisonFunc::Always:       return D3D11_COMPARISON_ALWAYS;
             default:                              return D3D11_COMPARISON_NEVER;
         }
     };

@@ -4,11 +4,11 @@
 #include <wrl/client.h>
 #include <umbrellas/access-modifiers.hpp>
 
-#include "../IGalSwapchain.h"
+#include "../RhiSwapchain.h"
 
 using Microsoft::WRL::ComPtr;
 
-class Dx11Swapchain final : public IGalSwapchain {
+class Dx11Swapchain final : public RhiSwapchain {
 
     hide
     ComPtr<IDXGISwapChain1> _swapchain;

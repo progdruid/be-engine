@@ -1,7 +1,7 @@
 #pragma once
 #include <umbrellas/access-modifiers.hpp>
 
-class IGalSampler {
+class RhiSampler {
     expose
-    virtual ~IGalSampler() = default;
+    virtual ~RhiSampler() = default;
 };

@@ -3,13 +3,13 @@
 #include <wrl/client.h>
 #include <umbrellas/access-modifiers.hpp>
 
-#include "../IGalContext.h"
-#include "../GalFormatConverter.h"
+#include "../RhiContext.h"
+#include "../RhiFormatConverter.h"
 #include "Dx11Buffer.h"
 
 using Microsoft::WRL::ComPtr;
 
-class Dx11Context final : public IGalContext {
+class Dx11Context final : public RhiContext {
 
     hide
     ComPtr<ID3D11DeviceContext> _context;
@@ -21,7 +21,7 @@ class Dx11Context final : public IGalContext {
 
     ~Dx11Context() override = default;
 
-    auto SetViewport(const GalViewport& viewport) -> void override {
+    auto SetViewport(const RhiViewport& viewport) -> void override {
         D3D11_VIEWPORT vp;
         vp.TopLeftX = viewport.X;
         vp.TopLeftY = viewport.Y;
@@ -32,18 +32,18 @@ class Dx11Context final : public IGalContext {
         _context->RSSetViewports(1, &vp);
     }
 
-    auto SetTopology(GalTopology topology) -> void override {
-        _context->IASetPrimitiveTopology(GalFormatConverter::ToD3DTopology(topology));
+    auto SetTopology(RhiTopology topology) -> void override {
+        _context->IASetPrimitiveTopology(RhiFormatConverter::ToD3DTopology(topology));
     }
 
-    auto MapBuffer(const std::shared_ptr<IGalBuffer>& buffer, void** outData) -> void override {
+    auto MapBuffer(const std::shared_ptr<RhiBuffer>& buffer, void** outData) -> void override {
         auto dx11Buffer = std::static_pointer_cast<Dx11Buffer>(buffer);
         D3D11_MAPPED_SUBRESOURCE mapped;
         _context->Map(dx11Buffer->GetNativePtr(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
         *outData = mapped.pData;
     }
 
-    auto UnmapBuffer(const std::shared_ptr<IGalBuffer>& buffer) -> void override {
+    auto UnmapBuffer(const std::shared_ptr<RhiBuffer>& buffer) -> void override {
         auto dx11Buffer = std::static_pointer_cast<Dx11Buffer>(buffer);
         _context->Unmap(dx11Buffer->GetNativePtr(), 0);
     }

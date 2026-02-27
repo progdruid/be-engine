@@ -3,11 +3,11 @@
 #include <wrl/client.h>
 #include <umbrellas/access-modifiers.hpp>
 
-#include "../IGalSampler.h"
+#include "../RhiSampler.h"
 
 using Microsoft::WRL::ComPtr;
 
-class Dx11Sampler final : public IGalSampler {
+class Dx11Sampler final : public RhiSampler {
 
     hide
     ComPtr<ID3D11SamplerState> _sampler;
