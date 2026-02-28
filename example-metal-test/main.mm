@@ -212,6 +212,8 @@ int main() {
 
         std::cout << "be-engine Metal test running. Close window to exit.\n";
 
+        [metalLayer setDisplaySyncEnabled:YES];
+
         while (!glfwWindowShouldClose(window)) {
             @autoreleasepool {
                 glfwPollEvents();
