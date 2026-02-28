@@ -99,20 +99,7 @@ auto BeTexture::Builder::BuildNoReturn(BeRenderer& renderer) -> void {
         BeAssetRegistry::AddTexture(_descriptor.Name, resource);
 }
 
-
-BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
-    : Name(descriptor.Name)
-    , Width(descriptor.Width)
-    , Height(descriptor.Height)
-    , IsCubemap(descriptor.IsCubemap)
-    , Mips(descriptor.Mips)
-    , BindFlags(descriptor.BindFlags)
-    , Format(descriptor.Format)
-{
-    static uint32_t textureCount = 0;
-    UniqueID = ++textureCount;
-    CreateMipViewports();
-}
+// Constructor/destructor defined in platform files where BeTextureImpl is complete.
 
 auto BeTexture::GetMipViewport(const uint32_t mip) const -> const BeViewport& { return _mipViewports[mip]; }
 

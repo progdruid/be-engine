@@ -91,7 +91,7 @@ PixelOutput PixelFunction(VertexOutput input) {
     float4 diffuseColor = DiffuseTexture.Sample(DefaultSampler, input.UV);
     if (diffuseColor.a < 0.5) discard;
     float4 specularColor = Specular.Sample(DefaultSampler, input.UV);
-    float3 emissiveColor = EmissiveTexture.Sample(DefaultSampler, input.UV);
+    float3 emissiveColor = EmissiveTexture.Sample(DefaultSampler, input.UV).rgb;
     
     PixelOutput output;
     output.DiffuseRGB = diffuseColor.rgb * _DiffuseColor;

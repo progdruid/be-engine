@@ -27,6 +27,7 @@ project "core"
         "%{prj.location}/src/**.hlsli",
         -- Shared .cpp files (not in platform/)
         "%{prj.location}/src/*.cpp",
+        "%{prj.location}/src/umbrellas/*.cpp",
     }
 
     -- Platform-specific source files
@@ -99,6 +100,8 @@ project "core"
         links {
             "glfw3",
             "assimp",
+            "libassert",
+            "cpptrace",
             "Metal.framework",
             "QuartzCore.framework",
             "Cocoa.framework",

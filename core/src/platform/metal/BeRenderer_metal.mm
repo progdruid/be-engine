@@ -8,11 +8,32 @@
 
 #include "BeRenderer.h"
 #include "BePipeline.h"
+#include "BeRenderPass.h"
 #include "BeRendererImpl.h"
 #include "MetalUtils.h"
 
 #include "BeBuffers.h"
 #include "BeWindow.h"
+
+#include <algorithm>
+#include <cmath>
+
+namespace {
+    auto UpdateDrawableSize(BeRendererImpl* impl, uint32_t& width, uint32_t& height) -> void {
+        if (!impl || !impl->metalLayer) return;
+
+        const CGFloat scale = impl->metalLayer.contentsScale > 0.0 ? impl->metalLayer.contentsScale : 1.0;
+        const CGSize bounds = impl->metalLayer.bounds.size;
+        const auto drawableWidth = static_cast<uint32_t>(std::max<long long>(1, std::llround(bounds.width * scale)));
+        const auto drawableHeight = static_cast<uint32_t>(std::max<long long>(1, std::llround(bounds.height * scale)));
+
+        if (drawableWidth != width || drawableHeight != height) {
+            width = drawableWidth;
+            height = drawableHeight;
+            impl->metalLayer.drawableSize = CGSizeMake(width, height);
+        }
+    }
+}
 
 BeRenderer::BeRenderer(
     uint32_t width,
@@ -25,9 +46,21 @@ BeRenderer::BeRenderer(
 {
     NSWindow* nsWindow = glfwGetCocoaWindow(window.GetGlfwWindow());
     _impl->metalLayer = [CAMetalLayer layer];
-    _impl->metalLayer.frame = nsWindow.contentView.frame;
+    _impl->metalLayer.contentsScale = nsWindow.backingScaleFactor;
+    _impl->metalLayer.frame = nsWindow.contentView.bounds;
+    _impl->metalLayer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
     [nsWindow.contentView setLayer:_impl->metalLayer];
     [nsWindow.contentView setWantsLayer:YES];
+
+    int framebufferWidth = 0;
+    int framebufferHeight = 0;
+    glfwGetFramebufferSize(window.GetGlfwWindow(), &framebufferWidth, &framebufferHeight);
+    if (framebufferWidth > 0 && framebufferHeight > 0) {
+        _width = static_cast<uint32_t>(framebufferWidth);
+        _height = static_cast<uint32_t>(framebufferHeight);
+    }
+
+    UpdateDrawableSize(_impl.get(), _width, _height);
 }
 
 BeRenderer::~BeRenderer() = default;
@@ -38,6 +71,7 @@ auto BeRenderer::LaunchDevice() -> void {
     _impl->metalLayer.device = _impl->device;
     _impl->metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
     _impl->metalLayer.drawableSize = CGSizeMake(_width, _height);
+    UpdateDrawableSize(_impl.get(), _width, _height);
 
     _pipeline = BePipeline::Create(*this);
 
@@ -57,6 +91,7 @@ auto BeRenderer::LaunchDevice() -> void {
 
 auto BeRenderer::Render() -> void {
     @autoreleasepool {
+        UpdateDrawableSize(_impl.get(), _width, _height);
         _impl->currentDrawable = [_impl->metalLayer nextDrawable];
         if (!_impl->currentDrawable) return;
 

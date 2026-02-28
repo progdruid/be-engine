@@ -73,7 +73,7 @@ float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float t
 
 float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
     float depth = Depth.Sample(InputSampler, input.UV).r;
-    float3 diffuse = DiffuseRGB.Sample(InputSampler, input.UV);
+    float3 diffuse = DiffuseRGB.Sample(InputSampler, input.UV).rgb;
     float3 worldNormal = WorldNormalXYZ_UnusedA.Sample(InputSampler, input.UV).xyz;
     float4 specular_shininess = SpecularRGB_ShininessA.Sample(InputSampler, input.UV);
 

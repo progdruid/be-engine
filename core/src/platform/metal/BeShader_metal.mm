@@ -8,13 +8,10 @@
 
 #include <cassert>
 #include <fstream>
-#include <nlohmann/json.hpp>
 #include <umbrellas/include-glm.h>
 #include <umbrellas/include-libassert.h>
 
 #include "BeShaderTools.h"
-
-using Json = nlohmann::ordered_json;
 
 static auto LoadMSLSource(const std::filesystem::path& mslPath, id<MTLDevice> device) -> id<MTLLibrary> {
     std::ifstream file(mslPath);
@@ -24,7 +21,8 @@ static auto LoadMSLSource(const std::filesystem::path& mslPath, id<MTLDevice> de
     NSError* error = nil;
     NSString* nsSource = [NSString stringWithUTF8String:source.c_str()];
     id<MTLLibrary> library = [device newLibraryWithSource:nsSource options:nil error:&error];
-    be_assert(library != nil, "Metal shader compilation failed: " +
+    const bool isLibraryLoaded = library != nil;
+    be_assert(isLibraryLoaded, "Metal shader compilation failed: " +
         std::string([[error localizedDescription] UTF8String]));
     return library;
 }
@@ -33,22 +31,31 @@ static auto LoadMetallib(const std::filesystem::path& metallibPath, id<MTLDevice
     NSError* error = nil;
     NSString* path = [NSString stringWithUTF8String:metallibPath.c_str()];
     id<MTLLibrary> library = [device newLibraryWithFile:path error:&error];
-    be_assert(library != nil, "Failed to load .metallib: " + metallibPath.string());
+    const bool isLibraryLoaded = library != nil;
+    be_assert(isLibraryLoaded, "Failed to load .metallib: " + metallibPath.string());
     return library;
 }
 
 static auto FindShaderFile(const std::filesystem::path& hlslPath, const std::string& functionName, const std::string& stage) -> std::filesystem::path {
-    auto dir = hlslPath.parent_path();
     auto stem = hlslPath.stem().string();
+    (void)functionName;
 
-    auto metallibPath = dir / (stem + "." + stage + ".metallib");
-    if (std::filesystem::exists(metallibPath)) return metallibPath;
+    std::vector<std::filesystem::path> dirsToProbe;
+    const auto cwd = std::filesystem::current_path();
+    dirsToProbe.push_back(cwd / "bin/AARCH64/Debug/assets/shaders");
+    dirsToProbe.push_back(cwd / "bin/AARCH64/Release/assets/shaders");
+    dirsToProbe.push_back(hlslPath.parent_path());
 
-    auto metalPath = dir / (stem + "." + stage + ".metal");
-    if (std::filesystem::exists(metalPath)) return metalPath;
+    for (const auto& dir : dirsToProbe) {
+        auto metallibPath = dir / (stem + "." + stage + ".metallib");
+        if (std::filesystem::exists(metallibPath)) return metallibPath;
 
-    auto singleMetal = dir / (stem + ".metal");
-    if (std::filesystem::exists(singleMetal)) return singleMetal;
+        auto metalPath = dir / (stem + "." + stage + ".metal");
+        if (std::filesystem::exists(metalPath)) return metalPath;
+
+        auto singleMetal = dir / (stem + ".metal");
+        if (std::filesystem::exists(singleMetal)) return singleMetal;
+    }
 
     return {};
 }
@@ -71,7 +78,8 @@ static auto LoadFunction(
 
     NSString* fnName = [NSString stringWithUTF8String:functionName.c_str()];
     id<MTLFunction> function = [library newFunctionWithName:fnName];
-    be_assert(function != nil, "Function '" + functionName + "' not found in " + shaderPath.string());
+    const bool isFunctionLoaded = function != nil;
+    be_assert(isFunctionLoaded, "Function '" + functionName + "' not found in " + shaderPath.string());
     return { library, function };
 }
 
@@ -137,12 +145,12 @@ auto BeShader::Create(const std::filesystem::path& filePath, BeRenderer& rendere
             for (const std::string vertexSemanticName : vertexLayoutJson) {
                 vertexDesc.attributes[attrIndex].format = ElementFormats.at(vertexSemanticName);
                 vertexDesc.attributes[attrIndex].offset = ElementOffsets.at(vertexSemanticName);
-                vertexDesc.attributes[attrIndex].bufferIndex = 0;
+                vertexDesc.attributes[attrIndex].bufferIndex = 30;
                 attrIndex++;
             }
 
-            vertexDesc.layouts[0].stride = sizeof(float) * 16;
-            vertexDesc.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+            vertexDesc.layouts[30].stride = sizeof(float) * 16;
+            vertexDesc.layouts[30].stepFunction = MTLVertexStepFunctionPerVertex;
 
             shader->_impl->vertexDescriptor = vertexDesc;
         }

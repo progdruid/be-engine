@@ -16,7 +16,13 @@ SHADER_DIR="${1:?Usage: compile-shaders.sh <shader-dir> <output-dir> <target>}"
 OUTPUT_DIR="${2:?Usage: compile-shaders.sh <shader-dir> <output-dir> <target>}"
 TARGET="${3:?Usage: compile-shaders.sh <shader-dir> <output-dir> <target>}"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOCAL_SLANGC="$SCRIPT_DIR/.bin/slang/bin/slangc"
 SLANGC="${SLANGC:-slangc}"
+
+if [[ "$SLANGC" == "slangc" ]] && [[ -x "$LOCAL_SLANGC" ]]; then
+    SLANGC="$LOCAL_SLANGC"
+fi
 
 if ! command -v "$SLANGC" &>/dev/null; then
     echo "Error: slangc not found. Install from https://shader-slang.org or set SLANGC env var."
@@ -43,9 +49,39 @@ compile_shader() {
 
     local out="$OUTPUT_DIR/${stem}.${stage}.${ext}"
 
+    if [[ "$TARGET" == "metal" ]] && [[ "$stage" == "hs" || "$stage" == "ds" ]]; then
+        echo "  skipping $stem ($stage) for metal target"
+        return 0
+    fi
+
+    local slang_args=(
+        "$src"
+        -target "$TARGET"
+        -entry "$entry"
+        -profile "$profile"
+        -o "$out"
+        -I "$(dirname "$src")"
+        -I "core/src/shaders"
+    )
+
+    if [[ "$TARGET" == "spirv" ]]; then
+        slang_args+=(
+            -fvk-b-shift 0 all
+            -fvk-t-shift 1024 all
+            -fvk-s-shift 2048 all
+            -fvk-u-shift 3072 all
+        )
+    elif [[ "$TARGET" == "metal" ]]; then
+        slang_args+=(
+            -fvk-b-shift 0 all
+            -fvk-t-shift 0 all
+            -fvk-s-shift 8 all
+            -fvk-u-shift 0 all
+        )
+    fi
+
     echo "  $stem ($stage) -> $out"
-    "$SLANGC" "$src" -target "$TARGET" -entry "$entry" -profile "$profile" -o "$out" \
-        -I "$(dirname "$src")" -I "core/src/shaders" 2>&1 || {
+    "$SLANGC" "${slang_args[@]}" 2>&1 || {
         echo "  FAILED: $src ($stage)"
         return 1
     }
@@ -55,30 +91,33 @@ parse_and_compile() {
     local src="$1"
     local header
     header=$(grep -A 100 '@be-shader:' "$src" | head -100)
+    local file_failed=0
 
     local vertex_fn
-    vertex_fn=$(echo "$header" | grep -oP '"vertex"\s*:\s*"\K[^"]+' || true)
+    vertex_fn=$(echo "$header" | sed -n 's/.*"vertex"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
     if [[ -n "$vertex_fn" ]]; then
-        compile_shader "$src" "$vertex_fn" "vs_5_0" "vs"
+        compile_shader "$src" "$vertex_fn" "vs_5_0" "vs" || file_failed=1
     fi
 
     local pixel_fn
-    pixel_fn=$(echo "$header" | grep -oP '"pixel"\s*:\s*"\K[^"]+' || true)
+    pixel_fn=$(echo "$header" | sed -n 's/.*"pixel"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
     if [[ -n "$pixel_fn" ]]; then
-        compile_shader "$src" "$pixel_fn" "ps_5_0" "ps"
+        compile_shader "$src" "$pixel_fn" "ps_5_0" "ps" || file_failed=1
     fi
 
     local hull_fn
-    hull_fn=$(echo "$header" | grep -oP '"hull"\s*:\s*"\K[^"]+' || true)
+    hull_fn=$(echo "$header" | sed -n 's/.*"hull"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
     if [[ -n "$hull_fn" ]]; then
-        compile_shader "$src" "$hull_fn" "hs_5_0" "hs"
+        compile_shader "$src" "$hull_fn" "hs_5_0" "hs" || file_failed=1
     fi
 
     local domain_fn
-    domain_fn=$(echo "$header" | grep -oP '"domain"\s*:\s*"\K[^"]+' || true)
+    domain_fn=$(echo "$header" | sed -n 's/.*"domain"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
     if [[ -n "$domain_fn" ]]; then
-        compile_shader "$src" "$domain_fn" "ds_5_0" "ds"
+        compile_shader "$src" "$domain_fn" "ds_5_0" "ds" || file_failed=1
     fi
+
+    return $file_failed
 }
 
 echo "Compiling shaders: $SHADER_DIR -> $OUTPUT_DIR (target: $TARGET)"

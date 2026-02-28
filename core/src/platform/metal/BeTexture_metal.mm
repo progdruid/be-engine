@@ -112,6 +112,20 @@ static auto CreateCubemapResources(
     }
 }
 
+BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
+    : Name(descriptor.Name)
+    , Width(descriptor.Width)
+    , Height(descriptor.Height)
+    , IsCubemap(descriptor.IsCubemap)
+    , Mips(descriptor.Mips)
+    , BindFlags(descriptor.BindFlags)
+    , Format(descriptor.Format)
+{
+    static uint32_t textureCount = 0;
+    UniqueID = ++textureCount;
+    CreateMipViewports();
+}
+
 BeTexture::~BeTexture() = default;
 
 auto BeTexture::CreatePlatformResources(BeRenderer& renderer, const uint8_t* initialData) -> void {

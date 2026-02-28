@@ -58,11 +58,20 @@ project "example-sakura"
             "-isystem /opt/homebrew/include",
             "-isystem /usr/local/include",
         }
+        libdirs {
+            "/opt/homebrew/lib",
+            "/usr/local/lib",
+        }
         postbuildcommands {
+            "{MKDIR} %{cfg.targetdir}/src",
             "{COPY} %{wks.location}/core/src/shaders %{cfg.targetdir}/src/shaders",
             "{COPY} %{prj.location}/assets %{cfg.targetdir}/assets",
         }
         links {
+            "glfw3",
+            "assimp",
+            "libassert",
+            "cpptrace",
             "Metal.framework",
             "QuartzCore.framework",
             "Cocoa.framework",

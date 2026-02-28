@@ -1,6 +1,7 @@
 #include "BeAssetRegistry.h"
 
 #include <fstream>
+#include <sstream>
 
 #include "BeShader.h"
 #include "BeShaderTools.h"
@@ -61,8 +62,7 @@ auto BeAssetRegistry::IndexShaderFiles(const std::vector<std::filesystem::path>&
 
             try {
                 json = Json::parse(jsonContent, nullptr, true, true, true);
-            } catch (const Json::parse_error& e) {
-                const auto msg = e.what();
+            } catch (const Json::parse_error&) {
                 assert(false);
             }
 

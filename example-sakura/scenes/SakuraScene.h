@@ -25,7 +25,7 @@ class SakuraScene : public BaseScene {
     
     expose
     explicit SakuraScene(Game* game);
-    ~SakuraScene() override = default;
+    ~SakuraScene() override;
 
     auto Prepare() -> void override;
     auto OnLoad() -> void override;

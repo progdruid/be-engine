@@ -80,8 +80,8 @@ project "cpptrace"
             "CPPTRACE_DEMANGLE_WITH_CXXABI",
         }
         buildoptions {
-            "-isystem ../vendor/cpptrace/include",
-            "-isystem ../vendor/libassert/include",
+            "-isystem include",
+            "-isystem ../libassert/include",
         }
 
     filter {}
@@ -138,8 +138,8 @@ project "libassert"
 
     filter "system:macosx"
         buildoptions {
-            "-isystem ../vendor/libassert/include",
-            "-isystem ../vendor/cpptrace/include",
+            "-isystem include",
+            "-isystem ../cpptrace/include",
         }
 
     filter "configurations:Debug"

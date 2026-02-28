@@ -27,6 +27,8 @@ auto Game::Run() -> int {
     Height = Window->GetHeight();
     Renderer = std::make_shared<BeRenderer>(Width, Height, *Window);
     Renderer->LaunchDevice();
+    Width = Renderer->GetWidth();
+    Height = Renderer->GetHeight();
 
     SubmissionBuffer = std::make_shared<BeBRPSubmissionBuffer>();
     SubmissionBuffer->Init(*Renderer);

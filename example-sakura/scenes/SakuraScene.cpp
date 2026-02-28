@@ -25,11 +25,12 @@
 #include "scenes/BeSceneManager.h"
 
 SakuraScene::SakuraScene(Game* game) : BaseScene(game) {}
+SakuraScene::~SakuraScene() = default;
 
 auto SakuraScene::Prepare() -> void {
     _camera = std::make_unique<BeCamera>();
-    _camera->Width = GameIns->Window->GetWidth();
-    _camera->Height = GameIns->Window->GetHeight();
+    _camera->Width = GameIns->Renderer->GetWidth();
+    _camera->Height = GameIns->Renderer->GetHeight();
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
@@ -83,8 +84,8 @@ auto SakuraScene::Prepare() -> void {
 
     GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
 
-    const uint32_t screenWidth = GameIns->Window->GetWidth();
-    const uint32_t screenHeight = GameIns->Window->GetHeight();
+    const uint32_t screenWidth = GameIns->Renderer->GetWidth();
+    const uint32_t screenHeight = GameIns->Renderer->GetHeight();
 
     BeTexture::Create("DepthStencil")
     .SetBindFlags(BeBindFlags::DepthStencil | BeBindFlags::ShaderResource)
@@ -163,9 +164,11 @@ auto SakuraScene::OnLoad() -> void {
 
     GameIns->Renderer->ClearPasses();
 
+#if !defined(__APPLE__)
     const auto shadowPass = new BeShadowPass();
     GameIns->Renderer->AddRenderPass(shadowPass);
     shadowPass->SubmissionBuffer = GameIns->SubmissionBuffer;
+#endif
 
     const auto geometryPass = new BeGeometryPass();
     GameIns->Renderer->AddRenderPass(geometryPass);

@@ -24,3 +24,6 @@ obj/
 
 # Premake executable (explicitly include)
 !premake5.exe
+
+# Local tool binaries
+tools/.bin/

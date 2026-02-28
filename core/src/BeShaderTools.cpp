@@ -1,6 +1,7 @@
 #include "BeShaderTools.h"
 
 #include <fstream>
+#include <sstream>
 
 #include "umbrellas/include-libassert.h"
 

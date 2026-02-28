@@ -12,7 +12,7 @@
 #include "BeMaterial.h"
 #include "BeModel.h"
 #include "BeAssetRegistry.h"
-#include "BeBRPSubmissionBuffer.h"
+#include "../../../../toolkit/basic-render-pipeline/BeBRPSubmissionBuffer.h"
 #include "BeBRPSubmissionBufferImpl.h"
 
 #import <Metal/Metal.h>
@@ -60,7 +60,8 @@ static auto GetOrCreatePipelineState(
 
     NSError* error = nil;
     id<MTLRenderPipelineState> state = [impl->device newRenderPipelineStateWithDescriptor:desc error:&error];
-    be_assert(state != nil, "Failed to create pipeline state: " +
+    const bool pipelineStateCreated = state != nil;
+    be_assert(pipelineStateCreated, "Failed to create pipeline state: " +
         std::string([[error localizedDescription] UTF8String]));
     return state;
 }
@@ -227,15 +228,20 @@ auto BePipeline::DrawIndexed(uint32_t indexCount, uint32_t startIndex, int32_t b
     auto encoder = _impl->rendererImpl->currentEncoder;
     if (!encoder) return;
 
-    auto* bufImpl = _impl->rendererImpl;
-    [encoder drawIndexedPrimitives:MetalUtils::ToMTLPrimitiveType(_boundShader ? _boundShader->Topology : BeTopology::TriangleList)
-                        indexCount:indexCount
-                         indexType:MTLIndexTypeUInt32
-                       indexBuffer:nil
-                 indexBufferOffset:startIndex * sizeof(uint32_t)
-                     instanceCount:1
-                        baseVertex:baseVertex
-                      baseInstance:0];
+    if (_impl->currentVertexBuffer == nil) {
+        return;
+    }
+
+    [encoder setVertexBuffer:_impl->currentVertexBuffer offset:0 atIndex:30];
+
+    const size_t vertexOffset = static_cast<size_t>(startIndex) + static_cast<size_t>(baseVertex >= 0 ? baseVertex : 0);
+    if (vertexOffset + indexCount > _impl->currentVertexBufferLength / sizeof(BeFullVertex)) {
+        return;
+    }
+
+    [encoder drawPrimitives:MetalUtils::ToMTLPrimitiveType(_boundShader ? _boundShader->Topology : BeTopology::TriangleList)
+                vertexStart:static_cast<NSUInteger>(vertexOffset)
+                vertexCount:indexCount];
 }
 
 auto BePipeline::SetViewport(const BeViewport& viewport) const -> void {
@@ -279,10 +285,18 @@ auto BePipeline::BindMeshBuffers(const BeBRPSubmissionBuffer& submissionBuffer) 
     auto encoder = _impl->rendererImpl->currentEncoder;
     if (!encoder) return;
     auto* bufImpl = submissionBuffer.GetPlatformImpl();
-    [encoder setVertexBuffer:bufImpl->sharedVertexBuffer offset:0 atIndex:30];
+    _impl->currentVertexBuffer = bufImpl->sharedVertexBuffer;
+    _impl->currentVertexBufferLength = _impl->currentVertexBuffer ? static_cast<size_t>([_impl->currentVertexBuffer length]) : 0;
+    _impl->currentIndexBuffer = bufImpl->sharedIndexBuffer;
+    _impl->currentIndexBufferLength = _impl->currentIndexBuffer ? static_cast<size_t>([_impl->currentIndexBuffer length]) : 0;
+    [encoder setVertexBuffer:_impl->currentVertexBuffer offset:0 atIndex:30];
 }
 
 auto BePipeline::UnbindMeshBuffers() const -> void {
+    _impl->currentVertexBuffer = nil;
+    _impl->currentVertexBufferLength = 0;
+    _impl->currentIndexBuffer = nil;
+    _impl->currentIndexBufferLength = 0;
 }
 
 auto BePipeline::SetDepthOnlyTarget(BeTexture* depthTexture) const -> void {

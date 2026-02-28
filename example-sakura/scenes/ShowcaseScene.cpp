@@ -29,8 +29,8 @@ ShowcaseScene::~ShowcaseScene() = default;
 void ShowcaseScene::Prepare() {
 
     _camera = std::make_shared<BeCamera>();
-    _camera->Width = GameIns->Window->GetWidth();
-    _camera->Height = GameIns->Window->GetHeight();
+    _camera->Width = GameIns->Renderer->GetWidth();
+    _camera->Height = GameIns->Renderer->GetHeight();
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
@@ -59,8 +59,8 @@ void ShowcaseScene::Prepare() {
 }
 
 auto ShowcaseScene::CreateTargetTextures() -> void {
-    const uint32_t screenWidth = GameIns->Window->GetWidth();
-    const uint32_t screenHeight = GameIns->Window->GetHeight();
+    const uint32_t screenWidth = GameIns->Renderer->GetWidth();
+    const uint32_t screenHeight = GameIns->Renderer->GetHeight();
     auto& renderer = *GameIns->Renderer;
 
     BeTexture::Create("S_DepthStencil")
@@ -196,9 +196,11 @@ void ShowcaseScene::OnLoad() {
 auto ShowcaseScene::LoadPasses() -> void {
     GameIns->Renderer->ClearPasses();
 
+#if !defined(__APPLE__)
     const auto shadowPass = new BeShadowPass();
     GameIns->Renderer->AddRenderPass(shadowPass);
     shadowPass->SubmissionBuffer = GameIns->SubmissionBuffer;
+#endif
 
     const auto geometryPass = new BeGeometryPass();
     GameIns->Renderer->AddRenderPass(geometryPass);

@@ -15,12 +15,20 @@ struct BePipelineImpl {
     id<MTLDevice> device = nil;
     id<MTLRenderPipelineState> currentPipelineState = nil;
     id<MTLDepthStencilState> currentDepthStencilState = nil;
-    id<MTLBlendColorAttachmentDescriptor> blendDescriptor = nil;
+    MTLRenderPipelineColorAttachmentDescriptor* blendDescriptor = nil;
+    id<MTLBuffer> currentVertexBuffer = nil;
+    size_t currentVertexBufferLength = 0;
+    id<MTLBuffer> currentIndexBuffer = nil;
+    size_t currentIndexBufferLength = 0;
 #else
     void* device = nullptr;
     void* currentPipelineState = nullptr;
     void* currentDepthStencilState = nullptr;
     void* blendDescriptor = nullptr;
+    void* currentVertexBuffer = nullptr;
+    size_t currentVertexBufferLength = 0;
+    void* currentIndexBuffer = nullptr;
+    size_t currentIndexBufferLength = 0;
 #endif
 
     std::unordered_map<size_t, void*> pipelineStateCache;

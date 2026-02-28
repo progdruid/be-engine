@@ -7,6 +7,27 @@
 
 #import <Metal/Metal.h>
 
+BeMaterial::BeMaterial(
+    std::string name,
+    const bool frequentlyUsed,
+    BeMaterialScheme descriptor,
+    BeRenderer& renderer
+)
+    : Name(std::move(name))
+    , _isFrequentlyUsed(frequentlyUsed)
+    , _scheme(std::move(descriptor))
+{
+    static uint32_t materialCount = 0;
+    _uniqueID = ++materialCount;
+
+    if (_scheme.Properties.empty())
+        return;
+
+    AssembleData();
+    CreatePlatformBuffer(renderer);
+    _cbufferDirty = false;
+}
+
 BeMaterial::~BeMaterial() = default;
 BeMaterial::BeMaterial(BeMaterial&& other) noexcept = default;
 BeMaterial& BeMaterial::operator=(BeMaterial&& other) noexcept = default;

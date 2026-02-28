@@ -1,5 +1,6 @@
 #include "BeModel.h"
 
+#include <algorithm>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -158,7 +159,9 @@ auto BeModel::LoadTextureFromAssimpPath(
         .SetFormat(BeTextureFormat::R8G8B8A8_UNorm);
 
     if (texPath.C_Str()[0] != '*') {
-        const auto filename = std::filesystem::path(texPath.C_Str()).filename();
+        auto rawPath = std::string(texPath.C_Str());
+        std::replace(rawPath.begin(), rawPath.end(), '\\', '/');
+        const auto filename = std::filesystem::path(rawPath).filename();
         std::filesystem::path path;
         if (!std::filesystem::exists(path = parentPath / filename) &&
             !std::filesystem::exists(path = parentPath / "textures" / filename) &&

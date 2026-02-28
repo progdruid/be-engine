@@ -1,6 +1,8 @@
 #pragma once
+#include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <vector>
 #include <umbrellas/include-glm.h>
 
 struct aiScene;

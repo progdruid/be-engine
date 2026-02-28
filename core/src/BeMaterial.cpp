@@ -18,28 +18,7 @@ auto BeMaterial::Create(
     return material;
 }
 
-BeMaterial::BeMaterial(
-    std::string name,
-    const bool frequentlyUsed,
-    BeMaterialScheme descriptor,
-    BeRenderer& renderer
-)
-    : Name(std::move(name))
-    , _isFrequentlyUsed(frequentlyUsed)
-    , _scheme(std::move(descriptor))
-{
-    static uint32_t materialCount = 0;
-    _uniqueID = ++materialCount;
-
-    if (_scheme.Properties.empty())
-        return;
-
-    AssembleData();
-    CreatePlatformBuffer(renderer);
-    _cbufferDirty = false;
-}
-
-// Destructor and move ops defined in platform files where BeMaterialImpl is complete.
+// Constructor/destructor and move ops are defined in platform files where BeMaterialImpl is complete.
 
 auto BeMaterial::InitialiseSlotMaps() -> void {
     for (const auto& property : _scheme.Textures) {

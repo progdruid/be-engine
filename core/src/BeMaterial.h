@@ -82,8 +82,8 @@ class BeMaterial {
     auto Print() const -> std::string;
 
     expose auto GetPlatformImpl() const -> BeMaterialImpl* { return _platformImpl.get(); }
+    auto UpdatePlatformBuffer() -> bool;
 
     hide auto AssembleData() -> void;
     hide auto CreatePlatformBuffer(BeRenderer& renderer) -> void;
-    hide auto UpdatePlatformBuffer() -> bool;
 };

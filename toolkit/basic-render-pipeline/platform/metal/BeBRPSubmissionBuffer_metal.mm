@@ -5,6 +5,7 @@
 
 #include "BeRenderer.h"
 #include "BeModel.h"
+#include "umbrellas/include-libassert.h"
 
 #import <Metal/Metal.h>
 
@@ -42,11 +43,30 @@ auto BeBRPSubmissionBuffer::BakeModels() -> void {
         }
     }
 
-    _impl->sharedVertexBuffer = [_impl->device newBufferWithBytes:fullVertices.data()
-                                                           length:fullVertices.size() * sizeof(BeFullVertex)
+    // Metal fallback: expand indexed geometry into a flat vertex stream.
+    // This avoids unstable indexed draws on some Apple GPU driver paths.
+    std::vector<BeFullVertex> expandedVertices;
+    expandedVertices.reserve(indices.size());
+
+    for (auto& [_, slices] : _modelDrawSlices) {
+        for (auto& slice : slices) {
+            const uint32_t expandedStart = static_cast<uint32_t>(expandedVertices.size());
+            for (uint32_t i = 0; i < slice.IndexCount; ++i) {
+                const uint32_t idx = indices[slice.StartIndexLocation + i];
+                const int64_t vertexIndex = static_cast<int64_t>(slice.BaseVertexLocation) + static_cast<int64_t>(idx);
+                be_assert(vertexIndex >= 0 && vertexIndex < static_cast<int64_t>(fullVertices.size()),
+                    "Expanded vertex index out of range while baking model geometry.");
+                expandedVertices.push_back(fullVertices[vertexIndex]);
+            }
+
+            slice.StartIndexLocation = expandedStart;
+            slice.BaseVertexLocation = 0;
+        }
+    }
+
+    _impl->sharedVertexBuffer = [_impl->device newBufferWithBytes:expandedVertices.data()
+                                                           length:expandedVertices.size() * sizeof(BeFullVertex)
                                                           options:MTLResourceStorageModeShared];
 
-    _impl->sharedIndexBuffer = [_impl->device newBufferWithBytes:indices.data()
-                                                          length:indices.size() * sizeof(uint32_t)
-                                                         options:MTLResourceStorageModeShared];
+    _impl->sharedIndexBuffer = nil;
 }
