@@ -32,9 +32,7 @@ local function generateVersionHeaders()
     f:close()
 end
 
-if _ACTION == "vs2022" or _ACTION == "vs2019" then
-    generateVersionHeaders()
-end
+generateVersionHeaders()
 
 
 group "vendor"
@@ -64,13 +62,25 @@ project "cpptrace"
 
     defines {
         "CPPTRACE_STATIC_DEFINE",
-        "CPPTRACE_GET_SYMBOLS_WITH_DBGHELP",
-        "CPPTRACE_UNWIND_WITH_DBGHELP",
-        "CPPTRACE_DEMANGLE_WITH_WINAPI",
         "NOMINMAX",
     }
 
-    links { "dbghelp" }
+    filter "system:windows"
+        defines {
+            "CPPTRACE_GET_SYMBOLS_WITH_DBGHELP",
+            "CPPTRACE_UNWIND_WITH_DBGHELP",
+            "CPPTRACE_DEMANGLE_WITH_WINAPI",
+        }
+        links { "dbghelp" }
+
+    filter "system:macosx"
+        defines {
+            "CPPTRACE_GET_SYMBOLS_WITH_LIBDL",
+            "CPPTRACE_UNWIND_WITH_EXECINFO",
+            "CPPTRACE_DEMANGLE_WITH_CXXABI",
+        }
+
+    filter {}
 
     filter "configurations:Debug"
         symbols "On"
