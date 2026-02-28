@@ -29,18 +29,23 @@ project "core"
         "%{prj.location}/src/*.cpp",
     }
 
-    -- Platform-specific: include DX11 by default (Windows)
+    -- Platform-specific source files
     filter "system:windows"
         files {
             "%{prj.location}/src/platform/dx11/**.cpp",
             "%{prj.location}/src/platform/dx11/**.h",
         }
+        removefiles { "%{prj.location}/src/platform/metal/**" }
         defines { "BE_DX11" }
 
     filter "system:macosx"
         files {
             "%{prj.location}/src/platform/metal/**.mm",
             "%{prj.location}/src/platform/metal/**.h",
+        }
+        removefiles {
+            "%{prj.location}/src/platform/dx11/**",
+            "%{prj.location}/src/BeWindow.cpp",
         }
         defines { "BE_METAL" }
 
@@ -54,24 +59,41 @@ project "core"
         "vendor/Assimp/include",
         "vendor"
     }
-    libdirs {
-        "vendor/glfw/lib-vc2022",
-        "vendor/Assimp/lib/x64"
-    }
-    links {
-        "glfw3",
-        "assimp-vc143-mt",
 
-        -- directx 11
-        "d3d11",
-        "dxgi",
-        "d3dcompiler",
+    filter "system:windows"
+        libdirs {
+            "vendor/glfw/lib-vc2022",
+            "vendor/Assimp/lib/x64"
+        }
+        links {
+            "glfw3",
+            "assimp-vc143-mt",
+            "d3d11",
+            "dxgi",
+            "d3dcompiler",
+            "libassert",
+            "cpptrace",
+            "dbghelp"
+        }
 
-        -- libassert + cpptrace
-        "libassert",
-        "cpptrace",
-        "dbghelp"
-    }
+    filter "system:macosx"
+        libdirs {
+            "vendor/glfw/lib-macos",
+            "vendor/Assimp/lib/macos"
+        }
+        links {
+            "glfw3",
+            "assimp",
+            "Metal.framework",
+            "QuartzCore.framework",
+            "Cocoa.framework",
+            "IOKit.framework",
+            "CoreVideo.framework",
+            "libassert",
+            "cpptrace",
+        }
+
+    filter {}
 
     defines {
         "LIBASSERT_STATIC_DEFINE",

@@ -40,15 +40,30 @@ project "toolkit"
         "vendor/cpptrace/include",
         "vendor/Assimp/include",
     }
-    libdirs { "vendor/glfw/lib-vc2022", "vendor/Assimp/lib/x64" }
-    links {
-        "core",
-        "glfw3",
-        "d3d11",
-        "dxgi",
-        "d3dcompiler",
-        "assimp-vc143-mt"
-    }
+
+    filter "system:windows"
+        libdirs { "vendor/glfw/lib-vc2022", "vendor/Assimp/lib/x64" }
+        links {
+            "core",
+            "glfw3",
+            "d3d11",
+            "dxgi",
+            "d3dcompiler",
+            "assimp-vc143-mt"
+        }
+
+    filter "system:macosx"
+        libdirs { "vendor/glfw/lib-macos", "vendor/Assimp/lib/macos" }
+        links {
+            "core",
+            "glfw3",
+            "assimp",
+            "Metal.framework",
+            "QuartzCore.framework",
+            "Cocoa.framework",
+        }
+
+    filter {}
 
     filter "configurations:Debug"
         symbols "On"

@@ -15,7 +15,6 @@ newaction {
 
 workspace "be"
     configurations { "Debug", "Release" }
-    system "windows"
     architecture "x86_64"
     location "."
 

@@ -33,11 +33,27 @@ project "example-sakura"
 
     links { "core", "toolkit" }
 
-    postbuildcommands {
-        "{COPY} %{wks.location}/core/src/shaders %{cfg.targetdir}/src/shaders",
-        "{COPY} %{prj.location}/assets %{cfg.targetdir}/assets",
-        "{COPY} %{wks.location}/vendor/Assimp/bin/x64/assimp-vc143-mt.dll %{cfg.targetdir}"
-    }
+    filter "system:windows"
+        postbuildcommands {
+            "{COPY} %{wks.location}/core/src/shaders %{cfg.targetdir}/src/shaders",
+            "{COPY} %{prj.location}/assets %{cfg.targetdir}/assets",
+            "{COPY} %{wks.location}/vendor/Assimp/bin/x64/assimp-vc143-mt.dll %{cfg.targetdir}"
+        }
+
+    filter "system:macosx"
+        postbuildcommands {
+            "{COPY} %{wks.location}/core/src/shaders %{cfg.targetdir}/src/shaders",
+            "{COPY} %{prj.location}/assets %{cfg.targetdir}/assets",
+        }
+        links {
+            "Metal.framework",
+            "QuartzCore.framework",
+            "Cocoa.framework",
+            "IOKit.framework",
+            "CoreVideo.framework",
+        }
+
+    filter {}
 
     filter { "files:**.hlsl" }
         buildaction "None"
