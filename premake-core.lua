@@ -83,9 +83,12 @@ project "core"
     filter "system:macosx"
         buildoptions {
             "-fobjc-arc",
+            "-isystem src",
+            "-isystem src/shaders",
             "-isystem ../vendor",
             "-isystem ../vendor/libassert/include",
             "-isystem ../vendor/cpptrace/include",
+            "-isystem ../vendor/Assimp/include",
             "-isystem /opt/homebrew/include",
             "-isystem /usr/local/include",
         }
