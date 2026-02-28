@@ -62,6 +62,8 @@ project "toolkit"
             "-fobjc-arc",
             "-isystem ../core/src",
             "-isystem ../vendor",
+            "-isystem ../vendor/libassert/include",
+            "-isystem ../vendor/cpptrace/include",
             "-isystem /opt/homebrew/include",
             "-isystem /usr/local/include",
         }

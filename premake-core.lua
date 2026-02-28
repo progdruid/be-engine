@@ -35,7 +35,10 @@ project "core"
             "%{prj.location}/src/platform/dx11/**.cpp",
             "%{prj.location}/src/platform/dx11/**.h",
         }
-        removefiles { "%{prj.location}/src/platform/metal/**" }
+        removefiles {
+            "%{prj.location}/src/platform/metal/**",
+            "%{prj.location}/src/rhi/**",
+        }
         defines { "BE_DX11" }
 
     filter "system:macosx"
@@ -46,6 +49,7 @@ project "core"
         removefiles {
             "%{prj.location}/src/platform/dx11/**",
             "%{prj.location}/src/BeWindow.cpp",
+            "%{prj.location}/src/rhi/**",
         }
         defines { "BE_METAL" }
 
@@ -80,6 +84,8 @@ project "core"
         buildoptions {
             "-fobjc-arc",
             "-isystem ../vendor",
+            "-isystem ../vendor/libassert/include",
+            "-isystem ../vendor/cpptrace/include",
             "-isystem /opt/homebrew/include",
             "-isystem /usr/local/include",
         }

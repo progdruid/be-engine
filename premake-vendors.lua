@@ -79,6 +79,10 @@ project "cpptrace"
             "CPPTRACE_UNWIND_WITH_EXECINFO",
             "CPPTRACE_DEMANGLE_WITH_CXXABI",
         }
+        buildoptions {
+            "-isystem ../vendor/cpptrace/include",
+            "-isystem ../vendor/libassert/include",
+        }
 
     filter {}
 
@@ -131,6 +135,12 @@ project "libassert"
     }
 
     links { "cpptrace" }
+
+    filter "system:macosx"
+        buildoptions {
+            "-isystem ../vendor/libassert/include",
+            "-isystem ../vendor/cpptrace/include",
+        }
 
     filter "configurations:Debug"
         symbols "On"
