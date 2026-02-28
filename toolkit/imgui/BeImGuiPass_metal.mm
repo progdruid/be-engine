@@ -1,10 +1,11 @@
 #include "BeImGuiPass.h"
 
-#include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <imgui/backends/imgui_impl_metal.h>
-
+// System headers first to avoid access-modifier macro conflicts.
 #import <Metal/Metal.h>
+
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_metal.h"
 
 #include "BeRenderer.h"
 #include "BeWindow.h"
