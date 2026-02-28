@@ -23,11 +23,16 @@ project "toolkit"
     filter "system:windows"
         files {
             "%{prj.location}/**/platform/dx11/**.cpp",
+            "%{prj.location}/imgui/backends/imgui_impl_dx11.cpp",
         }
 
     filter "system:macosx"
         files {
             "%{prj.location}/**/platform/metal/**.mm",
+        }
+        removefiles {
+            "%{prj.location}/imgui/backends/imgui_impl_dx11.cpp",
+            "%{prj.location}/imgui/backends/imgui_impl_dx11.h",
         }
 
     filter {}
