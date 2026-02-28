@@ -53,7 +53,14 @@ project "toolkit"
         }
 
     filter "system:macosx"
-        libdirs { "vendor/glfw/lib-macos", "vendor/Assimp/lib/macos" }
+        buildoptions {
+            "-fobjc-arc",
+            "-isystem ../core/src",
+            "-isystem ../vendor",
+            "-isystem /opt/homebrew/include",
+            "-isystem /usr/local/include",
+        }
+        libdirs { "/opt/homebrew/lib", "/usr/local/lib" }
         links {
             "core",
             "glfw3",
@@ -61,6 +68,8 @@ project "toolkit"
             "Metal.framework",
             "QuartzCore.framework",
             "Cocoa.framework",
+            "IOKit.framework",
+            "CoreVideo.framework",
         }
 
     filter {}

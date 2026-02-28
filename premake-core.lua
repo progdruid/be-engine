@@ -77,9 +77,15 @@ project "core"
         }
 
     filter "system:macosx"
+        buildoptions {
+            "-fobjc-arc",
+            "-isystem ../vendor",
+            "-isystem /opt/homebrew/include",
+            "-isystem /usr/local/include",
+        }
         libdirs {
-            "vendor/glfw/lib-macos",
-            "vendor/Assimp/lib/macos"
+            "/opt/homebrew/lib",
+            "/usr/local/lib",
         }
         links {
             "glfw3",
@@ -89,8 +95,6 @@ project "core"
             "Cocoa.framework",
             "IOKit.framework",
             "CoreVideo.framework",
-            "libassert",
-            "cpptrace",
         }
 
     filter {}
