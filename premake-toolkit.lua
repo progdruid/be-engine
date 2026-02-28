@@ -14,8 +14,8 @@ project "toolkit"
         "%{prj.location}/**.hpp",
         -- Shared .cpp files
         "%{prj.location}/basic-render-pipeline/*.cpp",
-        "%{prj.location}/imgui/*.cpp",
-        "%{prj.location}/imgui/backends/*.cpp",
+        "%{prj.location}/imgui/imgui*.cpp",
+        "%{prj.location}/imgui/backends/imgui_impl_glfw.cpp",
         "%{prj.location}/scenes/*.cpp",
     }
 
@@ -23,16 +23,15 @@ project "toolkit"
     filter "system:windows"
         files {
             "%{prj.location}/**/platform/dx11/**.cpp",
+            "%{prj.location}/imgui/BeImGuiPass.cpp",
             "%{prj.location}/imgui/backends/imgui_impl_dx11.cpp",
         }
 
     filter "system:macosx"
         files {
             "%{prj.location}/**/platform/metal/**.mm",
-        }
-        removefiles {
-            "%{prj.location}/imgui/backends/imgui_impl_dx11.cpp",
-            "%{prj.location}/imgui/backends/imgui_impl_dx11.h",
+            "%{prj.location}/imgui/BeImGuiPass_metal.mm",
+            "%{prj.location}/imgui/backends/imgui_impl_metal.mm",
         }
 
     filter {}
