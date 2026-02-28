@@ -41,6 +41,20 @@ project "example-sakura"
         }
 
     filter "system:macosx"
+        kind "WindowedApp"
+        xcodebuildsettings {
+            ["INFOPLIST_FILE"] = "$(SRCROOT)/Info.plist",
+            ["CODE_SIGN_IDENTITY"] = "-",
+            ["PRODUCT_BUNDLE_IDENTIFIER"] = "com.be-engine.example-sakura",
+        }
+        buildoptions {
+            "-fobjc-arc",
+            "-isystem ../core/src",
+            "-isystem ../vendor",
+            "-isystem ../toolkit",
+            "-isystem /opt/homebrew/include",
+            "-isystem /usr/local/include",
+        }
         postbuildcommands {
             "{COPY} %{wks.location}/core/src/shaders %{cfg.targetdir}/src/shaders",
             "{COPY} %{prj.location}/assets %{cfg.targetdir}/assets",
