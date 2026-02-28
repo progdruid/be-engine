@@ -1,12 +1,15 @@
-#include "BeWindow.h"
+// System and GLFW headers must come before engine headers.
+// The engine's access-modifier macros (#define hide ...) conflict with AppKit
+// which uses 'hide' as a method name in NSApplication, NSRunningApplication, etc.
+#include <cstdio>
+#include <cassert>
+#include <stdexcept>
 
 #define GLFW_EXPOSE_NATIVE_COCOA
 #include <glfw/glfw3.h>
 #include <glfw/glfw3native.h>
 
-#include <cstdio>
-#include <cassert>
-#include <stdexcept>
+#include "BeWindow.h"
 
 namespace {
     auto errorCallback(int code, const char* desc) -> void {
@@ -58,7 +61,7 @@ BeWindow::BeWindow(int width, int height, const std::string& title, BeWindowMode
         glfwSetWindowPos(_window, 0, 0);
     }
 
-    _nativeHandle = static_cast<void*>(glfwGetCocoaWindow(_window));
+    _nativeHandle = (__bridge void*)glfwGetCocoaWindow(_window);
     assert(_nativeHandle != nullptr);
 }
 

@@ -1,3 +1,11 @@
+// System headers before engine headers to avoid access-modifier macro conflicts with AppKit.
+#import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
+
+#define GLFW_EXPOSE_NATIVE_COCOA
+#include <glfw/glfw3.h>
+#include <glfw/glfw3native.h>
+
 #include "BeRenderer.h"
 #include "BePipeline.h"
 #include "BeRendererImpl.h"
@@ -5,13 +13,6 @@
 
 #include "BeBuffers.h"
 #include "BeWindow.h"
-
-#import <Metal/Metal.h>
-#import <QuartzCore/CAMetalLayer.h>
-
-#define GLFW_EXPOSE_NATIVE_COCOA
-#include <glfw/glfw3.h>
-#include <glfw/glfw3native.h>
 
 BeRenderer::BeRenderer(
     uint32_t width,

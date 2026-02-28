@@ -15,6 +15,7 @@
 #include "BeWindow.h"
 #include "Components.h"
 #include "Game.h"
+#include "basic-render-pipeline/BeBRPSubmissionBuffer.h"
 #include "basic-render-pipeline/BeBackbufferPass.h"
 #include "basic-render-pipeline/BeBloomPass.h"
 #include "basic-render-pipeline/BeFullscreenEffectPass.h"
