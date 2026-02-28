@@ -13,6 +13,9 @@
 
 #include "BeShaderTools.h"
 
+BeShader::BeShader() = default;
+BeShader::~BeShader() = default;
+
 using Json = nlohmann::ordered_json;
 
 class BeShaderIncludeHandler : public ID3DInclude {

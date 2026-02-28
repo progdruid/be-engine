@@ -23,6 +23,9 @@ struct BeSamplerImpl {
     ComPtr<ID3D11SamplerState> samplerState;
 };
 
+BePipeline::BePipeline() = default;
+BePipeline::~BePipeline() = default;
+
 auto BePipeline::Create(BeRenderer& renderer) -> std::shared_ptr<BePipeline> {
     auto pipeline = std::shared_ptr<BePipeline>(new BePipeline());
     pipeline->_impl = std::make_unique<BePipelineImpl>();

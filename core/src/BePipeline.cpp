@@ -1,4 +1,3 @@
 #include "BePipeline.h"
 
-BePipeline::BePipeline() = default;
-BePipeline::~BePipeline() = default;
+// Constructor/destructor defined in platform files where BePipelineImpl is complete.

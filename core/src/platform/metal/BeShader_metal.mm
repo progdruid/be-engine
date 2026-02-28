@@ -75,6 +75,9 @@ static auto LoadFunction(
     return { library, function };
 }
 
+BeShader::BeShader() = default;
+BeShader::~BeShader() = default;
+
 auto BeShader::Create(const std::filesystem::path& filePath, BeRenderer& renderer) -> std::shared_ptr<BeShader> {
     be_assert(std::filesystem::exists(filePath), "Shader file doesn't exist: " + filePath.string());
 

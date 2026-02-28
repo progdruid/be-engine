@@ -20,8 +20,7 @@ auto BeBRPSunLightEntry::CalculateViewProj(glm::vec3 direction, float shadowCame
     return lightOrtho * lightView;
 }
 
-BeBRPSubmissionBuffer::BeBRPSubmissionBuffer() = default;
-BeBRPSubmissionBuffer::~BeBRPSubmissionBuffer() = default;
+// Constructor/destructor defined in platform files where BeBRPSubmissionBufferImpl is complete.
 
 auto BeBRPSubmissionBuffer::ClearEntries() -> void {
     _geometryEntries.clear();

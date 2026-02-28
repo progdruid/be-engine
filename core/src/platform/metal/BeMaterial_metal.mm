@@ -7,6 +7,10 @@
 
 #import <Metal/Metal.h>
 
+BeMaterial::~BeMaterial() = default;
+BeMaterial::BeMaterial(BeMaterial&& other) noexcept = default;
+BeMaterial& BeMaterial::operator=(BeMaterial&& other) noexcept = default;
+
 auto BeMaterial::CreatePlatformBuffer(BeRenderer& renderer) -> void {
     _platformImpl = std::make_unique<BeMaterialImpl>();
     _platformImpl->isFrequentlyUsed = _isFrequentlyUsed;

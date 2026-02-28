@@ -39,9 +39,7 @@ BeMaterial::BeMaterial(
     _cbufferDirty = false;
 }
 
-BeMaterial::~BeMaterial() = default;
-BeMaterial::BeMaterial(BeMaterial&& other) noexcept = default;
-BeMaterial& BeMaterial::operator=(BeMaterial&& other) noexcept = default;
+// Destructor and move ops defined in platform files where BeMaterialImpl is complete.
 
 auto BeMaterial::InitialiseSlotMaps() -> void {
     for (const auto& property : _scheme.Textures) {

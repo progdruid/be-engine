@@ -2,5 +2,5 @@
 
 std::string BeShader::StandardShaderIncludePath = "src/shaders/";
 
-BeShader::BeShader() = default;
-BeShader::~BeShader() = default;
+// Constructor/destructor defined in platform files (BeShader_dx11.cpp / BeShader_metal.mm)
+// where BeShaderImpl is a complete type.

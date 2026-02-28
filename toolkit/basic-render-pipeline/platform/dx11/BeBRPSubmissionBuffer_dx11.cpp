@@ -6,6 +6,9 @@
 #include "BeRenderer.h"
 #include "BeModel.h"
 
+BeBRPSubmissionBuffer::BeBRPSubmissionBuffer() = default;
+BeBRPSubmissionBuffer::~BeBRPSubmissionBuffer() = default;
+
 auto BeBRPSubmissionBuffer::Init(BeRenderer& renderer) -> void {
     _impl = std::make_unique<BeBRPSubmissionBufferImpl>();
     _impl->device = renderer.GetPlatformImpl()->device;
