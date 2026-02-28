@@ -1,21 +1,15 @@
-﻿#pragma once
-#include <d3d11.h>
+#pragma once
+
 #include <memory>
-#include <span>
 #include <string>
 #include <umbrellas/include-glm.h>
 
-#include "BeBRPSubmissionBuffer.h"
-#include "BeBRPSubmissionBuffer.h"
-#include "BeBRPSubmissionBuffer.h"
-#include "BeBRPSubmissionBuffer.h"
-#include "BeBRPSubmissionBuffer.h"
 #include "BeRenderPass.h"
 
 class BeBRPSubmissionBuffer;
 class BeMaterial;
-struct BePointLight;
-struct BeDirectionalLight;
+struct BeBRPSunLightEntry;
+struct BeBRPPointLightEntry;
 
 class BeShadowPass final : public BeRenderPass {
 
@@ -24,7 +18,7 @@ class BeShadowPass final : public BeRenderPass {
 
     hide
     std::shared_ptr<BeMaterial> _objectMaterial;
-    
+
     expose
     explicit BeShadowPass() = default;
     ~BeShadowPass() override = default;
@@ -36,6 +30,5 @@ class BeShadowPass final : public BeRenderPass {
     hide
     auto RenderDirectionalShadows(const BeBRPSunLightEntry& sunLight, const BeBRPSubmissionBuffer& submissionBuffer) const -> void;
     auto RenderPointLightShadows(const BeBRPPointLightEntry& pointLight, const BeBRPSubmissionBuffer& submissionBuffer) const -> void;
-
     auto CalculatePointLightFaceViewProjection(const BeBRPPointLightEntry& pointLight, int faceIndex) const -> glm::mat4;
 };

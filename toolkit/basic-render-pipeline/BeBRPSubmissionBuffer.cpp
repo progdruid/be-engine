@@ -1,9 +1,7 @@
 #include "BeBRPSubmissionBuffer.h"
 
 #include "BeModel.h"
-#include "Utils.h"
 #include "umbrellas/include-libassert.h"
-
 
 auto BeBRPGeometryEntry::CalculateModelMatrix(glm::vec3 pos, glm::quat rot, glm::vec3 scale) -> glm::mat4 {
     const glm::mat4x4 modelMatrix =
@@ -22,9 +20,8 @@ auto BeBRPSunLightEntry::CalculateViewProj(glm::vec3 direction, float shadowCame
     return lightOrtho * lightView;
 }
 
-auto BeBRPSubmissionBuffer::Init(const ComPtr<ID3D11Device>& device) -> void {
-    _device = device;
-}
+BeBRPSubmissionBuffer::BeBRPSubmissionBuffer() = default;
+BeBRPSubmissionBuffer::~BeBRPSubmissionBuffer() = default;
 
 auto BeBRPSubmissionBuffer::ClearEntries() -> void {
     _geometryEntries.clear();
@@ -59,53 +56,3 @@ auto BeBRPSubmissionBuffer::GetPointLightEntries() const -> const std::vector<Be
 auto BeBRPSubmissionBuffer::RegisterModel(const std::shared_ptr<BeModel>& model) -> void {
     _registeredModels.push_back(model);
 }
-
-auto BeBRPSubmissionBuffer::BakeModels() -> void {
-    be_assert(_device, "No device given. Submission buffer is probably uninitialized. Call Init.");
-
-    //vbo + ibo
-    size_t totalVerticesNumber = 0;
-    size_t totalIndicesNumber = 0;
-    size_t totalDrawSlices = 0;
-    for (const auto& model : _registeredModels) {
-        totalVerticesNumber += model->FullVertices.size();
-        totalIndicesNumber += model->Indices.size();
-        totalDrawSlices += model->DrawSlices.size();
-    }
-
-    std::vector<BeFullVertex> fullVertices;
-    std::vector<uint32_t> indices;
-    fullVertices.reserve(totalVerticesNumber);
-    indices.reserve(totalIndicesNumber);
-    for (auto& model : _registeredModels) {
-        fullVertices.insert(fullVertices.end(), model->FullVertices.begin(), model->FullVertices.end());
-        indices.insert(indices.end(), model->Indices.begin(), model->Indices.end());
-
-        auto & drawSlices = _modelDrawSlices[model.get()];
-        
-        for (auto slice : model->DrawSlices) {
-            slice.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - model->FullVertices.size());
-            slice.StartIndexLocation += static_cast<uint32_t>(indices.size() - model->Indices.size());
-            
-            drawSlices.push_back(slice);
-        }
-    }
-    
-    D3D11_BUFFER_DESC vertexBufferDescriptor = {};
-    vertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    vertexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
-    vertexBufferDescriptor.ByteWidth = static_cast<UINT>(fullVertices.size() * sizeof(BeFullVertex));
-    D3D11_SUBRESOURCE_DATA vertexData = {};
-    vertexData.pSysMem = fullVertices.data();
-    Utils::Check << _device->CreateBuffer(&vertexBufferDescriptor, &vertexData, &_sharedVertexBuffer);
-    
-    D3D11_BUFFER_DESC indexBufferDescriptor = {};
-    indexBufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    indexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
-    indexBufferDescriptor.ByteWidth = static_cast<UINT>(indices.size() * sizeof(uint32_t));
-    D3D11_SUBRESOURCE_DATA indexData = {};
-    indexData.pSysMem = indices.data();
-    Utils::Check << _device->CreateBuffer(&indexBufferDescriptor, &indexData, &_sharedIndexBuffer);
-}
-
-

@@ -12,12 +12,11 @@
 #include "BeMaterial.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
-#include "Utils.h"
 
 auto BeModel::Create(
     const std::filesystem::path& modelPath,
     std::weak_ptr<BeShader> usedShaderForMaterials,
-    const BeRenderer& renderer
+    BeRenderer& renderer
 ) -> std::shared_ptr<BeModel> {
     constexpr auto flags = (
         aiProcess_Triangulate |
@@ -34,7 +33,7 @@ auto BeModel::Create(
     const aiScene* scene = importer.ReadFile(modelPath.string().c_str(), flags);
     if (!scene || !scene->mRootNode)
         throw std::runtime_error("Failed to load model: " + modelPath.string());
-    
+
     auto model = std::make_shared<BeModel>();
     model->Shader = usedShaderForMaterials.lock();
     model->DrawSlices.reserve(scene->mNumMeshes);
@@ -85,10 +84,10 @@ auto BeModel::Create(
         }
     }
 
-    for (const auto & material : assimpIndexToMaterial | std::views::values) {
+    for (const auto& material : assimpIndexToMaterial | std::views::values) {
         model->Materials.push_back(material);
-    } 
-    
+    }
+
     size_t numVertices = 0;
     size_t numIndices = 0;
     for (unsigned i = 0; i < scene->mNumMeshes; ++i) {
@@ -99,7 +98,7 @@ auto BeModel::Create(
 
     model->FullVertices.reserve(numVertices);
     model->Indices.reserve(numIndices);
-    
+
     int32_t vertexOffset = 0;
     uint32_t indexOffset = 0;
     for (size_t i = 0; i < scene->mNumMeshes; ++i) {
@@ -149,18 +148,14 @@ auto BeModel::LoadTextureFromAssimpPath(
     const aiString& texPath,
     const aiScene* scene,
     const std::filesystem::path& parentPath,
-    const BeRenderer& renderer
-)
-    -> std::shared_ptr<BeTexture> {
-    const auto device = renderer.GetDevice();
-
+    BeRenderer& renderer
+) -> std::shared_ptr<BeTexture> {
     static int tempCount = -1;
     tempCount++;
     auto builder =
         BeTexture::Create("TODO" + std::to_string(tempCount))
-        .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM);
-    
+        .SetBindFlags(BeBindFlags::ShaderResource)
+        .SetFormat(BeTextureFormat::R8G8B8A8_UNorm);
 
     if (texPath.C_Str()[0] != '*') {
         const auto filename = std::filesystem::path(texPath.C_Str()).filename();
@@ -173,37 +168,35 @@ auto BeModel::LoadTextureFromAssimpPath(
         return builder
             .LoadFromFile(path)
             .AddToRegistry()
-            .Build(device);
+            .Build(renderer);
     }
 
     char* endPtr;
     const long texIndex = std::strtol(texPath.C_Str() + 1, &endPtr, 10);
     const aiTexture* aiTex = scene->mTextures[texIndex];
 
-    // handle compressed texture
     if (aiTex->mHeight == 0) {
         int w = 0, h = 0, channelsInFile = 0;
         uint8_t* decoded = stbi_load_from_memory(reinterpret_cast<const uint8_t*>(aiTex->pcData), aiTex->mWidth, &w, &h, &channelsInFile, 4);
         if (!decoded) throw std::runtime_error("Failed to decode embedded texture");
 
-        const auto & resource = builder
-            .SetSize(w, h).FillFromMemory(decoded).AddToRegistry().Build(device);
+        const auto& resource = builder
+            .SetSize(w, h).FillFromMemory(decoded).AddToRegistry().Build(renderer);
         stbi_image_free(decoded);
         return resource;
     }
 
-    // decoded texture
     const size_t pixelCount = aiTex->mWidth * aiTex->mHeight;
     uint8_t* converted = static_cast<uint8_t*>(malloc(pixelCount * 4));
     const uint8_t* srcData = reinterpret_cast<const uint8_t*>(aiTex->pcData);
     for (size_t i = 0; i < pixelCount; ++i) {
-        converted[i * 4 + 0] = srcData[i * 4 + 2]; // B -> R
-        converted[i * 4 + 1] = srcData[i * 4 + 1]; // G
-        converted[i * 4 + 2] = srcData[i * 4 + 0]; // R -> B
-        converted[i * 4 + 3] = srcData[i * 4 + 3]; // A
+        converted[i * 4 + 0] = srcData[i * 4 + 2];
+        converted[i * 4 + 1] = srcData[i * 4 + 1];
+        converted[i * 4 + 2] = srcData[i * 4 + 0];
+        converted[i * 4 + 3] = srcData[i * 4 + 3];
     }
-    const auto & resource = builder
-        .SetSize(aiTex->mWidth, aiTex->mHeight).FillFromMemory(converted).AddToRegistry().Build(device);
+    const auto& resource = builder
+        .SetSize(aiTex->mWidth, aiTex->mHeight).FillFromMemory(converted).AddToRegistry().Build(renderer);
     free(converted);
     return resource;
 }

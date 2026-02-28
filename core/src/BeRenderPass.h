@@ -1,10 +1,6 @@
-﻿#pragma once
-#include <wrl/client.h>
+#pragma once
 #include <string>
-
-#include "umbrellas/access-modifiers.hpp"
-
-using Microsoft::WRL::ComPtr;
+#include <umbrellas/access-modifiers.hpp>
 
 class BeRenderer;
 
@@ -15,7 +11,7 @@ class BeRenderPass {
     expose
     virtual ~BeRenderPass() = default;
 
-    auto InjectRenderer (BeRenderer* renderer) -> void {
+    auto InjectRenderer(BeRenderer* renderer) -> void {
         _renderer = renderer;
     }
 

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <memory>
 
@@ -10,19 +10,19 @@ class BeMaterial;
 class BeShader;
 
 class BeGeometryPass final : public BeRenderPass {
-    
+
     expose
     std::weak_ptr<BeBRPSubmissionBuffer> SubmissionBuffer;
-    
+
     std::weak_ptr<BeTexture> OutputTexture0;
     std::weak_ptr<BeTexture> OutputTexture1;
     std::weak_ptr<BeTexture> OutputTexture2;
     std::weak_ptr<BeTexture> OutputTexture3;
     std::weak_ptr<BeTexture> OutputDepthTexture;
 
-    hide 
+    hide
     std::shared_ptr<BeMaterial> _objectMaterial;
-    
+
     expose
     explicit BeGeometryPass();
     ~BeGeometryPass() override;

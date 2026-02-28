@@ -1,4 +1,3 @@
-
 #include "SakuraScene.h"
 
 #include <glfw/glfw3.h>
@@ -34,48 +33,47 @@ auto SakuraScene::Prepare() -> void {
     _camera->FarPlane = 200.0f;
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
-    
-    const auto device = GameIns->Renderer->GetDevice();
 
-    BeAssetRegistry::IndexShaderFiles({ 
-        "assets/shaders/objectMaterial.hlsl", 
+    auto& renderer = *GameIns->Renderer;
+
+    BeAssetRegistry::IndexShaderFiles({
+        "assets/shaders/objectMaterial.hlsl",
         "assets/shaders/standard.hlsl",
         "assets/shaders/checkerboard.hlsl",
-        "assets/shaders/fullscreen-vertex.hlsl", 
-        "assets/shaders/directionalLight.hlsl", 
-        "assets/shaders/pointLight.hlsl", 
+        "assets/shaders/fullscreen-vertex.hlsl",
+        "assets/shaders/directionalLight.hlsl",
+        "assets/shaders/pointLight.hlsl",
         "assets/shaders/emissive-add.hlsl",
-        "assets/shaders/BeBloomAdd.hlsl", 
-        "assets/shaders/BeBloomBright.hlsl", 
-        "assets/shaders/BeBloomKawase.hlsl", 
-        "assets/shaders/tonemapper.hlsl", 
-        "assets/shaders/backbuffer.hlsl", 
+        "assets/shaders/BeBloomAdd.hlsl",
+        "assets/shaders/BeBloomBright.hlsl",
+        "assets/shaders/BeBloomKawase.hlsl",
+        "assets/shaders/tonemapper.hlsl",
+        "assets/shaders/backbuffer.hlsl",
     });
-    
+
     const auto standardShader = BeAssetRegistry::GetShader("standard");
     const auto checkerboardShader = BeAssetRegistry::GetShader("checkerboard");
-    
-    _cube = BeModel::Create("assets/cube.glb", checkerboardShader, *GameIns->Renderer);
-    _cube->Materials[0]->SetTexture("DiffuseTexture", 
+
+    _cube = BeModel::Create("assets/cube.glb", checkerboardShader, renderer);
+    _cube->Materials[0]->SetTexture("DiffuseTexture",
         BeTexture::Create("Checkerboard")
         .LoadFromFile("assets/checkerboard.png")
         .AddToRegistry()
-        .Build(device)
-    ); 
-    
-    _emissiveCube = BeModel::Create("assets/cube.glb", standardShader, *GameIns->Renderer);
+        .Build(renderer)
+    );
+
+    _emissiveCube = BeModel::Create("assets/cube.glb", standardShader, renderer);
     _emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.99f, 0.8f, 0.6f) * 1.7f);
-    
-    _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
+
+    _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, renderer);
     _anvil->Materials[0]->SetFloat3("SpecularColor", glm::vec3(1.0f));
     _anvil->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
 
-    _sakura = BeModel::Create("assets/sakura/scene.gltf", standardShader, *GameIns->Renderer);
+    _sakura = BeModel::Create("assets/sakura/scene.gltf", standardShader, renderer);
     _sakura->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("linear-wrap"));
-    
-    _sakura2 = BeModel::Create("assets/stylized_sakura_tree.glb", standardShader, *GameIns->Renderer);
-    //_sakura2->Materials[0]
-    
+
+    _sakura2 = BeModel::Create("assets/stylized_sakura_tree.glb", standardShader, renderer);
+
     GameIns->SubmissionBuffer->RegisterModel(_cube);
     GameIns->SubmissionBuffer->RegisterModel(_anvil);
     GameIns->SubmissionBuffer->RegisterModel(_sakura);
@@ -86,48 +84,48 @@ auto SakuraScene::Prepare() -> void {
 
     const uint32_t screenWidth = GameIns->Window->GetWidth();
     const uint32_t screenHeight = GameIns->Window->GetHeight();
-    
+
     BeTexture::Create("DepthStencil")
-    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+    .SetBindFlags(BeBindFlags::DepthStencil | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R32_Typeless)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 
     BeTexture::Create("BaseColor")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 
     BeTexture::Create("WorldNormal")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
+    .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R16G16B16A16_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 
     BeTexture::Create("Specular-Shininess")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R8G8B8A8_UNorm)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 
     BeTexture::Create("Emissive")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
-    
+    .Build(renderer);
+
     BeTexture::Create("HDR-Input")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 
     for (int mip = 0; mip < 5; ++mip) {
         const float multiplier = glm::pow(0.5f, mip);
@@ -135,32 +133,31 @@ auto SakuraScene::Prepare() -> void {
         const uint32_t mipHeight = screenHeight * multiplier;
 
         BeTexture::Create("Bloom_Mip" + std::to_string(mip))
-        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+        .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+        .SetFormat(BeTextureFormat::R11G11B10_Float)
         .SetSize(mipWidth, mipHeight)
         .AddToRegistry()
-        .Build(device);
+        .Build(renderer);
     }
 
     BeTexture::Create("BloomOutput")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 
     BeTexture::Create("TonemapperOutput")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 }
 
 auto SakuraScene::OnLoad() -> void {
-    const auto& device = GameIns->Renderer->GetDevice();
+    auto& renderer = *GameIns->Renderer;
 
-    // Clear all entities from previous load
     _registry.clear();
 
     GameIns->Renderer->ClearPasses();
@@ -191,7 +188,7 @@ auto SakuraScene::OnLoad() -> void {
     BeTexture::Create("BloomDirtTexture")
     .LoadFromFile("assets/bloom-dirt-mask.png")
     .AddToRegistry()
-    .BuildNoReturn(device);
+    .BuildNoReturn(renderer);
     const auto bloomPass = new BeBloomPass();
     GameIns->Renderer->AddRenderPass(bloomPass);
     bloomPass->InputHDRTexture = BeAssetRegistry::GetTexture("HDR-Input");
@@ -208,7 +205,7 @@ auto SakuraScene::OnLoad() -> void {
 
     const auto tonemapperShader = BeAssetRegistry::GetShader("tonemapper");
     const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
-    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, *GameIns->Renderer);
+    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, renderer);
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     GameIns->Renderer->AddRenderPass(tonemapperPass);
@@ -220,10 +217,10 @@ auto SakuraScene::OnLoad() -> void {
     GameIns->Renderer->AddRenderPass(backbufferPass);
     backbufferPass->InputTexture = BeAssetRegistry::GetTexture("TonemapperOutput");
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
-    
+
     GameIns->Renderer->InitialisePasses();
-    
-    
+
+
     CreateEntity(_registry
         ,NameComponent { .Name = "Cube" }
         ,TransformComponent { .Position = glm::vec3(15, -30, -15), .Rotation = glm::quat(), .Scale = glm::vec3(30) }
@@ -233,30 +230,20 @@ auto SakuraScene::OnLoad() -> void {
     CreateEntity(_registry
         ,NameComponent { .Name = "Anvil1" }
         ,RenderComponent { .Model = _anvil }
-        ,TransformComponent { 
-            .Position = {0, 0, 0}, 
-            .Rotation = glm::quat(glm::vec3(0, 0_rad, 0)), 
-            .Scale = glm::vec3(0.2f), 
+        ,TransformComponent {
+            .Position = {0, 0, 0},
+            .Rotation = glm::quat(glm::vec3(0, 0_rad, 0)),
+            .Scale = glm::vec3(0.2f),
         }
     );
-    
-    //CreateEntity(_registry
-    //    ,NameComponent { .Name = "Sakura" }
-    //    ,RenderComponent { .Model = _sakura }
-    //    ,TransformComponent { 
-    //        .Position = {-7.5, 0, 0}, 
-    //        .Rotation = glm::quat(glm::vec3(0, 45.0_rad, 0)), 
-    //        .Scale = glm::vec3(0.7f), 
-    //    }
-    //);
-    
+
     CreateEntity(_registry
         ,NameComponent { .Name = "Sakura2" }
         ,RenderComponent { .Model = _sakura2 }
-        ,TransformComponent { 
-            .Position = {-3.f, -5.5, 2}, 
-            .Rotation = glm::quat(glm::vec3(0, 45.0_rad, 0)), 
-            .Scale = glm::vec3(5.0f), 
+        ,TransformComponent {
+            .Position = {-3.f, -5.5, 2},
+            .Rotation = glm::quat(glm::vec3(0, 45.0_rad, 0)),
+            .Scale = glm::vec3(5.0f),
         }
     );
 
@@ -273,14 +260,14 @@ auto SakuraScene::OnLoad() -> void {
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
             .ShadowMap = BeTexture::Create("SakuraScene_SunLightShadowMap")
-                .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-                .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+                .SetBindFlags(BeBindFlags::DepthStencil | BeBindFlags::ShaderResource)
+                .SetFormat(BeTextureFormat::R32_Typeless)
                 .SetSize(4096, 4096)
                 .AddToRegistry()
-                .Build(device)
+                .Build(renderer)
         }
     );
-    
+
     for (uint32_t i = 0; i < 4; ++i) {
         CreateEntity(_registry
             ,NameComponent { .Name = "PointLight_" + std::to_string(i) }
@@ -294,12 +281,12 @@ auto SakuraScene::OnLoad() -> void {
                 .ShadowNearPlane = 0.1f,
                 .ShadowMap =
                     BeTexture::Create("SakuraScene_PointLight" + std::to_string(i) + "_ShadowMap")
-                    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-                    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+                    .SetBindFlags(BeBindFlags::DepthStencil | BeBindFlags::ShaderResource)
+                    .SetFormat(BeTextureFormat::R32_Typeless)
                     .SetCubemap(true)
                     .SetSize(2048, 2048)
                     .AddToRegistry()
-                    .Build(device)
+                    .Build(renderer)
             }
             ,RenderComponent {
                 .Model = _emissiveCube,
@@ -307,18 +294,18 @@ auto SakuraScene::OnLoad() -> void {
             }
         );
     }
-    
+
     srand(time(0));
     for (uint32_t i = 0; i < 100; ++i) {
         auto randFloat = [](float min, float max) -> float {
             float random = float(rand()) / float(RAND_MAX);
             return min + random * (max - min);
         };
-        
+
         auto x = randFloat(-50.f, 50.f);
         auto y = randFloat(30.f, 60.f);
         auto z = randFloat(-50.f, 50.f);
-        
+
         CreateEntity(_registry
             ,NameComponent { .Name = "Star_" + std::to_string(i) }
             ,TransformComponent { .Position = glm::vec3(x, y, z), .Scale = glm::vec3(0.1f) }
@@ -338,17 +325,14 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         return;
     }
 
-
     static const auto GeometryView = _registry.view<TransformComponent, RenderComponent>();
     static const auto SunView = _registry.view<SunLightComponent>();
     static const auto PointLightView = _registry.view<TransformComponent, PointLightComponent>();
 
-    // Toggle between cameras with [C]
     if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
         _useOrbitCamera = !_useOrbitCamera;
     }
 
-    // Update the appropriate camera controller
     if (_useOrbitCamera) {
         GameIns->Input->SetMouseCapture(false);
         _orbitCameraController->Update(deltaTime, GameIns->Input.get());
@@ -369,12 +353,10 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         auto i = size_t(0);
         for (const auto [entity, transform, _] : PointLightView.each()) {
             constexpr float radius = 13.0f;
-
             const auto add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(PointLightView.size_hint()));
             const auto rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
             const auto pos = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
             transform.Position = pos;
-            
             i++;
         }
     }
@@ -385,14 +367,11 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         entry.Model = render.Model;
         entry.CastShadows = render.CastShadows;
         entry.ModelMatrix = BeBRPGeometryEntry::CalculateModelMatrix(
-            transform.Position,
-            transform.Rotation,
-            transform.Scale
+            transform.Position, transform.Rotation, transform.Scale
         );
-        
         GameIns->SubmissionBuffer->SubmitGeometry(entry);
     }
-    
+
     for (const auto [entity, sunLight] : SunView.each()) {
         auto entry = BeBRPSunLightEntry();
         entry.Direction = sunLight.Direction;
@@ -402,16 +381,12 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         entry.ShadowMapResolution = sunLight.ShadowMapResolution;
         entry.ShadowMap = sunLight.ShadowMap;
         entry.ShadowViewProjection = BeBRPSunLightEntry::CalculateViewProj(
-            entry.Direction,
-            sunLight.ShadowCameraDistance,
-            sunLight.ShadowMapWorldSize,
-            sunLight.ShadowNearPlane,
-            sunLight.ShadowFarPlane
+            entry.Direction, sunLight.ShadowCameraDistance,
+            sunLight.ShadowMapWorldSize, sunLight.ShadowNearPlane, sunLight.ShadowFarPlane
         );
-        
         GameIns->SubmissionBuffer->SubmitSunLight(entry);
     }
-    
+
     for (const auto [entity, transform, pointLight] : PointLightView.each()) {
         auto entry = BeBRPPointLightEntry{
             .Position = transform.Position,
@@ -426,7 +401,3 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         GameIns->SubmissionBuffer->SubmitPointLight(entry);
     }
 }
-
-
-
-

@@ -1,4 +1,3 @@
-
 #include "Game.h"
 
 #include <glfw/glfw3.h>
@@ -22,37 +21,34 @@ Game::~Game() = default;
 auto Game::Run() -> int {
     Width = 1920;
     Height = 1080;
-    
-    //Window = std::make_shared<BeWindow>(Width, Height, "be: example game 1");
+
     Window = std::make_shared<BeWindow>(0, 0, "be: example sakura", BeWindowMode::BorderlessFullscreen);
     Width = Window->GetWidth();
     Height = Window->GetHeight();
-    Renderer = std::make_shared<BeRenderer>(Width, Height, Window->GetHwnd());
+    Renderer = std::make_shared<BeRenderer>(Width, Height, *Window);
     Renderer->LaunchDevice();
-    const auto device = Renderer->GetDevice();
-    
+
     SubmissionBuffer = std::make_shared<BeBRPSubmissionBuffer>();
-    SubmissionBuffer->Init(device);
+    SubmissionBuffer->Init(*Renderer);
     Input = std::make_unique<BeInput>(Window->GetGlfwWindow());
-    
-    
+
     BeAssetRegistry::InjectRenderer(Renderer);
-    
+
     BeTexture::Create("white")
     .SetSize(1, 1)
-    .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetBindFlags(BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R8G8B8A8_UNorm)
     .FillWithColor(glm::vec4(1.f))
     .AddToRegistry()
-    .BuildNoReturn(device);
+    .BuildNoReturn(*Renderer);
     BeTexture::Create("black")
     .SetSize(1, 1)
-    .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetBindFlags(BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R8G8B8A8_UNorm)
     .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
     .AddToRegistry()
-    .BuildNoReturn(device);
-    
+    .BuildNoReturn(*Renderer);
+
     SetupScenes();
 
     MainLoop();
@@ -65,16 +61,16 @@ auto Game::SetupScenes() -> void {
 
     auto menuScene = std::make_unique<MenuScene>(this);
     auto mainScene = std::make_unique<SakuraScene>(this);
-    auto showcase  = std::make_unique<ShowcaseScene>(this); 
-    
+    auto showcase  = std::make_unique<ShowcaseScene>(this);
+
     SceneManager->RegisterScene("menu", std::move(menuScene));
     SceneManager->RegisterScene("sakura", std::move(mainScene));
     SceneManager->RegisterScene("showcase", std::move(showcase));
-    
+
     SceneManager->GetScene<BaseScene>("menu")->Prepare();
     SceneManager->GetScene<BaseScene>("sakura")->Prepare();
     SceneManager->GetScene<BaseScene>("showcase")->Prepare();
-    
+
     SubmissionBuffer->BakeModels();
 
     SceneManager->RequestSceneChange("menu");

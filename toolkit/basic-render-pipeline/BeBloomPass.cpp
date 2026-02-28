@@ -15,57 +15,47 @@ auto BeBloomPass::Initialise() -> void {
     auto brightScheme = BeAssetRegistry::GetMaterialScheme("bloom-bright-material");
     _brightMaterial = BeMaterial::Create("Bright Pass Material", brightScheme, false, *_renderer);
     _brightMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
-    //_brightMaterial->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
 
     _kawaseShader = BeAssetRegistry::GetShader("bloom-kawase").lock();
-    auto kawaseScheme = BeAssetRegistry::GetMaterialScheme("bloom-kawase-material");;
+    auto kawaseScheme = BeAssetRegistry::GetMaterialScheme("bloom-kawase-material");
 
-    // Create downsample materials for each mip level (1 to size-1)
     _downsampleMaterials.resize(BloomMipCount);
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
         auto mat = BeMaterial::Create(
             "Downsample Mip " + std::to_string(mipTarget),
-            kawaseScheme,
-            false,
-            *_renderer
+            kawaseScheme, false, *_renderer
         );
 
         const auto sourceMip = BloomMipTextures[mipTarget - 1].lock();
-
         const auto texelSizeX = 1.0f / sourceMip->Width;
         const auto texelSizeY = 1.0f / sourceMip->Height;
-
         const auto passRadius = 0.5f * (1 << (mipTarget - 1));
 
         mat->SetFloat2("TexelSize", glm::vec2(texelSizeX, texelSizeY));
         mat->SetFloat("PassRadius", passRadius);
         mat->SetTexture("BloomMipInput", sourceMip);
-        mat->UpdateGPUBuffers(_renderer->GetContext().Get());
+        _renderer->GetPipeline()->UpdateMaterialBuffers(mat);
 
         _downsampleMaterials[mipTarget] = mat;
     }
 
     _upsampleMaterials.resize(BloomMipCount);
-    for (uint32_t mipTarget = 0; mipTarget < BloomMipCount-1; ++mipTarget) {
+    for (uint32_t mipTarget = 0; mipTarget < BloomMipCount - 1; ++mipTarget) {
         const auto mat = BeMaterial::Create(
             "Upsample Mip " + std::to_string(mipTarget),
-            kawaseScheme,
-            false,
-            *_renderer
+            kawaseScheme, false, *_renderer
         );
 
         const auto sourceMip = BloomMipTextures[mipTarget + 1].lock();
         const auto targetMip = BloomMipTextures[mipTarget].lock();
-
         const auto texelSizeX = 1.0f / targetMip->Width;
         const auto texelSizeY = 1.0f / targetMip->Height;
-
         const auto upsampleRadius = 0.5f * (1 << mipTarget);
 
         mat->SetFloat2("TexelSize", glm::vec2(texelSizeX, texelSizeY));
         mat->SetFloat("PassRadius", upsampleRadius);
         mat->SetTexture("BloomMipInput", sourceMip);
-        mat->UpdateGPUBuffers(_renderer->GetContext().Get());
+        _renderer->GetPipeline()->UpdateMaterialBuffers(mat);
 
         _upsampleMaterials[mipTarget] = mat;
     }
@@ -86,10 +76,8 @@ auto BeBloomPass::Render() -> void {
 }
 
 auto BeBloomPass::RenderBrightPass() const -> void {
-    const auto context = _renderer->GetContext();
     const auto pipeline = _renderer->GetPipeline();
-    
-    const auto bloomMip0  = BloomMipTextures[0].lock();
+    const auto bloomMip0 = BloomMipTextures[0].lock();
 
     pipeline->BindTargets({ bloomMip0 }, nullptr, false);
     pipeline->BindShader(_brightShader, BeShaderType::Vertex | BeShaderType::Pixel);
@@ -101,72 +89,46 @@ auto BeBloomPass::RenderBrightPass() const -> void {
 }
 
 auto BeBloomPass::RenderDownsamplePasses() -> void {
-    const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-    
-    uint32_t numberOfPreviousViewports = 1;
-    D3D11_VIEWPORT previousViewport;
-    context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
+    const auto previousViewport = pipeline->GetViewport();
 
     pipeline->BindShader(_kawaseShader, BeShaderType::Vertex | BeShaderType::Pixel);
-    
+
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
         const auto targetMip = BloomMipTextures[mipTarget].lock();
 
-        // viewport
-        D3D11_VIEWPORT viewport = {};
+        BeViewport viewport;
         viewport.Width = static_cast<float>(targetMip->Width);
         viewport.Height = static_cast<float>(targetMip->Height);
-        viewport.MinDepth = 0.0f;
-        viewport.MaxDepth = 1.0f;
-        context->RSSetViewports(1, &viewport);
+        pipeline->SetViewport(viewport);
 
         pipeline->BindTargets({ targetMip }, nullptr, false);
         pipeline->BindMaterialAutomatic(_downsampleMaterials[mipTarget]);
-        
+
         pipeline->Draw(4, 0);
 
         pipeline->ClearTargets();
     }
 
     pipeline->Clear();
-    context->RSSetViewports(1, &previousViewport);
+    pipeline->SetViewport(previousViewport);
 }
 
 auto BeBloomPass::RenderUpsamplePasses() -> void {
-    const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-    
-    uint32_t numberOfPreviousViewports = 1;
-    D3D11_VIEWPORT previousViewport;
-    context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
-    
-    // Set additive blend state for upsampling (accumulate into mips)
-    ID3D11BlendState* additiveBlendState = nullptr;
-    D3D11_BLEND_DESC blendDesc = {};
-    blendDesc.RenderTarget[0].BlendEnable = TRUE;
-    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
-    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
-    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-    Utils::Check << _renderer->GetDevice()->CreateBlendState(&blendDesc, &additiveBlendState);
-    context->OMSetBlendState(additiveBlendState, nullptr, 0xFFFFFFFF);
+    const auto previousViewport = pipeline->GetViewport();
 
+    pipeline->SetAdditiveBlending();
     pipeline->BindShader(_kawaseShader, BeShaderType::Vertex | BeShaderType::Pixel);
 
     for (int32_t mipTarget = BloomMipCount - 2; mipTarget >= 0; --mipTarget) {
         const auto targetMip = BloomMipTextures[mipTarget].lock();
-        
-        D3D11_VIEWPORT viewport = {};
+
+        BeViewport viewport;
         viewport.Width = static_cast<float>(targetMip->Width);
         viewport.Height = static_cast<float>(targetMip->Height);
-        viewport.MinDepth = 0.0f;
-        viewport.MaxDepth = 1.0f;
-        context->RSSetViewports(1, &viewport);
-        
+        pipeline->SetViewport(viewport);
+
         pipeline->BindTargets({ targetMip }, nullptr, false);
         pipeline->BindMaterialAutomatic(_upsampleMaterials[mipTarget]);
 
@@ -175,21 +137,18 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
         pipeline->ClearTargets();
     }
 
-    context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
-    if (additiveBlendState) additiveBlendState->Release();
-
+    pipeline->ClearBlendState();
     pipeline->Clear();
-    context->RSSetViewports(1, &previousViewport);
+    pipeline->SetViewport(previousViewport);
 }
 
 auto BeBloomPass::RenderAddPass() const -> void {
-    const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-    
+
     pipeline->BindTargets({ OutputTexture }, nullptr, false);
     pipeline->BindShader(_addShader, BeShaderType::Vertex | BeShaderType::Pixel);
     pipeline->BindMaterialAutomatic(_addMaterial);
-    
+
     pipeline->Draw(4, 0);
 
     pipeline->Clear();

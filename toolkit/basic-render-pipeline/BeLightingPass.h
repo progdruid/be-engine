@@ -1,17 +1,13 @@
-﻿#pragma once
-#include <d3d11.h>
+#pragma once
+
 #include <memory>
-#include <span>
 
 #include "BeRenderPass.h"
 
 class BeBRPSubmissionBuffer;
 class BeTexture;
-struct BePointLight;
-struct BeDirectionalLight;
 class BeMaterial;
 class BeShader;
-class BeRenderer;
 
 class BeLightingPass final : public BeRenderPass {
     expose
@@ -23,17 +19,15 @@ class BeLightingPass final : public BeRenderPass {
     std::weak_ptr<BeTexture> InputTexture3;
     std::weak_ptr<BeTexture> InputDepthTexture;
     std::weak_ptr<BeTexture> OutputTexture;
-    
-    hide
-    ComPtr<ID3D11BlendState> _lightingBlendState;
 
+    hide
     std::shared_ptr<BeShader> _directionalLightShader;
     std::shared_ptr<BeMaterial> _directionalLightMaterial;
     std::shared_ptr<BeShader> _pointLightShader;
     std::shared_ptr<BeMaterial> _pointLightMaterial;
     std::shared_ptr<BeShader> _emissiveAddShader;
     std::shared_ptr<BeMaterial> _emissiveMaterial;
-    
+
     expose
     explicit BeLightingPass();
     ~BeLightingPass() override;

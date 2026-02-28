@@ -1,6 +1,5 @@
-﻿#include "BeFullscreenEffectPass.h"
+#include "BeFullscreenEffectPass.h"
 
-#include "BeAssetRegistry.h"
 #include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
@@ -13,7 +12,7 @@ auto BeFullscreenEffectPass::Initialise() -> void {}
 
 auto BeFullscreenEffectPass::Render() -> void {
     const auto& pipeline = _renderer->GetPipeline();
-    
+
     pipeline->BindTargets(OutputTextures, nullptr);
     pipeline->BindShader(Shader.lock(), BeShaderType::Vertex | BeShaderType::Pixel);
     if (Material) { pipeline->BindMaterialAutomatic(Material); }

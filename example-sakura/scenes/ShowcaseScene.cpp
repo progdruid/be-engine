@@ -34,112 +34,109 @@ void ShowcaseScene::Prepare() {
     _camera->FarPlane = 200.0f;
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
-    
-    BeAssetRegistry::IndexShaderFiles({ 
-        "assets/shaders/objectMaterial.hlsl", 
+
+    BeAssetRegistry::IndexShaderFiles({
+        "assets/shaders/objectMaterial.hlsl",
         "assets/shaders/standard.hlsl",
         "assets/shaders/checkerboard.hlsl",
-        "assets/shaders/fullscreen-vertex.hlsl", 
-        "assets/shaders/directionalLight.hlsl", 
-        "assets/shaders/pointLight.hlsl", 
+        "assets/shaders/fullscreen-vertex.hlsl",
+        "assets/shaders/directionalLight.hlsl",
+        "assets/shaders/pointLight.hlsl",
         "assets/shaders/emissive-add.hlsl",
-        "assets/shaders/BeBloomAdd.hlsl", 
-        "assets/shaders/BeBloomBright.hlsl", 
-        "assets/shaders/BeBloomKawase.hlsl", 
-        "assets/shaders/tonemapper.hlsl", 
-        "assets/shaders/backbuffer.hlsl", 
+        "assets/shaders/BeBloomAdd.hlsl",
+        "assets/shaders/BeBloomBright.hlsl",
+        "assets/shaders/BeBloomKawase.hlsl",
+        "assets/shaders/tonemapper.hlsl",
+        "assets/shaders/backbuffer.hlsl",
     });
-    
+
     CreateTargetTextures();
     LoadModels();
     CreateObjects();
-    
+
     GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
 }
 
 auto ShowcaseScene::CreateTargetTextures() -> void {
     const uint32_t screenWidth = GameIns->Window->GetWidth();
     const uint32_t screenHeight = GameIns->Window->GetHeight();
-    const auto device = GameIns->Renderer->GetDevice();
-    
+    auto& renderer = *GameIns->Renderer;
+
     BeTexture::Create("S_DepthStencil")
-    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+    .SetBindFlags(BeBindFlags::DepthStencil | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R32_Typeless)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 
     BeTexture::Create("S_BaseColor")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 
     BeTexture::Create("S_WorldNormal")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
+    .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R16G16B16A16_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 
     BeTexture::Create("S_Specular-Shininess")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R8G8B8A8_UNorm)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 
     BeTexture::Create("S_Emissive")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetBindFlags(BeBindFlags::RenderTarget | BeBindFlags::ShaderResource)
+    .SetFormat(BeTextureFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build(renderer);
 }
 
 
 auto ShowcaseScene::LoadModels() -> void {
-    auto device = GameIns->Renderer->GetDevice();
-    
+    auto& renderer = *GameIns->Renderer;
     auto standardShader = BeAssetRegistry::GetShader("standard");
-    
-    
-    auto ramen = BeModel::Create("assets/ramen/scene.gltf", standardShader, *GameIns->Renderer);
+
+    auto ramen = BeModel::Create("assets/ramen/scene.gltf", standardShader, renderer);
     BeAssetRegistry::AddModel("ramen", ramen);
-    
-    auto stillLife = BeModel::Create("assets/still-life/scene.gltf", standardShader, *GameIns->Renderer);
+
+    auto stillLife = BeModel::Create("assets/still-life/scene.gltf", standardShader, renderer);
     BeAssetRegistry::AddModel("still-life", stillLife);
-    
-    auto fiestaTea = BeModel::Create("assets/fiesta_tea/scene.gltf", standardShader, *GameIns->Renderer);
+
+    auto fiestaTea = BeModel::Create("assets/fiesta_tea/scene.gltf", standardShader, renderer);
     BeAssetRegistry::AddModel("fiesta-tea", fiestaTea);
-    
-    auto honeydew_melons = BeModel::Create("assets/honeydew_melons/scene.gltf", standardShader, *GameIns->Renderer);
+
+    auto honeydew_melons = BeModel::Create("assets/honeydew_melons/scene.gltf", standardShader, renderer);
     BeAssetRegistry::AddModel("honeydew_melons", honeydew_melons);
-    
-    auto hunger_games = BeModel::Create("assets/hunger_games/scene.gltf", standardShader, *GameIns->Renderer);
+
+    auto hunger_games = BeModel::Create("assets/hunger_games/scene.gltf", standardShader, renderer);
     BeAssetRegistry::AddModel("hunger_games", hunger_games);
-    
-    auto pickles = BeModel::Create("assets/pickles/scene.gltf", standardShader, *GameIns->Renderer);
+
+    auto pickles = BeModel::Create("assets/pickles/scene.gltf", standardShader, renderer);
     BeAssetRegistry::AddModel("pickles", pickles);
-    
-    auto watermelons = BeModel::Create("assets/watermelons/scene.gltf", standardShader, *GameIns->Renderer);
+
+    auto watermelons = BeModel::Create("assets/watermelons/scene.gltf", standardShader, renderer);
     BeAssetRegistry::AddModel("watermelons", watermelons);
-    
-    auto apfel = BeModel::Create("assets/apfel/scene.gltf", standardShader, *GameIns->Renderer);
+
+    auto apfel = BeModel::Create("assets/apfel/scene.gltf", standardShader, renderer);
     BeAssetRegistry::AddModel("apfel", apfel);
-    
-    auto eggplant = BeModel::Create("assets/eggplant/scene.gltf", standardShader, *GameIns->Renderer);
+
+    auto eggplant = BeModel::Create("assets/eggplant/scene.gltf", standardShader, renderer);
     BeAssetRegistry::AddModel("eggplant", eggplant);
-    
-    auto tomatoes = BeModel::Create("assets/tomatoes/scene.gltf", standardShader, *GameIns->Renderer);
+
+    auto tomatoes = BeModel::Create("assets/tomatoes/scene.gltf", standardShader, renderer);
     BeAssetRegistry::AddModel("tomatoes", tomatoes);
-    
-    
-    auto skycube = BeModel::Create("assets/cube.glb", standardShader, *GameIns->Renderer);
+
+    auto skycube = BeModel::Create("assets/cube.glb", standardShader, renderer);
     skycube->Materials[0]->SetFloat3("DiffuseColor", HexColor("#FAC8CD"));
     BeAssetRegistry::AddModel("skycube", skycube);
-    
+
     GameIns->SubmissionBuffer->RegisterModel(skycube);
     GameIns->SubmissionBuffer->RegisterModel(ramen);
     GameIns->SubmissionBuffer->RegisterModel(stillLife);
@@ -154,21 +151,20 @@ auto ShowcaseScene::LoadModels() -> void {
 }
 
 auto ShowcaseScene::CreateObjects() -> void {
-    
-    auto device = GameIns->Renderer->GetDevice();
-    
+    auto& renderer = *GameIns->Renderer;
+
     CreateEntity(_registry
         ,NameComponent { .Name = "showcased-object" }
         ,TransformComponent { }
         ,RenderComponent { .Model = BeAssetRegistry::GetModel("ramen").lock(), .CastShadows = false }
     );
-    
+
     CreateEntity(_registry
         ,NameComponent { .Name = "skycube" }
         ,TransformComponent { .Position = glm::vec3(50, -50, -50), .Rotation = glm::quat(), .Scale = glm::vec3(100) }
         ,RenderComponent { .Model = BeAssetRegistry::GetModel("skycube").lock(), .CastShadows = false }
     );
-    
+
     CreateEntity(_registry
         ,NameComponent { .Name = "Moon" }
         ,SunLightComponent {
@@ -182,11 +178,11 @@ auto ShowcaseScene::CreateObjects() -> void {
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
             .ShadowMap = BeTexture::Create("ShowcaseScene_SunLightShadowMap")
-                .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-                .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+                .SetBindFlags(BeBindFlags::DepthStencil | BeBindFlags::ShaderResource)
+                .SetFormat(BeTextureFormat::R32_Typeless)
                 .SetSize(4096, 4096)
                 .AddToRegistry()
-                .Build(device)
+                .Build(renderer)
         }
     );
 }
@@ -197,8 +193,6 @@ void ShowcaseScene::OnLoad() {
 }
 
 auto ShowcaseScene::LoadPasses() -> void {
-    const auto& device = GameIns->Renderer->GetDevice();
-    
     GameIns->Renderer->ClearPasses();
 
     const auto shadowPass = new BeShadowPass();
@@ -218,7 +212,7 @@ auto ShowcaseScene::LoadPasses() -> void {
     GameIns->Renderer->AddRenderPass(backbufferPass);
     backbufferPass->InputTexture = BeAssetRegistry::GetTexture("S_BaseColor");
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
-    
+
     GameIns->Renderer->InitialisePasses();
 }
 
@@ -229,12 +223,12 @@ void ShowcaseScene::Tick(float deltaTime) {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
         GameIns->SceneManager->RequestSceneChange("menu");
     }
-    
+
     if (GameIns->Input->GetKeyDown(GLFW_KEY_1)) {
         ChangeShowcase("ramen", "#FAC8CD", TransformComponent());
     }
     else if (GameIns->Input->GetKeyDown(GLFW_KEY_2)) {
-        ChangeShowcase("still-life", "#D0D0C4", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(4.f) } ); 
+        ChangeShowcase("still-life", "#D0D0C4", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(4.f) } );
     }
     else if (GameIns->Input->GetKeyDown(GLFW_KEY_3)) {
         ChangeShowcase("fiesta-tea", "#61636D", TransformComponent { .Position = { 0, -1, 0}, .Scale = glm::vec3(2.f) });
@@ -261,12 +255,10 @@ void ShowcaseScene::Tick(float deltaTime) {
         ChangeShowcase("tomatoes", "#E4FDE1", TransformComponent { .Position = {0.f, 1.f, 0.f}, .Scale = glm::vec3(2.f) });
     }
 
-    // Toggle between cameras with [C]
     if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
         _useOrbitCamera = !_useOrbitCamera;
     }
-    
-    // Update the appropriate camera controller
+
     if (_useOrbitCamera) {
         GameIns->Input->SetMouseCapture(false);
         _orbitCameraController->Update(deltaTime, GameIns->Input.get());
@@ -287,11 +279,8 @@ void ShowcaseScene::Tick(float deltaTime) {
         entry.Model = render.Model;
         entry.CastShadows = render.CastShadows;
         entry.ModelMatrix = BeBRPGeometryEntry::CalculateModelMatrix(
-            transform.Position,
-            transform.Rotation,
-            transform.Scale
+            transform.Position, transform.Rotation, transform.Scale
         );
-
         GameIns->SubmissionBuffer->SubmitGeometry(entry);
     }
 
@@ -304,27 +293,22 @@ void ShowcaseScene::Tick(float deltaTime) {
         entry.ShadowMapResolution = sunLight.ShadowMapResolution;
         entry.ShadowMap = sunLight.ShadowMap;
         entry.ShadowViewProjection = BeBRPSunLightEntry::CalculateViewProj(
-            entry.Direction,
-            sunLight.ShadowCameraDistance,
-            sunLight.ShadowMapWorldSize,
-            sunLight.ShadowNearPlane,
-            sunLight.ShadowFarPlane
+            entry.Direction, sunLight.ShadowCameraDistance,
+            sunLight.ShadowMapWorldSize, sunLight.ShadowNearPlane, sunLight.ShadowFarPlane
         );
-
         GameIns->SubmissionBuffer->SubmitSunLight(entry);
     }
 }
 
 auto ShowcaseScene::ChangeShowcase(
-    const std::string& modelName, 
+    const std::string& modelName,
     const std::string& hxcolor,
     const TransformComponent& adjustedTransform
 ) -> void {
-    
     auto view = _registry.view<NameComponent, TransformComponent, RenderComponent>();
     for (auto [entity, name, transform, render] : view.each()) {
         if (name.Name == "showcased-object") {
-            transform = adjustedTransform;            
+            transform = adjustedTransform;
             render.Model = BeAssetRegistry::GetModel(modelName).lock();
         }
         if (name.Name == "skycube") {
@@ -332,4 +316,3 @@ auto ShowcaseScene::ChangeShowcase(
         }
     }
 }
-

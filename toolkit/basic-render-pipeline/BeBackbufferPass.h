@@ -1,7 +1,8 @@
-﻿#pragma once
+#pragma once
 #include <memory>
 #include <string>
 #include <umbrellas/include-glm.h>
+#include <umbrellas/access-modifiers.hpp>
 
 #include "BeRenderPass.h"
 
@@ -11,16 +12,15 @@ class BeShader;
 
 class BeBackbufferPass final : public BeRenderPass {
 
-public:
+    expose
     glm::vec3 ClearColor;
+    std::weak_ptr<BeTexture> InputTexture;
 
-    std::weak_ptr <BeTexture> InputTexture;
-    
-private:
+    hide
     std::shared_ptr<BeShader> _backbufferShader = nullptr;
     std::shared_ptr<BeMaterial> _backbufferMaterial = nullptr;
-    
-public:
+
+    expose
     explicit BeBackbufferPass();
     ~BeBackbufferPass() override;
 

@@ -21,13 +21,30 @@ project "core"
     objdir    ("%{prj.location}/obj/%{cfg.architecture}/%{cfg.buildcfg}")
 
     files {
-        "%{prj.location}/src/**.cpp",
-        "%{prj.location}/src/**.c",
         "%{prj.location}/src/**.h",
         "%{prj.location}/src/**.hpp",
         "%{prj.location}/src/**.hlsl",
         "%{prj.location}/src/**.hlsli",
+        -- Shared .cpp files (not in platform/)
+        "%{prj.location}/src/*.cpp",
     }
+
+    -- Platform-specific: include DX11 by default (Windows)
+    filter "system:windows"
+        files {
+            "%{prj.location}/src/platform/dx11/**.cpp",
+            "%{prj.location}/src/platform/dx11/**.h",
+        }
+        defines { "BE_DX11" }
+
+    filter "system:macosx"
+        files {
+            "%{prj.location}/src/platform/metal/**.mm",
+            "%{prj.location}/src/platform/metal/**.h",
+        }
+        defines { "BE_METAL" }
+
+    filter {}
 
     includedirs {
         "%{prj.location}/src",

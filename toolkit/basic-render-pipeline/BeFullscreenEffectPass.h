@@ -1,7 +1,8 @@
-﻿#pragma once
+#pragma once
 #include <memory>
 #include <string>
 #include <vector>
+#include <umbrellas/access-modifiers.hpp>
 
 #include "BeRenderPass.h"
 

@@ -10,11 +10,27 @@ project "toolkit"
     objdir    ("%{prj.location}/obj/%{cfg.architecture}/%{cfg.buildcfg}")
 
     files {
-        "%{prj.location}/**.cpp",
-        "%{prj.location}/**.c",
         "%{prj.location}/**.h",
         "%{prj.location}/**.hpp",
+        -- Shared .cpp files
+        "%{prj.location}/basic-render-pipeline/*.cpp",
+        "%{prj.location}/imgui/*.cpp",
+        "%{prj.location}/imgui/backends/*.cpp",
+        "%{prj.location}/scenes/*.cpp",
     }
+
+    -- Platform-specific toolkit files
+    filter "system:windows"
+        files {
+            "%{prj.location}/**/platform/dx11/**.cpp",
+        }
+
+    filter "system:macosx"
+        files {
+            "%{prj.location}/**/platform/metal/**.mm",
+        }
+
+    filter {}
 
     includedirs {
         "%{prj.location}",

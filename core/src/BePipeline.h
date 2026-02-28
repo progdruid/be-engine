@@ -1,71 +1,81 @@
 #pragma once
-#include <d3d11.h>
-#include <memory>
-#include <umbrellas/access-modifiers.hpp>
-#include <wrl/client.h>
 
-#include "BeShader.h"
+#include <memory>
+#include <string>
+#include <vector>
+#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/include-glm.h>
+
+#include "BeTypes.h"
 
 struct BeDrawSlice;
 class BeTexture;
 class BeMaterial;
-using Microsoft::WRL::ComPtr;
+class BeShader;
+class BeRenderer;
+class BeBRPSubmissionBuffer;
+struct BePipelineImpl;
 
 class BePipeline {
 
-    // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
-    static auto Create (const ComPtr<ID3D11DeviceContext>& context) -> std::shared_ptr<BePipeline>;
+    static auto Create(BeRenderer& renderer) -> std::shared_ptr<BePipeline>;
 
-    
-    // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide
-    ComPtr<ID3D11DeviceContext> _context;
-
+    std::unique_ptr<BePipelineImpl> _impl;
     BeShaderType _boundShaderType = BeShaderType::None;
     std::shared_ptr<BeShader> _boundShader;
 
-    std::array<uint32_t, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> _vertexResCache;
-    std::array<uint32_t, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> _tessResCache;
-    std::array<uint32_t, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> _pixelResCache;
+    hide BePipeline();
+    expose ~BePipeline();
 
-    std::array<uint32_t, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT> _vertexCBufferIDCache;
-    std::array<uint32_t, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT>   _tessCBufferIDCache;
-    std::array<uint32_t, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT>  _pixelCBufferIDCache;
-    
-    std::array<ID3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT> _vertexSamplerCache;
-    std::array<ID3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT>   _tessSamplerCache;
-    std::array<ID3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT>  _pixelSamplerCache;
-    
-    // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
-    hide BePipeline() = default;
-    expose ~BePipeline() = default;
-
-    
-    // interface ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
-    auto GetRawContext () -> ComPtr<ID3D11DeviceContext> { return _context; }
-    
-    expose
-    auto BindShader (const std::shared_ptr<BeShader>& shader, BeShaderType shaderType) -> void;
-    auto BindMaterialAutomatic (const std::shared_ptr<BeMaterial>& material) -> void;
-    auto BindMaterialManual (const std::shared_ptr<BeMaterial>& material, const uint8_t materialSlot) -> void;
+    auto BindShader(const std::shared_ptr<BeShader>& shader, BeShaderType shaderType) -> void;
+    auto BindMaterialAutomatic(const std::shared_ptr<BeMaterial>& material) -> void;
+    auto BindMaterialManual(const std::shared_ptr<BeMaterial>& material, uint8_t materialSlot) -> void;
     auto Clear() -> void;
     auto ClearCache() -> void;
-    
-    hide
-    auto BindMaterialTextures (const BeMaterial& material) -> void;
 
     expose
-    auto BindTargets (
+    auto BindTargets(
         const std::vector<std::weak_ptr<BeTexture>>& renderTargets,
         const BeTexture* depthTarget,
         bool clearRTVs = false
     ) const -> void;
-    auto ClearTargets () const -> void;
-    auto ResetTarget (const std::shared_ptr<BeTexture>& texture) const -> void;
-    
+    auto ClearTargets() const -> void;
+    auto ResetTarget(const std::shared_ptr<BeTexture>& texture) const -> void;
+
     expose
     auto Draw(uint32_t vertexCount, uint32_t startVertexLocation) const -> void;
     auto DrawSlice(const BeDrawSlice& slice) const -> void;
+    auto DrawIndexed(uint32_t indexCount, uint32_t startIndex, int32_t baseVertex) const -> void;
+
+    expose
+    auto SetViewport(const BeViewport& viewport) const -> void;
+    auto GetViewport() const -> BeViewport;
+    auto SetCullMode(BeCullMode mode) const -> void;
+
+    expose
+    auto BindMeshBuffers(const BeBRPSubmissionBuffer& submissionBuffer) const -> void;
+    auto UnbindMeshBuffers() const -> void;
+
+    expose
+    auto SetDepthOnlyTarget(BeTexture* depthTexture) const -> void;
+    auto SetCubemapDepthTarget(BeTexture* cubemapTexture, uint32_t face) const -> void;
+    auto ClearDepthTarget(BeTexture* depthTexture) const -> void;
+
+    expose
+    auto BindBackbuffer(const glm::vec4& clearColor) const -> void;
+    auto UnbindBackbuffer() const -> void;
+
+    expose
+    auto SetAdditiveBlending() const -> void;
+    auto ClearBlendState() const -> void;
+
+    expose
+    auto UpdateMaterialBuffers(const std::shared_ptr<BeMaterial>& material) const -> void;
+
+    expose auto GetPlatformImpl() const -> BePipelineImpl* { return _impl.get(); }
+
+    hide auto BindMaterialTextures(const BeMaterial& material) -> void;
 };

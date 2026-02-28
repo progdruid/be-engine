@@ -1,4 +1,4 @@
-﻿#include "BeBackbufferPass.h"
+#include "BeBackbufferPass.h"
 
 #include "BeAssetRegistry.h"
 #include "BeMaterial.h"
@@ -18,24 +18,15 @@ auto BeBackbufferPass::Initialise() -> void {
 }
 
 auto BeBackbufferPass::Render() -> void {
-    const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-    
-    // render target
-    auto backbufferTarget = _renderer->GetBackbufferTarget();
-    auto fullClearColor = glm::vec4(ClearColor, 1.0f);
-    context->ClearRenderTargetView(backbufferTarget.Get(), reinterpret_cast<FLOAT*>(&fullClearColor));
-    context->OMSetRenderTargets(1, backbufferTarget.GetAddressOf(), nullptr);
 
-    // shaders
+    pipeline->BindBackbuffer(glm::vec4(ClearColor, 1.0f));
+
     pipeline->BindShader(_backbufferShader, BeShaderType::Vertex | BeShaderType::Pixel);
-    pipeline->BindMaterialAutomatic( _backbufferMaterial);
+    pipeline->BindMaterialAutomatic(_backbufferMaterial);
 
-    // draw
     pipeline->Draw(4, 0);
 
-    // clear
     pipeline->Clear();
-    context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
+    pipeline->UnbindBackbuffer();
 }
-

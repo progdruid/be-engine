@@ -6,6 +6,7 @@
 
 #include "BeRenderer.h"
 #include "BeWindow.h"
+#include "platform/dx11/BeRendererImpl.h"
 
 BeImGuiPass::BeImGuiPass(const std::shared_ptr<BeWindow>& window)
     : _window(window) {
@@ -22,8 +23,9 @@ auto BeImGuiPass::Initialise() -> void {
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
 
+    auto* impl = _renderer->GetPlatformImpl();
     ImGui_ImplGlfw_InitForOther(_window->GetGlfwWindow(), true);
-    ImGui_ImplDX11_Init(_renderer->GetDevice().Get(), _renderer->GetContext().Get());
+    ImGui_ImplDX11_Init(impl->device.Get(), impl->context.Get());
 }
 
 auto BeImGuiPass::Render() -> void {
@@ -40,22 +42,20 @@ auto BeImGuiPass::Render() -> void {
 
     ImGui::Render();
 
-    const auto context = _renderer->GetContext();
-    const auto backbuffer = _renderer->GetBackbufferTarget();
+    auto* impl = _renderer->GetPlatformImpl();
+    auto& backbuffer = impl->backbufferTarget;
 
-    D3D11_VIEWPORT viewport{};
-    viewport.Width = static_cast<float>(_renderer->GetWidth());
-    viewport.Height = static_cast<float>(_renderer->GetHeight());
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
-    context->RSSetViewports(1, &viewport);
+    BeViewport vp;
+    vp.Width = static_cast<float>(_renderer->GetWidth());
+    vp.Height = static_cast<float>(_renderer->GetHeight());
+    _renderer->GetPipeline()->SetViewport(vp);
 
     ID3D11RenderTargetView* rtv = backbuffer.Get();
-    context->OMSetRenderTargets(1, &rtv, nullptr);
+    impl->context->OMSetRenderTargets(1, &rtv, nullptr);
 
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-    context->OMSetRenderTargets(0, nullptr, nullptr);
+    impl->context->OMSetRenderTargets(0, nullptr, nullptr);
 }
 
 auto BeImGuiPass::SetUICallback(const std::function<void()>& callback) -> void {

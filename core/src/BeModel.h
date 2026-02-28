@@ -1,7 +1,6 @@
 #pragma once
 #include <filesystem>
 #include <memory>
-#include <wrl/client.h>
 #include <umbrellas/include-glm.h>
 
 struct aiScene;
@@ -10,15 +9,14 @@ class BeTexture;
 class BeShader;
 class BeMaterial;
 class BeRenderer;
-using Microsoft::WRL::ComPtr;
 
 struct BeFullVertex {
-    glm::vec3 Position;                 // 0
-    glm::vec3 Normal;                   // 12
-    glm::vec4 Color     {1, 1, 1, 1};   // 24
-    glm::vec2 UV0       {0, 0};         // 40
-    glm::vec2 UV1       {0, 0};         // 48
-    glm::vec2 UV2       {0, 0};         // 56
+    glm::vec3 Position;
+    glm::vec3 Normal;
+    glm::vec4 Color     {1, 1, 1, 1};
+    glm::vec2 UV0       {0, 0};
+    glm::vec2 UV1       {0, 0};
+    glm::vec2 UV2       {0, 0};
 };
 
 struct BeDrawSlice {
@@ -31,17 +29,17 @@ struct BeDrawSlice {
 
 struct BeModel {
 
-    // Static
     static auto Create(
         const std::filesystem::path& modelPath,
         std::weak_ptr<BeShader> usedShaderForMaterials,
-        const BeRenderer& renderer
+        BeRenderer& renderer
     ) -> std::shared_ptr<BeModel>;
-    
+
     static auto LoadTextureFromAssimpPath(
         const aiString& texPath,
         const aiScene* scene,
-        const std::filesystem::path& parentPath, const BeRenderer& renderer
+        const std::filesystem::path& parentPath,
+        BeRenderer& renderer
     ) -> std::shared_ptr<BeTexture>;
 
     std::vector<BeDrawSlice> DrawSlices;
