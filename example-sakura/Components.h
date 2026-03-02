@@ -6,7 +6,7 @@
 
 #include "entt/entt.hpp"
 
-struct BeModel;
+struct BeProp;
 class BeTexture;
 
 struct TransformComponent {
@@ -16,7 +16,7 @@ struct TransformComponent {
 };
 
 struct RenderComponent {
-    std::shared_ptr<BeModel> Model;
+    std::shared_ptr<BeProp> Prop;
     bool CastShadows = true;
 };
 

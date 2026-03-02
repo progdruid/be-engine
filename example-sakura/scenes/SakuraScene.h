@@ -4,7 +4,7 @@
 #include "BaseScene.h"
 #include "entt/entt.hpp"
 
-struct BeModel;
+struct BeProp;
 class BeInput;
 class BeCamera;
 class OrbitCameraController;
@@ -21,7 +21,7 @@ class SakuraScene : public BaseScene {
     std::unique_ptr<FreeCameraController> _freeCameraController;
     bool _useOrbitCamera = false;
     
-    std::shared_ptr<BeModel> _cube, _anvil, _sakura, _sakura2, _emissiveCube;
+    std::shared_ptr<BeProp> _cube, _anvil, _sakura, _sakura2, _emissiveCube;
     
     expose
     explicit SakuraScene(Game* game);

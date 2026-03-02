@@ -1,6 +1,5 @@
 #include "BeBRPSubmissionBuffer.h"
 
-#include "BeModel.h"
 #include "Utils.h"
 #include "umbrellas/include-libassert.h"
 
@@ -56,41 +55,45 @@ auto BeBRPSubmissionBuffer::GetPointLightEntries() const -> const std::vector<Be
     return _pointLightEntries;
 }
 
-auto BeBRPSubmissionBuffer::RegisterModel(const std::shared_ptr<BeModel>& model) -> void {
-    _registeredModels.push_back(model);
+auto BeBRPSubmissionBuffer::RegisterMesh(const std::shared_ptr<BeMesh>& mesh) -> void {
+    _registeredMeshes.push_back(mesh);
 }
 
-auto BeBRPSubmissionBuffer::BakeModels() -> void {
+auto BeBRPSubmissionBuffer::BakeMeshes() -> void {
     be_assert(_device, "No device given. Submission buffer is probably uninitialized. Call Init.");
 
     //vbo + ibo
     size_t totalVerticesNumber = 0;
     size_t totalIndicesNumber = 0;
-    size_t totalDrawSlices = 0;
-    for (const auto& model : _registeredModels) {
-        totalVerticesNumber += model->FullVertices.size();
-        totalIndicesNumber += model->Indices.size();
-        totalDrawSlices += model->DrawSlices.size();
+    for (const auto& mesh : _registeredMeshes) {
+        totalVerticesNumber += mesh->Vertices.size();
+        totalIndicesNumber += mesh->Indices.size();
     }
 
     std::vector<BeFullVertex> fullVertices;
     std::vector<uint32_t> indices;
     fullVertices.reserve(totalVerticesNumber);
     indices.reserve(totalIndicesNumber);
-    for (auto& model : _registeredModels) {
-        fullVertices.insert(fullVertices.end(), model->FullVertices.begin(), model->FullVertices.end());
-        indices.insert(indices.end(), model->Indices.begin(), model->Indices.end());
+    for (auto& mesh : _registeredMeshes) {
+        if (_meshSlices.contains(mesh.get()))
+            continue;
 
-        auto & drawSlices = _modelDrawSlices[model.get()];
-        
-        for (auto slice : model->DrawSlices) {
-            slice.BaseVertexLocation += static_cast<int32_t>(fullVertices.size() - model->FullVertices.size());
-            slice.StartIndexLocation += static_cast<uint32_t>(indices.size() - model->Indices.size());
-            
-            drawSlices.push_back(slice);
+        const auto vertexBase = static_cast<int32_t>(fullVertices.size());
+        const auto indexBase = static_cast<uint32_t>(indices.size());
+
+        fullVertices.insert(fullVertices.end(), mesh->Vertices.begin(), mesh->Vertices.end());
+        indices.insert(indices.end(), mesh->Indices.begin(), mesh->Indices.end());
+
+        auto& slices = _meshSlices[mesh.get()];
+        for (const auto& slice : mesh->Slices) {
+            slices.push_back({
+                .IndexCount = slice.IndexCount,
+                .StartIndexLocation = slice.StartIndexLocation + indexBase,
+                .BaseVertexLocation = slice.BaseVertexLocation + vertexBase,
+            });
         }
     }
-    
+
     D3D11_BUFFER_DESC vertexBufferDescriptor = {};
     vertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     vertexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
@@ -98,7 +101,7 @@ auto BeBRPSubmissionBuffer::BakeModels() -> void {
     D3D11_SUBRESOURCE_DATA vertexData = {};
     vertexData.pSysMem = fullVertices.data();
     Utils::Check << _device->CreateBuffer(&vertexBufferDescriptor, &vertexData, &_sharedVertexBuffer);
-    
+
     D3D11_BUFFER_DESC indexBufferDescriptor = {};
     indexBufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;
     indexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;

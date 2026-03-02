@@ -6,7 +6,6 @@
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
 #include "BeMaterial.h"
-#include "BeModel.h"
 #include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
@@ -25,12 +24,12 @@ auto BeShadowPass::Render() -> void {
     SCOPE_EXIT { context->RSSetViewports(1, &previousViewport); };
 
     const auto& submissionBuffer = *SubmissionBuffer.lock();
-    
+
     const auto& sunLights = submissionBuffer.GetSunLightEntries();
     for (size_t i = 0; i < sunLights.size(); ++i) {
         if (!sunLights[i].CastsShadows)
             continue;
-        
+
         Utils::BeDebugAnnotation directionalLightAnnotation(context, "Directional Light Shadows " + std::to_string(i));
         RenderDirectionalShadows(sunLights[0], submissionBuffer);
     }
@@ -51,7 +50,7 @@ auto BeShadowPass::RenderDirectionalShadows(
 ) const -> void {
     const auto& context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-    
+
     // sort out viewport
     D3D11_VIEWPORT viewport = {};
     viewport.Width = sunLight.ShadowMapResolution;
@@ -80,24 +79,27 @@ auto BeShadowPass::RenderDirectionalShadows(
         if (!entry.CastShadows)
             continue;
 
-        pipeline->BindShader(entry.Model->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
-        
+        pipeline->BindShader(entry.Prop->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
+
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
         _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
         _objectMaterial->UpdateGPUBuffers(context);
         pipeline->BindMaterialAutomatic(_objectMaterial);
-        
-        const auto & drawSlices = submissionBuffer.GetDrawSlicesForModel(entry.Model);
-        for (const auto& slice : drawSlices) {
-            if (slice.TwoSided) {
+
+        const auto& meshSlices = submissionBuffer.GetMeshSlices(entry.Prop->Mesh.get());
+        for (size_t i = 0; i < meshSlices.size(); ++i) {
+            const auto& meshSlice = meshSlices[i];
+            const auto& propSlice = entry.Prop->Slices[i];
+
+            if (propSlice.TwoSided) {
                 context->RSSetState(_renderer->GetRasterizerCullNone().Get());
             }
 
-            pipeline->BindMaterialAutomatic(slice.Material);
-            context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
+            pipeline->BindMaterialAutomatic(propSlice.Material);
+            context->DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
 
-            if (slice.TwoSided) {
+            if (propSlice.TwoSided) {
                 context->RSSetState(_renderer->GetRasterizerCullBack().Get());
             }
         }
@@ -107,13 +109,13 @@ auto BeShadowPass::RenderDirectionalShadows(
 }
 
 auto BeShadowPass::RenderPointLightShadows(
-    const BeBRPPointLightEntry& pointLight, 
+    const BeBRPPointLightEntry& pointLight,
     const BeBRPSubmissionBuffer& submissionBuffer
 ) const -> void {
     // get what we need
     const auto& context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-    
+
     // sort out vertex and index buffers
     uint32_t stride = sizeof(BeFullVertex);
     uint32_t offset = 0;
@@ -123,7 +125,7 @@ auto BeShadowPass::RenderPointLightShadows(
         context->IASetVertexBuffers(0, 1, Utils::NullBuffers, &stride, &offset);
         context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
     };
-    
+
     // sort out viewport
     D3D11_VIEWPORT viewport = {};
     viewport.Width = pointLight.ShadowMapResolution;
@@ -147,25 +149,28 @@ auto BeShadowPass::RenderPointLightShadows(
             if (!entry.CastShadows)
                 continue;
 
-            pipeline->BindShader(entry.Model->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
-            
+            pipeline->BindShader(entry.Prop->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
+
             _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
             _objectMaterial->SetMatrix("ProjectionView", faceViewProj);
             _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
             _objectMaterial->UpdateGPUBuffers(context);
             pipeline->BindMaterialAutomatic(_objectMaterial);
-            
+
             // draw
-            const auto& drawSlices = submissionBuffer.GetDrawSlicesForModel(entry.Model);
-            for (const auto& slice : drawSlices) {
-                if (slice.TwoSided) {
+            const auto& meshSlices = submissionBuffer.GetMeshSlices(entry.Prop->Mesh.get());
+            for (size_t i = 0; i < meshSlices.size(); ++i) {
+                const auto& meshSlice = meshSlices[i];
+                const auto& propSlice = entry.Prop->Slices[i];
+
+                if (propSlice.TwoSided) {
                     context->RSSetState(_renderer->GetRasterizerCullNone().Get());
                 }
 
-                pipeline->BindMaterialAutomatic(slice.Material);
-                context->DrawIndexed(slice.IndexCount, slice.StartIndexLocation, slice.BaseVertexLocation);
+                pipeline->BindMaterialAutomatic(propSlice.Material);
+                context->DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
 
-                if (slice.TwoSided) {
+                if (propSlice.TwoSided) {
                     context->RSSetState(_renderer->GetRasterizerCullBack().Get());
                 }
             }
@@ -173,12 +178,12 @@ auto BeShadowPass::RenderPointLightShadows(
             pipeline->Clear();
         }
     }
-    
+
     context->OMSetRenderTargets(0, nullptr, nullptr);
 }
 
 auto BeShadowPass::CalculatePointLightFaceViewProjection(
-    const BeBRPPointLightEntry& pointLight, 
+    const BeBRPPointLightEntry& pointLight,
     const int faceIndex
 ) const -> glm::mat4 {
     static constexpr std::array<glm::vec3, 6> Forwards = {
@@ -200,8 +205,8 @@ auto BeShadowPass::CalculatePointLightFaceViewProjection(
     };
 
     glm::mat4x4 proj = glm::perspectiveLH_ZO(
-      glm::radians(90.0f),  
-      1.0f,  
+      glm::radians(90.0f),
+      1.0f,
       pointLight.ShadowNearPlane,
       pointLight.Radius
     );

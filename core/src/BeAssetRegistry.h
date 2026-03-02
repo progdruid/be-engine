@@ -14,7 +14,7 @@ class BeRenderer;
 class BeTexture;
 class BeShader;
 class BeMaterial;
-struct BeModel;
+struct BeProp;
 
 using Microsoft::WRL::ComPtr;
 
@@ -30,7 +30,7 @@ class BeAssetRegistry {
     static std::unordered_map<std::string, ComPtr<ID3D11SamplerState>> _samplers;
     static std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _materials;
     static std::unordered_map<std::string, std::shared_ptr<BeTexture>> _textures;
-    static std::unordered_map<std::string, std::shared_ptr<BeModel>> _models;
+    static std::unordered_map<std::string, std::shared_ptr<BeProp>> _props;
 
     expose
     //BeAssetRegistry() = default;
@@ -66,9 +66,9 @@ class BeAssetRegistry {
     static auto RemoveTexture(std::string_view name) -> void { _textures.erase(std::string(name)); }
     static auto HasTexture(std::string_view name) -> bool { return _textures.contains(std::string(name)); }
     
-    // Model
-    static auto AddModel(std::string_view name, std::shared_ptr<BeModel> model) -> void { _models[std::string(name)] = model; }
-    static auto GetModel(std::string_view name) -> std::weak_ptr<BeModel> { be_assert(_models.contains(std::string(name))); return _models.at(std::string(name)); }
-    static auto RemoveModel(std::string_view name) -> void { _models.erase(std::string(name)); }
-    static auto HasModel(std::string_view name) -> bool { return _models.contains(std::string(name)); }
+    // Prop
+    static auto AddProp(std::string_view name, std::shared_ptr<BeProp> prop) -> void { _props[std::string(name)] = prop; }
+    static auto GetProp(std::string_view name) -> std::weak_ptr<BeProp> { be_assert(_props.contains(std::string(name))); return _props.at(std::string(name)); }
+    static auto RemoveProp(std::string_view name) -> void { _props.erase(std::string(name)); }
+    static auto HasProp(std::string_view name) -> bool { return _props.contains(std::string(name)); }
 };

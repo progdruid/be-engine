@@ -1,4 +1,4 @@
-#include "BeModel.h"
+#include "BeProp.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -14,11 +14,11 @@
 #include "BeTexture.h"
 #include "Utils.h"
 
-auto BeModel::Create(
+auto BeProp::Create(
     const std::filesystem::path& modelPath,
     std::weak_ptr<BeShader> usedShaderForMaterials,
     const BeRenderer& renderer
-) -> std::shared_ptr<BeModel> {
+) -> std::shared_ptr<BeProp> {
     constexpr auto flags = (
         aiProcess_Triangulate |
         aiProcess_GenNormals |
@@ -34,11 +34,11 @@ auto BeModel::Create(
     const aiScene* scene = importer.ReadFile(modelPath.string().c_str(), flags);
     if (!scene || !scene->mRootNode)
         throw std::runtime_error("Failed to load model: " + modelPath.string());
-    
-    auto model = std::make_shared<BeModel>();
-    model->Shader = usedShaderForMaterials.lock();
-    model->DrawSlices.reserve(scene->mNumMeshes);
-    const auto& materialScheme = BeAssetRegistry::GetMaterialScheme(model->Shader->GetMaterialSchemeName("geometry-main"));
+
+    auto prop = std::make_shared<BeProp>();
+    prop->Mesh = std::make_shared<BeMesh>();
+    prop->Shader = usedShaderForMaterials.lock();
+    const auto& materialScheme = BeAssetRegistry::GetMaterialScheme(prop->Shader->GetMaterialSchemeName("geometry-main"));
 
     std::unordered_map<uint32_t, std::shared_ptr<BeMaterial>> assimpIndexToMaterial;
     std::unordered_set<uint32_t> assimpIndexToTwoSided;
@@ -86,9 +86,9 @@ auto BeModel::Create(
     }
 
     for (const auto & material : assimpIndexToMaterial | std::views::values) {
-        model->Materials.push_back(material);
-    } 
-    
+        prop->Materials.push_back(material);
+    }
+
     size_t numVertices = 0;
     size_t numIndices = 0;
     for (unsigned i = 0; i < scene->mNumMeshes; ++i) {
@@ -97,9 +97,10 @@ auto BeModel::Create(
         numIndices += 3 * mesh->mNumFaces;
     }
 
-    model->FullVertices.reserve(numVertices);
-    model->Indices.reserve(numIndices);
-    
+    prop->Mesh->Vertices.reserve(numVertices);
+    prop->Mesh->Indices.reserve(numIndices);
+    prop->Mesh->Slices.reserve(scene->mNumMeshes);
+
     int32_t vertexOffset = 0;
     uint32_t indexOffset = 0;
     for (size_t i = 0; i < scene->mNumMeshes; ++i) {
@@ -119,21 +120,24 @@ auto BeModel::Create(
             vertex.UV0 = {texCoord0.x, texCoord0.y};
             vertex.UV1 = {texCoord1.x, texCoord1.y};
             vertex.UV2 = {texCoord2.x, texCoord2.y};
-            model->FullVertices.push_back(vertex);
+            prop->Mesh->Vertices.push_back(vertex);
         }
 
         for (size_t f = 0; f < mesh->mNumFaces; ++f) {
             const aiFace& face = mesh->mFaces[f];
             if (face.mNumIndices != 3) continue;
-            model->Indices.push_back(face.mIndices[0]);
-            model->Indices.push_back(face.mIndices[2]);
-            model->Indices.push_back(face.mIndices[1]);
+            prop->Mesh->Indices.push_back(face.mIndices[0]);
+            prop->Mesh->Indices.push_back(face.mIndices[2]);
+            prop->Mesh->Indices.push_back(face.mIndices[1]);
         }
 
-        model->DrawSlices.push_back({
+        prop->Mesh->Slices.push_back({
             .IndexCount = mesh->mNumFaces * 3,
             .StartIndexLocation = indexOffset,
             .BaseVertexLocation = vertexOffset,
+        });
+
+        prop->Slices.push_back({
             .Material = assimpIndexToMaterial.at(mesh->mMaterialIndex),
             .TwoSided = assimpIndexToTwoSided.contains(mesh->mMaterialIndex),
         });
@@ -142,10 +146,33 @@ auto BeModel::Create(
         indexOffset += mesh->mNumFaces * 3;
     }
 
-    return model;
+    return prop;
 }
 
-auto BeModel::LoadTextureFromAssimpPath(
+auto BeProp::FromMesh(
+    std::shared_ptr<BeMesh> mesh,
+    std::weak_ptr<BeShader> shader,
+    const BeRenderer& renderer
+) -> std::shared_ptr<BeProp> {
+    auto prop = std::make_shared<BeProp>();
+    prop->Mesh = std::move(mesh);
+    prop->Shader = shader.lock();
+
+    const auto& materialScheme = BeAssetRegistry::GetMaterialScheme(prop->Shader->GetMaterialSchemeName("geometry-main"));
+
+    for (size_t i = 0; i < prop->Mesh->Slices.size(); ++i) {
+        auto material = BeMaterial::Create("mesh-mat-" + std::to_string(i), materialScheme, true, renderer);
+        prop->Materials.push_back(material);
+        prop->Slices.push_back({
+            .Material = material,
+            .TwoSided = false,
+        });
+    }
+
+    return prop;
+}
+
+auto BeProp::LoadTextureFromAssimpPath(
     const aiString& texPath,
     const aiScene* scene,
     const std::filesystem::path& parentPath,
@@ -160,7 +187,7 @@ auto BeModel::LoadTextureFromAssimpPath(
         BeTexture::Create("TODO" + std::to_string(tempCount))
         .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
         .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM);
-    
+
 
     if (texPath.C_Str()[0] != '*') {
         const auto filename = std::filesystem::path(texPath.C_Str()).filename();

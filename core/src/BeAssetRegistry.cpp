@@ -15,7 +15,7 @@ std::unordered_map<std::string, BeMaterialScheme> BeAssetRegistry::_materialSche
 std::unordered_map<std::string, ComPtr<ID3D11SamplerState>> BeAssetRegistry::_samplers;
 std::unordered_map<std::string, std::shared_ptr<BeMaterial>> BeAssetRegistry::_materials;
 std::unordered_map<std::string, std::shared_ptr<BeTexture>> BeAssetRegistry::_textures;
-std::unordered_map<std::string, std::shared_ptr<BeModel>> BeAssetRegistry::_models;
+std::unordered_map<std::string, std::shared_ptr<BeProp>> BeAssetRegistry::_props;
 
 auto BeAssetRegistry::IndexShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void {
     

@@ -8,7 +8,7 @@
 #include "BeCamera.h"
 #include "BeInput.h"
 #include "BeMaterial.h"
-#include "BeModel.h"
+#include "BeProp.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
 #include "BeWindow.h"
@@ -105,52 +105,52 @@ auto ShowcaseScene::LoadModels() -> void {
     auto standardShader = BeAssetRegistry::GetShader("standard");
     
     
-    auto ramen = BeModel::Create("assets/ramen/scene.gltf", standardShader, *GameIns->Renderer);
-    BeAssetRegistry::AddModel("ramen", ramen);
-    
-    auto stillLife = BeModel::Create("assets/still-life/scene.gltf", standardShader, *GameIns->Renderer);
-    BeAssetRegistry::AddModel("still-life", stillLife);
-    
-    auto fiestaTea = BeModel::Create("assets/fiesta_tea/scene.gltf", standardShader, *GameIns->Renderer);
-    BeAssetRegistry::AddModel("fiesta-tea", fiestaTea);
-    
-    auto honeydew_melons = BeModel::Create("assets/honeydew_melons/scene.gltf", standardShader, *GameIns->Renderer);
-    BeAssetRegistry::AddModel("honeydew_melons", honeydew_melons);
-    
-    auto hunger_games = BeModel::Create("assets/hunger_games/scene.gltf", standardShader, *GameIns->Renderer);
-    BeAssetRegistry::AddModel("hunger_games", hunger_games);
-    
-    auto pickles = BeModel::Create("assets/pickles/scene.gltf", standardShader, *GameIns->Renderer);
-    BeAssetRegistry::AddModel("pickles", pickles);
-    
-    auto watermelons = BeModel::Create("assets/watermelons/scene.gltf", standardShader, *GameIns->Renderer);
-    BeAssetRegistry::AddModel("watermelons", watermelons);
-    
-    auto apfel = BeModel::Create("assets/apfel/scene.gltf", standardShader, *GameIns->Renderer);
-    BeAssetRegistry::AddModel("apfel", apfel);
-    
-    auto eggplant = BeModel::Create("assets/eggplant/scene.gltf", standardShader, *GameIns->Renderer);
-    BeAssetRegistry::AddModel("eggplant", eggplant);
-    
-    auto tomatoes = BeModel::Create("assets/tomatoes/scene.gltf", standardShader, *GameIns->Renderer);
-    BeAssetRegistry::AddModel("tomatoes", tomatoes);
-    
-    
-    auto skycube = BeModel::Create("assets/cube.glb", standardShader, *GameIns->Renderer);
+    auto ramen = BeProp::Create("assets/ramen/scene.gltf", standardShader, *GameIns->Renderer);
+    BeAssetRegistry::AddProp("ramen", ramen);
+
+    auto stillLife = BeProp::Create("assets/still-life/scene.gltf", standardShader, *GameIns->Renderer);
+    BeAssetRegistry::AddProp("still-life", stillLife);
+
+    auto fiestaTea = BeProp::Create("assets/fiesta_tea/scene.gltf", standardShader, *GameIns->Renderer);
+    BeAssetRegistry::AddProp("fiesta-tea", fiestaTea);
+
+    auto honeydew_melons = BeProp::Create("assets/honeydew_melons/scene.gltf", standardShader, *GameIns->Renderer);
+    BeAssetRegistry::AddProp("honeydew_melons", honeydew_melons);
+
+    auto hunger_games = BeProp::Create("assets/hunger_games/scene.gltf", standardShader, *GameIns->Renderer);
+    BeAssetRegistry::AddProp("hunger_games", hunger_games);
+
+    auto pickles = BeProp::Create("assets/pickles/scene.gltf", standardShader, *GameIns->Renderer);
+    BeAssetRegistry::AddProp("pickles", pickles);
+
+    auto watermelons = BeProp::Create("assets/watermelons/scene.gltf", standardShader, *GameIns->Renderer);
+    BeAssetRegistry::AddProp("watermelons", watermelons);
+
+    auto apfel = BeProp::Create("assets/apfel/scene.gltf", standardShader, *GameIns->Renderer);
+    BeAssetRegistry::AddProp("apfel", apfel);
+
+    auto eggplant = BeProp::Create("assets/eggplant/scene.gltf", standardShader, *GameIns->Renderer);
+    BeAssetRegistry::AddProp("eggplant", eggplant);
+
+    auto tomatoes = BeProp::Create("assets/tomatoes/scene.gltf", standardShader, *GameIns->Renderer);
+    BeAssetRegistry::AddProp("tomatoes", tomatoes);
+
+
+    auto skycube = BeProp::Create("assets/cube.glb", standardShader, *GameIns->Renderer);
     skycube->Materials[0]->SetFloat3("DiffuseColor", HexColor("#FAC8CD"));
-    BeAssetRegistry::AddModel("skycube", skycube);
-    
-    GameIns->SubmissionBuffer->RegisterModel(skycube);
-    GameIns->SubmissionBuffer->RegisterModel(ramen);
-    GameIns->SubmissionBuffer->RegisterModel(stillLife);
-    GameIns->SubmissionBuffer->RegisterModel(fiestaTea);
-    GameIns->SubmissionBuffer->RegisterModel(honeydew_melons);
-    GameIns->SubmissionBuffer->RegisterModel(hunger_games);
-    GameIns->SubmissionBuffer->RegisterModel(pickles);
-    GameIns->SubmissionBuffer->RegisterModel(watermelons);
-    GameIns->SubmissionBuffer->RegisterModel(apfel);
-    GameIns->SubmissionBuffer->RegisterModel(eggplant);
-    GameIns->SubmissionBuffer->RegisterModel(tomatoes);
+    BeAssetRegistry::AddProp("skycube", skycube);
+
+    GameIns->SubmissionBuffer->RegisterMesh(skycube->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(ramen->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(stillLife->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(fiestaTea->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(honeydew_melons->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(hunger_games->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(pickles->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(watermelons->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(apfel->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(eggplant->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(tomatoes->Mesh);
 }
 
 auto ShowcaseScene::CreateObjects() -> void {
@@ -160,13 +160,13 @@ auto ShowcaseScene::CreateObjects() -> void {
     CreateEntity(_registry
         ,NameComponent { .Name = "showcased-object" }
         ,TransformComponent { }
-        ,RenderComponent { .Model = BeAssetRegistry::GetModel("ramen").lock(), .CastShadows = false }
+        ,RenderComponent { .Prop = BeAssetRegistry::GetProp("ramen").lock(), .CastShadows = false }
     );
     
     CreateEntity(_registry
         ,NameComponent { .Name = "skycube" }
         ,TransformComponent { .Position = glm::vec3(50, -50, -50), .Rotation = glm::quat(), .Scale = glm::vec3(100) }
-        ,RenderComponent { .Model = BeAssetRegistry::GetModel("skycube").lock(), .CastShadows = false }
+        ,RenderComponent { .Prop = BeAssetRegistry::GetProp("skycube").lock(), .CastShadows = false }
     );
     
     CreateEntity(_registry
@@ -284,7 +284,7 @@ void ShowcaseScene::Tick(float deltaTime) {
     GameIns->SubmissionBuffer->ClearEntries();
     for (const auto [entity, transform, render] : GeometryView.each()) {
         auto entry = BeBRPGeometryEntry();
-        entry.Model = render.Model;
+        entry.Prop = render.Prop;
         entry.CastShadows = render.CastShadows;
         entry.ModelMatrix = BeBRPGeometryEntry::CalculateModelMatrix(
             transform.Position,
@@ -324,11 +324,11 @@ auto ShowcaseScene::ChangeShowcase(
     auto view = _registry.view<NameComponent, TransformComponent, RenderComponent>();
     for (auto [entity, name, transform, render] : view.each()) {
         if (name.Name == "showcased-object") {
-            transform = adjustedTransform;            
-            render.Model = BeAssetRegistry::GetModel(modelName).lock();
+            transform = adjustedTransform;
+            render.Prop = BeAssetRegistry::GetProp(modelName).lock();
         }
         if (name.Name == "skycube") {
-            render.Model->Materials[0]->SetFloat3("DiffuseColor", HexColor(hxcolor.c_str()));
+            render.Prop->Materials[0]->SetFloat3("DiffuseColor", HexColor(hxcolor.c_str()));
         }
     }
 }

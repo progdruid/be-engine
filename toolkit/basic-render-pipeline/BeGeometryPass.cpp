@@ -7,7 +7,6 @@
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
 #include "BeMaterial.h"
-#include "BeModel.h"
 #include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
@@ -44,28 +43,31 @@ auto BeGeometryPass::Render() -> void
     // Draw all objects
     const auto& entries = SubmissionBuffer.lock()->GetGeometryEntries();
     for (const auto& entry : entries) {
-        const auto shader = entry.Model->Shader;
+        const auto shader = entry.Prop->Shader;
         assert(shader);
-        
+
         pipeline->BindShader(shader, BeShaderType::All);
         SCOPE_EXIT { pipeline->Clear(); };
-        
+
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", _renderer->UniformData.ProjectionView);
         _objectMaterial->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
         _objectMaterial->UpdateGPUBuffers(context);
         pipeline->BindMaterialAutomatic(_objectMaterial);
 
-        const auto & drawSlices = submissionBuffer->GetDrawSlicesForModel(entry.Model);
-        for (const auto& slice : drawSlices) {
-            if (slice.TwoSided) {
+        const auto& meshSlices = submissionBuffer->GetMeshSlices(entry.Prop->Mesh.get());
+        for (size_t i = 0; i < meshSlices.size(); ++i) {
+            const auto& meshSlice = meshSlices[i];
+            const auto& propSlice = entry.Prop->Slices[i];
+
+            if (propSlice.TwoSided) {
                 context->RSSetState(_renderer->GetRasterizerCullNone().Get());
             }
 
-            pipeline->BindMaterialAutomatic(slice.Material);
-            pipeline->DrawSlice(slice);
+            pipeline->BindMaterialAutomatic(propSlice.Material);
+            pipeline->DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
 
-            if (slice.TwoSided) {
+            if (propSlice.TwoSided) {
                 context->RSSetState(_renderer->GetRasterizerCullBack().Get());
             }
         }

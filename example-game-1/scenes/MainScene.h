@@ -10,7 +10,8 @@
 #include "BaseScene.h"
 
 class BeCamera;
-struct BeModel;
+struct BeProp;
+struct BeMesh;
 struct BePointLight;
 struct BeDirectionalLight;
 
@@ -21,7 +22,7 @@ struct TransformComponent {
 };
 
 struct RenderComponent {
-    std::shared_ptr<BeModel> Model;
+    std::shared_ptr<BeProp> Prop;
     bool CastShadows = true;
 };
 
@@ -36,7 +37,7 @@ class MainScene : public BaseScene {
     std::shared_ptr<BeDirectionalLight> _directionalLight;
     std::vector<BePointLight> _pointLights;
 
-    std::shared_ptr<BeModel> _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil;
+    std::shared_ptr<BeProp> _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil;
 
     expose
     explicit MainScene(Game* game);
@@ -47,5 +48,5 @@ class MainScene : public BaseScene {
     auto Tick(float deltaTime) -> void override;
     
     hide
-    auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel>;
+    auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeProp>;
 };

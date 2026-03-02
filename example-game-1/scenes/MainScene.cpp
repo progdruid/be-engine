@@ -7,7 +7,8 @@
 #include "BeCamera.h"
 #include "BeInput.h"
 #include "BeMaterial.h"
-#include "BeModel.h"
+#include "BeMesh.h"
+#include "BeProp.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
@@ -68,22 +69,22 @@ auto MainScene::Prepare() -> void {
     const auto tessellatedShader = BeAssetRegistry::GetShader("tessellated");
     
     _plane = CreatePlane(64);
-    _witchItems = BeModel::Create("assets/witch_items.glb", standardShader, *GameIns->Renderer);
-    _cube = BeModel::Create("assets/cube.glb", tessellatedShader, *GameIns->Renderer);
+    _witchItems = BeProp::Create("assets/witch_items.glb", standardShader, *GameIns->Renderer);
+    _cube = BeProp::Create("assets/cube.glb", tessellatedShader, *GameIns->Renderer);
     _cube->Materials[0]->SetFloat3("DiffuseColor", glm::vec3(0.28, 0.39, 1.0));
-    _macintosh = BeModel::Create("assets/model.fbx", standardShader, *GameIns->Renderer);
-    _pagoda = BeModel::Create("assets/pagoda.glb", standardShader, *GameIns->Renderer);
-    _disks = BeModel::Create("assets/floppy-disks.glb", standardShader, *GameIns->Renderer);
-    _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
-    _anvil->DrawSlices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
+    _macintosh = BeProp::Create("assets/model.fbx", standardShader, *GameIns->Renderer);
+    _pagoda = BeProp::Create("assets/pagoda.glb", standardShader, *GameIns->Renderer);
+    _disks = BeProp::Create("assets/floppy-disks.glb", standardShader, *GameIns->Renderer);
+    _anvil = BeProp::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
+    _anvil->Slices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
 
-    GameIns->SubmissionBuffer->RegisterModel(_plane);
-    GameIns->SubmissionBuffer->RegisterModel(_witchItems);
-    GameIns->SubmissionBuffer->RegisterModel(_cube);
-    GameIns->SubmissionBuffer->RegisterModel(_macintosh);
-    GameIns->SubmissionBuffer->RegisterModel(_pagoda);
-    GameIns->SubmissionBuffer->RegisterModel(_disks);
-    GameIns->SubmissionBuffer->RegisterModel(_anvil);
+    GameIns->SubmissionBuffer->RegisterMesh(_plane->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(_witchItems->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(_cube->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(_macintosh->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(_pagoda->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(_disks->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(_anvil->Mesh);
 
     GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
 
@@ -383,26 +384,18 @@ auto MainScene::Tick(float deltaTime) -> void {
         //    .Position = transform.Position,
         //    .Rotation = transform.Rotation,
         //    .Scale = transform.Scale,
-        //    .Model = render.Model,
+        //    .Prop = render.Prop,
         //    .CastShadows = render.CastShadows,
         //});
     });
 }
 
-auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> {
-    const auto shader = BeAssetRegistry::GetShader("terrain").lock();
-    const auto& scheme = BeAssetRegistry::GetMaterialScheme("terrain-main-material-for-geometry-pass");
-    auto material = BeMaterial::Create("TerrainMat", scheme, true, *GameIns->Renderer);
-    material->SetFloat("TerrainScale", 200.0f);
-    material->SetFloat("HeightScale", 100.0f);
-
-    auto model = std::make_shared<BeModel>();
-    model->Shader = shader;
-    model->Materials.push_back(material);
+auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeProp> {
+    auto mesh = std::make_shared<BeMesh>();
 
     const float cellSize = 1.0f / (verticesPerSide - 1);
 
-    model->FullVertices.reserve(verticesPerSide * verticesPerSide);
+    mesh->Vertices.reserve(verticesPerSide * verticesPerSide);
     for (int y = 0; y < verticesPerSide; ++y) {
         for (int x = 0; x < verticesPerSide; ++x) {
             BeFullVertex vertex{};
@@ -415,12 +408,12 @@ auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> 
             vertex.Color = {1.0f, 1.0f, 1.0f, 1.0f};
             vertex.UV0 = {x * cellSize, y * cellSize};
 
-            model->FullVertices.push_back(vertex);
+            mesh->Vertices.push_back(vertex);
         }
     }
 
     size_t quadsPerSide = verticesPerSide - 1;
-    model->Indices.reserve(quadsPerSide * quadsPerSide * 6);
+    mesh->Indices.reserve(quadsPerSide * quadsPerSide * 6);
 
     for (int y = 0; y < quadsPerSide; ++y) {
         for (int x = 0; x < quadsPerSide; ++x) {
@@ -429,24 +422,29 @@ auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeModel> 
             uint32_t bottomLeft = (y + 1) * verticesPerSide + x;
             uint32_t bottomRight = (y + 1) * verticesPerSide + (x + 1);
 
-            model->Indices.push_back(topLeft);
-            model->Indices.push_back(topRight);
-            model->Indices.push_back(bottomLeft);
+            mesh->Indices.push_back(topLeft);
+            mesh->Indices.push_back(topRight);
+            mesh->Indices.push_back(bottomLeft);
 
-            model->Indices.push_back(topRight);
-            model->Indices.push_back(bottomRight);
-            model->Indices.push_back(bottomLeft);
+            mesh->Indices.push_back(topRight);
+            mesh->Indices.push_back(bottomRight);
+            mesh->Indices.push_back(bottomLeft);
         }
     }
 
-    BeDrawSlice slice{};
-    slice.IndexCount = static_cast<uint32_t>(model->Indices.size());
-    slice.StartIndexLocation = 0;
-    slice.BaseVertexLocation = 0;
-    slice.Material = material;
-    model->DrawSlices.push_back(slice);
+    mesh->Slices.push_back({
+        .IndexCount = static_cast<uint32_t>(mesh->Indices.size()),
+        .StartIndexLocation = 0,
+        .BaseVertexLocation = 0,
+    });
 
-    return model;
+    const auto shader = BeAssetRegistry::GetShader("terrain");
+    auto prop = BeProp::FromMesh(std::move(mesh), shader, *GameIns->Renderer);
+
+    prop->Slices[0].Material->SetFloat("TerrainScale", 200.0f);
+    prop->Slices[0].Material->SetFloat("HeightScale", 100.0f);
+
+    return prop;
 }
 
 

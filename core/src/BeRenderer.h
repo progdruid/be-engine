@@ -15,23 +15,11 @@ class BeWindow;
 class BePipeline;
 class BeRenderPass;
 class BeShader;
-struct BeDrawSlice;
-struct BeModel;
 using Microsoft::WRL::ComPtr;
 
 
 class BeRenderer {
 
-    // types ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose struct DrawEntry {
-        glm::vec3 Position = {0.f, 0.f, 0.f};
-        glm::quat Rotation = glm::quat(glm::vec3(0, 0, 0));
-        glm::vec3 Scale = {1.f, 1.f, 1.f};
-        std::shared_ptr<BeModel> Model = nullptr;
-        bool CastShadows = true;
-    };
-
-    
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     hide static auto GetBestAdapter() -> ComPtr<IDXGIAdapter1>;
     

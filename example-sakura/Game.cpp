@@ -75,7 +75,7 @@ auto Game::SetupScenes() -> void {
     SceneManager->GetScene<BaseScene>("sakura")->Prepare();
     SceneManager->GetScene<BaseScene>("showcase")->Prepare();
     
-    SubmissionBuffer->BakeModels();
+    SubmissionBuffer->BakeMeshes();
 
     SceneManager->RequestSceneChange("menu");
     SceneManager->ApplyPendingSceneChange();

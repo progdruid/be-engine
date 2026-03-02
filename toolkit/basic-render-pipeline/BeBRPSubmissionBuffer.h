@@ -7,7 +7,8 @@
 #include <umbrellas/include-glm.h>
 #include <wrl/client.h>
 
-#include "BeModel.h"
+#include "BeMesh.h"
+#include "BeProp.h"
 
 class BeTexture;
 
@@ -15,14 +16,14 @@ using Microsoft::WRL::ComPtr;
 
 struct BeBRPGeometryEntry {
     glm::mat4 ModelMatrix;
-    std::shared_ptr<BeModel> Model;
+    std::shared_ptr<BeProp> Prop;
     bool CastShadows;
-    
+
     static auto CalculateModelMatrix(
         glm::vec3 pos,
         glm::quat rot,
         glm::vec3 scale
-    ) -> glm::mat4; 
+    ) -> glm::mat4;
 };
 
 struct BeBRPSunLightEntry {
@@ -36,9 +37,9 @@ struct BeBRPSunLightEntry {
     glm::mat4 ShadowViewProjection;
     uint32_t ShadowMapResolution;
     std::weak_ptr<BeTexture> ShadowMap;
-    
+
     static auto CalculateViewProj(
-        glm::vec3 direction,    
+        glm::vec3 direction,
         float shadowCameraDistance,
         float shadowMapWorldSize,
         float shadowNearPlane,
@@ -55,14 +56,14 @@ struct BeBRPPointLightEntry {
     bool CastsShadows;
     uint32_t ShadowMapResolution;
     float ShadowNearPlane;
-    std::weak_ptr<BeTexture> ShadowMap; 
+    std::weak_ptr<BeTexture> ShadowMap;
 };
 
 class BeBRPSubmissionBuffer {
 
     hide
     ComPtr<ID3D11Device> _device;
-    
+
     hide
     std::vector<BeBRPGeometryEntry> _geometryEntries;
     std::vector<BeBRPSunLightEntry> _sunLightEntries;
@@ -70,31 +71,31 @@ class BeBRPSubmissionBuffer {
 
     ComPtr<ID3D11Buffer> _sharedVertexBuffer;
     ComPtr<ID3D11Buffer> _sharedIndexBuffer;
-    std::unordered_map<BeModel*, std::vector<BeDrawSlice>> _modelDrawSlices;
-    std::vector<std::shared_ptr<BeModel>> _registeredModels;
-    
+    std::unordered_map<BeMesh*, std::vector<BeMeshSlice>> _meshSlices;
+    std::vector<std::shared_ptr<BeMesh>> _registeredMeshes;
+
     expose
     explicit BeBRPSubmissionBuffer() = default;
     ~BeBRPSubmissionBuffer() = default;
 
     auto Init (const ComPtr<ID3D11Device>& device) -> void;
-    
+
     expose
     auto ClearEntries () -> void;
     auto SubmitGeometry (const BeBRPGeometryEntry& entry) -> void;
     auto SubmitSunLight(const BeBRPSunLightEntry& entry) -> void;
     auto SubmitPointLight(const BeBRPPointLightEntry& entry) -> void;
-    
+
     expose
     auto GetGeometryEntries () const -> const std::vector<BeBRPGeometryEntry>&;
     auto GetSunLightEntries () const -> const std::vector<BeBRPSunLightEntry>&;
     auto GetPointLightEntries () const -> const std::vector<BeBRPPointLightEntry>&;
 
     expose
-    auto RegisterModel (const std::shared_ptr<BeModel>& model) -> void;
-    auto BakeModels () -> void;
-    auto GetDrawSlicesForModel(const std::shared_ptr<BeModel>& model) const -> const std::vector<BeDrawSlice>& { return _modelDrawSlices.at(model.get()); }
-    
+    auto RegisterMesh (const std::shared_ptr<BeMesh>& mesh) -> void;
+    auto BakeMeshes () -> void;
+    auto GetMeshSlices(BeMesh* mesh) const -> const std::vector<BeMeshSlice>& { return _meshSlices.at(mesh); }
+
     auto GetSharedVertexBuffer() const -> ComPtr<ID3D11Buffer> { return _sharedVertexBuffer; }
     auto GetSharedIndexBuffer() const -> ComPtr<ID3D11Buffer> { return _sharedIndexBuffer; }
 };

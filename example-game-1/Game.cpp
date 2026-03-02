@@ -45,7 +45,7 @@ auto Game::SetupScenes() -> void {
     SceneManager->GetScene<MenuScene>("menu")->Prepare();
     SceneManager->GetScene<MainScene>("main")->Prepare();
 
-    SubmissionBuffer->BakeModels();
+    SubmissionBuffer->BakeMeshes();
 
     SceneManager->RequestSceneChange("menu");
     SceneManager->ApplyPendingSceneChange();

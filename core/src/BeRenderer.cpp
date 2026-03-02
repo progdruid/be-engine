@@ -4,7 +4,6 @@
 #include <scope_guard/scope_guard.hpp>
 #include <dxgi1_6.h>
 
-#include "BeModel.h"
 #include "BePipeline.h"
 #include "BeRenderPass.h"
 #include "BeShader.h"

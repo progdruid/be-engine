@@ -2,7 +2,6 @@
 
 #include "BeAssetRegistry.h"
 #include "BeMaterial.h"
-#include "BeModel.h"
 #include "BeTexture.h"
 
 auto BePipeline::Create(const ComPtr<ID3D11DeviceContext>& context)-> std::shared_ptr<BePipeline> {
@@ -185,10 +184,6 @@ auto BePipeline::Draw(uint32_t vertexCount, uint32_t startVertexLocation) const 
     _context->Draw(vertexCount, startVertexLocation);
 }
 
-auto BePipeline::DrawSlice(const BeDrawSlice& slice) const -> void {
-    _context->DrawIndexed(
-        slice.IndexCount,
-        slice.StartIndexLocation,
-        slice.BaseVertexLocation
-    );
+auto BePipeline::DrawIndexed(uint32_t indexCount, uint32_t startIndex, int32_t baseVertex) const -> void {
+    _context->DrawIndexed(indexCount, startIndex, baseVertex);
 }

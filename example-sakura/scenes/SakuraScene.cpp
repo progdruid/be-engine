@@ -9,7 +9,7 @@
 #include "BeCamera.h"
 #include "BeInput.h"
 #include "BeMaterial.h"
-#include "BeModel.h"
+#include "BeProp.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
@@ -55,32 +55,32 @@ auto SakuraScene::Prepare() -> void {
     const auto standardShader = BeAssetRegistry::GetShader("standard");
     const auto checkerboardShader = BeAssetRegistry::GetShader("checkerboard");
     
-    _cube = BeModel::Create("assets/cube.glb", checkerboardShader, *GameIns->Renderer);
-    _cube->Materials[0]->SetTexture("DiffuseTexture", 
+    _cube = BeProp::Create("assets/cube.glb", checkerboardShader, *GameIns->Renderer);
+    _cube->Materials[0]->SetTexture("DiffuseTexture",
         BeTexture::Create("Checkerboard")
         .LoadFromFile("assets/checkerboard.png")
         .AddToRegistry()
         .Build(device)
-    ); 
-    
-    _emissiveCube = BeModel::Create("assets/cube.glb", standardShader, *GameIns->Renderer);
+    );
+
+    _emissiveCube = BeProp::Create("assets/cube.glb", standardShader, *GameIns->Renderer);
     _emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.99f, 0.8f, 0.6f) * 1.7f);
-    
-    _anvil = BeModel::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
+
+    _anvil = BeProp::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
     _anvil->Materials[0]->SetFloat3("SpecularColor", glm::vec3(1.0f));
     _anvil->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
 
-    _sakura = BeModel::Create("assets/sakura/scene.gltf", standardShader, *GameIns->Renderer);
+    _sakura = BeProp::Create("assets/sakura/scene.gltf", standardShader, *GameIns->Renderer);
     _sakura->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("linear-wrap"));
-    
-    _sakura2 = BeModel::Create("assets/stylized_sakura_tree.glb", standardShader, *GameIns->Renderer);
+
+    _sakura2 = BeProp::Create("assets/stylized_sakura_tree.glb", standardShader, *GameIns->Renderer);
     //_sakura2->Materials[0]
-    
-    GameIns->SubmissionBuffer->RegisterModel(_cube);
-    GameIns->SubmissionBuffer->RegisterModel(_anvil);
-    GameIns->SubmissionBuffer->RegisterModel(_sakura);
-    GameIns->SubmissionBuffer->RegisterModel(_sakura2);
-    GameIns->SubmissionBuffer->RegisterModel(_emissiveCube);
+
+    GameIns->SubmissionBuffer->RegisterMesh(_cube->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(_anvil->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(_sakura->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(_sakura2->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(_emissiveCube->Mesh);
 
     GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
 
@@ -227,12 +227,12 @@ auto SakuraScene::OnLoad() -> void {
     CreateEntity(_registry
         ,NameComponent { .Name = "Cube" }
         ,TransformComponent { .Position = glm::vec3(15, -30, -15), .Rotation = glm::quat(), .Scale = glm::vec3(30) }
-        ,RenderComponent { .Model = _cube, .CastShadows = true }
+        ,RenderComponent { .Prop = _cube, .CastShadows = true }
     );
 
     CreateEntity(_registry
         ,NameComponent { .Name = "Anvil1" }
-        ,RenderComponent { .Model = _anvil }
+        ,RenderComponent { .Prop = _anvil }
         ,TransformComponent { 
             .Position = {0, 0, 0}, 
             .Rotation = glm::quat(glm::vec3(0, 0_rad, 0)), 
@@ -242,7 +242,7 @@ auto SakuraScene::OnLoad() -> void {
     
     //CreateEntity(_registry
     //    ,NameComponent { .Name = "Sakura" }
-    //    ,RenderComponent { .Model = _sakura }
+    //    ,RenderComponent { .Prop = _sakura }
     //    ,TransformComponent { 
     //        .Position = {-7.5, 0, 0}, 
     //        .Rotation = glm::quat(glm::vec3(0, 45.0_rad, 0)), 
@@ -252,7 +252,7 @@ auto SakuraScene::OnLoad() -> void {
     
     CreateEntity(_registry
         ,NameComponent { .Name = "Sakura2" }
-        ,RenderComponent { .Model = _sakura2 }
+        ,RenderComponent { .Prop = _sakura2 }
         ,TransformComponent { 
             .Position = {-3.f, -5.5, 2}, 
             .Rotation = glm::quat(glm::vec3(0, 45.0_rad, 0)), 
@@ -302,7 +302,7 @@ auto SakuraScene::OnLoad() -> void {
                     .Build(device)
             }
             ,RenderComponent {
-                .Model = _emissiveCube,
+                .Prop = _emissiveCube,
                 .CastShadows = false,
             }
         );
@@ -323,7 +323,7 @@ auto SakuraScene::OnLoad() -> void {
             ,NameComponent { .Name = "Star_" + std::to_string(i) }
             ,TransformComponent { .Position = glm::vec3(x, y, z), .Scale = glm::vec3(0.1f) }
             ,RenderComponent {
-                .Model = _emissiveCube,
+                .Prop = _emissiveCube,
                 .CastShadows = false,
             }
         );
@@ -382,7 +382,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     GameIns->SubmissionBuffer->ClearEntries();
     for (const auto [entity, transform, render] : GeometryView.each()) {
         auto entry = BeBRPGeometryEntry();
-        entry.Model = render.Model;
+        entry.Prop = render.Prop;
         entry.CastShadows = render.CastShadows;
         entry.ModelMatrix = BeBRPGeometryEntry::CalculateModelMatrix(
             transform.Position,

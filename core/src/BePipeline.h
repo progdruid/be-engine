@@ -6,7 +6,6 @@
 
 #include "BeShader.h"
 
-struct BeDrawSlice;
 class BeTexture;
 class BeMaterial;
 using Microsoft::WRL::ComPtr;
@@ -67,5 +66,5 @@ class BePipeline {
     
     expose
     auto Draw(uint32_t vertexCount, uint32_t startVertexLocation) const -> void;
-    auto DrawSlice(const BeDrawSlice& slice) const -> void;
+    auto DrawIndexed(uint32_t indexCount, uint32_t startIndex, int32_t baseVertex) const -> void;
 };
