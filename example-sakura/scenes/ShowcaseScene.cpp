@@ -8,6 +8,7 @@
 #include "BeCamera.h"
 #include "BeInput.h"
 #include "BeMaterial.h"
+#include "BeMeshPrimitives.h"
 #include "BeProp.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
@@ -136,7 +137,7 @@ auto ShowcaseScene::LoadModels() -> void {
     BeAssetRegistry::AddProp("tomatoes", tomatoes);
 
 
-    auto skycube = BeProp::Create("assets/cube.glb", standardShader, *GameIns->Renderer);
+    auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, *GameIns->Renderer);
     skycube->Materials[0]->SetFloat3("DiffuseColor", HexColor("#FAC8CD"));
     BeAssetRegistry::AddProp("skycube", skycube);
 
@@ -165,7 +166,7 @@ auto ShowcaseScene::CreateObjects() -> void {
     
     CreateEntity(_registry
         ,NameComponent { .Name = "skycube" }
-        ,TransformComponent { .Position = glm::vec3(50, -50, -50), .Rotation = glm::quat(), .Scale = glm::vec3(100) }
+        ,TransformComponent { .Position = glm::vec3(0, 0, 0), .Rotation = glm::quat(), .Scale = glm::vec3(100) }
         ,RenderComponent { .Prop = BeAssetRegistry::GetProp("skycube").lock(), .CastShadows = false }
     );
     

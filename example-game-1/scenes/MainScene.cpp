@@ -8,6 +8,7 @@
 #include "BeInput.h"
 #include "BeMaterial.h"
 #include "BeMesh.h"
+#include "BeMeshPrimitives.h"
 #include "BeProp.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
@@ -68,7 +69,13 @@ auto MainScene::Prepare() -> void {
     const auto standardShader = BeAssetRegistry::GetShader("standard");
     const auto tessellatedShader = BeAssetRegistry::GetShader("tessellated");
     
-    _plane = CreatePlane(64);
+    {
+        auto planeMesh = BeMeshPrimitives::Plane(63);
+        const auto terrainShader = BeAssetRegistry::GetShader("terrain");
+        _plane = BeProp::FromMesh(std::move(planeMesh), terrainShader, *GameIns->Renderer);
+        _plane->Slices[0].Material->SetFloat("TerrainScale", 200.0f);
+        _plane->Slices[0].Material->SetFloat("HeightScale", 100.0f);
+    }
     _witchItems = BeProp::Create("assets/witch_items.glb", standardShader, *GameIns->Renderer);
     _cube = BeProp::Create("assets/cube.glb", tessellatedShader, *GameIns->Renderer);
     _cube->Materials[0]->SetFloat3("DiffuseColor", glm::vec3(0.28, 0.39, 1.0));
@@ -388,63 +395,6 @@ auto MainScene::Tick(float deltaTime) -> void {
         //    .CastShadows = render.CastShadows,
         //});
     });
-}
-
-auto MainScene::CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeProp> {
-    auto mesh = std::make_shared<BeMesh>();
-
-    const float cellSize = 1.0f / (verticesPerSide - 1);
-
-    mesh->Vertices.reserve(verticesPerSide * verticesPerSide);
-    for (int y = 0; y < verticesPerSide; ++y) {
-        for (int x = 0; x < verticesPerSide; ++x) {
-            BeFullVertex vertex{};
-
-            float posX = x * cellSize - 0.5f;
-            float posZ = y * cellSize - 0.5f;
-
-            vertex.Position = {-posX, 0.0f, posZ};
-            vertex.Normal = {0.0f, 1.0f, 0.0f};
-            vertex.Color = {1.0f, 1.0f, 1.0f, 1.0f};
-            vertex.UV0 = {x * cellSize, y * cellSize};
-
-            mesh->Vertices.push_back(vertex);
-        }
-    }
-
-    size_t quadsPerSide = verticesPerSide - 1;
-    mesh->Indices.reserve(quadsPerSide * quadsPerSide * 6);
-
-    for (int y = 0; y < quadsPerSide; ++y) {
-        for (int x = 0; x < quadsPerSide; ++x) {
-            uint32_t topLeft = y * verticesPerSide + x;
-            uint32_t topRight = y * verticesPerSide + (x + 1);
-            uint32_t bottomLeft = (y + 1) * verticesPerSide + x;
-            uint32_t bottomRight = (y + 1) * verticesPerSide + (x + 1);
-
-            mesh->Indices.push_back(topLeft);
-            mesh->Indices.push_back(topRight);
-            mesh->Indices.push_back(bottomLeft);
-
-            mesh->Indices.push_back(topRight);
-            mesh->Indices.push_back(bottomRight);
-            mesh->Indices.push_back(bottomLeft);
-        }
-    }
-
-    mesh->Slices.push_back({
-        .IndexCount = static_cast<uint32_t>(mesh->Indices.size()),
-        .StartIndexLocation = 0,
-        .BaseVertexLocation = 0,
-    });
-
-    const auto shader = BeAssetRegistry::GetShader("terrain");
-    auto prop = BeProp::FromMesh(std::move(mesh), shader, *GameIns->Renderer);
-
-    prop->Slices[0].Material->SetFloat("TerrainScale", 200.0f);
-    prop->Slices[0].Material->SetFloat("HeightScale", 100.0f);
-
-    return prop;
 }
 
 

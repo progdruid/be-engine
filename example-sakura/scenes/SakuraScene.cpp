@@ -9,6 +9,7 @@
 #include "BeCamera.h"
 #include "BeInput.h"
 #include "BeMaterial.h"
+#include "BeMeshPrimitives.h"
 #include "BeProp.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
@@ -55,7 +56,7 @@ auto SakuraScene::Prepare() -> void {
     const auto standardShader = BeAssetRegistry::GetShader("standard");
     const auto checkerboardShader = BeAssetRegistry::GetShader("checkerboard");
     
-    _cube = BeProp::Create("assets/cube.glb", checkerboardShader, *GameIns->Renderer);
+    _cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), checkerboardShader, *GameIns->Renderer);
     _cube->Materials[0]->SetTexture("DiffuseTexture",
         BeTexture::Create("Checkerboard")
         .LoadFromFile("assets/checkerboard.png")
@@ -63,7 +64,7 @@ auto SakuraScene::Prepare() -> void {
         .Build(device)
     );
 
-    _emissiveCube = BeProp::Create("assets/cube.glb", standardShader, *GameIns->Renderer);
+    _emissiveCube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, *GameIns->Renderer);
     _emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.99f, 0.8f, 0.6f) * 1.7f);
 
     _anvil = BeProp::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
@@ -226,7 +227,7 @@ auto SakuraScene::OnLoad() -> void {
     
     CreateEntity(_registry
         ,NameComponent { .Name = "Cube" }
-        ,TransformComponent { .Position = glm::vec3(15, -30, -15), .Rotation = glm::quat(), .Scale = glm::vec3(30) }
+        ,TransformComponent { .Position = glm::vec3(0, -15, 0), .Rotation = glm::quat(), .Scale = glm::vec3(30) }
         ,RenderComponent { .Prop = _cube, .CastShadows = true }
     );
 
@@ -288,7 +289,7 @@ auto SakuraScene::OnLoad() -> void {
             ,PointLightComponent {
                 .Radius = 20.0f,
                 .Color = glm::vec3(0.99f, 0.8f, 0.6f),
-                .Power = (1.0f / 0.7f) * 2.7f,
+                .Power = (1.0f / 0.7f) * 1.7f,
                 .CastsShadows = false,
                 .ShadowMapResolution = 2048,
                 .ShadowNearPlane = 0.1f,

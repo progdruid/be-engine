@@ -47,6 +47,4 @@ class MainScene : public BaseScene {
     auto OnLoad() -> void override;
     auto Tick(float deltaTime) -> void override;
     
-    hide
-    auto CreatePlane(size_t verticesPerSide) -> std::shared_ptr<BeProp>;
 };
