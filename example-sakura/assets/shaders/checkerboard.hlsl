@@ -29,7 +29,8 @@
     "targets": {
         "Diffuse.RGB": 0,
         "WorldNormal.XYZ": 1,
-        "Specular.RGB_Shininess.A": 2
+        "Specular.RGB_Shininess.A": 2,
+        "Emissive.RGB": 3,
     }
 }
 @be-end
@@ -68,6 +69,7 @@ struct PixelOutput {
     float3 DiffuseRGB : SV_Target0;
     float4 WorldNormalXYZ_UnusedA : SV_Target1;
     float4 SpecularRGB_ShininessA : SV_Target2;
+    float3 EmissiveRGB : SV_Target3;
 };
 
 VertexOutput VertexFunction(VertexInput input) {
@@ -117,6 +119,7 @@ PixelOutput PixelFunction(VertexOutput input) {
     output.WorldNormalXYZ_UnusedA.w = 1.0;
     output.SpecularRGB_ShininessA.rgb = triplanarSpecular * _SpecularColor;
     output.SpecularRGB_ShininessA.a = _Shininess / 2048.0;
+    output.EmissiveRGB = (0.f).rrr;
 
     return output;
 };
