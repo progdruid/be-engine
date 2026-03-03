@@ -1,41 +1,31 @@
-﻿#include "BeShader.h"
+#include "BeShader.h"
 
-#include <cassert>
-#include <d3dcompiler.h>
 #include <umbrellas/include-glm.h>
 
 #include "BeRenderer.h"
-#include "BeShaderIncludeHandler.hpp"
+#include "BeShaderCompiler.h"
 #include "BeShaderTools.h"
 #include "Utils.h"
 #include <umbrellas/include-libassert.h>
 
-std::string BeShader::StandardShaderIncludePath = "src/shaders/";
-
 auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader> {
     be_assert(
-        std::filesystem::exists(filePath), 
+        std::filesystem::exists(filePath),
         "Shader file doesn't exist: " + filePath.string()
     );
-    
+
     const auto& device = renderer.GetDevice();
     auto shader = std::make_shared<BeShader>();
-    
+
     auto src = BeShaderTools::ReadFile(filePath);
     auto [header, shaderName] = BeShaderTools::ParseFor(src, "@be-shader:");
     shader->Name = shaderName;
-    
-    BeShaderIncludeHandler includeHandler(
-        filePath.parent_path().string(),
-        StandardShaderIncludePath
-    );
-    
+
     if (header.contains("materials")) {
         shader->HasMaterial = true;
         const auto& materialLinksJson = header.at("materials");
 
         for (const auto& materialLinkJson : materialLinksJson.items()) {
-
             auto linkName = std::string(materialLinkJson.key());
             auto schemeName = std::string(materialLinkJson.value()["scheme"]);
             auto schemeSlot = uint8_t(materialLinkJson.value()["slot"]);
@@ -45,7 +35,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
             shader->_materialSlotsByScheme[schemeName] = schemeSlot;
         }
     }
-    
+
     {
         be_assert(header.contains("topology"), "", filePath);
         const auto& topology = header.at("topology");
@@ -63,33 +53,25 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
             be_assert(false, "Unsupported topology", filePath);
         }
     }
-    
-    auto shaderErrMsgLambda = [&](const std::pair<HRESULT, ComPtr<ID3DBlob>>& err, const std::string& shaderStage) -> std::string {
-        auto hrText = std::string (BeShaderTools::Trim(Utils::HResultToStr(err.first), " \n\r\t"));
-        auto dxText = std::string("D3D Compiler didn't produce an error message.");
-        if (err.second) {
-            dxText = std::string (static_cast<const char*>(err.second->GetBufferPointer()) );
-        }
-        return 
-        "1. Shader compilation error. \n"
-        "2. Path to shader: " + filePath.string() + "\n"
-        "3. Shader stage that failed: " + shaderStage + "\n"
-        "4. HRESULT: " + hrText + "\n"
-        "5. Compiler output: " + dxText + "\n"
-        "\n"
-        "Source code:\n\n" + src + "\n\n Source code end.";
+
+    auto shaderErrMsg = [&](const std::string& err, const std::string& stage) -> std::string {
+        return
+            "1. Shader compilation error.\n"
+            "2. Path to shader: " + filePath.string() + "\n"
+            "3. Shader stage that failed: " + stage + "\n"
+            "4. Compiler output:\n" + err + "\n"
+            "5. Source code:\n\n" + src;
     };
-    
+
     if (header.contains("vertex")) {
         shader->ShaderType = BeShaderType::Vertex;
 
         auto vertexFunctionName = std::string(header.at("vertex"));
-        auto result = CompileBlob(src, vertexFunctionName.c_str(), "vs_5_0", &includeHandler);
-        be_assert(result, shaderErrMsgLambda(result.error(), "vertex"));
-        auto blob = result.value();
-        Utils::Check << device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->VertexShader);
+        auto result = BeShaderCompiler::Compile(filePath, vertexFunctionName, SLANG_STAGE_VERTEX);
+        be_assert(result, shaderErrMsg(result.error(), "vertex"));
+        auto& blob = result.value();
+        Utils::Check << device->CreateVertexShader(blob->getBufferPointer(), blob->getBufferSize(), nullptr, &shader->VertexShader);
 
-        //input layout
         if (header.contains("vertexLayout")) {
             auto vertexLayoutJson = header["vertexLayout"];
 
@@ -102,7 +84,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                     {"normal", "NORMAL"},
                     {"color3", "COLOR"},
                     {"color4", "COLOR"},
-                    {"uv0", "TEXCOORD"}, //????????
+                    {"uv0", "TEXCOORD"},
                     {"uv1", "TEXCOORD1"},
                     {"uv2", "TEXCOORD2"},
                 };
@@ -133,15 +115,15 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                 elementDesc.AlignedByteOffset = ElementOffsets.at(vertexSemanticName);
                 elementDesc.SemanticName = SemanticNames.at(vertexSemanticName);
                 elementDesc.Format = ElementFormats.at(vertexSemanticName);
-                
+
                 inputLayout.push_back(elementDesc);
             }
 
             Utils::Check << renderer.GetDevice()->CreateInputLayout(
                 inputLayout.data(),
                 static_cast<UINT>(inputLayout.size()),
-                blob->GetBufferPointer(),
-                blob->GetBufferSize(),
+                blob->getBufferPointer(),
+                blob->getBufferSize(),
                 &shader->ComputedInputLayout);
         }
     }
@@ -153,32 +135,32 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         auto hullFunctionName = std::string(tesselation.at("hull"));
         auto domainFunctionName = std::string(tesselation.at("domain"));
 
+        auto hullResult = BeShaderCompiler::Compile(filePath, hullFunctionName, SLANG_STAGE_HULL);
+        be_assert(hullResult, shaderErrMsg(hullResult.error(), "hull"));
+        auto domainResult = BeShaderCompiler::Compile(filePath, domainFunctionName, SLANG_STAGE_DOMAIN);
+        be_assert(domainResult, shaderErrMsg(domainResult.error(), "domain"));
 
-        auto hullResult = CompileBlob(src, hullFunctionName.c_str(), "hs_5_0", &includeHandler);
-        be_assert(hullResult, shaderErrMsgLambda(hullResult.error(), "hull"));
-        auto domainResult = CompileBlob(src, domainFunctionName.c_str(), "ds_5_0", &includeHandler); 
-        be_assert(domainResult, shaderErrMsgLambda(domainResult.error(), "domain"));
-        ComPtr<ID3DBlob> hullBlob = hullResult.value();
-        ComPtr<ID3DBlob> domainBlob = domainResult.value();
-        Utils::Check << device->CreateHullShader(hullBlob->GetBufferPointer(), hullBlob->GetBufferSize(), nullptr, &shader->HullShader);
-        Utils::Check << device->CreateDomainShader(domainBlob->GetBufferPointer(), domainBlob->GetBufferSize(), nullptr, &shader->DomainShader);
+        auto& hullBlob = hullResult.value();
+        auto& domainBlob = domainResult.value();
+        Utils::Check << device->CreateHullShader(hullBlob->getBufferPointer(), hullBlob->getBufferSize(), nullptr, &shader->HullShader);
+        Utils::Check << device->CreateDomainShader(domainBlob->getBufferPointer(), domainBlob->getBufferSize(), nullptr, &shader->DomainShader);
     }
-    
+
     if (header.contains("pixel")) {
         be_assert(header.contains("targets"), "", filePath);
         shader->ShaderType = shader->ShaderType | BeShaderType::Pixel;
 
         std::string pixelFunctionName = header.at("pixel");
-        auto result = CompileBlob(src, pixelFunctionName.c_str(), "ps_5_0", &includeHandler);
-        be_assert(result, shaderErrMsgLambda(result.error(), "pixel"));
-        auto blob = result.value();
-        Utils::Check << device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->PixelShader);
+        auto result = BeShaderCompiler::Compile(filePath, pixelFunctionName, SLANG_STAGE_PIXEL);
+        be_assert(result, shaderErrMsg(result.error(), "pixel"));
+        auto& blob = result.value();
+        Utils::Check << device->CreatePixelShader(blob->getBufferPointer(), blob->getBufferSize(), nullptr, &shader->PixelShader);
 
         Json targets = header.at("targets");
         for (const auto& target : targets.items()) {
             const std::string& targetName = target.key();
             uint32_t targetSlot = target.value().get<uint32_t>();
-            
+
             be_assert(!shader->PixelTargets.contains(targetName), "", filePath);
             be_assert(!shader->PixelTargetsInverse.contains(targetSlot), "", filePath);
 
@@ -188,36 +170,4 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
     }
 
     return shader;
-}
-
-auto BeShader::CompileBlob(
-    const std::string& src,
-    const char* entrypointName,
-    const char* target,
-    BeShaderIncludeHandler* includeHandler
-) -> 
-std::expected <
-    ComPtr<ID3DBlob>, 
-    std::pair<HRESULT, ComPtr<ID3DBlob>>
-> 
-{
-    
-    ComPtr<ID3DBlob> shaderBlob, errorBlob;
-    const auto result = D3DCompile(
-        src.c_str(),
-        src.length(),
-        nullptr,
-        nullptr,
-        includeHandler,
-        entrypointName,
-        target,
-        0, 0,
-        &shaderBlob,
-        &errorBlob);
-    if (FAILED(result)) {
-        auto err = std::pair<HRESULT, ComPtr<ID3DBlob>>(result, errorBlob);
-        return std::unexpected(err);
-    }
-    
-    return shaderBlob;
 }

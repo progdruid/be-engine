@@ -117,7 +117,7 @@ PixelOutput PixelFunction(VertexOutput input) {
     output.DiffuseRGB = triplanarDiffuse.rgb * _DiffuseColor;
     output.WorldNormalXYZ_UnusedA.xyz = input.Normal;
     output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = triplanarSpecular * _SpecularColor;
+    output.SpecularRGB_ShininessA.rgb = triplanarSpecular.xyz * _SpecularColor;
     output.SpecularRGB_ShininessA.a = _Shininess / 2048.0;
     output.EmissiveRGB = (0.f).rrr;
 

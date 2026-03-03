@@ -35,11 +35,13 @@ project "core"
         "vendor/libassert/include",
         "vendor/cpptrace/include",
         "vendor/Assimp/include",
+        "vendor/slang/include",
         "vendor"
     }
     libdirs {
         "vendor/glfw/lib-vc2022",
-        "vendor/Assimp/lib/x64"
+        "vendor/Assimp/lib/x64",
+        "vendor/slang/lib"
     }
     links {
         "glfw3",
@@ -48,7 +50,9 @@ project "core"
         -- directx 11
         "d3d11",
         "dxgi",
-        "d3dcompiler",
+
+        -- slang
+        "slang-compiler",
 
         -- libassert + cpptrace
         "libassert",

@@ -7,6 +7,7 @@
 #include "BePipeline.h"
 #include "BeRenderPass.h"
 #include "BeShader.h"
+#include "BeShaderCompiler.h"
 #include "Utils.h"
 
 auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
@@ -104,6 +105,8 @@ auto BeRenderer::LaunchDevice() -> void {
     const auto& hwnd = _hwnd;
     Utils::Check << _factory->CreateSwapChainForHwnd(_device.Get(), hwnd, &scDesc, nullptr, nullptr, &_swapchain);
     Utils::Check << _factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
+
+    BeShaderCompiler::Launch();
 
     _pipeline = BePipeline::Create(_context);
     

@@ -20,7 +20,8 @@ obj/
 *.vcxproj.user
 *.vcxproj.filters
 
-!vendor/Assimp/
+!vendor/Assimp/**
+!vendor/slang/**
 
 # Premake executable (explicitly include)
 !premake5.exe

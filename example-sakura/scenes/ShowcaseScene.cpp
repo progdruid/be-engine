@@ -99,7 +99,6 @@ auto ShowcaseScene::CreateTargetTextures() -> void {
     .Build(device);
 }
 
-
 auto ShowcaseScene::LoadModels() -> void {
     auto device = GameIns->Renderer->GetDevice();
     
@@ -139,7 +138,9 @@ auto ShowcaseScene::LoadModels() -> void {
 
     auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, *GameIns->Renderer);
     skycube->Materials[0]->SetFloat3("DiffuseColor", HexColor("#FAC8CD"));
+    skycube->Slices[0].TwoSided = true;
     BeAssetRegistry::AddProp("skycube", skycube);
+    
 
     GameIns->SubmissionBuffer->RegisterMesh(skycube->Mesh);
     GameIns->SubmissionBuffer->RegisterMesh(ramen->Mesh);
