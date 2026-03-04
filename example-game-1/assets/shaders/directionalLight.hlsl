@@ -28,7 +28,7 @@
         "main": { "scheme": "directional-light-material", "slot": 2 },
     },
     "targets": {
-        "LightHDR": 0
+        "LightHDR": { "type": "float3", "slot": 0 }
     }
 }
 @be-end

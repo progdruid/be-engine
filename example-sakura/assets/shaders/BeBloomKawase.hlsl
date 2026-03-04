@@ -19,7 +19,7 @@
         "main": { "scheme": "bloom-kawase-material", "slot": 2 },
     },
     "targets": {
-        "BloomMipOutput": 0
+        "BloomMipOutput": { "type": "float3", "slot": 0 }
     },
 }
 @be-end

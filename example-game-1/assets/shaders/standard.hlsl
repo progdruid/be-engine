@@ -27,9 +27,10 @@
         "geometry-main": { "scheme": "standard-material-for-geometry-pass", "slot": 2 },
     },
     "targets": {
-        "Diffuse.RGB": 0,
-        "WorldNormal.XYZ": 1,
-        "Specular.RGB_Shininess.A": 2
+        "DiffuseRGB":             { "type": "float3", "slot": 0 },
+        "WorldNormalXYZ_UnusedA": { "type": "float4", "slot": 1 },
+        "SpecularRGB_ShininessA": { "type": "float4", "slot": 2 },
+        "EmissiveRGB":            { "type": "float3", "slot": 3 },
     }
 }
 @be-end

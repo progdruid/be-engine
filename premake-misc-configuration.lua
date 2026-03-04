@@ -19,4 +19,5 @@ project "misc-configuration"
         "premake-misc-configuration.lua",
         "premake-example-game-1.lua",
         "premake-example-sakura.lua",
+        "premake-devtool-shader-boilerplate-autogen.lua",
     }

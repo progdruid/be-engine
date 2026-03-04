@@ -16,7 +16,7 @@
         "main": { "scheme": "emissive-add-material", "slot": 2 },
     },
     "targets": {
-        "HDROutput": 0
+        "HDROutput": { "type": "float3", "slot": 0 }
     },
 }
 @be-end

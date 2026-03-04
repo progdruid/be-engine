@@ -18,7 +18,7 @@
         "main": { "scheme": "bloom-add-material", "slot": 2 },
     },
     "targets": {
-        "BloomOutput": 0
+        "BloomOutput": { "type": "float3", "slot": 0 }
     },
 }
 @be-end

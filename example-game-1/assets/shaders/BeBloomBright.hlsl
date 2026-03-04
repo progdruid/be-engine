@@ -21,7 +21,7 @@
         "main": { "scheme": "bright-material", "slot": 2 },
     },
     "targets": {
-        "BloomMip": 0
+        "BloomMip": { "type": "float3", "slot": 0 }
     },
 }
 @be-end

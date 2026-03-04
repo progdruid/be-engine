@@ -159,7 +159,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         Json targets = header.at("targets");
         for (const auto& target : targets.items()) {
             const std::string& targetName = target.key();
-            uint32_t targetSlot = target.value().get<uint32_t>();
+            uint32_t targetSlot = target.value()["slot"].get<uint32_t>();
 
             be_assert(!shader->PixelTargets.contains(targetName), "", filePath);
             be_assert(!shader->PixelTargetsInverse.contains(targetSlot), "", filePath);

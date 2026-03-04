@@ -16,7 +16,7 @@
         "main": { "scheme": "tonemapper-material", "slot": 2 },
     },
     "targets": {
-        "HDRTarget": 0
+        "HDRTarget": { "type": "float3", "slot": 0 }
     },
 }
 @be-end

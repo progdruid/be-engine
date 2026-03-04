@@ -16,7 +16,7 @@
         "main": { "scheme": "backbuffer-material", "slot": 2 },
     },
     "targets": {
-        "Backbuffer": 0
+        "Backbuffer": { "type": "float4", "slot": 0 }
     }
 }
 @be-end
