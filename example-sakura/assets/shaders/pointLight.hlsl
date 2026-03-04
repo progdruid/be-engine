@@ -26,7 +26,7 @@
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "materials": {
-        "main": { "scheme": "point-light-material", "slot": 2 },
+        "main": { "scheme": "point-light-material", "slot": 2, "var": "PointLight" },
     },
     "targets": {
         "LightHDR": { "type": "float3", "slot": 0 }
@@ -55,6 +55,10 @@ Texture2D Specular_Shininess : register(t3);
 TextureCube PointLightShadowMap : register(t4);
 SamplerState InputSampler : register(s0);
 
+cbuffer CBuffer2 : register(b2) {
+    point_light_material _PointLight;
+};
+
 struct PixelOutput {
     float3 LightHDR : SV_Target0;
 };
@@ -65,10 +69,6 @@ struct PixelOutput {
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
 #include "fullscreen-vertex.hlsl"
-
-cbuffer PointLightBuffer: register(b2) {
-    point_light_material _PointLight;
-};
 
 float SamplePointLightShadow(float3 worldPos) {
     float3 lightDir = worldPos - _PointLight.Position;

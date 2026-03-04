@@ -41,6 +41,8 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "objectMaterial.hlsl"
+
 struct standard_material_for_geometry_pass {
     float3 DiffuseColor;
     float3 SpecularColor;
@@ -52,6 +54,14 @@ Texture2D DiffuseTexture : register(t0);
 Texture2D SpecularTexture : register(t1);
 Texture2D EmissiveTexture : register(t2);
 SamplerState InputSampler : register(s0);
+
+cbuffer CBuffer1 : register(b1) {
+    object_material_for_geometry_pass _GeometryObject;
+};
+
+cbuffer CBuffer2 : register(b2) {
+    standard_material_for_geometry_pass _GeometryMain;
+};
 
 struct VertexInput {
     float3 Position : POSITION;
@@ -69,16 +79,6 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "objectMaterial.hlsl"
-
-cbuffer ModelBuffer: register(b1) {
-    object_material_for_geometry_pass _Object;
-};
-
-cbuffer MaterialBuffer: register(b2) {
-    standard_material_for_geometry_pass _Material;
-};
-
 struct VertexOutput {
     float4 Position : SV_POSITION;
     float3 Normal : NORMAL;
@@ -86,11 +86,11 @@ struct VertexOutput {
 };
 
 VertexOutput VertexFunction(VertexInput input) {
-    float4 worldPosition = mul(float4(input.Position, 1.0), _Object.Model);
+    float4 worldPosition = mul(float4(input.Position, 1.0), _GeometryObject.Model);
     
     VertexOutput output;
-    output.Position = mul(worldPosition, _Object.ProjectionView);
-    output.Normal = normalize(mul(input.Normal, (float3x3)_Object.Model));
+    output.Position = mul(worldPosition, _GeometryObject.ProjectionView);
+    output.Normal = normalize(mul(input.Normal, (float3x3)_GeometryObject.Model));
     output.UV = input.UV;
 
     return output;
@@ -103,12 +103,12 @@ PixelOutput PixelFunction(VertexOutput input) {
     float3 emissiveColor = EmissiveTexture.Sample(InputSampler, input.UV).rgb;
     
     PixelOutput output;
-    output.DiffuseRGB = diffuseColor.rgb * _Material.DiffuseColor;
+    output.DiffuseRGB = diffuseColor.rgb * _GeometryMain.DiffuseColor;
     output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
     output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = specularColor.rgb * _Material.SpecularColor;
-    output.SpecularRGB_ShininessA.a = _Material.Shininess / 2048.0;
-    output.EmissiveRGB = emissiveColor.rgb * _Material.EmissiveColor;
+    output.SpecularRGB_ShininessA.rgb = specularColor.rgb * _GeometryMain.SpecularColor;
+    output.SpecularRGB_ShininessA.a = _GeometryMain.Shininess / 2048.0;
+    output.EmissiveRGB = emissiveColor.rgb * _GeometryMain.EmissiveColor;
     
     return output;
 };

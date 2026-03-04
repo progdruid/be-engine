@@ -25,7 +25,7 @@
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
     "materials": {
-        "main": { "scheme": "directional-light-material", "slot": 2 },
+        "main": { "scheme": "directional-light-material", "slot": 2, "var": "DirectionalLight" },
     },
     "targets": {
         "LightHDR": { "type": "float3", "slot": 0 }
@@ -57,16 +57,16 @@ Texture2D Specular_Shininess : register(t3);
 Texture2D ShadowMap : register(t4);
 SamplerState InputSampler : register(s0);
 
+cbuffer CBuffer2 : register(b2) {
+    directional_light_material _DirectionalLight;
+};
+
 struct PixelOutput {
     float3 LightHDR : SV_Target0;
 };
 
 // endregion
 /*========================================================*/
-
-cbuffer DirectionalLightBuffer: register(b2) {
-    directional_light_material _DirectionalLight;
-};
 
 
 float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float texelSize, float currentDepth) {

@@ -39,6 +39,10 @@ struct bloom_bright_material {
 Texture2D HDRInput : register(t0);
 SamplerState InputSampler : register(s0);
 
+cbuffer CBuffer2 : register(b2) {
+    bloom_bright_material _Main;
+};
+
 struct PixelOutput {
     float3 BloomMip : SV_Target0;
 };
@@ -48,17 +52,13 @@ struct PixelOutput {
 
 #include "fullscreen-vertex.hlsl"
 
-cbuffer MaterialConstants : register(b2) {
-    bloom_bright_material _Material;
-};
-
 PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 hdrColor = HDRInput.Sample(InputSampler, input.UV).rgb; // linear sampler
 
     float luminance = dot(hdrColor, float3(0.2126, 0.7152, 0.0722));
-    float brightPart = saturate((luminance - _Material.Threshold) * rcp(max(luminance, 0.0001)));
-    float kneeFactor = smoothstep(_Material.Threshold, _Material.Threshold + _Material.Knee, luminance);
-    float3 brightColor = hdrColor * brightPart * kneeFactor * _Material.Intensity;
+    float brightPart = saturate((luminance - _Main.Threshold) * rcp(max(luminance, 0.0001)));
+    float kneeFactor = smoothstep(_Main.Threshold, _Main.Threshold + _Main.Knee, luminance);
+    float3 brightColor = hdrColor * brightPart * kneeFactor * _Main.Intensity;
     
     PixelOutput output;
     output.BloomMip = brightColor;

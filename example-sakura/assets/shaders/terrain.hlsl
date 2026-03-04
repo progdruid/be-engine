@@ -27,7 +27,7 @@
     "pixel": "PixelFunction",
     "materials": {
         "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
-        "geometry-main": { "scheme": "terrain-main-material-for-geometry-pass", "slot": 2 },
+        "geometry-main": { "scheme": "terrain-main-material-for-geometry-pass", "slot": 2, "var": "Terrain" },
     },
     "targets": {
         "DiffuseRGB":             { "type": "float3", "slot": 0 },
@@ -39,25 +39,30 @@
 
 */
 
-#include <BeUniformBuffer.hlsli>
+/*========================================================*/
+// region @be-auto-boilerplate
 #include "objectMaterial.hlsl"
 
-cbuffer ModelBuffer: register(b1) {
-    object_material_for_geometry_pass _Object;
+struct terrain_main_material_for_geometry_pass {
+    float3 DiffuseColor;
+    float3 SpecularColor;
+    float Shininess;
+    float TerrainScale;
+    float HeightScale;
+    float NoiseResolution;
+    float Speed;
 };
 
-cbuffer MaterialBuffer: register(b2) {
-    float3 _DiffuseColor;
-    float3 _SpecularColor;
-    float _Shininess;
-    float _TerrainScale;
-    float _HeightScale;
-    float _NoiseResolution;
-    float _Speed;
-};
-
-SamplerState DefaultSampler : register(s0);
 Texture2D DiffuseTexture : register(t0);
+SamplerState InputSampler : register(s0);
+
+cbuffer CBuffer1 : register(b1) {
+    object_material_for_geometry_pass _GeometryObject;
+};
+
+cbuffer CBuffer2 : register(b2) {
+    terrain_main_material_for_geometry_pass _Terrain;
+};
 
 struct VertexInput {
     float3 Position : POSITION;
@@ -65,17 +70,22 @@ struct VertexInput {
     float2 UV : TEXCOORD0;
 };
 
+struct PixelOutput {
+    float3 DiffuseRGB : SV_Target0;
+    float4 WorldNormalXYZ_UnusedA : SV_Target1;
+    float4 SpecularRGB_ShininessA : SV_Target2;
+};
+
+// endregion
+/*========================================================*/
+
+#include <BeUniformBuffer.hlsli>
+
 struct VertexOutput {
     float4 Position : SV_POSITION;
     nointerpolation float3 Normal : NORMAL;
     float2 UV : TEXCOORD0;
     float3 WorldPosition : TEXCOORD1;
-};
-
-struct PixelOutput {
-    float3 DiffuseRGB : SV_Target0;
-    float4 WorldNormalXYZ_UnusedA : SV_Target1;
-    float4 SpecularRGB_ShininessA : SV_Target2;
 };
 
 //float Hash(float3 p) {
@@ -155,17 +165,17 @@ float terrainFunc (float2 uv, float2 noiseUV) {
 
 VertexOutput VertexFunction(VertexInput input) {
     float2 terrainUV = input.UV;
-    terrainUV *= _NoiseResolution;
-    terrainUV += (_Time * _Speed).rr;
+    terrainUV *= _Terrain.NoiseResolution;
+    terrainUV += (_Time * _Terrain.Speed).rr;
     float terrainHeight = terrainFunc(input.UV, terrainUV) - 0.5;
 
-    float3 displacedPos = input.Position * float3(_TerrainScale, 1.0, _TerrainScale);
-    displacedPos.y += terrainHeight * _HeightScale;
+    float3 displacedPos = input.Position * float3(_Terrain.TerrainScale, 1.0, _Terrain.TerrainScale);
+    displacedPos.y += terrainHeight * _Terrain.HeightScale;
 
-    float4 worldPosition = mul(float4(displacedPos, 1.0), _Object.Model);
+    float4 worldPosition = mul(float4(displacedPos, 1.0), _GeometryObject.Model);
 
     VertexOutput output;
-    output.Position = mul(worldPosition, _Object.ProjectionView);
+    output.Position = mul(worldPosition, _GeometryObject.ProjectionView);
     output.Normal = float3(0, 0, 0); // normal is computed in hull
     output.UV = input.UV;
     output.WorldPosition = worldPosition.xyz;
@@ -220,14 +230,14 @@ VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : 
 }
 
 PixelOutput PixelFunction(VertexOutput input) {
-    float4 diffuseColor = DiffuseTexture.Sample(DefaultSampler, input.UV);
+    float4 diffuseColor = DiffuseTexture.Sample(InputSampler, input.UV);
 
     PixelOutput output;
-    output.DiffuseRGB.rgb = diffuseColor.rgb * _DiffuseColor;
+    output.DiffuseRGB.rgb = diffuseColor.rgb * _Terrain.DiffuseColor;
     output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
     output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = _SpecularColor;
-    output.SpecularRGB_ShininessA.a = _Shininess / 2048.0;
+    output.SpecularRGB_ShininessA.rgb = _Terrain.SpecularColor;
+    output.SpecularRGB_ShininessA.a = _Terrain.Shininess / 2048.0;
 
     return output;
 }

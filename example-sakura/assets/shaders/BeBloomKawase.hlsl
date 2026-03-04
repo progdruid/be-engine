@@ -38,6 +38,10 @@ struct bloom_kawase_material {
 Texture2D BloomMipInput : register(t0);
 SamplerState InputSampler : register(s0);
 
+cbuffer CBuffer2 : register(b2) {
+    bloom_kawase_material _Main;
+};
+
 struct PixelOutput {
     float3 BloomMipOutput : SV_Target0;
 };
@@ -45,12 +49,8 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-cbuffer MaterialConstants : register(b2) {
-    bloom_kawase_material _Material;
-};
-
 PixelOutput PixelFunction(FullscreenVSOutput input) {
-    float2 offset = _Material.TexelSize * _Material.PassRadius;
+    float2 offset = _Main.TexelSize * _Main.PassRadius;
     
     static const float2 offsets[6] = {
         float2( 0.0,      1.384),

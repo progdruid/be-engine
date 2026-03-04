@@ -37,6 +37,23 @@ static auto KebabToSnakeCase(const std::string& s) -> std::string {
     return result;
 }
 
+static auto KebabToPascalCase(const std::string& s) -> std::string {
+    auto result = std::string();
+    auto cap = true;
+    for (unsigned char c : s) {
+        if (c == '-') { cap = true; continue; }
+        result += cap ? (char)std::toupper(c) : (char)c;
+        cap = false;
+    }
+    return result;
+}
+
+struct SchemeEntry {
+    std::filesystem::path Path;
+    MaterialBlock         Block;
+};
+using SchemeRegistry = std::unordered_map<std::string, SchemeEntry>;
+
 static auto ParseAllMaterials(const std::string& src) -> std::vector<MaterialBlock> {
     auto results  = std::vector<MaterialBlock>();
     const auto tag    = std::string_view("@be-material:");
@@ -71,7 +88,30 @@ static auto ParseAllMaterials(const std::string& src) -> std::vector<MaterialBlo
     return results;
 }
 
+static auto BuildRegistry(const std::vector<std::filesystem::path>& files) -> SchemeRegistry {
+    auto registry = SchemeRegistry();
+    for (const auto& p : files) {
+        if (!std::filesystem::exists(p)) continue;
+        try {
+            for (auto& mat : ParseAllMaterials(BeShaderTools::ReadFile(p)))
+                registry[mat.Name] = { p, mat };
+        } catch (...) {}
+    }
+    return registry;
+}
+
 // -------------------------------------------------------------------------
+
+static auto HasStructFields(const MaterialBlock& mat) -> bool {
+    if (!mat.Properties.is_array()) return false;
+    for (const auto& propJson : mat.Properties) {
+        if (!propJson.is_string()) continue;
+        auto type = std::string(BeShaderTools::ParseMaterialProperty(propJson.get<std::string>()).Type);
+        if (type != "texture2d" && type != "textureCube" && type != "sampler")
+            return true;
+    }
+    return false;
+}
 
 static auto VertexFieldForLayout(const std::string& layout) -> std::string {
     if (layout == "position") return "float3 Position : POSITION;";
@@ -126,16 +166,73 @@ static auto GenerateMaterialBlock(const MaterialBlock& mat) -> std::string {
     return out;
 }
 
-static auto GenerateBoilerplate(const Json& shaderMeta, const std::vector<MaterialBlock>& materials) -> std::string {
+static auto GenerateBoilerplate(const Json& shaderMeta, const std::vector<MaterialBlock>& materials,
+                                const SchemeRegistry& registry, const std::filesystem::path& shaderPath) -> std::string {
     auto parts = std::vector<std::string>();
 
-    // Materials first
+    // Includes for external schemes referenced in @be-shader: materials
+    if (shaderMeta.contains("materials")) {
+        auto includes = std::string();
+        auto seen     = std::vector<std::filesystem::path>();
+        for (const auto& [linkName, linkVal] : shaderMeta["materials"].items()) {
+            auto schemeName = linkVal["scheme"].get<std::string>();
+            auto it = registry.find(schemeName);
+            if (it == registry.end()) continue;
+            if (std::filesystem::equivalent(it->second.Path, shaderPath)) continue;
+            auto rel = std::filesystem::relative(it->second.Path, shaderPath.parent_path());
+            if (std::ranges::find(seen, rel) != seen.end()) continue;
+            seen.push_back(rel);
+            includes += "#include \"" + rel.generic_string() + "\"\n";
+        }
+        if (!includes.empty()) {
+            includes.pop_back();
+            parts.push_back(includes);
+        }
+    }
+
+    // Inline material structs
     for (const auto& mat : materials) {
         auto s = GenerateMaterialBlock(mat);
         if (!s.empty()) parts.push_back(s);
     }
 
-    // Then VertexInput / PixelOutput
+    // Cbuffers
+    if (shaderMeta.contains("materials")) {
+        struct CbufferEntry { uint32_t Slot; std::string Code; };
+        auto entries = std::vector<CbufferEntry>();
+        for (const auto& [linkName, linkVal] : shaderMeta["materials"].items()) {
+            auto schemeName = linkVal["scheme"].get<std::string>();
+
+            // Skip cbuffer if scheme has no scalar fields (only textures/samplers)
+            auto* block = [&]() -> const MaterialBlock* {
+                for (const auto& mat : materials)
+                    if (mat.Name == schemeName) return &mat;
+                if (auto it = registry.find(schemeName); it != registry.end()) return &it->second.Block;
+                return nullptr;
+            }();
+            if (!block || !HasStructFields(*block)) continue;
+
+            auto structName = KebabToSnakeCase(schemeName);
+            auto varName    = linkVal.contains("var") ? linkVal["var"].get<std::string>() : KebabToPascalCase(linkName);
+            auto slot       = linkVal["slot"].get<uint32_t>();
+            entries.push_back({ slot,
+                "cbuffer CBuffer" + std::to_string(slot) + " : register(b" + std::to_string(slot) + ") {\n"
+                "    " + structName + " _" + varName + ";\n"
+                "};"
+            });
+        }
+        std::ranges::sort(entries, {}, &CbufferEntry::Slot);
+        if (!entries.empty()) {
+            auto s = std::string();
+            for (size_t i = 0; i < entries.size(); i++) {
+                if (i > 0) s += "\n\n";
+                s += entries[i].Code;
+            }
+            parts.push_back(s);
+        }
+    }
+
+    // VertexInput / PixelOutput
     if (shaderMeta.contains("vertexLayout")) {
         auto s = std::string("struct VertexInput {\n");
         for (const auto& item : shaderMeta["vertexLayout"])
@@ -206,7 +303,7 @@ static auto LineStart(const std::string& src, size_t pos) -> size_t {
     return (ls == std::string::npos) ? 0 : ls + 1;
 }
 
-static auto TryProcessFile(const std::filesystem::path& path) -> void {
+static auto TryProcessFile(const std::filesystem::path& path, const SchemeRegistry& registry) -> void {
     auto src = BeShaderTools::ReadFile(path);
 
     auto regionBegin = src.find(RegionBegin);
@@ -255,7 +352,7 @@ static auto TryProcessFile(const std::filesystem::path& path) -> void {
 
     auto materials = ParseAllMaterials(src);
     
-    WriteToRegion(src, regionBegin, regionEnd, path, GenerateBoilerplate(shaderMeta, materials) + "\n\n");
+    WriteToRegion(src, regionBegin, regionEnd, path, GenerateBoilerplate(shaderMeta, materials, registry, path) + "\n\n");
     std::println("Updated {}", path.filename().string());
 }
 
@@ -272,7 +369,11 @@ void main(int argc, char* argv[]) {
     auto mode = std::string(argv[1]);
 
     if (mode == "--once") {
-        TryProcessFile(std::filesystem::path(argv[2]));
+        auto shaderPath = std::filesystem::path(argv[2]);
+        auto files = std::vector<std::filesystem::path>();
+        for (auto& e : std::filesystem::recursive_directory_iterator(shaderPath.parent_path()))
+            if (e.path().extension() == ".hlsl") files.push_back(e.path());
+        TryProcessFile(shaderPath, BuildRegistry(files));
         return;
     }
 
@@ -305,7 +406,9 @@ void main(int argc, char* argv[]) {
             auto currentWriteTime = std::filesystem::last_write_time(path);
             if (currentWriteTime == lastWriteTime) continue;
 
-            TryProcessFile(path);
+            auto allFiles = std::vector<std::filesystem::path>();
+            for (const auto& [p, _] : watchedFiles) allFiles.push_back(p);
+            TryProcessFile(path, BuildRegistry(allFiles));
 
             // Update after our own write so we don't re-trigger on our own output
             lastWriteTime = std::filesystem::last_write_time(path);

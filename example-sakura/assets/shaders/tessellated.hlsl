@@ -26,8 +26,8 @@
     },
     "pixel": "PixelFunction",
     "materials": {
-        "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
-        "geometry-main": { "scheme": "tesselated-main-material-for-geometry-pass", "slot": 2 },
+        "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1, "var": "Object" },
+        "geometry-main": { "scheme": "tesselated-main-material-for-geometry-pass", "slot": 2, "var": "Tesselated" },
     },
     "targets": {
         "DiffuseRGB":             { "type": "float3", "slot": 0 },
@@ -38,25 +38,30 @@
 @be-end
 */
 
-#include <BeUniformBuffer.hlsli>
+/*========================================================*/
+// region @be-auto-boilerplate
 #include "objectMaterial.hlsl"
 
-cbuffer ModelBuffer: register(b1) {
+struct tesselated_main_material_for_geometry_pass {
+    float3 DiffuseColor;
+    float3 SpecularColor;
+    float Shininess;
+    float TessellationLevel;
+    float DisplacementStrength;
+    float AnimationSpeed;
+    float NoiseFrequency;
+};
+
+Texture2D DiffuseTexture : register(t0);
+SamplerState InputSampler : register(s0);
+
+cbuffer CBuffer1 : register(b1) {
     object_material_for_geometry_pass _Object;
 };
 
-cbuffer MaterialBuffer: register(b2) {
-    float3 _DiffuseColor;
-    float3 _SpecularColor;
-    float _Shininess;
-    float _TessellationLevel;
-    float _DisplacementStrength;
-    float _AnimationSpeed;
-    float _NoiseFrequency;
+cbuffer CBuffer2 : register(b2) {
+    tesselated_main_material_for_geometry_pass _Tesselated;
 };
-
-SamplerState DefaultSampler : register(s0);
-Texture2D DiffuseTexture : register(t0);
 
 struct VertexInput {
     float3 Position : POSITION;
@@ -64,6 +69,16 @@ struct VertexInput {
     float2 UV : TEXCOORD0;
 };
 
+struct PixelOutput {
+    float3 DiffuseRGB : SV_Target0;
+    float4 WorldNormalXYZ_UnusedA : SV_Target1;
+    float4 SpecularRGB_ShininessA : SV_Target2;
+};
+
+// endregion
+/*========================================================*/
+
+#include <BeUniformBuffer.hlsli>
 struct VertexOutput {
     float4 Position : SV_POSITION;
     float3 Normal : NORMAL;
@@ -71,11 +86,6 @@ struct VertexOutput {
     float3 WorldPosition : TEXCOORD1;
 };
 
-struct PixelOutput {
-    float3 DiffuseRGB : SV_Target0;
-    float4 WorldNormalXYZ_UnusedA : SV_Target1;
-    float4 SpecularRGB_ShininessA : SV_Target2;
-};
 
 float Hash(float3 p) {
     return frac(sin(dot(p, float3(12.9898, 78.233, 45.164))) * 43758.5453);
@@ -125,9 +135,9 @@ float fbm(float3 p, int octaves) {
 
 float GetDisplacement(float3 worldPos) {
     float distFromOrigin = length(worldPos.xz);
-    float ripple = sin(distFromOrigin * 3.0 + _Time * _AnimationSpeed * 2.0) * 0.5 + 0.5;
+    float ripple = sin(distFromOrigin * 3.0 + _Time * _Tesselated.AnimationSpeed * 2.0) * 0.5 + 0.5;
 
-    float3 noisePos = worldPos * _NoiseFrequency + _Time * _AnimationSpeed * float3(0.3, 0.5, 0.7);
+    float3 noisePos = worldPos * _Tesselated.NoiseFrequency + _Time * _Tesselated.AnimationSpeed * float3(0.3, 0.5, 0.7);
     float fbmVal = fbm(noisePos, 2);
 
     float result = lerp(fbmVal - 0.5, ripple, 0.6);
@@ -143,7 +153,7 @@ float3 GetDisplacedPos (const OutputPatch<VertexOutput, 3> patch, float3 bary, f
 
     float3 dirFromCenter = normalize(worldPos - objectCenter);
     float disp = GetDisplacement(worldPos);
-    float3 displacedPos = worldPos + dirFromCenter * disp * _DisplacementStrength;
+    float3 displacedPos = worldPos + dirFromCenter * disp * _Tesselated.DisplacementStrength;
     return displacedPos;
 }
 
@@ -167,7 +177,7 @@ struct PatchConstantOutput {
 PatchConstantOutput PatchConstantFunction(InputPatch<VertexOutput, 3> patch) {
     PatchConstantOutput output;
 
-    float factor = _TessellationLevel;
+    float factor = _Tesselated.TessellationLevel;
 
     output.EdgeTessFactor[0] = factor;
     output.EdgeTessFactor[1] = factor;
@@ -217,14 +227,14 @@ VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : 
 }
 
 PixelOutput PixelFunction(VertexOutput input) {
-    float4 diffuseColor = DiffuseTexture.Sample(DefaultSampler, input.UV);
+    float4 diffuseColor = DiffuseTexture.Sample(InputSampler, input.UV);
 
     PixelOutput output;
-    output.DiffuseRGB = diffuseColor.rgb * _DiffuseColor;
+    output.DiffuseRGB = diffuseColor.rgb * _Tesselated.DiffuseColor;
     output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
     output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = _SpecularColor;
-    output.SpecularRGB_ShininessA.a = _Shininess / 2048.0;
+    output.SpecularRGB_ShininessA.rgb = _Tesselated.SpecularColor;
+    output.SpecularRGB_ShininessA.a = _Tesselated.Shininess / 2048.0;
 
     return output;
 }

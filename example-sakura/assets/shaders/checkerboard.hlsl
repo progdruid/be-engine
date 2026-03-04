@@ -39,6 +39,8 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "objectMaterial.hlsl"
+
 struct checkerboard_material_for_geometry_pass {
     float3 DiffuseColor;
     float3 SpecularColor;
@@ -49,6 +51,14 @@ struct checkerboard_material_for_geometry_pass {
 Texture2D DiffuseTexture : register(t0);
 Texture2D SpecularTexture : register(t1);
 SamplerState InputSampler : register(s0);
+
+cbuffer CBuffer1 : register(b1) {
+    object_material_for_geometry_pass _GeometryObject;
+};
+
+cbuffer CBuffer2 : register(b2) {
+    checkerboard_material_for_geometry_pass _GeometryMain;
+};
 
 struct VertexInput {
     float3 Position : POSITION;
@@ -65,16 +75,6 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "objectMaterial.hlsl"
-
-cbuffer ModelBuffer: register(b1) {
-    object_material_for_geometry_pass _Object;
-};
-
-cbuffer MaterialBuffer: register(b2) {
-    checkerboard_material_for_geometry_pass _Material;
-};
-
 struct VertexOutput {
     float4 Position : SV_POSITION;
     float3 WorldPosition : TEXCOORD0;
@@ -82,12 +82,12 @@ struct VertexOutput {
 };
 
 VertexOutput VertexFunction(VertexInput input) {
-    float4 worldPosition = mul(float4(input.Position, 1.0), _Object.Model);
+    float4 worldPosition = mul(float4(input.Position, 1.0), _GeometryObject.Model);
 
     VertexOutput output;
-    output.Position = mul(worldPosition, _Object.ProjectionView);
+    output.Position = mul(worldPosition, _GeometryObject.ProjectionView);
     output.WorldPosition = worldPosition.xyz;
-    output.Normal = normalize(mul(input.Normal, (float3x3)_Object.Model));
+    output.Normal = normalize(mul(input.Normal, (float3x3)_GeometryObject.Model));
 
     return output;
 }
@@ -97,7 +97,7 @@ PixelOutput PixelFunction(VertexOutput input) {
     
     // Triplanar mapping using world coordinates
     // This ensures texture stays consistent regardless of object scale/transform
-    float3 worldPos = input.WorldPosition * _Material.TileScale;
+    float3 worldPos = input.WorldPosition * _GeometryMain.TileScale;
     float3 blendWeights = abs(input.Normal);
 
     // Normalise blend weights so they sum to 1
@@ -123,11 +123,11 @@ PixelOutput PixelFunction(VertexOutput input) {
         zSpecular * blendWeights.z;
     
     PixelOutput output;
-    output.DiffuseRGB = triplanarDiffuse.rgb * _Material.DiffuseColor;
+    output.DiffuseRGB = triplanarDiffuse.rgb * _GeometryMain.DiffuseColor;
     output.WorldNormalXYZ_UnusedA.xyz = input.Normal;
     output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = triplanarSpecular.xyz * _Material.SpecularColor;
-    output.SpecularRGB_ShininessA.a = _Material.Shininess / 2048.0;
+    output.SpecularRGB_ShininessA.rgb = triplanarSpecular.xyz * _GeometryMain.SpecularColor;
+    output.SpecularRGB_ShininessA.a = _GeometryMain.Shininess / 2048.0;
     output.EmissiveRGB = (0.f).rrr;
 
     return output;
