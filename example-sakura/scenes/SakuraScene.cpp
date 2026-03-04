@@ -89,43 +89,43 @@ auto SakuraScene::Prepare() -> void {
     const uint32_t screenHeight = GameIns->Window->GetHeight();
     
     BeTexture::Create("DepthStencil")
-    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::Depth32)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("BaseColor")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("WorldNormal")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA16_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("Specular-Shininess")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA8_Unorm)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("Emissive")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
     
     BeTexture::Create("HDR-Input")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
@@ -136,23 +136,23 @@ auto SakuraScene::Prepare() -> void {
         const uint32_t mipHeight = screenHeight * multiplier;
 
         BeTexture::Create("Bloom_Mip" + std::to_string(mip))
-        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::R11G11B10_Float)
         .SetSize(mipWidth, mipHeight)
         .AddToRegistry()
         .Build(device);
     }
 
     BeTexture::Create("BloomOutput")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("TonemapperOutput")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
@@ -274,8 +274,8 @@ auto SakuraScene::OnLoad() -> void {
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
             .ShadowMap = BeTexture::Create("SakuraScene_SunLightShadowMap")
-                .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-                .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+                .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+                .SetFormat(SenFormat::Depth32)
                 .SetSize(4096, 4096)
                 .AddToRegistry()
                 .Build(device)
@@ -295,8 +295,8 @@ auto SakuraScene::OnLoad() -> void {
                 .ShadowNearPlane = 0.1f,
                 .ShadowMap =
                     BeTexture::Create("SakuraScene_PointLight" + std::to_string(i) + "_ShadowMap")
-                    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-                    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+                    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+                    .SetFormat(SenFormat::Depth32)
                     .SetCubemap(true)
                     .SetSize(2048, 2048)
                     .AddToRegistry()

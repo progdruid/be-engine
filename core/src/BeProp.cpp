@@ -185,8 +185,8 @@ auto BeProp::LoadTextureFromAssimpPath(
     tempCount++;
     auto builder =
         BeTexture::Create("TODO" + std::to_string(tempCount))
-        .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM);
+        .SetUsage(SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::RGBA8_Unorm);
 
 
     if (texPath.C_Str()[0] != '*') {

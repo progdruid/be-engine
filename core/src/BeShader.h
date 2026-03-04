@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 #include <wrl/client.h>
 #include <umbrellas/access-modifiers.hpp>
+#include <sen-rhi/SenTypes.h>
 
 #include "Utils.h"
 
@@ -23,12 +24,6 @@ enum class BeShaderType : uint8_t {
     All = Vertex | Pixel | Tesselation
 };
 ENABLE_BITMASK(BeShaderType);
-
-enum class BeShaderTopology : uint8_t {
-    None,
-    TriangleList,
-    PatchList3,
-};
 
 struct BeVertexElementDescriptor {
     enum class BeVertexSemantic : uint8_t {
@@ -54,7 +49,7 @@ class BeShader {
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose std::string Name;
     expose BeShaderType ShaderType = BeShaderType::None;
-    expose D3D11_PRIMITIVE_TOPOLOGY Topology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+    expose SenTopology Topology = SenTopology::Undefined;
     expose ComPtr<ID3D11InputLayout> ComputedInputLayout;
     expose ComPtr<ID3D11VertexShader> VertexShader;
     expose ComPtr<ID3D11HullShader> HullShader;

@@ -9,6 +9,7 @@
 #include <vector>
 #include <umbrellas/include-glm.h>
 #include <umbrellas/access-modifiers.hpp>
+#include <sen-rhi/SenTypes.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -18,8 +19,8 @@ class BeTexture {
     expose struct BeTextureDescriptor {
         std::string Name;
         bool IsCubemap = false;
-        DXGI_FORMAT Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        uint32_t BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        SenFormat Format = SenFormat::RGBA8_Unorm;
+        SenTextureUsage Usage = SenTextureUsage::ShaderResource;
         uint32_t Mips = 1;
         uint32_t Width = 1;
         uint32_t Height = 1;
@@ -38,8 +39,8 @@ class BeTexture {
         expose Builder (Builder&&) = default;
         expose auto operator=(Builder&&) -> Builder& = default;
 
-        expose auto SetBindFlags(uint32_t bindFlags) -> Builder&& ;
-        expose auto SetFormat(DXGI_FORMAT format) -> Builder&& ;
+        expose auto SetUsage(SenTextureUsage usage) -> Builder&&;
+        expose auto SetFormat(SenFormat format) -> Builder&&;
         expose auto SetMips(uint32_t mips) -> Builder&&;
         expose auto SetSize(uint32_t w, uint32_t h) -> Builder&& ;
         expose auto SetCubemap(bool cubemap) -> Builder&& ;
@@ -68,10 +69,10 @@ class BeTexture {
     expose uint32_t Height;
     expose bool IsCubemap;
     expose uint32_t Mips;
-    expose uint32_t BindFlags;
-    expose DXGI_FORMAT Format;
-    
-    hide std::vector<D3D11_VIEWPORT> _mipViewports;
+    expose SenTextureUsage Usage;
+    expose SenFormat Format;
+
+    hide std::vector<SenViewport> _mipViewports;
     
     hide ComPtr<ID3D11Texture2D> _texture;
     hide ComPtr<ID3D11ShaderResourceView> _srv;
@@ -86,7 +87,7 @@ class BeTexture {
     expose ~BeTexture();
 
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
-    expose auto GetMipViewport (const uint32_t mip) const              -> const D3D11_VIEWPORT&;
+    expose auto GetMipViewport (const uint32_t mip) const              -> const SenViewport&;
     expose auto GetSRV         () const                                -> ComPtr<ID3D11ShaderResourceView>;
     expose auto GetDSV         () const                                -> ComPtr<ID3D11DepthStencilView>;
     expose auto GetRTV         (const uint32_t mip = 0) const          -> ComPtr<ID3D11RenderTargetView>;
@@ -99,7 +100,7 @@ class BeTexture {
     hide auto CreateMipViewports () -> void;
 
     hide auto GetDepthSRVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;
-    hide auto GetDSVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;
+    hide auto GetDSVFormat     (DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;
 
 
     // befriending shared_ptr for constructor/destructor access because ours are private

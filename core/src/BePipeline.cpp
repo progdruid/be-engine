@@ -3,6 +3,7 @@
 #include "BeAssetRegistry.h"
 #include "BeMaterial.h"
 #include "BeTexture.h"
+#include <sen-rhi/dx11/SenDx11Convert.h>
 
 auto BePipeline::Create(const ComPtr<ID3D11DeviceContext>& context)-> std::shared_ptr<BePipeline> {
     auto pipeline = std::shared_ptr<BePipeline>(new BePipeline());
@@ -15,9 +16,9 @@ auto BePipeline::Create(const ComPtr<ID3D11DeviceContext>& context)-> std::share
 auto BePipeline::BindShader(const std::shared_ptr<BeShader>& shader, BeShaderType shaderType) -> void {
     assert(_boundShaderType == BeShaderType::None);
     assert(_boundShader == nullptr);
-    assert(shader->Topology != D3D_PRIMITIVE_TOPOLOGY_UNDEFINED);
+    assert(shader->Topology != SenTopology::Undefined);
 
-    _context->IASetPrimitiveTopology(shader->Topology);
+    _context->IASetPrimitiveTopology(Sen::Dx11::ToTopology(shader->Topology));
     
     const auto boundType = shader->ShaderType & shaderType;
     
@@ -168,10 +169,10 @@ auto BePipeline::ClearTargets() const -> void {
 
 auto BePipeline::ResetTarget(const std::shared_ptr<BeTexture>& texture) const -> void {
     be_assert(
-        texture->BindFlags & D3D11_BIND_RENDER_TARGET,
+        HasAny(texture->Usage, SenTextureUsage::RenderTarget),
         "trying to reset a texture that is not a render target. "
         "only render targets can be reset. ",
-        texture->BindFlags
+        texture->Usage
     );
     
     _context->ClearRenderTargetView(

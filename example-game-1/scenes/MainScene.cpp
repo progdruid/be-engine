@@ -36,16 +36,16 @@ auto MainScene::Prepare() -> void {
     
     BeTexture::Create("white")
     .SetSize(1, 1)
-    .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetUsage(SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA8_Unorm)
     .FillWithColor(glm::vec4(1.f))
     .AddToRegistry()
     .BuildNoReturn(device);
 
     BeTexture::Create("black")
     .SetSize(1, 1)
-    .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetUsage(SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA8_Unorm)
     .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
     .AddToRegistry()
     .BuildNoReturn(device);
@@ -107,8 +107,8 @@ auto MainScene::Prepare() -> void {
     _directionalLight->ShadowFarPlane = 400.0f;
     _directionalLight->ShadowMap =
     BeTexture::Create("DirectionalLightShadowMap")
-    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::Depth32)
     .SetSize(_directionalLight->ShadowMapResolution, _directionalLight->ShadowMapResolution)
     .AddToRegistry()
     .Build(device);
@@ -126,8 +126,8 @@ auto MainScene::Prepare() -> void {
 
         pointLight.ShadowMap =
             BeTexture::Create("PointLight" + std::to_string(i) + "_ShadowMap")
-            .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-            .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+            .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+            .SetFormat(SenFormat::Depth32)
             .SetCubemap(true)
             .SetSize(pointLight.ShadowMapResolution, pointLight.ShadowMapResolution)
             .AddToRegistry()
@@ -141,36 +141,36 @@ auto MainScene::Prepare() -> void {
     const uint32_t screenHeight = GameIns->Window->GetHeight();
     
     BeTexture::Create("DepthStencil")
-    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::Depth32)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("BaseColor")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("WorldNormal")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA16_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("Specular-Shininess")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA8_Unorm)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("HDR-Input")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
@@ -181,23 +181,23 @@ auto MainScene::Prepare() -> void {
         const uint32_t mipHeight = screenHeight * multiplier;
 
         BeTexture::Create("Bloom_Mip" + std::to_string(mip))
-        .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-        .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::R11G11B10_Float)
         .SetSize(mipWidth, mipHeight)
         .AddToRegistry()
         .Build(device);
     }
 
     BeTexture::Create("BloomOutput")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("TonemapperOutput")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);

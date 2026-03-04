@@ -40,15 +40,15 @@ auto Game::Run() -> int {
     
     BeTexture::Create("white")
     .SetSize(1, 1)
-    .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetUsage(SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA8_Unorm)
     .FillWithColor(glm::vec4(1.f))
     .AddToRegistry()
     .BuildNoReturn(device);
     BeTexture::Create("black")
     .SetSize(1, 1)
-    .SetBindFlags(D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetUsage(SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA8_Unorm)
     .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
     .AddToRegistry()
     .BuildNoReturn(device);

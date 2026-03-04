@@ -59,7 +59,7 @@ struct VertexInput {
     float2 UV    : TEXCOORD0;
 };
 
-struct VertexOutput {
+struct Interpolators {
     float4 Position : SV_POSITION;
     float3 Normal : NORMAL;
     float2 UV    : TEXCOORD0;
@@ -71,10 +71,10 @@ struct PixelOutput {
     float4 SpecularRGB_ShininessA : SV_Target2;
 };
 
-VertexOutput VertexFunction(VertexInput input) {
+Interpolators VertexFunction(VertexInput input) {
     float4 worldPosition = mul(float4(input.Position, 1.0), _Object.Model);
     
-    VertexOutput output;
+    Interpolators output;
     output.Position = mul(worldPosition, _Object.ProjectionView);
     output.Normal = normalize(mul(input.Normal, (float3x3)_Object.Model));
     output.UV = input.UV;
@@ -82,7 +82,7 @@ VertexOutput VertexFunction(VertexInput input) {
     return output;
 }
 
-PixelOutput PixelFunction(VertexOutput input) {
+PixelOutput PixelFunction(Interpolators input) {
     float4 diffuseColor = DiffuseTexture.Sample(DefaultSampler, input.UV);
     float4 specularColor = Specular.Sample(DefaultSampler, input.UV);
     if (diffuseColor.a < 0.5) discard;

@@ -79,16 +79,16 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-struct VertexOutput {
+struct Interpolators {
     float4 Position : SV_POSITION;
     float3 Normal : NORMAL;
     float2 UV    : TEXCOORD0;
 };
 
-VertexOutput VertexFunction(VertexInput input) {
+Interpolators VertexFunction(VertexInput input) {
     float4 worldPosition = mul(float4(input.Position, 1.0), _GeometryObject.Model);
     
-    VertexOutput output;
+    Interpolators output;
     output.Position = mul(worldPosition, _GeometryObject.ProjectionView);
     output.Normal = normalize(mul(input.Normal, (float3x3)_GeometryObject.Model));
     output.UV = input.UV;
@@ -96,7 +96,7 @@ VertexOutput VertexFunction(VertexInput input) {
     return output;
 }
 
-PixelOutput PixelFunction(VertexOutput input) {
+PixelOutput PixelFunction(Interpolators input) {
     float4 diffuseColor = DiffuseTexture.Sample(InputSampler, input.UV);
     if (diffuseColor.a < 0.5) discard;
     float4 specularColor = SpecularTexture.Sample(InputSampler, input.UV);

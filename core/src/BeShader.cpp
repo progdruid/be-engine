@@ -7,6 +7,7 @@
 #include "BeShaderTools.h"
 #include "Utils.h"
 #include <umbrellas/include-libassert.h>
+#include <sen-rhi/dx11/SenDx11Convert.h>
 
 auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader> {
     be_assert(
@@ -41,13 +42,13 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         const auto& topology = header.at("topology");
 
         if (topology == "triangle-list") {
-            shader->Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+            shader->Topology = SenTopology::TriangleList;
         }
         else if (topology == "triangle-strip") {
-            shader->Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+            shader->Topology = SenTopology::TriangleStrip;
         }
         else if (topology == "patch-list-3") {
-            shader->Topology = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
+            shader->Topology = SenTopology::PatchList3;
         }
         else {
             be_assert(false, "Unsupported topology", filePath);

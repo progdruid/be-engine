@@ -81,7 +81,7 @@ struct PixelOutput {
 
 #include <BeUniformBuffer.hlsli>
 
-struct VertexOutput {
+struct Interpolators {
     float4 Position : SV_POSITION;
     nointerpolation float3 Normal : NORMAL;
     float2 UV : TEXCOORD0;
@@ -163,7 +163,7 @@ float terrainFunc (float2 uv, float2 noiseUV) {
     return finalHeight;
 }
 
-VertexOutput VertexFunction(VertexInput input) {
+Interpolators VertexFunction(VertexInput input) {
     float2 terrainUV = input.UV;
     terrainUV *= _Terrain.NoiseResolution;
     terrainUV += (_Time * _Terrain.Speed).rr;
@@ -174,7 +174,7 @@ VertexOutput VertexFunction(VertexInput input) {
 
     float4 worldPosition = mul(float4(displacedPos, 1.0), _GeometryObject.Model);
 
-    VertexOutput output;
+    Interpolators output;
     output.Position = mul(worldPosition, _GeometryObject.ProjectionView);
     output.Normal = float3(0, 0, 0); // normal is computed in hull
     output.UV = input.UV;
@@ -188,7 +188,7 @@ struct PatchConstantOutput {
     float InsideTessFactor : SV_InsideTessFactor;
 };
 
-PatchConstantOutput PatchConstantFunction(InputPatch<VertexOutput, 3> patch) {
+PatchConstantOutput PatchConstantFunction(InputPatch<Interpolators, 3> patch) {
     PatchConstantOutput output;
 
     output.EdgeTessFactor[0] = 1.0f;
@@ -204,8 +204,8 @@ PatchConstantOutput PatchConstantFunction(InputPatch<VertexOutput, 3> patch) {
 [outputtopology("triangle_cw")]
 [outputcontrolpoints(3)]
 [patchconstantfunc("PatchConstantFunction")]
-VertexOutput HullFunction(InputPatch<VertexOutput, 3> patch, uint pointId : SV_OutputControlPointID) {
-    VertexOutput output = patch[pointId];
+Interpolators HullFunction(InputPatch<Interpolators, 3> patch, uint pointId : SV_OutputControlPointID) {
+    Interpolators output = patch[pointId];
 
     float3 v0 = patch[0].WorldPosition;
     float3 v1 = patch[1].WorldPosition;
@@ -216,8 +216,8 @@ VertexOutput HullFunction(InputPatch<VertexOutput, 3> patch, uint pointId : SV_O
 }
 
 [domain("tri")]
-VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : SV_DomainLocation, const OutputPatch<VertexOutput, 3> patch) {
-    VertexOutput output;
+Interpolators DomainFunction(PatchConstantOutput patchData, float3 barycentric : SV_DomainLocation, const OutputPatch<Interpolators, 3> patch) {
+    Interpolators output;
 
     output.WorldPosition = barycentric.x * patch[0].WorldPosition + barycentric.y * patch[1].WorldPosition + barycentric.z * patch[2].WorldPosition;
     output.Position = barycentric.x * patch[0].Position + barycentric.y * patch[1].Position + barycentric.z * patch[2].Position;
@@ -229,7 +229,7 @@ VertexOutput DomainFunction(PatchConstantOutput patchData, float3 barycentric : 
     return output;
 }
 
-PixelOutput PixelFunction(VertexOutput input) {
+PixelOutput PixelFunction(Interpolators input) {
     float4 diffuseColor = DiffuseTexture.Sample(InputSampler, input.UV);
 
     PixelOutput output;

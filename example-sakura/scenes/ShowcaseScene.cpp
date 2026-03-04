@@ -64,36 +64,36 @@ auto ShowcaseScene::CreateTargetTextures() -> void {
     const auto device = GameIns->Renderer->GetDevice();
     
     BeTexture::Create("S_DepthStencil")
-    .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::Depth32)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("S_BaseColor")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("S_WorldNormal")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA16_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("S_Specular-Shininess")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA8_Unorm)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
 
     BeTexture::Create("S_Emissive")
-    .SetBindFlags(D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE)
-    .SetFormat(DXGI_FORMAT_R11G11B10_FLOAT)
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build(device);
@@ -184,8 +184,8 @@ auto ShowcaseScene::CreateObjects() -> void {
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
             .ShadowMap = BeTexture::Create("ShowcaseScene_SunLightShadowMap")
-                .SetBindFlags(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE)
-                .SetFormat(DXGI_FORMAT_R32_TYPELESS)
+                .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+                .SetFormat(SenFormat::Depth32)
                 .SetSize(4096, 4096)
                 .AddToRegistry()
                 .Build(device)
