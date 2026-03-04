@@ -11,9 +11,13 @@
 
 */
 
-
-struct StandardObjectData {
-    row_major float4x4 Model;
-    row_major float4x4 ProjectionView;
+/*========================================================*/
+// region @be-auto-boilerplate
+struct object_material_for_geometry_pass {
+    float4x4 Model;
+    float4x4 ProjectionView;
     float3 ViewerPosition;
 };
+
+// endregion
+/*========================================================*/

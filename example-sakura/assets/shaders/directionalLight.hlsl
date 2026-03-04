@@ -39,22 +39,35 @@
 #include <BeFunctions.hlsli>
 #include "fullscreen-vertex.hlsl"
 
+/*========================================================*/
+// region @be-auto-boilerplate
+struct directional_light_material {
+    float HasShadowMap;
+    float3 Direction;
+    float3 Color;
+    float Power;
+    float4x4 ProjectionView;
+    float TexelSize;
+};
+
 Texture2D Depth : register(t0);
-Texture2D DiffuseRGB : register(t1);
-Texture2D WorldNormalXYZ_UnusedA : register(t2);
-Texture2D SpecularRGB_ShininessA : register(t3);
-Texture2D DirectionalLightShadowMap : register(t4);
+Texture2D Diffuse : register(t1);
+Texture2D WorldNormal : register(t2);
+Texture2D Specular_Shininess : register(t3);
+Texture2D ShadowMap : register(t4);
 SamplerState InputSampler : register(s0);
 
-cbuffer DirectionalLightBuffer: register(b2) {
-    float _DirectionalLightHasShadowMap;
-    float3 _DirectionalLightVector;
-    float3 _DirectionalLightColor;
-    float _DirectionalLightPower;
-    
-    row_major float4x4 _DirectionalLightProjectionView;
-    float _ShadowMapTexelSize;
+struct PixelOutput {
+    float3 LightHDR : SV_Target0;
 };
+
+// endregion
+/*========================================================*/
+
+cbuffer DirectionalLightBuffer: register(b2) {
+    directional_light_material _DirectionalLight;
+};
+
 
 float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float texelSize, float currentDepth) {
     float shadow = 0.0;
@@ -71,33 +84,35 @@ float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float t
     return shadow / 9.0;
 }
 
-float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
+PixelOutput PixelFunction(FullscreenVSOutput input) {
     float depth = Depth.Sample(InputSampler, input.UV).r;
-    float3 diffuse = DiffuseRGB.Sample(InputSampler, input.UV).rgb;
-    float3 worldNormal = WorldNormalXYZ_UnusedA.Sample(InputSampler, input.UV).xyz;
-    float4 specular_shininess = SpecularRGB_ShininessA.Sample(InputSampler, input.UV).rgba;
+    float3 diffuse = Diffuse.Sample(InputSampler, input.UV).rgb;
+    float3 worldNormal = WorldNormal.Sample(InputSampler, input.UV).xyz;
+    float4 specular_shininess = Specular_Shininess.Sample(InputSampler, input.UV).rgba;
 
     float3 worldPos = ReconstructWorldPosition(input.UV, depth, _CameraInverseProjectionView);
 
-    float4 lightSpacePos = mul(float4(worldPos, 1.0), _DirectionalLightProjectionView);
+    float4 lightSpacePos = mul(float4(worldPos, 1.0), _DirectionalLight.ProjectionView);
     lightSpacePos /= lightSpacePos.w;
     float2 shadowUV = lightSpacePos.xy * 0.5 + 0.5;
     shadowUV.y = 1.0 - shadowUV.y;
     float currentShadowDepth = lightSpacePos.z;
-    float shadowAbsenceFactor = PCFShadow(DirectionalLightShadowMap, InputSampler, shadowUV, _ShadowMapTexelSize, currentShadowDepth);
+    float shadowAbsenceFactor = PCFShadow(ShadowMap, InputSampler, shadowUV, _DirectionalLight.TexelSize, currentShadowDepth);
     
     float3 viewVec = _CameraPosition - worldPos;
     float3 lit = StandardLambertBlinnPhong(
         worldNormal,
         viewVec,
-        -_DirectionalLightVector,
+        -_DirectionalLight.Direction,
         //_AmbientColor,
-        _DirectionalLightColor,
-        _DirectionalLightPower,
+        _DirectionalLight.Color,
+        _DirectionalLight.Power,
         diffuse.rgb,
         specular_shininess.rgb,
         specular_shininess.a
     );
 
-    return lit * shadowAbsenceFactor;
+    PixelOutput output;
+    output.LightHDR = lit * shadowAbsenceFactor;
+    return output;
 }

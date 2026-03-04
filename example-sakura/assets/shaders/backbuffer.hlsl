@@ -16,19 +16,31 @@
         "main": { "scheme": "backbuffer-material", "slot": 2 },
     },
     "targets": {
-        "Backbuffer": { "type": "float4", "slot": 0 }
+        "BackbufferColor": { "type": "float4", "slot": 0 }
     }
 }
 @be-end
 
 */
 
-#include "fullscreen-vertex.hlsl"
-
+/*========================================================*/
+// region @be-auto-boilerplate
 Texture2D InputTexture : register(t0);
 SamplerState InputSampler : register(s0);
 
-float4 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
+struct PixelOutput {
+    float4 BackbufferColor : SV_Target0;
+};
+
+// endregion
+/*========================================================*/
+
+#include "fullscreen-vertex.hlsl"
+
+PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 inputColor = InputTexture.Sample(InputSampler, input.UV).rgb;
-    return float4(inputColor, 1.f);
+    
+    PixelOutput output;
+    output.BackbufferColor = float4(inputColor, 1.f);
+    return output;
 }

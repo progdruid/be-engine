@@ -22,16 +22,27 @@
 @be-end
 */
 
-#include <BeTonemappers.hlsli>
-#include "fullscreen-vertex.hlsl"
-
+/*========================================================*/
+// region @be-auto-boilerplate
 Texture2D HDRInput : register(t0);
 SamplerState InputSampler : register(s0);
 
-float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
+struct PixelOutput {
+    float3 HDRTarget : SV_Target0;
+};
+
+// endregion
+/*========================================================*/
+
+#include <BeTonemappers.hlsli>
+#include "fullscreen-vertex.hlsl"
+
+PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 hdrColor = HDRInput.Sample(InputSampler, input.UV).rgb;
 
     float3 finalColor = Tonemap_ReinhardWhite(hdrColor, 1.5);
     
-    return finalColor;
+    PixelOutput output;
+    output.HDRTarget = finalColor;
+    return output;
 }

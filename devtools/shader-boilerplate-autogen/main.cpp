@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <filesystem>
 #include <thread>
 #include <chrono>
@@ -10,14 +11,67 @@
 #include "BeShaderTools.h"
 #include "umbrellas/include-libassert.h"
 
-static const char* RegionBegin = "// region @be-auto-boilerplate";
-static const char* RegionEnd   = "// endregion";
+static const char* RegionBegin       = "// region @be-auto-boilerplate";
+static const char* RegionEnd         = "// endregion";
+static const char* SingleLineTrigger = "@be-auto-boilerplate";
+static const char* Decorator         = "/*========================================================*/";
+
+// -------------------------------------------------------------------------
 
 struct TargetEntry {
     std::string Name;
     std::string Type;
     uint32_t    Slot;
 };
+
+struct MaterialBlock {
+    std::string Name;
+    Json        Properties; // JSON array of property strings
+};
+
+// -------------------------------------------------------------------------
+
+static auto KebabToSnakeCase(const std::string& s) -> std::string {
+    auto result = s;
+    std::ranges::replace(result, '-', '_');
+    return result;
+}
+
+static auto ParseAllMaterials(const std::string& src) -> std::vector<MaterialBlock> {
+    auto results  = std::vector<MaterialBlock>();
+    const auto tag    = std::string_view("@be-material:");
+    const auto endTag = std::string_view("@be-end");
+
+    auto pos = size_t(0);
+    while (true) {
+        auto tagPos = src.find(tag, pos);
+        if (tagPos == std::string::npos) break;
+
+        auto endPos = src.find(endTag, tagPos);
+        if (endPos == std::string::npos) break;
+
+        auto nameStart   = tagPos + tag.size();
+        auto nameLineEnd = src.find('\n', nameStart);
+        if (nameLineEnd == std::string::npos || nameLineEnd > endPos) break;
+
+        auto nameSubstr = src.substr(nameStart, nameLineEnd - nameStart);
+        auto name       = std::string(BeShaderTools::Trim(nameSubstr, " \t\r\n"));
+
+        auto jsonContent = src.substr(nameLineEnd + 1, endPos - (nameLineEnd + 1));
+        jsonContent.erase(0, jsonContent.find_first_not_of(" \t\r\n"));
+        if (!jsonContent.empty())
+            jsonContent.erase(jsonContent.find_last_not_of(" \t\r\n") + 1);
+
+        try {
+            results.push_back({ name, Json::parse(jsonContent, nullptr, true, true, true) });
+        } catch (...) {}
+
+        pos = endPos + endTag.size();
+    }
+    return results;
+}
+
+// -------------------------------------------------------------------------
 
 static auto VertexFieldForLayout(const std::string& layout) -> std::string {
     if (layout == "position") return "float3 Position : POSITION;";
@@ -30,121 +84,231 @@ static auto VertexFieldForLayout(const std::string& layout) -> std::string {
     return "// unknown layout: " + layout;
 }
 
-static auto GenerateBoilerplate(const Json& meta) -> std::string {
+static auto GenerateMaterialBlock(const MaterialBlock& mat) -> std::string {
+    if (!mat.Properties.is_array()) return "";
+
+    auto structFields = std::string();
+    auto bindings     = std::string();
+
+    for (const auto& propJson : mat.Properties) {
+        if (!propJson.is_string()) continue;
+        auto prop = BeShaderTools::ParseMaterialProperty(propJson.get<std::string>());
+        auto name = std::string(prop.Name);
+        auto type = std::string(prop.Type);
+
+        if (type == "texture2d") {
+            bindings += "Texture2D " + name + " : register(t" + std::to_string(prop.Slot) + ");\n";
+        } else if (type == "textureCube") {
+            bindings += "TextureCube " + name + " : register(t" + std::to_string(prop.Slot) + ");\n";
+        } else if (type == "sampler") {
+            bindings += "SamplerState " + name + " : register(s" + std::to_string(prop.Slot) + ");\n";
+        } else {
+            auto hlslType = (type == "matrix") ? std::string("float4x4") : type;
+            structFields += "    " + hlslType + " " + name + ";\n";
+        }
+    }
+
+    auto parts = std::vector<std::string>();
+
+    if (!structFields.empty())
+        parts.push_back("struct " + KebabToSnakeCase(mat.Name) + " {\n" + structFields + "};");
+
+    if (!bindings.empty()) {
+        bindings.pop_back(); // remove trailing \n
+        parts.push_back(bindings);
+    }
+
     auto out = std::string();
-
-    if (meta.contains("vertexLayout")) {
-        out += "struct VertexInput {\n";
-        for (const auto& item : meta["vertexLayout"]) {
-            out += "    " + VertexFieldForLayout(item.get<std::string>()) + "\n";
-        }
-        out += "};\n";
+    for (size_t i = 0; i < parts.size(); i++) {
+        if (i > 0) out += "\n\n";
+        out += parts[i];
     }
-
-    if (meta.contains("targets")) {
-        auto entries = std::vector<TargetEntry>();
-        for (const auto& [name, val] : meta["targets"].items()) {
-            entries.push_back({ name, val["type"].get<std::string>(), val["slot"].get<uint32_t>() });
-        }
-        std::ranges::sort(entries, [](const TargetEntry& a, const TargetEntry& b) {
-            return a.Slot < b.Slot;
-        });
-
-        if (!entries.empty()) {
-            if (meta.contains("vertexLayout")) out += "\n";
-            out += "struct PixelOutput {\n";
-            for (const auto& e : entries) {
-                out += "    " + e.Type + " " + e.Name + " : SV_Target" + std::to_string(e.Slot) + ";\n";
-            }
-            out += "};";
-        }
-    }
-
     return out;
 }
 
+static auto GenerateBoilerplate(const Json& shaderMeta, const std::vector<MaterialBlock>& materials) -> std::string {
+    auto parts = std::vector<std::string>();
+
+    // Materials first
+    for (const auto& mat : materials) {
+        auto s = GenerateMaterialBlock(mat);
+        if (!s.empty()) parts.push_back(s);
+    }
+
+    // Then VertexInput / PixelOutput
+    if (shaderMeta.contains("vertexLayout")) {
+        auto s = std::string("struct VertexInput {\n");
+        for (const auto& item : shaderMeta["vertexLayout"])
+            s += "    " + VertexFieldForLayout(item.get<std::string>()) + "\n";
+        s += "};";
+        parts.push_back(s);
+    }
+
+    if (shaderMeta.contains("targets")) {
+        auto entries = std::vector<TargetEntry>();
+        for (const auto& [name, val] : shaderMeta["targets"].items())
+            entries.push_back({ name, val["type"].get<std::string>(), val["slot"].get<uint32_t>() });
+        std::ranges::sort(entries, {}, &TargetEntry::Slot);
+
+        if (!entries.empty()) {
+            auto s = std::string("struct PixelOutput {\n");
+            for (const auto& e : entries)
+                s += "    " + e.Type + " " + e.Name + " : SV_Target" + std::to_string(e.Slot) + ";\n";
+            s += "};";
+            parts.push_back(s);
+        }
+    }
+
+    auto out = std::string();
+    for (size_t i = 0; i < parts.size(); i++) {
+        if (i > 0) out += "\n\n";
+        out += parts[i];
+    }
+    return out;
+}
+
+// -------------------------------------------------------------------------
+
 static auto WriteToRegion(const std::string& src, size_t regionBegin, size_t regionEnd,
                            const std::filesystem::path& path, const std::string& content) -> void {
-    auto insertStart = src.find('\n', regionBegin);
-    if (insertStart == std::string::npos) insertStart = regionBegin + std::strlen(RegionBegin);
-    else insertStart++;
+    // Expand start back over preceding decorator line if present
+    auto blockStart = regionBegin;
+    if (regionBegin > 0 && src[regionBegin - 1] == '\n') {
+        auto prevLineStart = (regionBegin < 2) ? size_t(0) : src.rfind('\n', regionBegin - 2);
+        prevLineStart = (prevLineStart == std::string::npos) ? 0 : prevLineStart + 1;
+        if (src.compare(prevLineStart, std::strlen(Decorator), Decorator) == 0)
+            blockStart = prevLineStart;
+    }
 
-    be_assert(insertStart <= regionEnd, "region begin marker must precede endregion on a separate line");
+    // Find end of endregion line, expand over following decorator line if present
+    auto blockEnd = src.find('\n', regionEnd);
+    if (blockEnd == std::string::npos) blockEnd = src.size();
+    else blockEnd++;
+    if (blockEnd < src.size() && src.compare(blockEnd, std::strlen(Decorator), Decorator) == 0) {
+        auto nextNl = src.find('\n', blockEnd);
+        blockEnd = (nextNl == std::string::npos) ? src.size() : nextNl + 1;
+    }
 
-    auto newSrc = src.substr(0, insertStart) + content + src.substr(regionEnd);
+    auto newBlock = std::string(Decorator) + "\n"
+                  + RegionBegin + "\n"
+                  + content
+                  + RegionEnd + "\n"
+                  + Decorator + "\n";
+    auto newSrc = src.substr(0, blockStart) + newBlock + src.substr(blockEnd);
     auto file = std::ofstream(path);
     file << newSrc;
     if (file.fail())
         std::println(stderr, "Failed to write {}", path.filename().string());
 }
 
+static auto LineStart(const std::string& src, size_t pos) -> size_t {
+    auto ls = src.rfind('\n', pos);
+    return (ls == std::string::npos) ? 0 : ls + 1;
+}
+
 static auto TryProcessFile(const std::filesystem::path& path) -> void {
     auto src = BeShaderTools::ReadFile(path);
 
     auto regionBegin = src.find(RegionBegin);
-    if (regionBegin == std::string::npos)
-        return;
+    auto regionEnd   = src.find(RegionEnd, regionBegin);
 
-    auto regionEnd = src.find(RegionEnd, regionBegin);
-    if (regionEnd == std::string::npos)
-        return;
+    if (regionBegin == std::string::npos || regionEnd == std::string::npos) {
+        // No region block — find trigger and expand it in place
+        auto triggerPos = src.find(SingleLineTrigger);
+        if (triggerPos == std::string::npos) return;
+        auto ls = LineStart(src, triggerPos);
+        auto le = src.find('\n', ls);
+        if (le == std::string::npos) le = src.size(); else le++;
+        src = src.substr(0, ls) + Decorator + "\n" + RegionBegin + "\n\n" + RegionEnd + "\n" + Decorator + "\n" + src.substr(le);
+        regionBegin = ls + std::strlen(Decorator) + 1; // skip decorator line
+        regionEnd   = src.find(RegionEnd, regionBegin);
+    } else {
+        // Region exists — delete stray trigger if present (skip the region begin line itself)
+        auto triggerPos = src.find(SingleLineTrigger);
+        while (triggerPos != std::string::npos) {
+            auto ls = LineStart(src, triggerPos);
+            if (src.compare(ls, std::strlen(RegionBegin), RegionBegin) != 0) {
+                auto le = src.find('\n', ls);
+                if (le == std::string::npos) le = src.size(); else le++;
+                src.erase(ls, le - ls);
+                regionBegin = src.find(RegionBegin);
+                regionEnd   = src.find(RegionEnd, regionBegin);
+                break;
+            }
+            triggerPos = src.find(SingleLineTrigger, triggerPos + 1);
+        }
+    }
 
     auto writeError = [&](const std::string& msg) {
-        WriteToRegion(src, regionBegin, regionEnd, path, "\n// ERROR: " + msg + "\n\n");
+        WriteToRegion(src, regionBegin, regionEnd, path, "// ERROR: " + msg + "\n\n");
         std::println(stderr, "Error: {}", msg);
     };
 
-    Json meta;
+    Json shaderMeta;
     try {
         auto [parsedMeta, shaderName] = BeShaderTools::ParseFor(src, "@be-shader:");
-        if (parsedMeta.empty()) {
-            writeError("No @be-shader: block found");
-            return;
-        }
-        meta = std::move(parsedMeta);
+        shaderMeta = std::move(parsedMeta); 
     } catch (const std::exception& e) {
         writeError(std::string("Failed to parse shader metadata: ") + e.what());
         return;
     }
 
-    WriteToRegion(src, regionBegin, regionEnd, path, "\n" + GenerateBoilerplate(meta) + "\n\n");
+    auto materials = ParseAllMaterials(src);
+    
+    WriteToRegion(src, regionBegin, regionEnd, path, GenerateBoilerplate(shaderMeta, materials) + "\n\n");
     std::println("Updated {}", path.filename().string());
 }
+
+// -------------------------------------------------------------------------
 
 void main(int argc, char* argv[]) {
     if (argc < 3 || (std::string(argv[1]) != "--once" && std::string(argv[1]) != "--watch")) {
         std::println(stderr, "Usage:");
         std::println(stderr, "  shader-boilerplate-autogen --once  <shader.hlsl>");
-        std::println(stderr, "  shader-boilerplate-autogen --watch <shader.hlsl>");
+        std::println(stderr, "  shader-boilerplate-autogen --watch <shader.hlsl> [<shader2.hlsl> ...]");
         return;
     }
 
     auto mode = std::string(argv[1]);
-    auto path = std::filesystem::path(argv[2]);
 
     if (mode == "--once") {
-        TryProcessFile(path);
+        TryProcessFile(std::filesystem::path(argv[2]));
         return;
     }
 
-    // --watch: poll last_write_time, re-run on change
-    std::println("Watching {} (Ctrl+C to stop)...", path.filename().string());
+    // --watch: collect all paths, poll last_write_time for each
+    // Arguments may be individual .hlsl files or directories (recursively expanded)
+    auto watchedFiles = std::unordered_map<std::filesystem::path, std::filesystem::file_time_type>();
+    for (int i = 2; i < argc; i++) {
+        auto entry = std::filesystem::path(argv[i]);
+        if (!std::filesystem::is_directory(entry)) {
+            watchedFiles[entry] = {};
+            std::println("Found file: {}", entry.string());
+            continue;
+        }
+        for (auto& dirEntry : std::filesystem::recursive_directory_iterator(entry)) {
+            if (dirEntry.path().extension() == ".hlsl") {
+                watchedFiles[dirEntry.path()] = {};
+                std::println("Found file: {}", dirEntry.path().string());
+            }
+        }
+    }
 
-    auto lastWriteTime = std::filesystem::file_time_type{};
+    std::println("Watching {} file(s) (Ctrl+C to stop)...", watchedFiles.size());
 
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-        if (!std::filesystem::exists(path)) continue;
+        for (auto& [path, lastWriteTime] : watchedFiles) {
+            if (!std::filesystem::exists(path)) continue;
 
-        auto currentWriteTime = std::filesystem::last_write_time(path);
-        std::println(stdout, "Write Time: {}", currentWriteTime);
-        if (currentWriteTime == lastWriteTime) 
-            continue;
+            auto currentWriteTime = std::filesystem::last_write_time(path);
+            if (currentWriteTime == lastWriteTime) continue;
 
-        TryProcessFile(path);
-        
-        // Update after our own write so we don't re-trigger on our own output
-        lastWriteTime = std::filesystem::last_write_time(path);
+            TryProcessFile(path);
+
+            // Update after our own write so we don't re-trigger on our own output
+            lastWriteTime = std::filesystem::last_write_time(path);
+        }
     }
 }

@@ -40,7 +40,7 @@
 #include "objectMaterial.hlsl"
 
 cbuffer ModelBuffer: register(b1) {
-    StandardObjectData _Object;
+    object_material_for_geometry_pass _Object;
 };
 
 cbuffer MaterialBuffer: register(b2) {

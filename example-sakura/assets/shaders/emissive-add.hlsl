@@ -22,14 +22,26 @@
 @be-end
 */
 
-#include "fullscreen-vertex.hlsl"
-
+/*========================================================*/
+// region @be-auto-boilerplate
 Texture2D InputEmissive : register(t0);
 SamplerState InputSampler : register(s0);
 
-float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
+struct PixelOutput {
+    float3 HDROutput : SV_Target0;
+};
+
+// endregion
+/*========================================================*/
+
+#include "fullscreen-vertex.hlsl"
+
+PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 emissiveColor = InputEmissive.Sample(InputSampler, input.UV).rgb;
-    return emissiveColor;
+    
+    PixelOutput output;
+    output.HDROutput = emissiveColor;
+    return output;
 }
 
 

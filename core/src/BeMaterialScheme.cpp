@@ -13,7 +13,7 @@ auto BeMaterialScheme::CreateFromJson(
         auto parsedProperty = BeShaderTools::ParseMaterialProperty(propertyItemJson);
     
         // extracting
-        if (parsedProperty.Type == "texture2d") {
+        if (parsedProperty.Type == "texture2d" || parsedProperty.Type == "textureCube") {
             auto descriptor = BeMaterialTextureDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.SlotIndex = parsedProperty.Slot;

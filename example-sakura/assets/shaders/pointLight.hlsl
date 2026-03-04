@@ -14,7 +14,7 @@
     "Diffuse: texture2d(1) = black",
     "WorldNormal: texture2d(2) = black",
     "Specular_Shininess: texture2d(3) = black",
-    "PointLightShadowMap: texture2d(4) = black",
+    "PointLightShadowMap: textureCube(4) = black",
 
     "InputSampler: sampler(0) = point-clamp"
 ]
@@ -36,37 +36,49 @@
 
 */
 
+/*========================================================*/
+// region @be-auto-boilerplate
+struct point_light_material {
+    float3 Position;
+    float Radius;
+    float3 Color;
+    float Power;
+    float HasShadowMap;
+    float ShadowMapResolution;
+    float ShadowNearPlane;
+};
+
+Texture2D Depth : register(t0);
+Texture2D Diffuse : register(t1);
+Texture2D WorldNormal : register(t2);
+Texture2D Specular_Shininess : register(t3);
+TextureCube PointLightShadowMap : register(t4);
+SamplerState InputSampler : register(s0);
+
+struct PixelOutput {
+    float3 LightHDR : SV_Target0;
+};
+
+// endregion
+/*========================================================*/
+
 #include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
 #include "fullscreen-vertex.hlsl"
 
-Texture2D Depth : register(t0);
-Texture2D DiffuseRGB : register(t1);
-Texture2D WorldNormalXYZ_UnusedA : register(t2);
-Texture2D SpecularRGB_ShininessA : register(t3);
-TextureCube PointLightShadowMap : register(t4);
-SamplerState InputSampler : register(s0);
-
 cbuffer PointLightBuffer: register(b2) {
-    float3 _PointLightPosition;
-    float _PointLightRadius;
-    float3 _PointLightColor;
-    float _PointLightPower;
-    
-    float _PointLightHasShadowMap;
-    float _PointLightShadowMapResolution;
-    float _PointLightShadowNearPlane;
+    point_light_material _PointLight;
 };
 
 float SamplePointLightShadow(float3 worldPos) {
-    float3 lightDir = worldPos - _PointLightPosition;
+    float3 lightDir = worldPos - _PointLight.Position;
     float distanceToLight = length(lightDir);
 
     // sample cubemap with direction
     float3 sampleDir = normalize(lightDir);
     float shadowmapDepth = PointLightShadowMap.Sample(InputSampler, sampleDir).r;
-    float near = _PointLightShadowNearPlane;
-    float far = _PointLightRadius;
+    float near = _PointLight.ShadowNearPlane;
+    float far = _PointLight.Radius;
     float linearDepth = (near * far) / (far - shadowmapDepth * (far - near));
     
     float xCos = abs(dot(sampleDir, float3(1, 0, 0)));
@@ -83,25 +95,25 @@ float SamplePointLightShadow(float3 worldPos) {
 
 
 
-float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
+PixelOutput PixelFunction(FullscreenVSOutput input) {
     float depth = Depth.Sample(InputSampler, input.UV).r;
-    float3 diffuse = DiffuseRGB.Sample(InputSampler, input.UV).rgb;
-    float3 worldNormal = WorldNormalXYZ_UnusedA.Sample(InputSampler, input.UV).xyz;
-    float4 specular_shininess = SpecularRGB_ShininessA.Sample(InputSampler, input.UV).rgba;
+    float3 diffuse = Diffuse.Sample(InputSampler, input.UV).rgb;
+    float3 worldNormal = WorldNormal.Sample(InputSampler, input.UV).xyz;
+    float4 specular_shininess = Specular_Shininess.Sample(InputSampler, input.UV).rgba;
 
     float3 worldPos = ReconstructWorldPosition(input.UV, depth, _CameraInverseProjectionView);
-    float3 lightDir = _PointLightPosition - worldPos;
+    float3 lightDir = _PointLight.Position - worldPos;
     float distanceToLight = length(lightDir);
-    if (distanceToLight > _PointLightRadius) {
+    if (distanceToLight > _PointLight.Radius) {
         discard;
     }
 
     float shadowAbsenceFactor = 1.0;
-    if (_PointLightHasShadowMap > 0.5) {
+    if (_PointLight.HasShadowMap > 0.5) {
         shadowAbsenceFactor = SamplePointLightShadow(worldPos);
     }
     
-    float attenuation = saturate(1.0 - (distanceToLight / _PointLightRadius));
+    float attenuation = saturate(1.0 - (distanceToLight / _PointLight.Radius));
     attenuation *= attenuation;
     
     float3 viewVec = _CameraPosition - worldPos;
@@ -110,12 +122,14 @@ float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
         viewVec,
         lightDir,
         //_AmbientColor,
-        _PointLightColor,
-        _PointLightPower * attenuation,
+        _PointLight.Color,
+        _PointLight.Power * attenuation,
         diffuse.rgb,
         specular_shininess.rgb,
         specular_shininess.a
     );
 
-    return lit * shadowAbsenceFactor;
+    PixelOutput output;
+    output.LightHDR = lit * shadowAbsenceFactor;
+    return output;
 }

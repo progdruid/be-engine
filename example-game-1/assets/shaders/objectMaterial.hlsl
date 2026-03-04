@@ -12,7 +12,7 @@
 */
 
 
-struct StandardObjectData {
+struct object_material_for_geometry_pass {
     row_major float4x4 Model;
     row_major float4x4 ProjectionView;
     float3 ViewerPosition;

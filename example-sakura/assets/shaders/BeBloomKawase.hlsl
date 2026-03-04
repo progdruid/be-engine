@@ -28,16 +28,29 @@
 
 #include "fullscreen-vertex.hlsl"
 
-Texture2D BloomMipInput : register(t0);
-SamplerState sLinear : register(s0);
-
-cbuffer MaterialConstants : register(b2) {
+/*========================================================*/
+// region @be-auto-boilerplate
+struct bloom_kawase_material {
     float2 TexelSize;
     float PassRadius;
 };
 
-float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
-    float2 offset = TexelSize * PassRadius;
+Texture2D BloomMipInput : register(t0);
+SamplerState InputSampler : register(s0);
+
+struct PixelOutput {
+    float3 BloomMipOutput : SV_Target0;
+};
+
+// endregion
+/*========================================================*/
+
+cbuffer MaterialConstants : register(b2) {
+    bloom_kawase_material _Material;
+};
+
+PixelOutput PixelFunction(FullscreenVSOutput input) {
+    float2 offset = _Material.TexelSize * _Material.PassRadius;
     
     static const float2 offsets[6] = {
         float2( 0.0,      1.384),
@@ -52,8 +65,10 @@ float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
 
     for (int i = 0; i < 6; ++i) {
         float2 sampleUV = input.UV + offsets[i] * offset;
-        color += BloomMipInput.Sample(sLinear, sampleUV).rgb;
+        color += BloomMipInput.Sample(InputSampler, sampleUV).rgb;
     }
 
-    return color * 0.166666;
+    PixelOutput output;
+    output.BloomMipOutput = color * 0.166666;
+    return output;
 }

@@ -44,9 +44,9 @@ auto BeShaderTools::ParseFor(const std::string& src, const std::string& target) 
     auto metadata = Json::object();
     
     const auto startPos = src.find(startTag);
-    if (startPos == std::string::npos) return metadata;
+    if (startPos == std::string::npos) return {metadata, ""};
     const auto endPos = src.find(endTag, startPos);
-    if (endPos == std::string::npos) return metadata;
+    if (endPos == std::string::npos) return {metadata, ""};
     
     auto jsonStart = src.find('\n', startPos);
     be_assert(jsonStart != std::string::npos && jsonStart < endPos);

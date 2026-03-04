@@ -40,6 +40,9 @@ project "shader-boilerplate-autogen"
         symbols "Off"
         defines { "NDEBUG" }
         optimize "Full"
+        postbuildcommands {
+            "{COPY} %{cfg.targetdir}/%{prj.name}.exe %{wks.location}/devtools/"
+        }
 
     filter { "toolset:msc*", "language:C++" }
         buildoptions { "/Zc:__cplusplus /Zc:preprocessor" }

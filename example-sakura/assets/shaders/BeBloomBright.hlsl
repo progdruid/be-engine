@@ -28,24 +28,39 @@
 
 */
 
-#include "fullscreen-vertex.hlsl"
-
-Texture2D HDRInput : register(t0);
-SamplerState Linear : register(s0);
-
-cbuffer MaterialConstants : register(b2) {
+/*========================================================*/
+// region @be-auto-boilerplate
+struct bloom_bright_material {
     float Threshold;
     float Intensity;
     float Knee;
 };
 
-float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
-    float3 hdrColor = HDRInput.Sample(Linear, input.UV).rgb;
+Texture2D HDRInput : register(t0);
+SamplerState InputSampler : register(s0);
+
+struct PixelOutput {
+    float3 BloomMip : SV_Target0;
+};
+
+// endregion
+/*========================================================*/
+
+#include "fullscreen-vertex.hlsl"
+
+cbuffer MaterialConstants : register(b2) {
+    bloom_bright_material _Material;
+};
+
+PixelOutput PixelFunction(FullscreenVSOutput input) {
+    float3 hdrColor = HDRInput.Sample(InputSampler, input.UV).rgb; // linear sampler
 
     float luminance = dot(hdrColor, float3(0.2126, 0.7152, 0.0722));
-    float brightPart = saturate((luminance - Threshold) * rcp(max(luminance, 0.0001)));
-    float kneeFactor = smoothstep(Threshold, Threshold + Knee, luminance);
-    float3 brightColor = hdrColor * brightPart * kneeFactor * Intensity;
+    float brightPart = saturate((luminance - _Material.Threshold) * rcp(max(luminance, 0.0001)));
+    float kneeFactor = smoothstep(_Material.Threshold, _Material.Threshold + _Material.Knee, luminance);
+    float3 brightColor = hdrColor * brightPart * kneeFactor * _Material.Intensity;
     
-    return brightColor;
+    PixelOutput output;
+    output.BloomMip = brightColor;
+    return output;
 }

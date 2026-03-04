@@ -37,31 +37,21 @@
 
 */
 
-#include "objectMaterial.hlsl"
-
-cbuffer ModelBuffer: register(b1) {
-    StandardObjectData _Object;
+/*========================================================*/
+// region @be-auto-boilerplate
+struct checkerboard_material_for_geometry_pass {
+    float3 DiffuseColor;
+    float3 SpecularColor;
+    float Shininess;
+    float TileScale;
 };
 
-cbuffer MaterialBuffer: register(b2) {
-    float3 _DiffuseColor;
-    float3 _SpecularColor;
-    float _Shininess;
-    float _TileScale;
-};
-
-SamplerState InputSampler : register(s0);
 Texture2D DiffuseTexture : register(t0);
 Texture2D SpecularTexture : register(t1);
+SamplerState InputSampler : register(s0);
 
 struct VertexInput {
     float3 Position : POSITION;
-    float3 Normal : NORMAL;
-};
-
-struct VertexOutput {
-    float4 Position : SV_POSITION;
-    float3 WorldPosition : TEXCOORD0;
     float3 Normal : NORMAL;
 };
 
@@ -70,6 +60,25 @@ struct PixelOutput {
     float4 WorldNormalXYZ_UnusedA : SV_Target1;
     float4 SpecularRGB_ShininessA : SV_Target2;
     float3 EmissiveRGB : SV_Target3;
+};
+
+// endregion
+/*========================================================*/
+
+#include "objectMaterial.hlsl"
+
+cbuffer ModelBuffer: register(b1) {
+    object_material_for_geometry_pass _Object;
+};
+
+cbuffer MaterialBuffer: register(b2) {
+    checkerboard_material_for_geometry_pass _Material;
+};
+
+struct VertexOutput {
+    float4 Position : SV_POSITION;
+    float3 WorldPosition : TEXCOORD0;
+    float3 Normal : NORMAL;
 };
 
 VertexOutput VertexFunction(VertexInput input) {
@@ -88,7 +97,7 @@ PixelOutput PixelFunction(VertexOutput input) {
     
     // Triplanar mapping using world coordinates
     // This ensures texture stays consistent regardless of object scale/transform
-    float3 worldPos = input.WorldPosition * _TileScale;
+    float3 worldPos = input.WorldPosition * _Material.TileScale;
     float3 blendWeights = abs(input.Normal);
 
     // Normalise blend weights so they sum to 1
@@ -114,11 +123,11 @@ PixelOutput PixelFunction(VertexOutput input) {
         zSpecular * blendWeights.z;
     
     PixelOutput output;
-    output.DiffuseRGB = triplanarDiffuse.rgb * _DiffuseColor;
+    output.DiffuseRGB = triplanarDiffuse.rgb * _Material.DiffuseColor;
     output.WorldNormalXYZ_UnusedA.xyz = input.Normal;
     output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = triplanarSpecular.xyz * _SpecularColor;
-    output.SpecularRGB_ShininessA.a = _Shininess / 2048.0;
+    output.SpecularRGB_ShininessA.rgb = triplanarSpecular.xyz * _Material.SpecularColor;
+    output.SpecularRGB_ShininessA.a = _Material.Shininess / 2048.0;
     output.EmissiveRGB = (0.f).rrr;
 
     return output;

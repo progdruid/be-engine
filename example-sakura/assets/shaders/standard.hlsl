@@ -39,10 +39,19 @@
 
 */
 
-#include "objectMaterial.hlsl"
-
-
+/*========================================================*/
 // region @be-auto-boilerplate
+struct standard_material_for_geometry_pass {
+    float3 DiffuseColor;
+    float3 SpecularColor;
+    float Shininess;
+    float3 EmissiveColor;
+};
+
+Texture2D DiffuseTexture : register(t0);
+Texture2D SpecularTexture : register(t1);
+Texture2D EmissiveTexture : register(t2);
+SamplerState InputSampler : register(s0);
 
 struct VertexInput {
     float3 Position : POSITION;
@@ -57,24 +66,18 @@ struct PixelOutput {
     float3 EmissiveRGB : SV_Target3;
 };
 
-// endregion 
+// endregion
+/*========================================================*/
 
+#include "objectMaterial.hlsl"
 
 cbuffer ModelBuffer: register(b1) {
-    StandardObjectData _Object;
+    object_material_for_geometry_pass _Object;
 };
 
 cbuffer MaterialBuffer: register(b2) {
-    float3 _DiffuseColor;
-    float3 _SpecularColor;
-    float _Shininess;
-    float3 _EmissiveColor;
+    standard_material_for_geometry_pass _Material;
 };
-
-SamplerState DefaultSampler : register(s0);
-Texture2D DiffuseTexture : register(t0);
-Texture2D Specular : register(t1);
-Texture2D EmissiveTexture : register(t2);
 
 struct VertexOutput {
     float4 Position : SV_POSITION;
@@ -94,18 +97,18 @@ VertexOutput VertexFunction(VertexInput input) {
 }
 
 PixelOutput PixelFunction(VertexOutput input) {
-    float4 diffuseColor = DiffuseTexture.Sample(DefaultSampler, input.UV);
+    float4 diffuseColor = DiffuseTexture.Sample(InputSampler, input.UV);
     if (diffuseColor.a < 0.5) discard;
-    float4 specularColor = Specular.Sample(DefaultSampler, input.UV);
-    float3 emissiveColor = EmissiveTexture.Sample(DefaultSampler, input.UV).rgb;
+    float4 specularColor = SpecularTexture.Sample(InputSampler, input.UV);
+    float3 emissiveColor = EmissiveTexture.Sample(InputSampler, input.UV).rgb;
     
     PixelOutput output;
-    output.DiffuseRGB = diffuseColor.rgb * _DiffuseColor;
+    output.DiffuseRGB = diffuseColor.rgb * _Material.DiffuseColor;
     output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
     output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = specularColor.rgb * _SpecularColor;
-    output.SpecularRGB_ShininessA.a = _Shininess / 2048.0;
-    output.EmissiveRGB = emissiveColor.rgb * _EmissiveColor;
+    output.SpecularRGB_ShininessA.rgb = specularColor.rgb * _Material.SpecularColor;
+    output.SpecularRGB_ShininessA.a = _Material.Shininess / 2048.0;
+    output.EmissiveRGB = emissiveColor.rgb * _Material.EmissiveColor;
     
     return output;
 };
