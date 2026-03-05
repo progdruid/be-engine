@@ -1,5 +1,4 @@
 #pragma once
-
 #include <slang.h>
 #include <slang-com-ptr.h>
 #include <filesystem>
@@ -7,7 +6,7 @@
 #include <expected>
 #include <umbrellas/access-modifiers.hpp>
 
-class BeShaderCompiler {
+class SenShaderCompiler {
     hide static Slang::ComPtr<slang::IGlobalSession> _globalSession;
 
     expose

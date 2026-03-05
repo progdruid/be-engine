@@ -5,12 +5,10 @@
 #include <vector>
 #include <wrl/client.h>
 #include <memory>
-#include <unordered_map>
 #include <umbrellas/access-modifiers.hpp>
-#include <umbrellas/include-glm.h>
 
 #include "BeBuffers.h"
-#include <sen-rhi/SenBuffer.h>
+#include <sen-rhi/SenTypes.h>
 
 class BeWindow;
 class BePipeline;

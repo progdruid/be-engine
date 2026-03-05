@@ -95,18 +95,18 @@ auto BeBRPSubmissionBuffer::BakeMeshes() -> void {
         }
     }
 
-    _sharedVertexBuffer = SenDx11Backend::Get().CreateBuffer(_device, {
-        .usage  = SenBufferUsage::Vertex,
-        .access = SenBufferAccess::Immutable,
-        .size   = static_cast<uint32_t>(fullVertices.size() * sizeof(BeFullVertex)),
-        .data   = fullVertices.data(),
+    _sharedVertexBuffer = SenDx11Backend::Get().CreateBuffer({
+        .Usage  = SenBufferUsage::Vertex,
+        .Access = SenBufferAccess::Immutable,
+        .Size   = static_cast<uint32_t>(fullVertices.size() * sizeof(BeFullVertex)),
+        .Data   = fullVertices.data(),
     });
 
-    _sharedIndexBuffer = SenDx11Backend::Get().CreateBuffer(_device, {
-        .usage  = SenBufferUsage::Index,
-        .access = SenBufferAccess::Immutable,
-        .size   = static_cast<uint32_t>(indices.size() * sizeof(uint32_t)),
-        .data   = indices.data(),
+    _sharedIndexBuffer = SenDx11Backend::Get().CreateBuffer({
+        .Usage  = SenBufferUsage::Index,
+        .Access = SenBufferAccess::Immutable,
+        .Size   = static_cast<uint32_t>(indices.size() * sizeof(uint32_t)),
+        .Data   = indices.data(),
     });
 }
 

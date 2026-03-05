@@ -41,11 +41,11 @@ BeMaterial::BeMaterial(
     AssembleData();
 
     const uint32_t sizeInBytes = static_cast<uint32_t>(_bufferData.size() * sizeof(float));
-    _cbuffer = SenDx11Backend::Get().CreateBuffer(renderer.GetDevice(), {
-        .usage  = SenBufferUsage::Constant,
-        .access = _isFrequentlyUsed ? SenBufferAccess::Dynamic : SenBufferAccess::Default,
-        .size   = sizeInBytes,
-        .data   = _bufferData.data(),
+    _cbuffer = SenDx11Backend::Get().CreateBuffer({
+        .Usage  = SenBufferUsage::Constant,
+        .Access = _isFrequentlyUsed ? SenBufferAccess::Dynamic : SenBufferAccess::Default,
+        .Size   = sizeInBytes,
+        .Data   = _bufferData.data(),
     });
 }
 
@@ -170,14 +170,13 @@ auto BeMaterial::GetSampler(const std::string& propertyName) const -> SenSampler
 }
 
 
-auto BeMaterial::UpdateGPUBuffers(const ComPtr<ID3D11DeviceContext>& context) -> bool {
+auto BeMaterial::UpdateGPUBuffers() -> bool {
     if (!_cbufferDirty) return false;
 
     SenDx11Backend::Get().WriteBuffer(
         _cbuffer,
         _bufferData.data(),
-        static_cast<uint32_t>(_bufferData.size() * sizeof(float)),
-        context
+        static_cast<uint32_t>(_bufferData.size() * sizeof(float))
     );
 
     _cbufferDirty = false;

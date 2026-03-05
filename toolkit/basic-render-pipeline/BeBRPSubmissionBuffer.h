@@ -9,7 +9,7 @@
 
 #include "BeMesh.h"
 #include "BeProp.h"
-#include <sen-rhi/SenBuffer.h>
+#include <sen-rhi/SenTypes.h>
 
 class BeTexture;
 

@@ -6,7 +6,7 @@
 
 #include "BeMaterialScheme.h"
 #include "umbrellas/include-libassert.h"
-#include <sen-rhi/SenSampler.h>
+#include <sen-rhi/SenTypes.h>
 
 // Windows headers define GetProp as GetPropW — undef to avoid macro collision
 #ifdef GetProp

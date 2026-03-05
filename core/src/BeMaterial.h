@@ -3,13 +3,10 @@
 #include <string>
 #include <umbrellas/access-modifiers.hpp>
 #include <umbrellas/include-glm.h>
-#include <wrl/client.h>
 
 #include "BeMaterialScheme.h"
-#include "sen-rhi/SenBuffer.h"
-#include "sen-rhi/SenSampler.h"
+#include "sen-rhi/SenTypes.h"
 
-struct ID3D11DeviceContext;
 class BeRenderer;
 class BeTexture;
 
@@ -83,7 +80,7 @@ class BeMaterial {
     auto SetSampler(const std::string& propertyName, SenSampler sampler) -> void;
     auto GetSampler(const std::string& propertyName) const -> SenSampler;
     
-    auto UpdateGPUBuffers (const Microsoft::WRL::ComPtr<ID3D11DeviceContext>& context) -> bool;
+    auto UpdateGPUBuffers () -> bool;
     auto GetBuffer () const -> SenBuffer { return _cbuffer; }
     auto GetTexturePairs () const -> const std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>>& { return _textures; }
     auto GetSamplerPairs () const -> const std::unordered_map<std::string, std::pair<SenSampler, uint8_t>>& { return _samplers; }

@@ -50,7 +50,7 @@ auto BeGeometryPass::Render() -> void
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", _renderer->UniformData.ProjectionView);
         _objectMaterial->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
-        _objectMaterial->UpdateGPUBuffers(context);
+        _objectMaterial->UpdateGPUBuffers();
         pipeline->BindMaterialAutomatic(_objectMaterial);
 
         const auto& meshSlices = submissionBuffer->GetMeshSlices(entry.Prop->Mesh.get());

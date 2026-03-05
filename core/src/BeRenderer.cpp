@@ -7,9 +7,9 @@
 #include "BePipeline.h"
 #include "BeRenderPass.h"
 #include "BeShader.h"
-#include "BeShaderCompiler.h"
 #include "Utils.h"
 #include <sen-rhi/dx11/SenDx11Backend.h>
+#include <sen-rhi/SenShaderCompiler.h>
 
 auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
     ComPtr<IDXGIFactory6> f6;
@@ -109,8 +109,8 @@ auto BeRenderer::LaunchDevice() -> void {
     Utils::Check << _factory->CreateSwapChainForHwnd(_device.Get(), hwnd, &scDesc, nullptr, nullptr, &_swapchain);
     Utils::Check << _factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
 
-    BeShaderCompiler::Launch();
-    SenDx11Backend::Init();
+    SenShaderCompiler::Launch();
+    SenDx11Backend::Init(_device, _context);
 
     _pipeline = BePipeline::Create(_context);
     
@@ -119,10 +119,10 @@ auto BeRenderer::LaunchDevice() -> void {
     << _swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))
     << _device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_backbufferTarget);
     
-    _uniformBuffer = SenDx11Backend::Get().CreateBuffer(_device, {
-        .usage  = SenBufferUsage::Constant,
-        .access = SenBufferAccess::Dynamic,
-        .size   = sizeof(BeUniformBufferGPU),
+    _uniformBuffer = SenDx11Backend::Get().CreateBuffer({
+        .Usage  = SenBufferUsage::Constant,
+        .Access = SenBufferAccess::Dynamic,
+        .Size   = sizeof(BeUniformBufferGPU),
     });
     
     D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {};
@@ -178,7 +178,7 @@ auto BeRenderer::Render() -> void {
 
 
     const BeUniformBufferGPU uniformDataGpu(UniformData);
-    SenDx11Backend::Get().WriteBuffer(_uniformBuffer, &uniformDataGpu, sizeof(BeUniformBufferGPU), _context);
+    SenDx11Backend::Get().WriteBuffer(_uniformBuffer, &uniformDataGpu, sizeof(BeUniformBufferGPU));
     auto* rawUniformBuffer = SenDx11Backend::Get().LookupBuffer(_uniformBuffer).Buffer.Get();
     _context->VSSetConstantBuffers(0, 1, &rawUniformBuffer);
     _context->HSSetConstantBuffers(0, 1, &rawUniformBuffer);

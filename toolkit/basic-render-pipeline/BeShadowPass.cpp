@@ -9,6 +9,7 @@
 #include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 auto BeShadowPass::Initialise() -> void {
     auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
@@ -60,9 +61,8 @@ auto BeShadowPass::RenderDirectionalShadows(
     context->RSSetViewports(1, &viewport);
 
     // sort out render target
-    context->OMSetRenderTargets(0, Utils::NullRTVs, sunLight.ShadowMap.lock()->GetDSV().Get());
-    context->ClearDepthStencilView(sunLight.ShadowMap.lock()->GetDSV().Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-    SCOPE_EXIT { context->OMSetRenderTargets(0, nullptr, nullptr); };
+    pipeline->BindTargets({}, sunLight.ShadowMap.lock().get(), true);
+    SCOPE_EXIT { pipeline->ClearTargets(); };
 
     // Set vertex and index buffers
     pipeline->BindVertexBuffer(submissionBuffer.GetSharedVertexBuffer(), sizeof(BeFullVertex));
@@ -82,7 +82,7 @@ auto BeShadowPass::RenderDirectionalShadows(
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
         _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
-        _objectMaterial->UpdateGPUBuffers(context);
+        _objectMaterial->UpdateGPUBuffers();
         pipeline->BindMaterialAutomatic(_objectMaterial);
 
         const auto& meshSlices = submissionBuffer.GetMeshSlices(entry.Prop->Mesh.get());
@@ -133,9 +133,10 @@ auto BeShadowPass::RenderPointLightShadows(
     // render each face
     for (int face = 0; face < 6; face++) {
         // sort out render target
-        auto cubemapDSV = pointLight.ShadowMap.lock()->GetCubemapDSV(face);
-        context->ClearDepthStencilView(cubemapDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-        context->OMSetRenderTargets(0, nullptr, cubemapDSV.Get());
+        auto shadowMapPtr = pointLight.ShadowMap.lock();
+        auto cubemapDSV = SenDx11Backend::Get().LookupTexture(shadowMapPtr->Handle).CubemapDSVs[face].Get();
+        context->ClearDepthStencilView(cubemapDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+        context->OMSetRenderTargets(0, nullptr, cubemapDSV);
 
         const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
@@ -150,7 +151,7 @@ auto BeShadowPass::RenderPointLightShadows(
             _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
             _objectMaterial->SetMatrix("ProjectionView", faceViewProj);
             _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
-            _objectMaterial->UpdateGPUBuffers(context);
+            _objectMaterial->UpdateGPUBuffers();
             pipeline->BindMaterialAutomatic(_objectMaterial);
 
             // draw

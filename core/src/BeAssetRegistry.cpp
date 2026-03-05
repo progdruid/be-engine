@@ -144,10 +144,10 @@ auto BeAssetRegistry::GetSampler(std::string_view samplerDescString) -> SenSampl
     auto renderer = _renderer.lock();
     be_assert(renderer, "Renderer couldn't be locked");
 
-    auto sampler = SenDx11Backend::Get().CreateSampler(renderer->GetDevice(), {
-        .filter     = filter,
-        .address    = address,
-        .comparison = hasComparison,
+    auto sampler = SenDx11Backend::Get().CreateSampler({
+        .Filter     = filter,
+        .Address    = address,
+        .Comparison = hasComparison,
     });
 
     _samplers[key] = sampler;

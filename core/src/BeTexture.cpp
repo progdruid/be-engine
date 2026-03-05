@@ -112,15 +112,15 @@ BeTexture::BeTexture(ComPtr<ID3D11Device> device, const BeTextureDescriptor& des
 , Format(descriptor.Format)
 {
     SenTextureDesc senDesc;
-    senDesc.format  = descriptor.Format;
-    senDesc.width   = descriptor.Width;
-    senDesc.height  = descriptor.Height;
-    senDesc.usage   = descriptor.Usage;
-    senDesc.mips    = descriptor.Mips;
-    senDesc.cubemap = descriptor.IsCubemap;
-    senDesc.data    = descriptor.Data;
+    senDesc.Format  = descriptor.Format;
+    senDesc.Width   = descriptor.Width;
+    senDesc.Height  = descriptor.Height;
+    senDesc.Usage   = descriptor.Usage;
+    senDesc.Mips    = descriptor.Mips;
+    senDesc.Cubemap = descriptor.IsCubemap;
+    senDesc.Data    = descriptor.Data;
 
-    Handle = SenDx11Backend::Get().CreateTexture(device, senDesc);
+    Handle = SenDx11Backend::Get().CreateTexture(senDesc);
 
     CreateMipViewports();
 }
@@ -131,22 +131,6 @@ BeTexture::~BeTexture() {
 
 
 auto BeTexture::GetMipViewport(const uint32_t mip) const -> const SenViewport& { return _mipViewports[mip]; }
-
-auto BeTexture::GetSRV() const -> ComPtr<ID3D11ShaderResourceView> {
-    return SenDx11Backend::Get().LookupTexture(Handle).SRV;
-}
-auto BeTexture::GetDSV() const -> ComPtr<ID3D11DepthStencilView> {
-    return SenDx11Backend::Get().LookupTexture(Handle).DSV;
-}
-auto BeTexture::GetRTV(const uint32_t mip) const -> ComPtr<ID3D11RenderTargetView> {
-    return SenDx11Backend::Get().LookupTexture(Handle).MipRTVs[mip];
-}
-auto BeTexture::GetCubemapDSV(const uint32_t faceIndex) -> ComPtr<ID3D11DepthStencilView> {
-    return SenDx11Backend::Get().LookupTexture(Handle).CubemapDSVs[faceIndex];
-}
-auto BeTexture::GetCubemapRTV(const uint32_t faceIndex, const uint32_t mip) -> ComPtr<ID3D11RenderTargetView> {
-    return SenDx11Backend::Get().LookupTexture(Handle).CubemapMipRTVs[faceIndex][mip];
-}
 
 
 auto BeTexture::CreateMipViewports() -> void {

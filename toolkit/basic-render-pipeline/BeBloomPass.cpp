@@ -40,7 +40,7 @@ auto BeBloomPass::Initialise() -> void {
         mat->SetFloat2("TexelSize", glm::vec2(texelSizeX, texelSizeY));
         mat->SetFloat("PassRadius", passRadius);
         mat->SetTexture("BloomMipInput", sourceMip);
-        mat->UpdateGPUBuffers(_renderer->GetContext().Get());
+        mat->UpdateGPUBuffers();
 
         _downsampleMaterials[mipTarget] = mat;
     }
@@ -65,7 +65,7 @@ auto BeBloomPass::Initialise() -> void {
         mat->SetFloat2("TexelSize", glm::vec2(texelSizeX, texelSizeY));
         mat->SetFloat("PassRadius", upsampleRadius);
         mat->SetTexture("BloomMipInput", sourceMip);
-        mat->UpdateGPUBuffers(_renderer->GetContext().Get());
+        mat->UpdateGPUBuffers();
 
         _upsampleMaterials[mipTarget] = mat;
     }

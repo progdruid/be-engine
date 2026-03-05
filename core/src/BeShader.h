@@ -1,12 +1,10 @@
 ﻿#pragma once
 
-#include <d3d11.h>
 #include <expected>
 #include <filesystem>
 #include <string>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
-#include <wrl/client.h>
 #include <umbrellas/access-modifiers.hpp>
 #include <sen-rhi/SenTypes.h>
 
@@ -14,7 +12,6 @@
 
 class BeShaderIncludeHandler;
 class BeRenderer;
-using Microsoft::WRL::ComPtr;
 
 enum class BeShaderType : uint8_t {
     None = 0,
@@ -25,22 +22,6 @@ enum class BeShaderType : uint8_t {
 };
 ENABLE_BITMASK(BeShaderType);
 
-struct BeVertexElementDescriptor {
-    enum class BeVertexSemantic : uint8_t {
-        Position,
-        Normal,
-        Color3,
-        Color4,
-        TexCoord0,
-        TexCoord1,
-        TexCoord2,
-        Count_
-    };
-    
-    std::string Name;
-    BeVertexSemantic Attribute;
-};
-
 class BeShader {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     expose static auto Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader>;
@@ -50,11 +31,11 @@ class BeShader {
     expose std::string Name;
     expose BeShaderType ShaderType = BeShaderType::None;
     expose SenTopology Topology = SenTopology::Undefined;
-    expose ComPtr<ID3D11InputLayout> ComputedInputLayout;
-    expose ComPtr<ID3D11VertexShader> VertexShader;
-    expose ComPtr<ID3D11HullShader> HullShader;
-    expose ComPtr<ID3D11DomainShader> DomainShader;
-    expose ComPtr<ID3D11PixelShader> PixelShader;
+    expose SenVertexLayout VertexLayout;
+    expose SenShader ShaderVertex;
+    expose SenShader ShaderHull;
+    expose SenShader ShaderDomain;
+    expose SenShader ShaderPixel;
     expose std::unordered_map<std::string, uint32_t> PixelTargets;
     expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
     

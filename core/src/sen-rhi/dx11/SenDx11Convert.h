@@ -1,7 +1,8 @@
 #pragma once
 #include <d3d11.h>
+#include <unordered_map>
+#include <string>
 #include <sen-rhi/SenTypes.h>
-#include <sen-rhi/SenSampler.h>
 
 namespace Sen::Dx11 {
 
@@ -11,6 +12,9 @@ namespace Sen::Dx11 {
             case SenFormat::RGBA16_Float:    return DXGI_FORMAT_R16G16B16A16_FLOAT;
             case SenFormat::R11G11B10_Float: return DXGI_FORMAT_R11G11B10_FLOAT;
             case SenFormat::Depth32:         return DXGI_FORMAT_R32_TYPELESS;
+            case SenFormat::RGB32_Float:     return DXGI_FORMAT_R32G32B32_FLOAT;
+            case SenFormat::RGBA32_Float:    return DXGI_FORMAT_R32G32B32A32_FLOAT;
+            case SenFormat::RG32_Float:      return DXGI_FORMAT_R32G32_FLOAT;
             default:                         return DXGI_FORMAT_UNKNOWN;
         }
     }
@@ -92,6 +96,19 @@ namespace Sen::Dx11 {
             case SenAddressMode::Mirror: return D3D11_TEXTURE_ADDRESS_MIRROR;
             default:                     return D3D11_TEXTURE_ADDRESS_CLAMP;
         }
+    }
+
+    inline auto ToVertexSemanticName(std::string_view semantic) -> const char* {
+        static const std::unordered_map<std::string, const char*> Map = {
+            {"position", "POSITION"},
+            {"normal",   "NORMAL"},
+            {"color3",   "COLOR"},
+            {"color4",   "COLOR"},
+            {"uv0",      "TEXCOORD"},
+            {"uv1",      "TEXCOORD1"},
+            {"uv2",      "TEXCOORD2"},
+        };
+        return Map.at(std::string(semantic));
     }
 
 } // namespace Sen::Dx11

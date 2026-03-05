@@ -20,22 +20,42 @@ auto BePipeline::BindShader(const std::shared_ptr<BeShader>& shader, BeShaderTyp
     assert(shader->Topology != SenTopology::Undefined);
 
     _context->IASetPrimitiveTopology(Sen::Dx11::ToTopology(shader->Topology));
-    
+
     const auto boundType = shader->ShaderType & shaderType;
-    
-    if (HasAny(boundType, BeShaderType::Vertex)) {
-        if (shader->ComputedInputLayout)
-            _context->IASetInputLayout(shader->ComputedInputLayout.Get());
-        _context->VSSetShader(shader->VertexShader.Get(), nullptr, 0);
+
+    if (HasAny(boundType, BeShaderType::Vertex) && shader->ShaderVertex.IsValid()) {
+        auto& vsEntry = SenDx11Backend::Get().LookupShader(shader->ShaderVertex);
+        ComPtr<ID3D11VertexShader> vs;
+        vsEntry.Shader.As(&vs);
+
+        if (shader->VertexLayout.IsValid()) {
+            auto& layoutEntry = SenDx11Backend::Get().LookupVertexLayout(shader->VertexLayout);
+            _context->IASetInputLayout(layoutEntry.InputLayout.Get());
+        }
+
+        _context->VSSetShader(vs.Get(), nullptr, 0);
     }
     if (HasAny(boundType, BeShaderType::Tesselation)) {
-        _context->HSSetShader(shader->HullShader.Get(), nullptr, 0);
-        _context->DSSetShader(shader->DomainShader.Get(), nullptr, 0);
+        if (shader->ShaderHull.IsValid()) {
+            auto& hsEntry = SenDx11Backend::Get().LookupShader(shader->ShaderHull);
+            ComPtr<ID3D11HullShader> hs;
+            hsEntry.Shader.As(&hs);
+            _context->HSSetShader(hs.Get(), nullptr, 0);
+        }
+        if (shader->ShaderDomain.IsValid()) {
+            auto& dsEntry = SenDx11Backend::Get().LookupShader(shader->ShaderDomain);
+            ComPtr<ID3D11DomainShader> ds;
+            dsEntry.Shader.As(&ds);
+            _context->DSSetShader(ds.Get(), nullptr, 0);
+        }
     }
-    if (HasAny(boundType, BeShaderType::Pixel)) {
-        _context->PSSetShader(shader->PixelShader.Get(), nullptr, 0);
+    if (HasAny(boundType, BeShaderType::Pixel) && shader->ShaderPixel.IsValid()) {
+        auto& psEntry = SenDx11Backend::Get().LookupShader(shader->ShaderPixel);
+        ComPtr<ID3D11PixelShader> ps;
+        psEntry.Shader.As(&ps);
+        _context->PSSetShader(ps.Get(), nullptr, 0);
     }
-    
+
     _boundShaderType = boundType;
     _boundShader = shader;
 }
@@ -49,7 +69,7 @@ auto BePipeline::BindMaterialAutomatic(const std::shared_ptr<BeMaterial>& materi
 auto BePipeline::BindMaterialManual(const std::shared_ptr<BeMaterial>& material, const uint8_t materialSlot) -> void {
     const auto bufferHandle = material->GetBuffer();
     if (bufferHandle.IsValid()) {
-        auto updated = material->UpdateGPUBuffers(_context);
+        auto updated = material->UpdateGPUBuffers();
         auto id = material->GetUniqueID();
         auto* rawBuffer = SenDx11Backend::Get().LookupBuffer(bufferHandle).Buffer.Get();
 
@@ -73,18 +93,18 @@ auto BePipeline::BindMaterialManual(const std::shared_ptr<BeMaterial>& material,
     const auto& samplerSlots = material->GetSamplerPairs();
     for (auto& [handle, slot] : samplerSlots | std::views::values) {
         auto* rawSampler = SenDx11Backend::Get().LookupSampler(handle).Sampler.Get();
-        if (HasAny(_boundShaderType, BeShaderType::Vertex) && _vertexSamplerCache[slot] != handle.id) {
+        if (HasAny(_boundShaderType, BeShaderType::Vertex) && _vertexSamplerCache[slot] != handle.ID) {
             _context->VSSetSamplers(slot, 1, &rawSampler);
-            _vertexSamplerCache[slot] = handle.id;
+            _vertexSamplerCache[slot] = handle.ID;
         }
-        if (HasAny(_boundShaderType, BeShaderType::Tesselation) && _tessSamplerCache[slot] != handle.id) {
+        if (HasAny(_boundShaderType, BeShaderType::Tesselation) && _tessSamplerCache[slot] != handle.ID) {
             _context->HSSetSamplers(slot, 1, &rawSampler);
             _context->DSSetSamplers(slot, 1, &rawSampler);
-            _tessSamplerCache[slot] = handle.id;
+            _tessSamplerCache[slot] = handle.ID;
         }
-        if (HasAny(_boundShaderType, BeShaderType::Pixel) && _pixelSamplerCache[slot] != handle.id) {
+        if (HasAny(_boundShaderType, BeShaderType::Pixel) && _pixelSamplerCache[slot] != handle.ID) {
             _context->PSSetSamplers(slot, 1, &rawSampler);
-            _pixelSamplerCache[slot] = handle.id;
+            _pixelSamplerCache[slot] = handle.ID;
         }
     }
 }
@@ -125,7 +145,7 @@ auto BePipeline::BindMaterialTextures(const BeMaterial& material) -> void {
     for (const auto& [texture, slot] : textureSlots | std::views::values) {
 
         const auto srv = SenDx11Backend::Get().LookupTexture(texture->Handle).SRV;
-        const auto id  = texture->Handle.id;
+        const auto id  = texture->Handle.ID;
         
         if (HasAny(_boundShaderType, BeShaderType::Vertex) && _vertexResCache[slot] != id) {
             _context->VSSetShaderResources(slot, 1, srv.GetAddressOf());
@@ -152,7 +172,8 @@ auto BePipeline::BindTargets(
     std::vector<ID3D11RenderTargetView*> rtvs;
     rtvs.reserve(renderTargets.size());
     for (const auto& renderTarget : renderTargets) {
-        auto rtv = renderTarget.lock()->GetRTV().Get();
+        auto texturePtr = renderTarget.lock();
+        auto rtv = SenDx11Backend::Get().LookupTexture(texturePtr->Handle).MipRTVs[0].Get();
         if (clearRTVs)
             _context->ClearRenderTargetView(rtv, glm::value_ptr(glm::vec4(0.0f)));
         rtvs.push_back(rtv);
@@ -161,7 +182,7 @@ auto BePipeline::BindTargets(
     //dsv
     ID3D11DepthStencilView* dsv = nullptr;
     if (depthTarget != nullptr) {
-        dsv = depthTarget->GetDSV().Get();
+        dsv = SenDx11Backend::Get().LookupTexture(depthTarget->Handle).DSV.Get();
         _context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     }
 
@@ -179,9 +200,9 @@ auto BePipeline::ResetTarget(const std::shared_ptr<BeTexture>& texture) const ->
         "only render targets can be reset. ",
         texture->Usage
     );
-    
+
     _context->ClearRenderTargetView(
-        texture->GetRTV().Get(),
+        SenDx11Backend::Get().LookupTexture(texture->Handle).MipRTVs[0].Get(),
         glm::value_ptr(glm::vec4(0.0f))
     );
 }

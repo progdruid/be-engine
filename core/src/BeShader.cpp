@@ -1,13 +1,12 @@
 #include "BeShader.h"
 
-#include <umbrellas/include-glm.h>
-
 #include "BeRenderer.h"
-#include "BeShaderCompiler.h"
 #include "BeShaderTools.h"
 #include "Utils.h"
 #include <umbrellas/include-libassert.h>
-#include <sen-rhi/dx11/SenDx11Convert.h>
+
+#include "sen-rhi/SenShaderCompiler.h"
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader> {
     be_assert(
@@ -68,64 +67,52 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         shader->ShaderType = BeShaderType::Vertex;
 
         auto vertexFunctionName = std::string(header.at("vertex"));
-        auto result = BeShaderCompiler::Compile(filePath, vertexFunctionName, SLANG_STAGE_VERTEX);
+        auto result = SenShaderCompiler::Compile(filePath, vertexFunctionName, SLANG_STAGE_VERTEX);
         be_assert(result, shaderErrMsg(result.error(), "vertex"));
         auto& blob = result.value();
-        Utils::Check << device->CreateVertexShader(blob->getBufferPointer(), blob->getBufferSize(), nullptr, &shader->VertexShader);
+
+        shader->ShaderVertex = SenDx11Backend::Get().CreateShader({
+            .Blob = blob->getBufferPointer(),
+            .BlobSize = static_cast<uint32_t>(blob->getBufferSize()),
+            .Stage = SenShaderStage::Vertex,
+        });
 
         if (header.contains("vertexLayout")) {
             auto vertexLayoutJson = header["vertexLayout"];
 
-            auto inputLayout = std::vector<D3D11_INPUT_ELEMENT_DESC>();
-            inputLayout.reserve(vertexLayoutJson.size());
+            static const std::unordered_map<std::string, SenFormat> ElementFormats = {
+                {"position", SenFormat::RGB32_Float},
+                {"normal",   SenFormat::RGB32_Float},
+                {"color3",   SenFormat::RGB32_Float},
+                {"color4",   SenFormat::RGBA32_Float},
+                {"uv0",      SenFormat::RG32_Float},
+                {"uv1",      SenFormat::RG32_Float},
+                {"uv2",      SenFormat::RG32_Float},
+            };
+            static const std::unordered_map<std::string, uint32_t> ElementOffsets = {
+                {"position", 0},
+                {"normal",  12},
+                {"color3",  24},
+                {"color4",  24},
+                {"uv0",     40},
+                {"uv1",     48},
+                {"uv2",     56},
+            };
 
-            for (const std::string vertexSemanticName : vertexLayoutJson) {
-                static const std::unordered_map<std::string, const char*> SemanticNames = {
-                    {"position", "POSITION"},
-                    {"normal", "NORMAL"},
-                    {"color3", "COLOR"},
-                    {"color4", "COLOR"},
-                    {"uv0", "TEXCOORD"},
-                    {"uv1", "TEXCOORD1"},
-                    {"uv2", "TEXCOORD2"},
-                };
-                static const std::unordered_map<std::string, DXGI_FORMAT> ElementFormats = {
-                    {"position", DXGI_FORMAT_R32G32B32_FLOAT},
-                    {"normal", DXGI_FORMAT_R32G32B32_FLOAT},
-                    {"color3", DXGI_FORMAT_R32G32B32_FLOAT},
-                    {"color4", DXGI_FORMAT_R32G32B32A32_FLOAT},
-                    {"uv0", DXGI_FORMAT_R32G32_FLOAT},
-                    {"uv1", DXGI_FORMAT_R32G32_FLOAT},
-                    {"uv2", DXGI_FORMAT_R32G32_FLOAT},
-                };
-                static const std::unordered_map<std::string, uint32_t> ElementOffsets = {
-                    {"position", 0},
-                    {"normal",  12},
-                    {"color3",  24},
-                    {"color4",  24},
-                    {"uv0",     40},
-                    {"uv1",     48},
-                    {"uv2",     56},
-                };
-
-                auto elementDesc = D3D11_INPUT_ELEMENT_DESC();
-                elementDesc.SemanticIndex = 0;
-                elementDesc.InputSlot = 0;
-                elementDesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-                elementDesc.InstanceDataStepRate = 0;
-                elementDesc.AlignedByteOffset = ElementOffsets.at(vertexSemanticName);
-                elementDesc.SemanticName = SemanticNames.at(vertexSemanticName);
-                elementDesc.Format = ElementFormats.at(vertexSemanticName);
-
-                inputLayout.push_back(elementDesc);
+            std::vector<SenVertexLayoutDesc::Element> layoutElements;
+            for (const std::string& semantic : vertexLayoutJson) {
+                layoutElements.push_back({
+                    .Semantic = semantic,
+                    .Format = ElementFormats.at(semantic),
+                    .Offset = ElementOffsets.at(semantic),
+                });
             }
 
-            Utils::Check << renderer.GetDevice()->CreateInputLayout(
-                inputLayout.data(),
-                static_cast<UINT>(inputLayout.size()),
-                blob->getBufferPointer(),
-                blob->getBufferSize(),
-                &shader->ComputedInputLayout);
+            shader->VertexLayout = SenDx11Backend::Get().CreateVertexLayout({
+                .Elements = layoutElements,
+                .VertexShaderBytecode = blob->getBufferPointer(),
+                .VertexShaderBytecodeSize = static_cast<uint32_t>(blob->getBufferSize()),
+            });
         }
     }
 
@@ -136,15 +123,24 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         auto hullFunctionName = std::string(tesselation.at("hull"));
         auto domainFunctionName = std::string(tesselation.at("domain"));
 
-        auto hullResult = BeShaderCompiler::Compile(filePath, hullFunctionName, SLANG_STAGE_HULL);
+        auto hullResult = SenShaderCompiler::Compile(filePath, hullFunctionName, SLANG_STAGE_HULL);
         be_assert(hullResult, shaderErrMsg(hullResult.error(), "hull"));
-        auto domainResult = BeShaderCompiler::Compile(filePath, domainFunctionName, SLANG_STAGE_DOMAIN);
+        auto domainResult = SenShaderCompiler::Compile(filePath, domainFunctionName, SLANG_STAGE_DOMAIN);
         be_assert(domainResult, shaderErrMsg(domainResult.error(), "domain"));
 
         auto& hullBlob = hullResult.value();
         auto& domainBlob = domainResult.value();
-        Utils::Check << device->CreateHullShader(hullBlob->getBufferPointer(), hullBlob->getBufferSize(), nullptr, &shader->HullShader);
-        Utils::Check << device->CreateDomainShader(domainBlob->getBufferPointer(), domainBlob->getBufferSize(), nullptr, &shader->DomainShader);
+
+        shader->ShaderHull = SenDx11Backend::Get().CreateShader({
+            .Blob = hullBlob->getBufferPointer(),
+            .BlobSize = static_cast<uint32_t>(hullBlob->getBufferSize()),
+            .Stage = SenShaderStage::Hull,
+        });
+        shader->ShaderDomain = SenDx11Backend::Get().CreateShader({
+            .Blob = domainBlob->getBufferPointer(),
+            .BlobSize = static_cast<uint32_t>(domainBlob->getBufferSize()),
+            .Stage = SenShaderStage::Domain,
+        });
     }
 
     if (header.contains("pixel")) {
@@ -152,10 +148,15 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         shader->ShaderType = shader->ShaderType | BeShaderType::Pixel;
 
         std::string pixelFunctionName = header.at("pixel");
-        auto result = BeShaderCompiler::Compile(filePath, pixelFunctionName, SLANG_STAGE_PIXEL);
+        auto result = SenShaderCompiler::Compile(filePath, pixelFunctionName, SLANG_STAGE_PIXEL);
         be_assert(result, shaderErrMsg(result.error(), "pixel"));
         auto& blob = result.value();
-        Utils::Check << device->CreatePixelShader(blob->getBufferPointer(), blob->getBufferSize(), nullptr, &shader->PixelShader);
+
+        shader->ShaderPixel = SenDx11Backend::Get().CreateShader({
+            .Blob = blob->getBufferPointer(),
+            .BlobSize = static_cast<uint32_t>(blob->getBufferSize()),
+            .Stage = SenShaderStage::Pixel,
+        });
 
         Json targets = header.at("targets");
         for (const auto& target : targets.items()) {

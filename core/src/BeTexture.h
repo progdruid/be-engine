@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include <array>
 #include <cstdint>
 #include <wrl/client.h>
 #include <d3d11.h>
@@ -10,7 +9,6 @@
 #include <umbrellas/include-glm.h>
 #include <umbrellas/access-modifiers.hpp>
 #include <sen-rhi/SenTypes.h>
-#include <sen-rhi/SenTexture.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -80,12 +78,7 @@ class BeTexture {
     expose ~BeTexture();
 
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
-    expose auto GetMipViewport (const uint32_t mip) const              -> const SenViewport&;
-    expose auto GetSRV         () const                                -> ComPtr<ID3D11ShaderResourceView>;
-    expose auto GetDSV         () const                                -> ComPtr<ID3D11DepthStencilView>;
-    expose auto GetRTV         (const uint32_t mip = 0) const          -> ComPtr<ID3D11RenderTargetView>;
-    expose auto GetCubemapDSV  (uint32_t faceIndex)                    -> ComPtr<ID3D11DepthStencilView>;
-    expose auto GetCubemapRTV  (uint32_t faceIndex, uint32_t mip = 0)  -> ComPtr<ID3D11RenderTargetView>;
+    expose auto GetMipViewport (const uint32_t mip) const -> const SenViewport&;
 
     // private logic ///////////////////////////////////////////////////////////////////////////////////////////////////
     hide auto CreateMipViewports() -> void;

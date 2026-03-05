@@ -1,19 +1,18 @@
-#include "BeShaderCompiler.h"
+#include "SenShaderCompiler.h"
 
 #include <fstream>
-#include <sstream>
 #include <umbrellas/include-libassert.h>
 
-Slang::ComPtr<slang::IGlobalSession> BeShaderCompiler::_globalSession;
-std::string BeShaderCompiler::AssetShadersPath = "assets/shaders/";
-std::string BeShaderCompiler::StandardShadersPath = "src/shaders/";
+Slang::ComPtr<slang::IGlobalSession> SenShaderCompiler::_globalSession;
+std::string SenShaderCompiler::AssetShadersPath = "assets/shaders/";
+std::string SenShaderCompiler::StandardShadersPath = "src/shaders/";
 
-auto BeShaderCompiler::Launch() -> void {
+auto SenShaderCompiler::Launch() -> void {
     SlangResult result = slang::createGlobalSession(_globalSession.writeRef());
     be_assert(SLANG_SUCCEEDED(result), "Failed to create Slang global session");
 }
 
-auto BeShaderCompiler::Compile(
+auto SenShaderCompiler::Compile(
     const std::filesystem::path& filePath,
     const std::string& entryPoint,
     SlangStage stage
@@ -24,7 +23,7 @@ auto BeShaderCompiler::Compile(
         ? std::string(static_cast<const char*>(diag->getBufferPointer()), diag->getBufferSize())
         : std::string("(no diagnostics)");
     };
-
+    
     slang::TargetDesc targetDesc = {};
     targetDesc.format = SLANG_DXBC;
     targetDesc.profile = _globalSession->findProfile("sm_5_0");

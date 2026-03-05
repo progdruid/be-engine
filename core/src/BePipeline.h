@@ -5,7 +5,7 @@
 #include <wrl/client.h>
 
 #include "BeShader.h"
-#include <sen-rhi/SenBuffer.h>
+#include <sen-rhi/SenTypes.h>
 
 class BeTexture;
 class BeMaterial;
