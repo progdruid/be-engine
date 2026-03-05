@@ -65,13 +65,11 @@ auto BeShadowPass::RenderDirectionalShadows(
     SCOPE_EXIT { context->OMSetRenderTargets(0, nullptr, nullptr); };
 
     // Set vertex and index buffers
-    uint32_t stride = sizeof(BeFullVertex);
-    uint32_t offset = 0;
-    context->IASetVertexBuffers(0, 1, submissionBuffer.GetSharedVertexBuffer().GetAddressOf(), &stride, &offset);
-    context->IASetIndexBuffer(submissionBuffer.GetSharedIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+    pipeline->BindVertexBuffer(submissionBuffer.GetSharedVertexBuffer(), sizeof(BeFullVertex));
+    pipeline->BindIndexBuffer(submissionBuffer.GetSharedIndexBuffer());
     SCOPE_EXIT {
-        context->IASetVertexBuffers(0, 1, Utils::NullBuffers, &stride, &offset);
-        context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
+        pipeline->ClearVertexBuffer();
+        pipeline->ClearIndexBuffer();
     };
 
     const auto& entries = submissionBuffer.GetGeometryEntries();
@@ -117,13 +115,11 @@ auto BeShadowPass::RenderPointLightShadows(
     const auto& pipeline = _renderer->GetPipeline();
 
     // sort out vertex and index buffers
-    uint32_t stride = sizeof(BeFullVertex);
-    uint32_t offset = 0;
-    context->IASetVertexBuffers(0, 1, submissionBuffer.GetSharedVertexBuffer().GetAddressOf(), &stride, &offset);
-    context->IASetIndexBuffer(submissionBuffer.GetSharedIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+    pipeline->BindVertexBuffer(submissionBuffer.GetSharedVertexBuffer(), sizeof(BeFullVertex));
+    pipeline->BindIndexBuffer(submissionBuffer.GetSharedIndexBuffer());
     SCOPE_EXIT {
-        context->IASetVertexBuffers(0, 1, Utils::NullBuffers, &stride, &offset);
-        context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
+        pipeline->ClearVertexBuffer();
+        pipeline->ClearIndexBuffer();
     };
 
     // sort out viewport

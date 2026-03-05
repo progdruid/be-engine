@@ -1,6 +1,7 @@
 #pragma once
 #include <d3d11.h>
 #include <sen-rhi/SenTypes.h>
+#include <sen-rhi/SenSampler.h>
 
 namespace Sen::Dx11 {
 
@@ -42,6 +43,55 @@ namespace Sen::Dx11 {
             .MinDepth = vp.MinDepth,
             .MaxDepth = vp.MaxDepth,
         };
+    }
+
+    struct Dx11BufferAccessDesc {
+        D3D11_USAGE usage;
+        UINT        cpuAccessFlags;
+    };
+
+    inline auto ToBufferBindFlag(SenBufferUsage usage) -> UINT {
+        switch (usage) {
+            case SenBufferUsage::Vertex:   return D3D11_BIND_VERTEX_BUFFER;
+            case SenBufferUsage::Index:    return D3D11_BIND_INDEX_BUFFER;
+            case SenBufferUsage::Constant: return D3D11_BIND_CONSTANT_BUFFER;
+            default:                       return 0;
+        }
+    }
+
+    inline auto ToBufferAccess(SenBufferAccess access) -> Dx11BufferAccessDesc {
+        switch (access) {
+            case SenBufferAccess::Dynamic:   return { D3D11_USAGE_DYNAMIC,   D3D11_CPU_ACCESS_WRITE };
+            case SenBufferAccess::Default:   return { D3D11_USAGE_DEFAULT,   0                      };
+            case SenBufferAccess::Immutable: return { D3D11_USAGE_IMMUTABLE, 0                      };
+            default:                         return { D3D11_USAGE_DEFAULT,   0                      };
+        }
+    }
+
+    inline auto ToFilter(SenFilter filter, bool comparison) -> D3D11_FILTER {
+        if (comparison) {
+            switch (filter) {
+                case SenFilter::Point:       return D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
+                case SenFilter::Linear:      return D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+                case SenFilter::Anisotropic: return D3D11_FILTER_COMPARISON_ANISOTROPIC;
+                default:                     return D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+            }
+        }
+        switch (filter) {
+            case SenFilter::Point:       return D3D11_FILTER_MIN_MAG_MIP_POINT;
+            case SenFilter::Linear:      return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+            case SenFilter::Anisotropic: return D3D11_FILTER_ANISOTROPIC;
+            default:                     return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        }
+    }
+
+    inline auto ToAddressMode(SenAddressMode address) -> D3D11_TEXTURE_ADDRESS_MODE {
+        switch (address) {
+            case SenAddressMode::Wrap:   return D3D11_TEXTURE_ADDRESS_WRAP;
+            case SenAddressMode::Clamp:  return D3D11_TEXTURE_ADDRESS_CLAMP;
+            case SenAddressMode::Mirror: return D3D11_TEXTURE_ADDRESS_MIRROR;
+            default:                     return D3D11_TEXTURE_ADDRESS_CLAMP;
+        }
     }
 
 } // namespace Sen::Dx11

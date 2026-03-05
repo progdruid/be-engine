@@ -1,19 +1,17 @@
 #pragma once
-#include <d3d11.h>
 #include <memory>
 #include <string>
-#include <unordered_map>
-#include <vector>
-#include <umbrellas/include-glm.h>
 #include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/include-glm.h>
 #include <wrl/client.h>
 
 #include "BeMaterialScheme.h"
-#include "BeShader.h"
+#include "sen-rhi/SenBuffer.h"
+#include "sen-rhi/SenSampler.h"
 
+struct ID3D11DeviceContext;
 class BeRenderer;
 class BeTexture;
-using Microsoft::WRL::ComPtr;
 
 class BeMaterial {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -35,12 +33,12 @@ class BeMaterial {
     uint32_t _uniqueID;
 
     std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>> _textures;
-    std::unordered_map<std::string, std::pair<ComPtr<ID3D11SamplerState>, uint8_t>> _samplers;
+    std::unordered_map<std::string, std::pair<SenSampler, uint8_t>> _samplers;
 
     std::unordered_map<std::string, uint32_t> _propertyOffsets;
     std::vector<float> _bufferData;
-    ComPtr<ID3D11Buffer> _cbuffer = nullptr;
-    bool _cbufferDirty;
+    SenBuffer _cbuffer;
+    bool _cbufferDirty = false;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
@@ -82,13 +80,13 @@ class BeMaterial {
     auto SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void;
     auto GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture>;
 
-    auto SetSampler(const std::string& propertyName, const ComPtr<ID3D11SamplerState>& sampler) -> void;
-    auto GetSampler(const std::string& propertyName) const -> ComPtr<ID3D11SamplerState>;
+    auto SetSampler(const std::string& propertyName, SenSampler sampler) -> void;
+    auto GetSampler(const std::string& propertyName) const -> SenSampler;
     
-    auto UpdateGPUBuffers (const ComPtr<ID3D11DeviceContext>& context) -> bool;
-    auto GetBuffer () const -> const ComPtr<ID3D11Buffer>& { return _cbuffer; }
+    auto UpdateGPUBuffers (const Microsoft::WRL::ComPtr<ID3D11DeviceContext>& context) -> bool;
+    auto GetBuffer () const -> SenBuffer { return _cbuffer; }
     auto GetTexturePairs () const -> const std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>>& { return _textures; }
-    auto GetSamplerPairs () const -> const std::unordered_map<std::string, std::pair<ComPtr<ID3D11SamplerState>, uint8_t>>& { return _samplers; }
+    auto GetSamplerPairs () const -> const std::unordered_map<std::string, std::pair<SenSampler, uint8_t>>& { return _samplers; }
     
     auto Print() const -> std::string;
 

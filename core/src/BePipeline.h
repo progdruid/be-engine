@@ -5,6 +5,7 @@
 #include <wrl/client.h>
 
 #include "BeShader.h"
+#include <sen-rhi/SenBuffer.h>
 
 class BeTexture;
 class BeMaterial;
@@ -32,9 +33,9 @@ class BePipeline {
     std::array<uint32_t, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT>   _tessCBufferIDCache;
     std::array<uint32_t, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT>  _pixelCBufferIDCache;
     
-    std::array<ID3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT> _vertexSamplerCache;
-    std::array<ID3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT>   _tessSamplerCache;
-    std::array<ID3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT>  _pixelSamplerCache;
+    std::array<uint32_t, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT> _vertexSamplerCache;
+    std::array<uint32_t, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT>   _tessSamplerCache;
+    std::array<uint32_t, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT>  _pixelSamplerCache;
     
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide BePipeline() = default;
@@ -65,6 +66,11 @@ class BePipeline {
     auto ResetTarget (const std::shared_ptr<BeTexture>& texture) const -> void;
     
     expose
+    auto BindVertexBuffer  (SenBuffer buffer, uint32_t stride) const -> void;
+    auto BindIndexBuffer   (SenBuffer buffer) const -> void;
+    auto ClearVertexBuffer () const -> void;
+    auto ClearIndexBuffer  () const -> void;
+
     auto Draw(uint32_t vertexCount, uint32_t startVertexLocation) const -> void;
     auto DrawIndexed(uint32_t indexCount, uint32_t startIndex, int32_t baseVertex) const -> void;
 };

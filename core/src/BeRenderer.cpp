@@ -9,7 +9,7 @@
 #include "BeShader.h"
 #include "BeShaderCompiler.h"
 #include "Utils.h"
-#include <sen-rhi/dx11/SenDx11TextureTable.h>
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
     ComPtr<IDXGIFactory6> f6;
@@ -53,7 +53,7 @@ BeRenderer::BeRenderer(
 {}
 
 BeRenderer::~BeRenderer() {
-    SenDx11TextureTable::Shutdown();
+    SenDx11Backend::Shutdown();
 }
 
 auto BeRenderer::LaunchDevice() -> void {
@@ -110,7 +110,7 @@ auto BeRenderer::LaunchDevice() -> void {
     Utils::Check << _factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
 
     BeShaderCompiler::Launch();
-    SenDx11TextureTable::Init();
+    SenDx11Backend::Init();
 
     _pipeline = BePipeline::Create(_context);
     
@@ -119,12 +119,11 @@ auto BeRenderer::LaunchDevice() -> void {
     << _swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))
     << _device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_backbufferTarget);
     
-    D3D11_BUFFER_DESC uniformBufferDescriptor = {};
-    uniformBufferDescriptor.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    uniformBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
-    uniformBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    uniformBufferDescriptor.ByteWidth = sizeof(BeUniformBufferGPU);
-    Utils::Check << _device->CreateBuffer(&uniformBufferDescriptor, nullptr, &_uniformBuffer);
+    _uniformBuffer = SenDx11Backend::Get().CreateBuffer(_device, {
+        .usage  = SenBufferUsage::Constant,
+        .access = SenBufferAccess::Dynamic,
+        .size   = sizeof(BeUniformBufferGPU),
+    });
     
     D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {};
     depthStencilStateDescriptor.DepthEnable = true;
@@ -179,14 +178,12 @@ auto BeRenderer::Render() -> void {
 
 
     const BeUniformBufferGPU uniformDataGpu(UniformData);
-    D3D11_MAPPED_SUBRESOURCE uniformMappedResource;
-    Utils::Check << _context->Map(_uniformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &uniformMappedResource);
-    memcpy(uniformMappedResource.pData, &uniformDataGpu, sizeof(BeUniformBufferGPU));
-    _context->Unmap(_uniformBuffer.Get(), 0);
-    _context->VSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
-    _context->HSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
-    _context->DSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
-    _context->PSSetConstantBuffers(0, 1, _uniformBuffer.GetAddressOf());
+    SenDx11Backend::Get().WriteBuffer(_uniformBuffer, &uniformDataGpu, sizeof(BeUniformBufferGPU), _context);
+    auto* rawUniformBuffer = SenDx11Backend::Get().LookupBuffer(_uniformBuffer).Buffer.Get();
+    _context->VSSetConstantBuffers(0, 1, &rawUniformBuffer);
+    _context->HSSetConstantBuffers(0, 1, &rawUniformBuffer);
+    _context->DSSetConstantBuffers(0, 1, &rawUniformBuffer);
+    _context->PSSetConstantBuffers(0, 1, &rawUniformBuffer);
 
     for (const auto& pass : _passes) {
         Utils::BeDebugAnnotation passAnnotation(_context, std::string(pass->GetPassName()));

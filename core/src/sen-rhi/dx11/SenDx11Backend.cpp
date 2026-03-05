@@ -1,33 +1,31 @@
-#include "SenDx11TextureTable.h"
+#include "SenDx11Backend.h"
 
 #include <unordered_map>
 #include "Utils.h"
 #include <umbrellas/include-libassert.h>
 #include <sen-rhi/dx11/SenDx11Convert.h>
 
-// ─── format helpers ───────────────────────────────────────────────────────────
+// ─── texture helpers ──────────────────────────────────────────────────────────
 
 static auto DepthSRVFormat(DXGI_FORMAT textureFormat) -> DXGI_FORMAT {
     static std::unordered_map<DXGI_FORMAT, DXGI_FORMAT> map = {
-        { DXGI_FORMAT_R32_TYPELESS,   DXGI_FORMAT_R32_FLOAT              },
-        { DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_R24_UNORM_X8_TYPELESS  },
-        { DXGI_FORMAT_R16_TYPELESS,   DXGI_FORMAT_R16_UNORM              },
+        { DXGI_FORMAT_R32_TYPELESS,   DXGI_FORMAT_R32_FLOAT             },
+        { DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_R24_UNORM_X8_TYPELESS },
+        { DXGI_FORMAT_R16_TYPELESS,   DXGI_FORMAT_R16_UNORM             },
     };
     return map.at(textureFormat);
 }
 
 static auto DepthDSVFormat(DXGI_FORMAT textureFormat) -> DXGI_FORMAT {
     static std::unordered_map<DXGI_FORMAT, DXGI_FORMAT> map = {
-        { DXGI_FORMAT_R32_TYPELESS,   DXGI_FORMAT_D32_FLOAT        },
+        { DXGI_FORMAT_R32_TYPELESS,   DXGI_FORMAT_D32_FLOAT         },
         { DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT },
         { DXGI_FORMAT_R16_TYPELESS,   DXGI_FORMAT_D16_UNORM         },
     };
     return map.at(textureFormat);
 }
 
-// ─── creation helpers ─────────────────────────────────────────────────────────
-
-static auto Create2D(
+static auto CreateTexture2D(
     const ComPtr<ID3D11Device>& device,
     const SenTextureDesc& desc,
     SenDx11TextureEntry& entry
@@ -85,7 +83,7 @@ static auto Create2D(
     }
 }
 
-static auto CreateCubemap(
+static auto CreateTextureCubemap(
     const ComPtr<ID3D11Device>& device,
     const SenTextureDesc& desc,
     SenDx11TextureEntry& entry
@@ -138,9 +136,9 @@ static auto CreateCubemap(
 
     if (dxBindFlags & D3D11_BIND_RENDER_TARGET) {
         D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-        rtvDesc.Format                         = dxFormat;
-        rtvDesc.ViewDimension                  = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-        rtvDesc.Texture2DArray.ArraySize       = 1;
+        rtvDesc.Format                   = dxFormat;
+        rtvDesc.ViewDimension            = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+        rtvDesc.Texture2DArray.ArraySize = 1;
         for (uint32_t face = 0; face < 6; ++face) {
             rtvDesc.Texture2DArray.FirstArraySlice = face;
             entry.CubemapMipRTVs[face].resize(desc.mips);
@@ -152,40 +150,136 @@ static auto CreateCubemap(
     }
 }
 
-// ─── table ────────────────────────────────────────────────────────────────────
+// ─── singleton ────────────────────────────────────────────────────────────────
 
-SenDx11TextureTable* SenDx11TextureTable::_instance = nullptr;
+SenDx11Backend* SenDx11Backend::_instance = nullptr;
 
-auto SenDx11TextureTable::Init() -> void {
-    _instance = new SenDx11TextureTable();
+auto SenDx11Backend::Init() -> void {
+    _instance = new SenDx11Backend();
 }
 
-auto SenDx11TextureTable::Shutdown() -> void {
+auto SenDx11Backend::Shutdown() -> void {
     delete _instance;
     _instance = nullptr;
 }
 
-auto SenDx11TextureTable::Get() -> SenDx11TextureTable& {
-    be_assert(_instance, "SenDx11TextureTable: Instance was already destroyed. Shutdown called.");
+auto SenDx11Backend::Get() -> SenDx11Backend& {
+    be_assert(_instance, "SenDx11Backend: not initialized");
     return *_instance;
 }
 
-auto SenDx11TextureTable::Create(const ComPtr<ID3D11Device>& device, const SenTextureDesc& desc) -> SenTexture {
-    const SenTexture handle { _nextId++ };
-    auto& entry = _entries[handle.id];
+// ─── textures ─────────────────────────────────────────────────────────────────
+
+auto SenDx11Backend::CreateTexture(const ComPtr<ID3D11Device>& device, const SenTextureDesc& desc) -> SenTexture {
+    const SenTexture handle { _nextTextureId++ };
+    auto& entry = _textures[handle.id];
 
     if (desc.cubemap)
-        CreateCubemap(device, desc, entry);
+        CreateTextureCubemap(device, desc, entry);
     else
-        Create2D(device, desc, entry);
+        CreateTexture2D(device, desc, entry);
 
     return handle;
 }
 
-auto SenDx11TextureTable::Destroy(SenTexture handle) -> void {
-    _entries.erase(handle.id);
+auto SenDx11Backend::DestroyTexture(SenTexture handle) -> void {
+    _textures.erase(handle.id);
 }
 
-auto SenDx11TextureTable::Lookup(SenTexture handle) -> SenDx11TextureEntry& {
-    return _entries.at(handle.id);
+auto SenDx11Backend::LookupTexture(SenTexture handle) -> SenDx11TextureEntry& {
+    return _textures.at(handle.id);
 }
+
+// ─── buffers ──────────────────────────────────────────────────────────────────
+
+auto SenDx11Backend::CreateBuffer(const ComPtr<ID3D11Device>& device, const SenBufferDesc& desc) -> SenBuffer {
+    const SenBuffer handle { _nextBufferId++ };
+    auto& entry = _buffers[handle.id];
+    entry.Access = desc.access;
+
+    const auto     accessDesc = Sen::Dx11::ToBufferAccess(desc.access);
+    const uint32_t bindFlag   = Sen::Dx11::ToBufferBindFlag(desc.usage);
+
+    // constant buffers must be a multiple of 16 bytes
+    uint32_t byteWidth = desc.size;
+    if (desc.usage == SenBufferUsage::Constant)
+        byteWidth = ((byteWidth + 15) / 16) * 16;
+
+    D3D11_BUFFER_DESC bd = {};
+    bd.ByteWidth      = byteWidth;
+    bd.Usage          = accessDesc.usage;
+    bd.BindFlags      = bindFlag;
+    bd.CPUAccessFlags = accessDesc.cpuAccessFlags;
+
+    D3D11_SUBRESOURCE_DATA  initData = {};
+    D3D11_SUBRESOURCE_DATA* pInit    = nullptr;
+    if (desc.data) {
+        initData.pSysMem = desc.data;
+        pInit = &initData;
+    }
+
+    Utils::Check << device->CreateBuffer(&bd, pInit, entry.Buffer.GetAddressOf());
+
+    return handle;
+}
+
+auto SenDx11Backend::DestroyBuffer(SenBuffer handle) -> void {
+    _buffers.erase(handle.id);
+}
+
+auto SenDx11Backend::LookupBuffer(SenBuffer handle) -> SenDx11BufferEntry& {
+    return _buffers.at(handle.id);
+}
+
+auto SenDx11Backend::WriteBuffer(
+    SenBuffer handle,
+    const void* data,
+    uint32_t size,
+    const ComPtr<ID3D11DeviceContext>& context
+) -> void {
+    auto& entry = _buffers.at(handle.id);
+
+    if (entry.Access == SenBufferAccess::Dynamic) {
+        D3D11_MAPPED_SUBRESOURCE mapped;
+        Utils::Check << context->Map(entry.Buffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+        memcpy(mapped.pData, data, size);
+        context->Unmap(entry.Buffer.Get(), 0);
+    }
+    else if (entry.Access == SenBufferAccess::Default) {
+        context->UpdateSubresource(entry.Buffer.Get(), 0, nullptr, data, 0, 0);
+    }
+    else {
+        be_assert(false, "SenDx11Backend::WriteBuffer: cannot write to an Immutable buffer");
+    }
+}
+
+// ─── samplers ─────────────────────────────────────────────────────────────────
+
+auto SenDx11Backend::CreateSampler(const ComPtr<ID3D11Device>& device, const SenSamplerDesc& desc) -> SenSampler {
+    const SenSampler handle { _nextSamplerId++ };
+    auto& entry = _samplers[handle.id];
+
+    D3D11_SAMPLER_DESC sd = {};
+    sd.Filter         = Sen::Dx11::ToFilter(desc.filter, desc.comparison);
+    sd.AddressU       = Sen::Dx11::ToAddressMode(desc.address);
+    sd.AddressV       = Sen::Dx11::ToAddressMode(desc.address);
+    sd.AddressW       = Sen::Dx11::ToAddressMode(desc.address);
+    sd.MipLODBias     = 0.f;
+    sd.MaxAnisotropy  = (desc.filter == SenFilter::Anisotropic) ? 16 : 1;
+    sd.ComparisonFunc = desc.comparison ? D3D11_COMPARISON_LESS : D3D11_COMPARISON_NEVER;
+    sd.MinLOD         = 0.f;
+    sd.MaxLOD         = D3D11_FLOAT32_MAX;
+
+    Utils::Check << device->CreateSamplerState(&sd, entry.Sampler.GetAddressOf());
+
+    return handle;
+}
+
+auto SenDx11Backend::DestroySampler(SenSampler handle) -> void {
+    _samplers.erase(handle.id);
+}
+
+auto SenDx11Backend::LookupSampler(SenSampler handle) -> SenDx11SamplerEntry& {
+    return _samplers.at(handle.id);
+}
+

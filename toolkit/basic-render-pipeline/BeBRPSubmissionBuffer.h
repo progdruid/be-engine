@@ -9,6 +9,7 @@
 
 #include "BeMesh.h"
 #include "BeProp.h"
+#include <sen-rhi/SenBuffer.h>
 
 class BeTexture;
 
@@ -69,8 +70,8 @@ class BeBRPSubmissionBuffer {
     std::vector<BeBRPSunLightEntry> _sunLightEntries;
     std::vector<BeBRPPointLightEntry> _pointLightEntries;
 
-    ComPtr<ID3D11Buffer> _sharedVertexBuffer;
-    ComPtr<ID3D11Buffer> _sharedIndexBuffer;
+    SenBuffer _sharedVertexBuffer;
+    SenBuffer _sharedIndexBuffer;
     std::unordered_map<BeMesh*, std::vector<BeMeshSlice>> _meshSlices;
     std::vector<std::shared_ptr<BeMesh>> _registeredMeshes;
 
@@ -96,6 +97,6 @@ class BeBRPSubmissionBuffer {
     auto BakeMeshes () -> void;
     auto GetMeshSlices(BeMesh* mesh) const -> const std::vector<BeMeshSlice>& { return _meshSlices.at(mesh); }
 
-    auto GetSharedVertexBuffer() const -> ComPtr<ID3D11Buffer> { return _sharedVertexBuffer; }
-    auto GetSharedIndexBuffer() const -> ComPtr<ID3D11Buffer> { return _sharedIndexBuffer; }
+    auto GetSharedVertexBuffer() const -> SenBuffer { return _sharedVertexBuffer; }
+    auto GetSharedIndexBuffer() const -> SenBuffer { return _sharedIndexBuffer; }
 };

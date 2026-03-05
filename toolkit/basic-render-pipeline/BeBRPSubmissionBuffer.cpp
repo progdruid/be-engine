@@ -2,6 +2,7 @@
 
 #include "Utils.h"
 #include "umbrellas/include-libassert.h"
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 
 auto BeBRPGeometryEntry::CalculateModelMatrix(glm::vec3 pos, glm::quat rot, glm::vec3 scale) -> glm::mat4 {
@@ -94,21 +95,19 @@ auto BeBRPSubmissionBuffer::BakeMeshes() -> void {
         }
     }
 
-    D3D11_BUFFER_DESC vertexBufferDescriptor = {};
-    vertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    vertexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
-    vertexBufferDescriptor.ByteWidth = static_cast<UINT>(fullVertices.size() * sizeof(BeFullVertex));
-    D3D11_SUBRESOURCE_DATA vertexData = {};
-    vertexData.pSysMem = fullVertices.data();
-    Utils::Check << _device->CreateBuffer(&vertexBufferDescriptor, &vertexData, &_sharedVertexBuffer);
+    _sharedVertexBuffer = SenDx11Backend::Get().CreateBuffer(_device, {
+        .usage  = SenBufferUsage::Vertex,
+        .access = SenBufferAccess::Immutable,
+        .size   = static_cast<uint32_t>(fullVertices.size() * sizeof(BeFullVertex)),
+        .data   = fullVertices.data(),
+    });
 
-    D3D11_BUFFER_DESC indexBufferDescriptor = {};
-    indexBufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    indexBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
-    indexBufferDescriptor.ByteWidth = static_cast<UINT>(indices.size() * sizeof(uint32_t));
-    D3D11_SUBRESOURCE_DATA indexData = {};
-    indexData.pSysMem = indices.data();
-    Utils::Check << _device->CreateBuffer(&indexBufferDescriptor, &indexData, &_sharedIndexBuffer);
+    _sharedIndexBuffer = SenDx11Backend::Get().CreateBuffer(_device, {
+        .usage  = SenBufferUsage::Index,
+        .access = SenBufferAccess::Immutable,
+        .size   = static_cast<uint32_t>(indices.size() * sizeof(uint32_t)),
+        .data   = indices.data(),
+    });
 }
 
 

@@ -5,6 +5,7 @@
 #include "BeShader.h"
 #include "BeShaderTools.h"
 #include "BeRenderer.h"
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 std::weak_ptr<BeRenderer> BeAssetRegistry::_renderer;
 
@@ -12,7 +13,7 @@ std::unordered_map<std::filesystem::path, std::string> BeAssetRegistry::_shaderS
 
 std::unordered_map<std::string, std::shared_ptr<BeShader>> BeAssetRegistry::_shaders;
 std::unordered_map<std::string, BeMaterialScheme> BeAssetRegistry::_materialSchemes;
-std::unordered_map<std::string, ComPtr<ID3D11SamplerState>> BeAssetRegistry::_samplers;
+std::unordered_map<std::string, SenSampler> BeAssetRegistry::_samplers;
 std::unordered_map<std::string, std::shared_ptr<BeMaterial>> BeAssetRegistry::_materials;
 std::unordered_map<std::string, std::shared_ptr<BeTexture>> BeAssetRegistry::_textures;
 std::unordered_map<std::string, std::shared_ptr<BeProp>> BeAssetRegistry::_props;
@@ -98,7 +99,7 @@ auto BeAssetRegistry::IndexShaderFiles(const std::vector<std::filesystem::path>&
     }
 }
 
-auto BeAssetRegistry::GetSampler(std::string_view samplerDescString) -> ComPtr<ID3D11SamplerState> {
+auto BeAssetRegistry::GetSampler(std::string_view samplerDescString) -> SenSampler {
 
     auto key = std::string(samplerDescString);
 
@@ -108,77 +109,47 @@ auto BeAssetRegistry::GetSampler(std::string_view samplerDescString) -> ComPtr<I
 
     auto tokens = BeShaderTools::Split(samplerDescString, "-");
     be_assert(
-        tokens.size() == 2 || tokens.size() == 3, 
-        "Invalid samplerDescString. Expected format: filter-address[-cmp]", 
-        samplerDescString, 
+        tokens.size() == 2 || tokens.size() == 3,
+        "Invalid samplerDescString. Expected format: filter-address[-cmp]",
+        samplerDescString,
         tokens.size()
     );
 
-    auto filterToken = std::string(tokens[0]);
-    auto addressToken = std::string(tokens[1]);
+    auto filterToken   = std::string(tokens[0]);
+    auto addressToken  = std::string(tokens[1]);
     auto hasComparison = tokens.size() == 3 && tokens[2] == "cmp";
 
-    
-    D3D11_FILTER filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    SenFilter filter = SenFilter::Linear;
     if (filterToken == "point") {
-        filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+        filter = SenFilter::Point;
     } else if (filterToken == "linear") {
-        filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    // todo: add anisotropic
+        filter = SenFilter::Linear;
+    } else if (filterToken == "anisotropic") {
+        filter = SenFilter::Anisotropic;
     } else {
         be_assert(false, "Unknown filter token", filterToken);
     }
-    
-    
-    D3D11_TEXTURE_ADDRESS_MODE addressMode = D3D11_TEXTURE_ADDRESS_CLAMP;
+
+    SenAddressMode address = SenAddressMode::Clamp;
     if (addressToken == "wrap") {
-        addressMode = D3D11_TEXTURE_ADDRESS_WRAP;
+        address = SenAddressMode::Wrap;
     } else if (addressToken == "clamp") {
-        addressMode = D3D11_TEXTURE_ADDRESS_CLAMP;
+        address = SenAddressMode::Clamp;
     } else if (addressToken == "mirror") {
-        addressMode = D3D11_TEXTURE_ADDRESS_MIRROR;
+        address = SenAddressMode::Mirror;
     } else {
         be_assert(false, "Unknown address token", addressToken);
     }
-    
-    
-    if (hasComparison) {
-        if (filter == D3D11_FILTER_MIN_MAG_MIP_POINT) {
-            filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
-        } else if (filter == D3D11_FILTER_MIN_MAG_MIP_LINEAR) {
-            filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
-        } else if (filter == D3D11_FILTER_ANISOTROPIC) {
-            filter = D3D11_FILTER_COMPARISON_ANISOTROPIC;
-        } else {
-            be_assert(false, "Unreachable, wrong filter", filter);
-        }
-    }
-    
-    D3D11_SAMPLER_DESC samplerDesc = {};
-    samplerDesc.Filter = filter;
-    samplerDesc.AddressU = addressMode;
-    samplerDesc.AddressV = addressMode;
-    samplerDesc.AddressW = addressMode;
-    samplerDesc.MipLODBias = 0.0f;
-    samplerDesc.MaxAnisotropy = 1;
-    samplerDesc.ComparisonFunc = hasComparison ? D3D11_COMPARISON_LESS : D3D11_COMPARISON_NEVER;
-    samplerDesc.BorderColor[0] = 0.0f;
-    samplerDesc.BorderColor[1] = 0.0f;
-    samplerDesc.BorderColor[2] = 0.0f;
-    samplerDesc.BorderColor[3] = 0.0f;
-    samplerDesc.MinLOD = 0.0f;
-    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
-    
     auto renderer = _renderer.lock();
     be_assert(renderer, "Renderer couldn't be locked");
 
-    auto device = renderer->GetDevice();
-    ComPtr<ID3D11SamplerState> samplerState;
+    auto sampler = SenDx11Backend::Get().CreateSampler(renderer->GetDevice(), {
+        .filter     = filter,
+        .address    = address,
+        .comparison = hasComparison,
+    });
 
-    auto hr = device->CreateSamplerState(&samplerDesc, &samplerState);
-    be_assert(SUCCEEDED(hr), "Failed to create sampler state", samplerDescString);
-
-    _samplers[key] = samplerState;
-    return samplerState;
+    _samplers[key] = sampler;
+    return sampler;
 }

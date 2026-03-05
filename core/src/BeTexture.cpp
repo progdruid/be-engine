@@ -4,7 +4,7 @@
 #include <stb_image/stb_image.h>
 
 #include "BeAssetRegistry.h"
-#include <sen-rhi/dx11/SenDx11TextureTable.h>
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 
 BeTexture::Builder::Builder(std::string name) { _descriptor.Name = std::move(name); }
@@ -120,32 +120,32 @@ BeTexture::BeTexture(ComPtr<ID3D11Device> device, const BeTextureDescriptor& des
     senDesc.cubemap = descriptor.IsCubemap;
     senDesc.data    = descriptor.Data;
 
-    Handle = SenDx11TextureTable::Get().Create(device, senDesc);
+    Handle = SenDx11Backend::Get().CreateTexture(device, senDesc);
 
     CreateMipViewports();
 }
 
 BeTexture::~BeTexture() {
-    SenDx11TextureTable::Get().Destroy(Handle);
+    SenDx11Backend::Get().DestroyTexture(Handle);
 }
 
 
 auto BeTexture::GetMipViewport(const uint32_t mip) const -> const SenViewport& { return _mipViewports[mip]; }
 
 auto BeTexture::GetSRV() const -> ComPtr<ID3D11ShaderResourceView> {
-    return SenDx11TextureTable::Get().Lookup(Handle).SRV;
+    return SenDx11Backend::Get().LookupTexture(Handle).SRV;
 }
 auto BeTexture::GetDSV() const -> ComPtr<ID3D11DepthStencilView> {
-    return SenDx11TextureTable::Get().Lookup(Handle).DSV;
+    return SenDx11Backend::Get().LookupTexture(Handle).DSV;
 }
 auto BeTexture::GetRTV(const uint32_t mip) const -> ComPtr<ID3D11RenderTargetView> {
-    return SenDx11TextureTable::Get().Lookup(Handle).MipRTVs[mip];
+    return SenDx11Backend::Get().LookupTexture(Handle).MipRTVs[mip];
 }
 auto BeTexture::GetCubemapDSV(const uint32_t faceIndex) -> ComPtr<ID3D11DepthStencilView> {
-    return SenDx11TextureTable::Get().Lookup(Handle).CubemapDSVs[faceIndex];
+    return SenDx11Backend::Get().LookupTexture(Handle).CubemapDSVs[faceIndex];
 }
 auto BeTexture::GetCubemapRTV(const uint32_t faceIndex, const uint32_t mip) -> ComPtr<ID3D11RenderTargetView> {
-    return SenDx11TextureTable::Get().Lookup(Handle).CubemapMipRTVs[faceIndex][mip];
+    return SenDx11Backend::Get().LookupTexture(Handle).CubemapMipRTVs[faceIndex][mip];
 }
 
 

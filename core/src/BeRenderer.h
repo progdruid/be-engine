@@ -10,6 +10,7 @@
 #include <umbrellas/include-glm.h>
 
 #include "BeBuffers.h"
+#include <sen-rhi/SenBuffer.h>
 
 class BeWindow;
 class BePipeline;
@@ -42,7 +43,7 @@ class BeRenderer {
     ComPtr<ID3D11RenderTargetView> _backbufferTarget;
     std::shared_ptr<BePipeline> _pipeline = nullptr;
 
-    ComPtr<ID3D11Buffer> _uniformBuffer;
+    SenBuffer _uniformBuffer;
     ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
     ComPtr<ID3D11RasterizerState> _rasterizerCullBack;
     ComPtr<ID3D11RasterizerState> _rasterizerCullNone;

@@ -4,7 +4,7 @@
 #include "BeMaterial.h"
 #include "BeTexture.h"
 #include <sen-rhi/dx11/SenDx11Convert.h>
-#include <sen-rhi/dx11/SenDx11TextureTable.h>
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 auto BePipeline::Create(const ComPtr<ID3D11DeviceContext>& context)-> std::shared_ptr<BePipeline> {
     auto pipeline = std::shared_ptr<BePipeline>(new BePipeline());
@@ -47,22 +47,23 @@ auto BePipeline::BindMaterialAutomatic(const std::shared_ptr<BeMaterial>& materi
 }
 
 auto BePipeline::BindMaterialManual(const std::shared_ptr<BeMaterial>& material, const uint8_t materialSlot) -> void {
-    const auto& buffer = material->GetBuffer();
-    if (buffer != nullptr) {
+    const auto bufferHandle = material->GetBuffer();
+    if (bufferHandle.IsValid()) {
         auto updated = material->UpdateGPUBuffers(_context);
         auto id = material->GetUniqueID();
-        
+        auto* rawBuffer = SenDx11Backend::Get().LookupBuffer(bufferHandle).Buffer.Get();
+
         if (HasAny(_boundShaderType, BeShaderType::Vertex) && (updated || _vertexCBufferIDCache[materialSlot] != id)) {
-            _context->VSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
+            _context->VSSetConstantBuffers(materialSlot, 1, &rawBuffer);
             _vertexCBufferIDCache[materialSlot] = id;
         }
         if (HasAny(_boundShaderType, BeShaderType::Tesselation) && (updated || _tessCBufferIDCache[materialSlot] != id)) {
-            _context->HSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
-            _context->DSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
+            _context->HSSetConstantBuffers(materialSlot, 1, &rawBuffer);
+            _context->DSSetConstantBuffers(materialSlot, 1, &rawBuffer);
             _tessCBufferIDCache[materialSlot] = id;
         }
         if (HasAny(_boundShaderType, BeShaderType::Pixel) && (updated || _pixelCBufferIDCache[materialSlot] != id)) {
-            _context->PSSetConstantBuffers(materialSlot, 1, buffer.GetAddressOf());
+            _context->PSSetConstantBuffers(materialSlot, 1, &rawBuffer);
             _pixelCBufferIDCache[materialSlot] = id;
         }
     }
@@ -70,20 +71,20 @@ auto BePipeline::BindMaterialManual(const std::shared_ptr<BeMaterial>& material,
     BindMaterialTextures(*material);
 
     const auto& samplerSlots = material->GetSamplerPairs();
-    for (auto& [sampler, slot] : samplerSlots | std::views::values) {
-        auto sampPtr = sampler.Get();
-        if (HasAny(_boundShaderType, BeShaderType::Vertex) && _vertexSamplerCache[slot] != sampPtr) {
-            _context->VSSetSamplers(slot, 1, sampler.GetAddressOf());
-            _vertexSamplerCache[slot] = sampPtr;
+    for (auto& [handle, slot] : samplerSlots | std::views::values) {
+        auto* rawSampler = SenDx11Backend::Get().LookupSampler(handle).Sampler.Get();
+        if (HasAny(_boundShaderType, BeShaderType::Vertex) && _vertexSamplerCache[slot] != handle.id) {
+            _context->VSSetSamplers(slot, 1, &rawSampler);
+            _vertexSamplerCache[slot] = handle.id;
         }
-        if (HasAny(_boundShaderType, BeShaderType::Tesselation) && _tessSamplerCache[slot] != sampPtr) {
-            _context->HSSetSamplers(slot, 1, sampler.GetAddressOf());
-            _context->DSSetSamplers(slot, 1, sampler.GetAddressOf());
-            _tessSamplerCache[slot] = sampPtr;
+        if (HasAny(_boundShaderType, BeShaderType::Tesselation) && _tessSamplerCache[slot] != handle.id) {
+            _context->HSSetSamplers(slot, 1, &rawSampler);
+            _context->DSSetSamplers(slot, 1, &rawSampler);
+            _tessSamplerCache[slot] = handle.id;
         }
-        if (HasAny(_boundShaderType, BeShaderType::Pixel) && _pixelSamplerCache[slot] != sampPtr) {
-            _context->PSSetSamplers(slot, 1, sampler.GetAddressOf());
-            _pixelSamplerCache[slot] = sampPtr;
+        if (HasAny(_boundShaderType, BeShaderType::Pixel) && _pixelSamplerCache[slot] != handle.id) {
+            _context->PSSetSamplers(slot, 1, &rawSampler);
+            _pixelSamplerCache[slot] = handle.id;
         }
     }
 }
@@ -112,6 +113,9 @@ auto BePipeline::ClearCache() -> void {
     _vertexCBufferIDCache.fill(0);
     _tessCBufferIDCache.fill(0);
     _pixelCBufferIDCache.fill(0);
+    _vertexSamplerCache.fill(0);
+    _tessSamplerCache.fill(0);
+    _pixelSamplerCache.fill(0);
 }
 
 auto BePipeline::BindMaterialTextures(const BeMaterial& material) -> void {
@@ -120,7 +124,7 @@ auto BePipeline::BindMaterialTextures(const BeMaterial& material) -> void {
     
     for (const auto& [texture, slot] : textureSlots | std::views::values) {
 
-        const auto srv = SenDx11TextureTable::Get().Lookup(texture->Handle).SRV;
+        const auto srv = SenDx11Backend::Get().LookupTexture(texture->Handle).SRV;
         const auto id  = texture->Handle.id;
         
         if (HasAny(_boundShaderType, BeShaderType::Vertex) && _vertexResCache[slot] != id) {
@@ -180,6 +184,27 @@ auto BePipeline::ResetTarget(const std::shared_ptr<BeTexture>& texture) const ->
         texture->GetRTV().Get(),
         glm::value_ptr(glm::vec4(0.0f))
     );
+}
+
+auto BePipeline::BindVertexBuffer(SenBuffer buffer, uint32_t stride) const -> void {
+    auto* raw = SenDx11Backend::Get().LookupBuffer(buffer).Buffer.Get();
+    const UINT offset = 0;
+    _context->IASetVertexBuffers(0, 1, &raw, &stride, &offset);
+}
+
+auto BePipeline::BindIndexBuffer(SenBuffer buffer) const -> void {
+    auto* raw = SenDx11Backend::Get().LookupBuffer(buffer).Buffer.Get();
+    _context->IASetIndexBuffer(raw, DXGI_FORMAT_R32_UINT, 0);
+}
+
+auto BePipeline::ClearVertexBuffer() const -> void {
+    ID3D11Buffer* null = nullptr;
+    const UINT zero = 0;
+    _context->IASetVertexBuffers(0, 1, &null, &zero, &zero);
+}
+
+auto BePipeline::ClearIndexBuffer() const -> void {
+    _context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
 }
 
 auto BePipeline::Draw(uint32_t vertexCount, uint32_t startVertexLocation) const -> void {

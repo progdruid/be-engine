@@ -4,10 +4,10 @@
 
 #include "OrbitCameraController.h"
 #include "FreeCameraController.h"
-#include "BeAssetRegistry.h"
 #include "BeCamera.h"
 #include "BeInput.h"
 #include "BeMaterial.h"
+#include "BeAssetRegistry.h"
 #include "BeMeshPrimitives.h"
 #include "BeProp.h"
 #include "BeRenderer.h"

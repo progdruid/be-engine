@@ -8,6 +8,7 @@
 #include "BeRenderer.h"
 #include "BeTexture.h"
 #include "Utils.h"
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 auto BeMaterial::Create(
     std::string_view name,
@@ -39,25 +40,13 @@ BeMaterial::BeMaterial(
     
     AssembleData();
 
-    D3D11_BUFFER_DESC bufferDesc = {};
-    bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     const uint32_t sizeInBytes = static_cast<uint32_t>(_bufferData.size() * sizeof(float));
-    bufferDesc.ByteWidth = ((sizeInBytes + 15) / 16) * 16;
-    if (_isFrequentlyUsed) {
-        bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-        bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    }
-    else {
-        bufferDesc.Usage = D3D11_USAGE_DEFAULT;
-        bufferDesc.CPUAccessFlags = 0;
-    }
-
-    D3D11_SUBRESOURCE_DATA data = {};
-    data.pSysMem = _bufferData.data();
-
-    Utils::Check << renderer.GetDevice()->CreateBuffer(&bufferDesc, &data, _cbuffer.GetAddressOf());
-
-    _cbufferDirty = false;
+    _cbuffer = SenDx11Backend::Get().CreateBuffer(renderer.GetDevice(), {
+        .usage  = SenBufferUsage::Constant,
+        .access = _isFrequentlyUsed ? SenBufferAccess::Dynamic : SenBufferAccess::Default,
+        .size   = sizeInBytes,
+        .data   = _bufferData.data(),
+    });
 }
 
 //BeMaterial::BeMaterial() = default;
@@ -76,7 +65,7 @@ auto BeMaterial::InitialiseSlotMaps() -> void {
 
     for (const auto& property : _scheme.Samplers) {
         auto sampler = BeAssetRegistry::GetSampler(property.DefaultSamplerDescString);
-        be_assert(sampler, "Invalid behaviour: BeAssetRegistry::GetSampler returned nullptr. This should never happen");
+        be_assert(sampler.IsValid(), "Invalid behaviour: BeAssetRegistry::GetSampler returned invalid handle. This should never happen");
         _samplers[property.Name] = { sampler, property.SlotIndex };
     }
 }
@@ -170,12 +159,12 @@ auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::share
 
 
 
-auto BeMaterial::SetSampler(const std::string& propertyName, const ComPtr<ID3D11SamplerState>& sampler) -> void {
+auto BeMaterial::SetSampler(const std::string& propertyName, SenSampler sampler) -> void {
     assert(_samplers.contains(propertyName));
     _samplers.at(propertyName).first = sampler;
 }
 
-auto BeMaterial::GetSampler(const std::string& propertyName) const -> ComPtr<ID3D11SamplerState> {
+auto BeMaterial::GetSampler(const std::string& propertyName) const -> SenSampler {
     assert(_samplers.contains(propertyName));
     return _samplers.at(propertyName).first;
 }
@@ -184,15 +173,12 @@ auto BeMaterial::GetSampler(const std::string& propertyName) const -> ComPtr<ID3
 auto BeMaterial::UpdateGPUBuffers(const ComPtr<ID3D11DeviceContext>& context) -> bool {
     if (!_cbufferDirty) return false;
 
-    if (_isFrequentlyUsed) {
-        D3D11_MAPPED_SUBRESOURCE mappedResource;
-        Utils::Check << context->Map(_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-        memcpy(mappedResource.pData, _bufferData.data(), _bufferData.size() * sizeof(float));
-        context->Unmap(_cbuffer.Get(), 0);
-    }
-    else {
-        context->UpdateSubresource(_cbuffer.Get(), 0, nullptr, _bufferData.data(), 0, 0);
-    }
+    SenDx11Backend::Get().WriteBuffer(
+        _cbuffer,
+        _bufferData.data(),
+        static_cast<uint32_t>(_bufferData.size() * sizeof(float)),
+        context
+    );
 
     _cbufferDirty = false;
     return true;
