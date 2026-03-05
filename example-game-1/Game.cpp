@@ -3,6 +3,7 @@
 
 #include <glfw/glfw3.h>
 
+#include "BeAssetRegistry.h"
 #include "BeWindow.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
@@ -30,6 +31,8 @@ auto Game::Run() -> int {
 
     MainLoop();
 
+    BeAssetRegistry::Shutdown();
+    
     return 0;
 }
 

@@ -13,6 +13,7 @@ project "misc-configuration"
         "*DotSettings*",
         
         "premake5.lua",
+        "premake-helpers.lua",
         "premake-core.lua",
         "premake-toolkit.lua",
         "premake-vendors.lua",

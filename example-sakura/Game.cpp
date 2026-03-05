@@ -57,6 +57,8 @@ auto Game::Run() -> int {
 
     MainLoop();
 
+    BeAssetRegistry::Shutdown();
+    
     return 0;
 }
 

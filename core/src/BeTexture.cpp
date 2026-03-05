@@ -1,13 +1,10 @@
-﻿#include "BeTexture.h"
+#include "BeTexture.h"
 
-#include <cassert>
-#include <unordered_map>
 #include <umbrellas/include-glm.h>
 #include <stb_image/stb_image.h>
 
 #include "BeAssetRegistry.h"
-#include "Utils.h"
-#include <sen-rhi/dx11/SenDx11Convert.h>
+#include <sen-rhi/dx11/SenDx11TextureTable.h>
 
 
 BeTexture::Builder::Builder(std::string name) { _descriptor.Name = std::move(name); }
@@ -73,14 +70,13 @@ auto BeTexture::Builder::LoadFromFile(const std::filesystem::path& file) -> Buil
 }
 
 auto BeTexture::Builder::FlipVertically(const uint32_t w, const uint32_t h, uint8_t* data) -> void {
-    const uint32_t rowSize = w * 4; 
+    const uint32_t rowSize = w * 4;
     const auto tempRow = new uint8_t[rowSize];
 
     for (uint32_t y = 0; y < h / 2; ++y) {
         uint8_t* topRow = data + y * rowSize;
         uint8_t* bottomRow = data + (h - 1 - y) * rowSize;
 
-        // swap
         memcpy(tempRow, topRow, rowSize);
         memcpy(topRow, bottomRow, rowSize);
         memcpy(bottomRow, tempRow, rowSize);
@@ -115,175 +111,43 @@ BeTexture::BeTexture(ComPtr<ID3D11Device> device, const BeTextureDescriptor& des
 , Usage(descriptor.Usage)
 , Format(descriptor.Format)
 {
-    static uint32_t textureCount = 0;
-    UniqueID = ++textureCount;
-    
-    CreateMipViewports();
+    SenTextureDesc senDesc;
+    senDesc.format  = descriptor.Format;
+    senDesc.width   = descriptor.Width;
+    senDesc.height  = descriptor.Height;
+    senDesc.usage   = descriptor.Usage;
+    senDesc.mips    = descriptor.Mips;
+    senDesc.cubemap = descriptor.IsCubemap;
+    senDesc.data    = descriptor.Data;
 
-    if (!descriptor.IsCubemap) {
-        CreateTexture2DResources(device, descriptor.Data);
-    } else {
-        CreateCubemapResources(device, descriptor.Data);
-    }
+    Handle = SenDx11TextureTable::Get().Create(device, senDesc);
+
+    CreateMipViewports();
 }
 
-BeTexture::~BeTexture() = default;
-
-
+BeTexture::~BeTexture() {
+    SenDx11TextureTable::Get().Destroy(Handle);
+}
 
 
 auto BeTexture::GetMipViewport(const uint32_t mip) const -> const SenViewport& { return _mipViewports[mip]; }
-auto BeTexture::GetSRV() const -> ComPtr<ID3D11ShaderResourceView> { return _srv; }
-auto BeTexture::GetDSV() const -> ComPtr<ID3D11DepthStencilView> { return _dsv; }
+
+auto BeTexture::GetSRV() const -> ComPtr<ID3D11ShaderResourceView> {
+    return SenDx11TextureTable::Get().Lookup(Handle).SRV;
+}
+auto BeTexture::GetDSV() const -> ComPtr<ID3D11DepthStencilView> {
+    return SenDx11TextureTable::Get().Lookup(Handle).DSV;
+}
 auto BeTexture::GetRTV(const uint32_t mip) const -> ComPtr<ID3D11RenderTargetView> {
-    assert(mip < _mipRTVs.size() && "Mip out of bounds of mip rtv array");
-    return _mipRTVs[mip];
+    return SenDx11TextureTable::Get().Lookup(Handle).MipRTVs[mip];
 }
-
 auto BeTexture::GetCubemapDSV(const uint32_t faceIndex) -> ComPtr<ID3D11DepthStencilView> {
-    assert(IsCubemap && "Resource is not a cubemap");
-    assert(faceIndex < 6 && "Face index out of bounds");
-    return _cubemapDSVs[faceIndex];
+    return SenDx11TextureTable::Get().Lookup(Handle).CubemapDSVs[faceIndex];
 }
-
 auto BeTexture::GetCubemapRTV(const uint32_t faceIndex, const uint32_t mip) -> ComPtr<ID3D11RenderTargetView> {
-    assert(IsCubemap && "Resource is not a cubemap");
-    assert(faceIndex < 6 && "Face index out of bounds");
-    assert(mip < _cubemapMipRTVs[faceIndex].size() && "Mip out of bounds of cubemap's mip rtv array");
-    return _cubemapMipRTVs[faceIndex][mip];
+    return SenDx11TextureTable::Get().Lookup(Handle).CubemapMipRTVs[faceIndex][mip];
 }
 
-
-
-auto BeTexture::CreateTexture2DResources(ComPtr<ID3D11Device> device, const uint8_t* defaultData) -> void {
-    const DXGI_FORMAT dxFormat    = Sen::Dx11::ToFormat(Format);
-    const uint32_t    dxBindFlags = Sen::Dx11::ToBindFlags(Usage);
-
-    D3D11_TEXTURE2D_DESC textureDesc = {};
-    textureDesc.Width = Width;
-    textureDesc.Height = Height;
-    textureDesc.MipLevels = Mips;
-    textureDesc.ArraySize = 1;
-    textureDesc.Format = dxFormat;
-    textureDesc.SampleDesc.Count = 1;
-    textureDesc.SampleDesc.Quality = 0;
-    textureDesc.Usage = D3D11_USAGE_DEFAULT;
-    textureDesc.BindFlags = dxBindFlags;
-    textureDesc.CPUAccessFlags = 0;
-    textureDesc.MiscFlags = 0;
-
-    D3D11_SUBRESOURCE_DATA* pInitData = nullptr;
-    if (defaultData) {
-        D3D11_SUBRESOURCE_DATA initData = {};
-        initData.pSysMem = defaultData;
-        initData.SysMemPitch = sizeof(uint8_t) * 4 * Width;
-        initData.SysMemSlicePitch = 0;
-        pInitData = &initData;
-    }
-    
-    Utils::Check << device->CreateTexture2D(&textureDesc, pInitData, _texture.GetAddressOf());
-    
-    if (dxBindFlags & D3D11_BIND_DEPTH_STENCIL) {
-        D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-        dsvDesc.Format = GetDSVFormat(dxFormat);
-        dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-        dsvDesc.Texture2D.MipSlice = 0;
-        Utils::Check << device->CreateDepthStencilView(_texture.Get(), &dsvDesc, _dsv.GetAddressOf());
-    }
-
-    if (dxBindFlags & D3D11_BIND_RENDER_TARGET) {
-        _mipRTVs.resize(Mips);
-
-        D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-        rtvDesc.Format = dxFormat;
-        rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-
-        for (uint32_t mip = 0; mip < Mips; ++mip) {
-            rtvDesc.Texture2D.MipSlice = mip;
-            Utils::Check << device->CreateRenderTargetView(_texture.Get(), &rtvDesc, _mipRTVs[mip].GetAddressOf());
-        }
-    }
-
-    if (dxBindFlags & D3D11_BIND_SHADER_RESOURCE) {
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Format =
-            dxBindFlags & D3D11_BIND_DEPTH_STENCIL
-            ? GetDepthSRVFormat(dxFormat)
-            : dxFormat;
-        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MostDetailedMip = 0;
-        srvDesc.Texture2D.MipLevels = Mips;
-        Utils::Check << device->CreateShaderResourceView(_texture.Get(), &srvDesc, _srv.GetAddressOf());
-    }
-}
-
-auto BeTexture::CreateCubemapResources(ComPtr<ID3D11Device> device, const uint8_t* defaultData) -> void {
-    const DXGI_FORMAT dxFormat    = Sen::Dx11::ToFormat(Format);
-    const uint32_t    dxBindFlags = Sen::Dx11::ToBindFlags(Usage);
-
-    D3D11_TEXTURE2D_DESC textureDesc = {};
-    textureDesc.Width = Width;
-    textureDesc.Height = Height;
-    textureDesc.MipLevels = Mips;
-    textureDesc.ArraySize = 6;
-    textureDesc.Format = dxFormat;
-    textureDesc.SampleDesc.Count = 1;
-    textureDesc.Usage = D3D11_USAGE_DEFAULT;
-    textureDesc.BindFlags = dxBindFlags;
-    textureDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-
-    D3D11_SUBRESOURCE_DATA* pInitData = nullptr;
-    if (defaultData) {
-        D3D11_SUBRESOURCE_DATA initData = {};
-        initData.pSysMem = defaultData;
-        initData.SysMemPitch = sizeof(uint8_t) * 4 * Width;
-        initData.SysMemSlicePitch = 0;
-        pInitData = &initData;
-    }
-
-    Utils::Check << device->CreateTexture2D(&textureDesc, pInitData, _texture.GetAddressOf());
-
-    if (dxBindFlags & D3D11_BIND_SHADER_RESOURCE) {
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Format =
-            dxBindFlags & D3D11_BIND_DEPTH_STENCIL
-            ? GetDepthSRVFormat(dxFormat)
-            : dxFormat;
-        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-        srvDesc.TextureCube.MostDetailedMip = 0;
-        srvDesc.TextureCube.MipLevels = Mips;
-        Utils::Check << device->CreateShaderResourceView(_texture.Get(), &srvDesc, _srv.GetAddressOf());
-    }
-
-    if (dxBindFlags & D3D11_BIND_DEPTH_STENCIL) {
-        for (uint32_t face = 0; face < 6; face++) {
-            D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-            dsvDesc.Format = GetDSVFormat(dxFormat);
-            dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-            dsvDesc.Texture2DArray.MipSlice = 0;
-            dsvDesc.Texture2DArray.FirstArraySlice = face;
-            dsvDesc.Texture2DArray.ArraySize = 1;
-
-            Utils::Check << device->CreateDepthStencilView(_texture.Get(), &dsvDesc, _cubemapDSVs[face].GetAddressOf());
-        }
-    }
-
-    if (dxBindFlags & D3D11_BIND_RENDER_TARGET) {
-        for (uint32_t face = 0; face < 6; face++) {
-            D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-            rtvDesc.Format = dxFormat;
-            rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-            rtvDesc.Texture2DArray.FirstArraySlice = face;
-            rtvDesc.Texture2DArray.ArraySize = 1;
-
-            for (uint32_t mip = 0; mip < Mips; ++mip) {
-                rtvDesc.Texture2DArray.MipSlice = mip;
-                Utils::Check << device->CreateRenderTargetView(_texture.Get(), &rtvDesc, _cubemapMipRTVs[face][mip].GetAddressOf());
-            }
-        }
-    }
-
-}
 
 auto BeTexture::CreateMipViewports() -> void {
     _mipViewports.resize(Mips);
@@ -296,22 +160,4 @@ auto BeTexture::CreateMipViewports() -> void {
         viewport.X        = 0.0f;
         viewport.Y        = 0.0f;
     }
-}
-
-auto BeTexture::GetDepthSRVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT {
-    static std::unordered_map<DXGI_FORMAT, DXGI_FORMAT> textureToSRV = {
-        {DXGI_FORMAT_R32_TYPELESS, DXGI_FORMAT_R32_FLOAT},
-        {DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_R24_UNORM_X8_TYPELESS},
-        {DXGI_FORMAT_R16_TYPELESS, DXGI_FORMAT_R16_UNORM},
-    };
-    return textureToSRV.at(textureFormat);
-}
-
-auto BeTexture::GetDSVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT {
-    static std::unordered_map<DXGI_FORMAT, DXGI_FORMAT> textureToDSV = {
-        {DXGI_FORMAT_R32_TYPELESS, DXGI_FORMAT_D32_FLOAT},
-        {DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT},
-        {DXGI_FORMAT_R16_TYPELESS, DXGI_FORMAT_D16_UNORM},
-    };
-    return textureToDSV.at(textureFormat);
 }

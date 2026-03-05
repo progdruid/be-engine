@@ -9,6 +9,7 @@
 #include "BeShader.h"
 #include "BeShaderCompiler.h"
 #include "Utils.h"
+#include <sen-rhi/dx11/SenDx11TextureTable.h>
 
 auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
     ComPtr<IDXGIFactory6> f6;
@@ -51,7 +52,9 @@ BeRenderer::BeRenderer(
     , _hwnd(window)
 {}
 
-BeRenderer::~BeRenderer() = default;
+BeRenderer::~BeRenderer() {
+    SenDx11TextureTable::Shutdown();
+}
 
 auto BeRenderer::LaunchDevice() -> void {
 
@@ -107,6 +110,7 @@ auto BeRenderer::LaunchDevice() -> void {
     Utils::Check << _factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
 
     BeShaderCompiler::Launch();
+    SenDx11TextureTable::Init();
 
     _pipeline = BePipeline::Create(_context);
     

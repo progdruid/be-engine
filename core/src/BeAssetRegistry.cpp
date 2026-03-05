@@ -17,6 +17,17 @@ std::unordered_map<std::string, std::shared_ptr<BeMaterial>> BeAssetRegistry::_m
 std::unordered_map<std::string, std::shared_ptr<BeTexture>> BeAssetRegistry::_textures;
 std::unordered_map<std::string, std::shared_ptr<BeProp>> BeAssetRegistry::_props;
 
+auto BeAssetRegistry::Shutdown() -> void {
+    _props.clear();
+    _materials.clear();
+    _textures.clear();
+    _samplers.clear();
+    _shaders.clear();
+    _materialSchemes.clear();
+    _shaderSources.clear();
+    _renderer.reset();
+}
+
 auto BeAssetRegistry::IndexShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void {
     
     // collect sources

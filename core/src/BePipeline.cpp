@@ -4,6 +4,7 @@
 #include "BeMaterial.h"
 #include "BeTexture.h"
 #include <sen-rhi/dx11/SenDx11Convert.h>
+#include <sen-rhi/dx11/SenDx11TextureTable.h>
 
 auto BePipeline::Create(const ComPtr<ID3D11DeviceContext>& context)-> std::shared_ptr<BePipeline> {
     auto pipeline = std::shared_ptr<BePipeline>(new BePipeline());
@@ -119,8 +120,8 @@ auto BePipeline::BindMaterialTextures(const BeMaterial& material) -> void {
     
     for (const auto& [texture, slot] : textureSlots | std::views::values) {
 
-        const auto srv = texture->GetSRV();
-        const auto id = texture->UniqueID;
+        const auto srv = SenDx11TextureTable::Get().Lookup(texture->Handle).SRV;
+        const auto id  = texture->Handle.id;
         
         if (HasAny(_boundShaderType, BeShaderType::Vertex) && _vertexResCache[slot] != id) {
             _context->VSSetShaderResources(slot, 1, srv.GetAddressOf());

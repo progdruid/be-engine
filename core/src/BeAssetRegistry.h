@@ -39,6 +39,7 @@ class BeAssetRegistry {
     ~BeAssetRegistry() = delete;
 
     static auto InjectRenderer (const std::weak_ptr<BeRenderer>& renderer) -> void { _renderer = renderer; }
+    static auto Shutdown       () -> void;
     
     // Shaders
     static auto IndexShaderFiles (const std::vector<std::filesystem::path>& filePaths) -> void;

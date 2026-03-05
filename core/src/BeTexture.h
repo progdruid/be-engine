@@ -10,6 +10,7 @@
 #include <umbrellas/include-glm.h>
 #include <umbrellas/access-modifiers.hpp>
 #include <sen-rhi/SenTypes.h>
+#include <sen-rhi/SenTexture.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -64,7 +65,7 @@ class BeTexture {
     
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose std::string Name;
-    expose uint32_t UniqueID;
+    expose SenTexture Handle;
     expose uint32_t Width;
     expose uint32_t Height;
     expose bool IsCubemap;
@@ -73,14 +74,6 @@ class BeTexture {
     expose SenFormat Format;
 
     hide std::vector<SenViewport> _mipViewports;
-    
-    hide ComPtr<ID3D11Texture2D> _texture;
-    hide ComPtr<ID3D11ShaderResourceView> _srv;
-    hide ComPtr<ID3D11DepthStencilView> _dsv;
-    hide std::vector<ComPtr<ID3D11RenderTargetView>> _mipRTVs;
-
-    hide std::array<ComPtr<ID3D11DepthStencilView>, 6> _cubemapDSVs;
-    hide std::array<std::vector<ComPtr<ID3D11RenderTargetView>>, 6> _cubemapMipRTVs;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide explicit BeTexture(ComPtr<ID3D11Device> device, const BeTextureDescriptor& descriptor);
@@ -95,12 +88,7 @@ class BeTexture {
     expose auto GetCubemapRTV  (uint32_t faceIndex, uint32_t mip = 0)  -> ComPtr<ID3D11RenderTargetView>;
 
     // private logic ///////////////////////////////////////////////////////////////////////////////////////////////////
-    hide auto CreateTexture2DResources (ComPtr<ID3D11Device> device, const uint8_t* defaultData = nullptr) -> void;
-    hide auto CreateCubemapResources   (ComPtr<ID3D11Device> device, const uint8_t* defaultData = nullptr) -> void;
-    hide auto CreateMipViewports () -> void;
-
-    hide auto GetDepthSRVFormat(DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;
-    hide auto GetDSVFormat     (DXGI_FORMAT textureFormat) const -> DXGI_FORMAT;
+    hide auto CreateMipViewports() -> void;
 
 
     // befriending shared_ptr for constructor/destructor access because ours are private
