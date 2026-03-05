@@ -1,10 +1,10 @@
 #include "SenDx11Backend.h"
 
 #include <unordered_map>
-#include <slang.h>
 #include "Utils.h"
 #include <umbrellas/include-libassert.h>
 #include <sen-rhi/dx11/SenDx11Convert.h>
+#include <sen-rhi/SenShaderCompiler.h>
 
 // ─── texture helpers ──────────────────────────────────────────────────────────
 
@@ -162,6 +162,9 @@ auto SenDx11Backend::Init(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D1
 }
 
 auto SenDx11Backend::Shutdown() -> void {
+    for (auto& pair : _instance->_shaders) {
+        delete pair.second.SlangBlobPtr;
+    }
     delete _instance;
     _instance = nullptr;
 }
@@ -287,32 +290,50 @@ auto SenDx11Backend::LookupSampler(SenSampler handle) -> SenDx11SamplerEntry& {
 
 // ─── shaders ──────────────────────────────────────────────────────────────────
 
-auto SenDx11Backend::CreateShader(const SenShaderDesc& desc) -> SenShader {
+auto SenDx11Backend::CreateShader(const SenShaderSourceDesc& sourceDesc) -> SenShader {
+    SlangStage slangStage = SLANG_STAGE_NONE;
+    switch (sourceDesc.Stage) {
+        case SenShaderStage::Vertex: slangStage = SLANG_STAGE_VERTEX; break;
+        case SenShaderStage::Hull: slangStage = SLANG_STAGE_HULL; break;
+        case SenShaderStage::Domain: slangStage = SLANG_STAGE_DOMAIN; break;
+        case SenShaderStage::Pixel: slangStage = SLANG_STAGE_PIXEL; break;
+        default: be_assert(false, "SenDx11Backend::CreateShader: unsupported shader stage"); break;
+    }
+
+    auto compileResult = SenShaderCompiler::Compile(sourceDesc.SourcePath, sourceDesc.FunctionName, slangStage);
+    be_assert(compileResult, "SenDx11Backend::CreateShader: shader compilation failed: " + compileResult.error());
+
     const SenShader handle { _nextShaderId++ };
     auto& entry = _shaders[handle.ID];
 
-    switch (desc.Stage) {
+    auto blobPtr = new Slang::ComPtr<ISlangBlob>(compileResult.value());
+    entry.SlangBlobPtr = blobPtr;
+
+    const void* bytecodePtr = blobPtr->get()->getBufferPointer();
+    size_t bytecodeSize = blobPtr->get()->getBufferSize();
+
+    switch (sourceDesc.Stage) {
         case SenShaderStage::Vertex: {
             ComPtr<ID3D11VertexShader> vs;
-            Utils::Check << _device->CreateVertexShader(desc.Blob, desc.BlobSize, nullptr, &vs);
+            Utils::Check << _device->CreateVertexShader(bytecodePtr, bytecodeSize, nullptr, &vs);
             entry.Shader = vs;
             break;
         }
         case SenShaderStage::Pixel: {
             ComPtr<ID3D11PixelShader> ps;
-            Utils::Check << _device->CreatePixelShader(desc.Blob, desc.BlobSize, nullptr, &ps);
+            Utils::Check << _device->CreatePixelShader(bytecodePtr, bytecodeSize, nullptr, &ps);
             entry.Shader = ps;
             break;
         }
         case SenShaderStage::Hull: {
             ComPtr<ID3D11HullShader> hs;
-            Utils::Check << _device->CreateHullShader(desc.Blob, desc.BlobSize, nullptr, &hs);
+            Utils::Check << _device->CreateHullShader(bytecodePtr, bytecodeSize, nullptr, &hs);
             entry.Shader = hs;
             break;
         }
         case SenShaderStage::Domain: {
             ComPtr<ID3D11DomainShader> ds;
-            Utils::Check << _device->CreateDomainShader(desc.Blob, desc.BlobSize, nullptr, &ds);
+            Utils::Check << _device->CreateDomainShader(bytecodePtr, bytecodeSize, nullptr, &ds);
             entry.Shader = ds;
             break;
         }
@@ -324,6 +345,7 @@ auto SenDx11Backend::CreateShader(const SenShaderDesc& desc) -> SenShader {
 }
 
 auto SenDx11Backend::DestroyShader(SenShader handle) -> void {
+    delete _shaders[handle.ID].SlangBlobPtr;
     _shaders.erase(handle.ID);
 }
 
@@ -331,43 +353,117 @@ auto SenDx11Backend::LookupShader(SenShader handle) -> SenDx11ShaderEntry& {
     return _shaders.at(handle.ID);
 }
 
-// ─── vertex layouts ───────────────────────────────────────────────
 
-auto SenDx11Backend::CreateVertexLayout(const SenVertexLayoutDesc& desc) -> SenVertexLayout {
-    const SenVertexLayout handle { _nextVertexLayoutId++ };
-    auto& entry = _vertexLayouts[handle.ID];
+// ─── pipelines ────────────────────────────────────────────────────────────────
 
-    std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayoutDesc;
-    inputLayoutDesc.reserve(desc.Elements.size());
+auto SenDx11Backend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
+    const SenPipeline handle { _nextPipelineId++ };
+    auto& entry = _pipelines[handle.ID];
 
-    for (const auto& element : desc.Elements) {
-        inputLayoutDesc.push_back({
-            .SemanticName         = Sen::Dx11::ToVertexSemanticName(element.Semantic),
-            .SemanticIndex        = 0,
-            .Format               = Sen::Dx11::ToFormat(element.Format),
-            .InputSlot            = 0,
-            .AlignedByteOffset    = element.Offset,
-            .InputSlotClass       = D3D11_INPUT_PER_VERTEX_DATA,
-            .InstanceDataStepRate = 0,
-        });
+    // Extract shader objects from handles
+    auto& vsEntry = _shaders.at(desc.VertexShader.ID);
+    entry.VertexShader = static_cast<ID3D11VertexShader*>(vsEntry.Shader.Get());
+
+    if (desc.HullShader.IsValid()) {
+        auto& hsEntry = _shaders.at(desc.HullShader.ID);
+        entry.HullShader = static_cast<ID3D11HullShader*>(hsEntry.Shader.Get());
     }
 
-    Utils::Check << _device->CreateInputLayout(
-        inputLayoutDesc.data(),
-        static_cast<UINT>(inputLayoutDesc.size()),
-        desc.VertexShaderBytecode,
-        desc.VertexShaderBytecodeSize,
-        entry.InputLayout.GetAddressOf()
-    );
+    if (desc.DomainShader.IsValid()) {
+        auto& dsEntry = _shaders.at(desc.DomainShader.ID);
+        entry.DomainShader = static_cast<ID3D11DomainShader*>(dsEntry.Shader.Get());
+    }
+
+    if (desc.PixelShader.IsValid()) {
+        auto& psEntry = _shaders.at(desc.PixelShader.ID);
+        entry.PixelShader = static_cast<ID3D11PixelShader*>(psEntry.Shader.Get());
+    }
+
+    // Extract input layout (optional for shaders using SV_VertexID, etc.)
+    if (!desc.VertexLayout.empty()) {
+        std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayoutDesc;
+        inputLayoutDesc.reserve(desc.VertexLayout.size());
+
+        for (const auto& element : desc.VertexLayout) {
+            inputLayoutDesc.push_back({
+                .SemanticName         = Sen::Dx11::ToVertexSemanticName(element.Semantic),
+                .SemanticIndex        = 0,
+                .Format               = Sen::Dx11::ToFormat(element.Format),
+                .InputSlot            = 0,
+                .AlignedByteOffset    = element.Offset,
+                .InputSlotClass       = D3D11_INPUT_PER_VERTEX_DATA,
+                .InstanceDataStepRate = 0,
+            });
+        }
+        
+        be_assert(vsEntry.SlangBlobPtr, "SenDx11Backend::CreatePipeline: vertex shader has no bytecode");
+        Utils::Check << _device->CreateInputLayout(
+            inputLayoutDesc.data(),
+            static_cast<UINT>(inputLayoutDesc.size()),
+            vsEntry.SlangBlobPtr->get()->getBufferPointer(),
+            vsEntry.SlangBlobPtr->get()->getBufferSize(),
+            entry.InputLayout.GetAddressOf()
+        );
+    }
+
+    // Set topology
+    entry.Topology = Sen::Dx11::ToTopology(desc.Topology);
+
+    // Create rasterizer state
+    {
+        D3D11_RASTERIZER_DESC rd = {};
+        rd.FillMode              = Sen::Dx11::ToFillMode(desc.RasterizerState.FillMode);
+        rd.CullMode              = Sen::Dx11::ToCullMode(desc.RasterizerState.CullMode);
+        rd.FrontCounterClockwise = FALSE;
+        rd.DepthBias             = static_cast<INT>(desc.RasterizerState.DepthBias);
+        rd.DepthBiasClamp        = 0.f;
+        rd.SlopeScaledDepthBias  = desc.RasterizerState.SlopeScaledDepthBias;
+        rd.DepthClipEnable       = desc.RasterizerState.DepthClipEnable;
+        rd.ScissorEnable         = desc.RasterizerState.ScissorEnable;
+        rd.MultisampleEnable     = FALSE;
+        rd.AntialiasedLineEnable = FALSE;
+
+        Utils::Check << _device->CreateRasterizerState(&rd, entry.RasterizerState.GetAddressOf());
+    }
+
+    // Create blend state
+    {
+        D3D11_BLEND_DESC bd = {};
+        bd.AlphaToCoverageEnable  = FALSE;
+        bd.IndependentBlendEnable = FALSE;
+
+        D3D11_RENDER_TARGET_BLEND_DESC& rtbd = bd.RenderTarget[0];
+        rtbd.BlendEnable    = desc.BlendState.Enable;
+        rtbd.SrcBlend       = Sen::Dx11::ToBlendFactor(desc.BlendState.SrcBlend);
+        rtbd.DestBlend      = Sen::Dx11::ToBlendFactor(desc.BlendState.DstBlend);
+        rtbd.BlendOp        = Sen::Dx11::ToBlendOp(desc.BlendState.BlendOp);
+        rtbd.SrcBlendAlpha  = Sen::Dx11::ToBlendFactor(desc.BlendState.SrcBlendAlpha);
+        rtbd.DestBlendAlpha = Sen::Dx11::ToBlendFactor(desc.BlendState.DstBlendAlpha);
+        rtbd.BlendOpAlpha   = Sen::Dx11::ToBlendOp(desc.BlendState.BlendOpAlpha);
+        rtbd.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+        Utils::Check << _device->CreateBlendState(&bd, entry.BlendState.GetAddressOf());
+    }
+
+    // Create depth-stencil state
+    {
+        D3D11_DEPTH_STENCIL_DESC dsd = {};
+        dsd.DepthEnable    = desc.DepthStencilState.DepthEnable;
+        dsd.DepthWriteMask = desc.DepthStencilState.DepthWriteEnable ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+        dsd.DepthFunc      = Sen::Dx11::ToComparisonFunc(desc.DepthStencilState.DepthFunc);
+        dsd.StencilEnable  = FALSE;
+
+        Utils::Check << _device->CreateDepthStencilState(&dsd, entry.DepthStencilState.GetAddressOf());
+    }
 
     return handle;
 }
 
-auto SenDx11Backend::DestroyVertexLayout(SenVertexLayout handle) -> void {
-    _vertexLayouts.erase(handle.ID);
+auto SenDx11Backend::DestroyPipeline(SenPipeline handle) -> void {
+    _pipelines.erase(handle.ID);
 }
 
-auto SenDx11Backend::LookupVertexLayout(SenVertexLayout handle) -> SenDx11VertexLayoutEntry& {
-    return _vertexLayouts.at(handle.ID);
+auto SenDx11Backend::LookupPipeline(SenPipeline handle) -> SenDx11PipelineEntry& {
+    return _pipelines.at(handle.ID);
 }
 

@@ -15,6 +15,9 @@
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
+    "rasterizer": "back-solid",
+    "blend": "disable",
+    "depthStencil": "disable",
     "materials": {
         "main": { "scheme": "bloom-kawase-material", "slot": 2 },
     },

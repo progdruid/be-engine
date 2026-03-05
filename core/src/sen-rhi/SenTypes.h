@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <vector>
 #include <umbrellas/bitmask.hpp>
@@ -93,6 +94,91 @@ struct SenSamplerDesc {
 };
 
 
+// ─── blend state ───────────────────────────────────────────────
+enum class SenBlendFactor : uint8_t {
+    Zero,
+    One,
+    SrcColor,
+    InvSrcColor,
+    SrcAlpha,
+    InvSrcAlpha,
+    DstColor,
+    InvDstColor,
+    DstAlpha,
+    InvDstAlpha,
+};
+
+enum class SenBlendOp : uint8_t {
+    Add,
+    Subtract,
+    ReverseSubtract,
+    Min,
+    Max,
+};
+
+struct SenBlendState {
+    bool              Enable           = false;
+    SenBlendFactor    SrcBlend         = SenBlendFactor::One;
+    SenBlendFactor    DstBlend         = SenBlendFactor::Zero;
+    SenBlendOp        BlendOp          = SenBlendOp::Add;
+    SenBlendFactor    SrcBlendAlpha    = SenBlendFactor::One;
+    SenBlendFactor    DstBlendAlpha    = SenBlendFactor::Zero;
+    SenBlendOp        BlendOpAlpha     = SenBlendOp::Add;
+};
+
+
+// ─── rasterizer state ──────────────────────────────────────────
+enum class SenCullMode : uint8_t {
+    None,
+    Front,
+    Back,
+};
+
+enum class SenFillMode : uint8_t {
+    Solid,
+    Wireframe,
+};
+
+struct SenRasterizerState {
+    SenCullMode CullMode              = SenCullMode::Back;
+    SenFillMode FillMode              = SenFillMode::Solid;
+    float       DepthBias             = 0.f;
+    float       SlopeScaledDepthBias  = 0.f;
+    bool        DepthClipEnable       = true;
+    bool        ScissorEnable         = false;
+};
+
+
+// ─── depth-stencil state ───────────────────────────────────────
+enum class SenComparisonFunc : uint8_t {
+    Never,
+    Less,
+    Equal,
+    LessEqual,
+    Greater,
+    NotEqual,
+    GreaterEqual,
+    Always,
+};
+
+struct SenDepthStencilState {
+    bool              DepthEnable      = true;
+    bool              DepthWriteEnable = true;
+    SenComparisonFunc DepthFunc        = SenComparisonFunc::Less;
+};
+
+
+// ─── topology ───────────────────────────────────────────────────
+enum class SenTopology : uint8_t {
+    Undefined,
+    TriangleList,
+    TriangleStrip,
+    LineList,
+    PointList,
+    PatchList3,
+};
+
+
 // ─── shader ─────────────────────────────────────────────────────
 enum class SenShaderStage : uint8_t {
     Vertex,
@@ -106,40 +192,52 @@ struct SenShader {
     auto IsValid() const -> bool { return ID != 0; }
 };
 
-struct SenShaderDesc {
-    const void* Blob = nullptr;
-    uint32_t BlobSize = 0;
+struct SenShaderSourceDesc {
+    std::filesystem::path SourcePath;
+    std::string FunctionName;
     SenShaderStage Stage;
 };
 
 // ─── vertex layout ─────────────────────────────────────────────
-struct SenVertexLayout {
+struct SenVertexLayoutElement {
+    std::string Semantic;
+    SenFormat Format;
+    uint32_t Offset;
+};
+
+struct SenVertexLayoutDesc {
+    std::vector<SenVertexLayoutElement> Elements;
+};
+
+
+// ─── pipeline ──────────────────────────────────────────────────
+struct SenPipeline {
     uint32_t ID = 0;
     auto IsValid() const -> bool { return ID != 0; }
 };
 
-struct SenVertexLayoutDesc {
-    struct Element {
-        std::string Semantic;
-        SenFormat Format;
-        uint32_t Offset;
-    };
-    std::vector<Element> Elements;
-    const void* VertexShaderBytecode = nullptr;     // raw pointer to shader bytecode
-    uint32_t VertexShaderBytecodeSize = 0;          // bytecode size in bytes
+struct SenPipelineDesc {
+    // Shader stages
+    SenShader VertexShader;
+    SenShader HullShader;
+    SenShader DomainShader;
+    SenShader PixelShader;
+
+    // Vertex input
+    std::vector<SenVertexLayoutElement> VertexLayout;
+    SenTopology Topology = SenTopology::TriangleList;
+
+    // Render state
+    SenRasterizerState    RasterizerState;
+    SenBlendState         BlendState;
+    SenDepthStencilState  DepthStencilState;
+
+    // Optional: render target formats (for validation/compatibility checking)
+    std::vector<SenFormat> RenderTargetFormats;
 };
 
 
-// ─── other ─────────────────────────────────────────────────────
-enum class SenTopology : uint8_t {
-    Undefined,
-    TriangleList,
-    TriangleStrip,
-    LineList,
-    PointList,
-    PatchList3,
-};
-
+// ─── viewport ───────────────────────────────────────────────────
 struct SenViewport {
     float X        = 0.f;
     float Y        = 0.f;

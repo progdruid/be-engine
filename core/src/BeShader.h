@@ -31,14 +31,15 @@ class BeShader {
     expose std::string Name;
     expose BeShaderType ShaderType = BeShaderType::None;
     expose SenTopology Topology = SenTopology::Undefined;
-    expose SenVertexLayout VertexLayout;
     expose SenShader ShaderVertex;
     expose SenShader ShaderHull;
     expose SenShader ShaderDomain;
     expose SenShader ShaderPixel;
     expose std::unordered_map<std::string, uint32_t> PixelTargets;
     expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
-    
+
+    expose SenPipelineDesc _pipelineDesc;
+
     expose bool HasMaterial = false;
     hide std::unordered_map<std::string, std::string> _materialSchemeNames;
     hide std::unordered_map<std::string, uint8_t> _materialSlots;
@@ -57,6 +58,10 @@ class BeShader {
     }
     expose auto GetMaterialSlotByScheme (const std::string& schemeName) const -> uint8_t {
         return _materialSlotsByScheme.at(schemeName);
+    }
+
+    expose auto CreatePipelineDesc() const -> SenPipelineDesc {
+        return _pipelineDesc;
     }
 };
 

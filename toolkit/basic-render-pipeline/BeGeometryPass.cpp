@@ -3,6 +3,7 @@
 #include <cassert>
 #include <scope_guard/scope_guard.hpp>
 #include <umbrellas/include-glm.h>
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
@@ -44,14 +45,18 @@ auto BeGeometryPass::Render() -> void
         const auto shader = entry.Prop->Shader;
         assert(shader);
 
-        pipeline->BindShader(shader, BeShaderType::All);
-        SCOPE_EXIT { pipeline->Clear(); };
+        // Get or create pipeline for this shader
+        if (!_shaderPipelines.contains(shader.get())) {
+            auto pipelineDesc = shader->CreatePipelineDesc();
+            _shaderPipelines[shader.get()] = SenDx11Backend::Get().CreatePipeline(pipelineDesc);
+        }
+        pipeline->BindPipeline(_shaderPipelines[shader.get()]);
 
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", _renderer->UniformData.ProjectionView);
         _objectMaterial->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
         _objectMaterial->UpdateGPUBuffers();
-        pipeline->BindMaterialAutomatic(_objectMaterial);
+        pipeline->BindMaterialAutomatic(_objectMaterial, shader);
 
         const auto& meshSlices = submissionBuffer->GetMeshSlices(entry.Prop->Mesh.get());
         for (size_t i = 0; i < meshSlices.size(); ++i) {
@@ -62,7 +67,7 @@ auto BeGeometryPass::Render() -> void
                 context->RSSetState(_renderer->GetRasterizerCullNone().Get());
             }
 
-            pipeline->BindMaterialAutomatic(propSlice.Material);
+            pipeline->BindMaterialAutomatic(propSlice.Material, shader);
             pipeline->DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
 
             if (propSlice.TwoSided) {
@@ -70,4 +75,6 @@ auto BeGeometryPass::Render() -> void
             }
         }
     }
+
+    pipeline->ResetRenderState();
 }

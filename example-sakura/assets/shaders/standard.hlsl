@@ -21,13 +21,19 @@
 @be-shader: standard
 {
     "topology": "triangle-list",
+    "rasterizer": "back-solid",
+    "blend": "disable",
+    "depthStencil": "less",
+    
     "vertex": "VertexFunction",
     "vertexLayout": ["position", "normal", "uv0"],
     "pixel": "PixelFunction",
+    
     "materials": {
         "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
         "geometry-main": { "scheme": "standard-material-for-geometry-pass", "slot": 2 },
     },
+    
     "targets": {
         "DiffuseRGB":             { "type": "float3", "slot": 0 },
         "WorldNormalXYZ_UnusedA": { "type": "float4", "slot": 1 },

@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include <sen-rhi/SenTypes.h>
+#include <umbrellas/include-libassert.h>
 
 namespace Sen::Dx11 {
 
@@ -109,6 +110,69 @@ namespace Sen::Dx11 {
             {"uv2",      "TEXCOORD2"},
         };
         return Map.at(std::string(semantic));
+    }
+
+    inline auto ToBlendFactor(SenBlendFactor factor) -> D3D11_BLEND {
+        switch (factor) {
+            case SenBlendFactor::Zero:          return D3D11_BLEND_ZERO;
+            case SenBlendFactor::One:           return D3D11_BLEND_ONE;
+            case SenBlendFactor::SrcColor:      return D3D11_BLEND_SRC_COLOR;
+            case SenBlendFactor::InvSrcColor:   return D3D11_BLEND_INV_SRC_COLOR;
+            case SenBlendFactor::SrcAlpha:      return D3D11_BLEND_SRC_ALPHA;
+            case SenBlendFactor::InvSrcAlpha:   return D3D11_BLEND_INV_SRC_ALPHA;
+            case SenBlendFactor::DstColor:      return D3D11_BLEND_DEST_COLOR;
+            case SenBlendFactor::InvDstColor:   return D3D11_BLEND_INV_DEST_COLOR;
+            case SenBlendFactor::DstAlpha:      return D3D11_BLEND_DEST_ALPHA;
+            case SenBlendFactor::InvDstAlpha:   return D3D11_BLEND_INV_DEST_ALPHA;
+        }
+        be_assert(false, "Unknown SenBlendFactor");
+        return D3D11_BLEND_ONE;
+    }
+
+    inline auto ToBlendOp(SenBlendOp op) -> D3D11_BLEND_OP {
+        switch (op) {
+            case SenBlendOp::Add:              return D3D11_BLEND_OP_ADD;
+            case SenBlendOp::Subtract:         return D3D11_BLEND_OP_SUBTRACT;
+            case SenBlendOp::ReverseSubtract:  return D3D11_BLEND_OP_REV_SUBTRACT;
+            case SenBlendOp::Min:              return D3D11_BLEND_OP_MIN;
+            case SenBlendOp::Max:              return D3D11_BLEND_OP_MAX;
+        }
+        be_assert(false, "Unknown SenBlendOp");
+        return D3D11_BLEND_OP_ADD;
+    }
+
+    inline auto ToCullMode(SenCullMode mode) -> D3D11_CULL_MODE {
+        switch (mode) {
+            case SenCullMode::None:   return D3D11_CULL_NONE;
+            case SenCullMode::Front:  return D3D11_CULL_FRONT;
+            case SenCullMode::Back:   return D3D11_CULL_BACK;
+        }
+        be_assert(false, "Unknown SenCullMode");
+        return D3D11_CULL_BACK;
+    }
+
+    inline auto ToFillMode(SenFillMode mode) -> D3D11_FILL_MODE {
+        switch (mode) {
+            case SenFillMode::Solid:      return D3D11_FILL_SOLID;
+            case SenFillMode::Wireframe:  return D3D11_FILL_WIREFRAME;
+        }
+        be_assert(false, "Unknown SenFillMode");
+        return D3D11_FILL_SOLID;
+    }
+
+    inline auto ToComparisonFunc(SenComparisonFunc func) -> D3D11_COMPARISON_FUNC {
+        switch (func) {
+            case SenComparisonFunc::Never:         return D3D11_COMPARISON_NEVER;
+            case SenComparisonFunc::Less:          return D3D11_COMPARISON_LESS;
+            case SenComparisonFunc::Equal:         return D3D11_COMPARISON_EQUAL;
+            case SenComparisonFunc::LessEqual:     return D3D11_COMPARISON_LESS_EQUAL;
+            case SenComparisonFunc::Greater:       return D3D11_COMPARISON_GREATER;
+            case SenComparisonFunc::NotEqual:      return D3D11_COMPARISON_NOT_EQUAL;
+            case SenComparisonFunc::GreaterEqual:  return D3D11_COMPARISON_GREATER_EQUAL;
+            case SenComparisonFunc::Always:        return D3D11_COMPARISON_ALWAYS;
+        }
+        be_assert(false, "Unknown SenComparisonFunc");
+        return D3D11_COMPARISON_LESS;
     }
 
 } // namespace Sen::Dx11

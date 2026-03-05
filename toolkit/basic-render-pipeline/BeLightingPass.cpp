@@ -2,6 +2,7 @@
 
 #include <scope_guard/scope_guard.hpp>
 #include <umbrellas/include-glm.h>
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
@@ -17,20 +18,6 @@ BeLightingPass::BeLightingPass() = default;
 BeLightingPass::~BeLightingPass() = default;
 
 void BeLightingPass::Initialise() {
-    const auto device = _renderer->GetDevice();
-
-    D3D11_BLEND_DESC lightingBlendDesc = {};
-    lightingBlendDesc.RenderTarget[0].BlendEnable = TRUE;
-    lightingBlendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-    lightingBlendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
-    lightingBlendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-    lightingBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-    lightingBlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
-    lightingBlendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-    lightingBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-
-    Utils::Check << device->CreateBlendState(&lightingBlendDesc, _lightingBlendState.GetAddressOf());
-    
     _directionalLightShader = BeAssetRegistry::GetShader( "directional-light").lock();
     const auto& directionalScheme = BeAssetRegistry::GetMaterialScheme("directional-light-material");;
     _directionalLightMaterial = BeMaterial::Create("DirectionalLightMaterial", directionalScheme, true, *_renderer);
@@ -51,6 +38,37 @@ void BeLightingPass::Initialise() {
     const auto& emissiveScheme = BeAssetRegistry::GetMaterialScheme("emissive-add-material");
     _emissiveMaterial = BeMaterial::Create("EmissiveMaterial", emissiveScheme, false, *_renderer);
     _emissiveMaterial->SetTexture("InputEmissive", InputTexture3.lock());
+
+    // Create pipelines for each shader with additive blending
+    auto directionalDesc = _directionalLightShader->CreatePipelineDesc();
+    directionalDesc.BlendState.Enable = true;
+    directionalDesc.BlendState.SrcBlend = SenBlendFactor::One;
+    directionalDesc.BlendState.DstBlend = SenBlendFactor::One;
+    directionalDesc.BlendState.BlendOp = SenBlendOp::Add;
+    directionalDesc.BlendState.SrcBlendAlpha = SenBlendFactor::One;
+    directionalDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
+    directionalDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
+    _directionalLightPipeline = SenDx11Backend::Get().CreatePipeline(directionalDesc);
+
+    auto pointDesc = _pointLightShader->CreatePipelineDesc();
+    pointDesc.BlendState.Enable = true;
+    pointDesc.BlendState.SrcBlend = SenBlendFactor::One;
+    pointDesc.BlendState.DstBlend = SenBlendFactor::One;
+    pointDesc.BlendState.BlendOp = SenBlendOp::Add;
+    pointDesc.BlendState.SrcBlendAlpha = SenBlendFactor::One;
+    pointDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
+    pointDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
+    _pointLightPipeline = SenDx11Backend::Get().CreatePipeline(pointDesc);
+
+    auto emissiveDesc = _emissiveAddShader->CreatePipelineDesc();
+    emissiveDesc.BlendState.Enable = true;
+    emissiveDesc.BlendState.SrcBlend = SenBlendFactor::One;
+    emissiveDesc.BlendState.DstBlend = SenBlendFactor::One;
+    emissiveDesc.BlendState.BlendOp = SenBlendOp::Add;
+    emissiveDesc.BlendState.SrcBlendAlpha = SenBlendFactor::One;
+    emissiveDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
+    emissiveDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
+    _emissivePipeline = SenDx11Backend::Get().CreatePipeline(emissiveDesc);
 }
 
 auto BeLightingPass::Render() -> void {
@@ -59,15 +77,11 @@ auto BeLightingPass::Render() -> void {
     const auto& pipeline = _renderer->GetPipeline();
     
     pipeline->BindTargets({ OutputTexture }, nullptr, true);
-    context->OMSetBlendState(_lightingBlendState.Get(), nullptr, 0xFFFFFFFF);
-    SCOPE_EXIT {
-        pipeline->ClearTargets();
-        context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
-    };
+    SCOPE_EXIT { pipeline->ClearTargets(); };
 
     // directional light
-    pipeline->BindShader(_directionalLightShader, BeShaderType::Vertex | BeShaderType::Pixel);
-        
+    pipeline->BindPipeline(_directionalLightPipeline);
+
     const auto& sunLight = submissionBuffer.GetSunLightEntries()[0];
     _directionalLightMaterial->SetFloat("HasShadowMap", sunLight.CastsShadows ? 1.0f : 0.0f);
     _directionalLightMaterial->SetFloat3("Direction", sunLight.Direction);
@@ -76,15 +90,14 @@ auto BeLightingPass::Render() -> void {
     _directionalLightMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
     _directionalLightMaterial->SetFloat("TexelSize", 1.0f / sunLight.ShadowMapResolution);
     _directionalLightMaterial->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
-    pipeline->BindMaterialAutomatic(_directionalLightMaterial);
-    
+    pipeline->BindMaterialAutomatic(_directionalLightMaterial, _directionalLightShader);
+
     pipeline->Draw(4, 0);
     _directionalLightMaterial->SetTexture("ShadowMap", nullptr);
-    pipeline->Clear();
 
 
     // point lights
-    pipeline->BindShader(_pointLightShader, BeShaderType::Vertex | BeShaderType::Pixel);
+    pipeline->BindPipeline(_pointLightPipeline);
     for (const auto& pointLight : submissionBuffer.GetPointLightEntries()) {
         _pointLightMaterial->SetFloat3("Position", pointLight.Position);
         _pointLightMaterial->SetFloat("Radius", pointLight.Radius);
@@ -94,19 +107,19 @@ auto BeLightingPass::Render() -> void {
         _pointLightMaterial->SetFloat("ShadowMapResolution", pointLight.ShadowMapResolution);
         _pointLightMaterial->SetFloat("ShadowNearPlane", pointLight.ShadowNearPlane);
         // TODO: super uncool, material shouldnt own anything ideally. or should it?
-        _pointLightMaterial->SetTexture("PointLightShadowMap", pointLight.ShadowMap.lock()); 
-        pipeline->BindMaterialAutomatic(_pointLightMaterial);
-    
+        _pointLightMaterial->SetTexture("PointLightShadowMap", pointLight.ShadowMap.lock());
+        pipeline->BindMaterialAutomatic(_pointLightMaterial, _pointLightShader);
+
         pipeline->Draw(4, 0);
     }
-    
+
     _pointLightMaterial->SetTexture("PointLightShadowMap", nullptr);
-    pipeline->Clear();
     
     
     // emissive add
-    pipeline->BindShader(_emissiveAddShader, BeShaderType::Vertex | BeShaderType::Pixel);
-    pipeline->BindMaterialAutomatic(_emissiveMaterial);
+    pipeline->BindPipeline(_emissivePipeline);
+    pipeline->BindMaterialAutomatic(_emissiveMaterial, _emissiveAddShader);
     pipeline->Draw(4, 0);
-    pipeline->Clear();
+
+    pipeline->ResetRenderState();
 }

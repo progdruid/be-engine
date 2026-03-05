@@ -2,6 +2,7 @@
 
 #include <umbrellas/include-glm.h>
 #include <scope_guard/scope_guard.hpp>
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
@@ -9,7 +10,6 @@
 #include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
-#include <sen-rhi/dx11/SenDx11Backend.h>
 
 auto BeShadowPass::Initialise() -> void {
     auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
@@ -48,7 +48,7 @@ auto BeShadowPass::Render() -> void {
 auto BeShadowPass::RenderDirectionalShadows(
     const BeBRPSunLightEntry& sunLight,
     const BeBRPSubmissionBuffer& submissionBuffer
-) const -> void {
+) -> void {
     const auto& context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
 
@@ -77,13 +77,19 @@ auto BeShadowPass::RenderDirectionalShadows(
         if (!entry.CastShadows)
             continue;
 
-        pipeline->BindShader(entry.Prop->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
+        const auto shader = entry.Prop->Shader;
+        // Get or create pipeline for this shader
+        if (!_shaderPipelines.contains(shader.get())) {
+            auto pipelineDesc = shader->CreatePipelineDesc();
+            _shaderPipelines[shader.get()] = SenDx11Backend::Get().CreatePipeline(pipelineDesc);
+        }
+        pipeline->BindPipeline(_shaderPipelines[shader.get()]);
 
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
         _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
         _objectMaterial->UpdateGPUBuffers();
-        pipeline->BindMaterialAutomatic(_objectMaterial);
+        pipeline->BindMaterialAutomatic(_objectMaterial, shader);
 
         const auto& meshSlices = submissionBuffer.GetMeshSlices(entry.Prop->Mesh.get());
         for (size_t i = 0; i < meshSlices.size(); ++i) {
@@ -94,22 +100,22 @@ auto BeShadowPass::RenderDirectionalShadows(
                 context->RSSetState(_renderer->GetRasterizerCullNone().Get());
             }
 
-            pipeline->BindMaterialAutomatic(propSlice.Material);
+            pipeline->BindMaterialAutomatic(propSlice.Material, shader);
             context->DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
 
             if (propSlice.TwoSided) {
                 context->RSSetState(_renderer->GetRasterizerCullBack().Get());
             }
         }
-
-        pipeline->Clear();
     }
+
+    pipeline->ResetRenderState();
 }
 
 auto BeShadowPass::RenderPointLightShadows(
     const BeBRPPointLightEntry& pointLight,
     const BeBRPSubmissionBuffer& submissionBuffer
-) const -> void {
+) -> void {
     // get what we need
     const auto& context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
@@ -146,13 +152,19 @@ auto BeShadowPass::RenderPointLightShadows(
             if (!entry.CastShadows)
                 continue;
 
-            pipeline->BindShader(entry.Prop->Shader, BeShaderType::Vertex | BeShaderType::Tesselation);
+            const auto shader = entry.Prop->Shader;
+            // Get or create pipeline for this shader
+            if (!_shaderPipelines.contains(shader.get())) {
+                auto pipelineDesc = shader->CreatePipelineDesc();
+                _shaderPipelines[shader.get()] = SenDx11Backend::Get().CreatePipeline(pipelineDesc);
+            }
+            pipeline->BindPipeline(_shaderPipelines[shader.get()]);
 
             _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
             _objectMaterial->SetMatrix("ProjectionView", faceViewProj);
             _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
             _objectMaterial->UpdateGPUBuffers();
-            pipeline->BindMaterialAutomatic(_objectMaterial);
+            pipeline->BindMaterialAutomatic(_objectMaterial, shader);
 
             // draw
             const auto& meshSlices = submissionBuffer.GetMeshSlices(entry.Prop->Mesh.get());
@@ -164,18 +176,17 @@ auto BeShadowPass::RenderPointLightShadows(
                     context->RSSetState(_renderer->GetRasterizerCullNone().Get());
                 }
 
-                pipeline->BindMaterialAutomatic(propSlice.Material);
+                pipeline->BindMaterialAutomatic(propSlice.Material, shader);
                 context->DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
 
                 if (propSlice.TwoSided) {
                     context->RSSetState(_renderer->GetRasterizerCullBack().Get());
                 }
             }
-
-            pipeline->Clear();
         }
     }
 
+    pipeline->ResetRenderState();
     context->OMSetRenderTargets(0, nullptr, nullptr);
 }
 

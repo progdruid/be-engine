@@ -2,6 +2,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
 
@@ -14,6 +15,9 @@ class BeFullscreenEffectPass final : public BeRenderPass {
     std::vector<std::weak_ptr<BeTexture>> OutputTextures;
     std::weak_ptr<BeShader> Shader;
     std::shared_ptr<BeMaterial> Material;
+
+    hide
+    SenPipeline _pipeline;
 
     expose
     explicit BeFullscreenEffectPass();

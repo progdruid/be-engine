@@ -6,19 +6,44 @@
 #include "BePipeline.h"
 #include "BeShader.h"
 #include "BeTexture.h"
+#include <umbrellas/include-libassert.h>
+#include <sen-rhi/dx11/SenDx11Backend.h>
 
 BeBloomPass::BeBloomPass() = default;
 BeBloomPass::~BeBloomPass() = default;
 
 auto BeBloomPass::Initialise() -> void {
     _brightShader = BeAssetRegistry::GetShader("bloom-bright").lock();
+    be_assert(_brightShader, "BeBloomPass: bloom-bright shader not found");
     auto brightScheme = BeAssetRegistry::GetMaterialScheme("bloom-bright-material");
     _brightMaterial = BeMaterial::Create("Bright Pass Material", brightScheme, false, *_renderer);
     _brightMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
-    //_brightMaterial->SetSampler("InputSampler", _renderer->GetPostProcessLinearClampSampler());
+
+    // Create bright pass pipeline
+    auto brightPipelineDesc = _brightShader->CreatePipelineDesc();
+    _brightPipeline = SenDx11Backend::Get().CreatePipeline(brightPipelineDesc);
+    be_assert(_brightPipeline.IsValid(), "BeBloomPass: failed to create bright pipeline");
 
     _kawaseShader = BeAssetRegistry::GetShader("bloom-kawase").lock();
-    auto kawaseScheme = BeAssetRegistry::GetMaterialScheme("bloom-kawase-material");;
+    be_assert(_kawaseShader, "BeBloomPass: bloom-kawase shader not found");
+    auto kawaseScheme = BeAssetRegistry::GetMaterialScheme("bloom-kawase-material");
+
+    // Create downsample pipeline (normal blending)
+    auto downsamplePipelineDesc = _kawaseShader->CreatePipelineDesc();
+    _downsamplePipeline = SenDx11Backend::Get().CreatePipeline(downsamplePipelineDesc);
+    be_assert(_downsamplePipeline.IsValid(), "BeBloomPass: failed to create downsample pipeline");
+
+    // Create upsample pipeline (additive blending)
+    auto upsamplePipelineDesc = _kawaseShader->CreatePipelineDesc();
+    upsamplePipelineDesc.BlendState.Enable = true;
+    upsamplePipelineDesc.BlendState.SrcBlend = SenBlendFactor::One;
+    upsamplePipelineDesc.BlendState.DstBlend = SenBlendFactor::One;
+    upsamplePipelineDesc.BlendState.BlendOp = SenBlendOp::Add;
+    upsamplePipelineDesc.BlendState.SrcBlendAlpha = SenBlendFactor::Zero;
+    upsamplePipelineDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
+    upsamplePipelineDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
+    _upsamplePipeline = SenDx11Backend::Get().CreatePipeline(upsamplePipelineDesc);
+    be_assert(_upsamplePipeline.IsValid(), "BeBloomPass: failed to create upsample pipeline");
 
     // Create downsample materials for each mip level (1 to size-1)
     _downsampleMaterials.resize(BloomMipCount);
@@ -71,11 +96,17 @@ auto BeBloomPass::Initialise() -> void {
     }
 
     _addShader = BeAssetRegistry::GetShader("bloom-add").lock();
+    be_assert(_addShader, "BeBloomPass: bloom-add shader not found");
     const auto& addScheme = BeAssetRegistry::GetMaterialScheme("bloom-add-material");
     _addMaterial = BeMaterial::Create("Add Pass Material", addScheme, false, *_renderer);
     _addMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
     _addMaterial->SetTexture("BloomInput", BloomMipTextures[0].lock());
     _addMaterial->SetTexture("DirtTexture", DirtTexture.lock());
+
+    // Create add pipeline
+    auto addPipelineDesc = _addShader->CreatePipelineDesc();
+    _addPipeline = SenDx11Backend::Get().CreatePipeline(addPipelineDesc);
+    be_assert(_addPipeline.IsValid(), "BeBloomPass: failed to create add pipeline");
 }
 
 auto BeBloomPass::Render() -> void {
@@ -88,28 +119,28 @@ auto BeBloomPass::Render() -> void {
 auto BeBloomPass::RenderBrightPass() const -> void {
     const auto context = _renderer->GetContext();
     const auto pipeline = _renderer->GetPipeline();
-    
-    const auto bloomMip0  = BloomMipTextures[0].lock();
 
+    const auto bloomMip0  = BloomMipTextures[0].lock();
+    
     pipeline->BindTargets({ bloomMip0 }, nullptr, false);
-    pipeline->BindShader(_brightShader, BeShaderType::Vertex | BeShaderType::Pixel);
-    pipeline->BindMaterialAutomatic(_brightMaterial);
+    pipeline->BindPipeline(_brightPipeline);
+    pipeline->BindMaterialAutomatic(_brightMaterial, _brightShader);
     pipeline->Draw(4, 0);
 
-    pipeline->Clear();
     pipeline->ClearTargets();
+    pipeline->ResetRenderState();
 }
 
 auto BeBloomPass::RenderDownsamplePasses() -> void {
     const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-    
+
     uint32_t numberOfPreviousViewports = 1;
     D3D11_VIEWPORT previousViewport;
     context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
 
-    pipeline->BindShader(_kawaseShader, BeShaderType::Vertex | BeShaderType::Pixel);
-    
+    pipeline->BindPipeline(_downsamplePipeline);
+
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
         const auto targetMip = BloomMipTextures[mipTarget].lock();
 
@@ -122,76 +153,59 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
         context->RSSetViewports(1, &viewport);
 
         pipeline->BindTargets({ targetMip }, nullptr, false);
-        pipeline->BindMaterialAutomatic(_downsampleMaterials[mipTarget]);
-        
+        pipeline->BindMaterialAutomatic(_downsampleMaterials[mipTarget], _kawaseShader);
+
         pipeline->Draw(4, 0);
 
         pipeline->ClearTargets();
     }
 
-    pipeline->Clear();
     context->RSSetViewports(1, &previousViewport);
+    pipeline->ResetRenderState();
 }
 
 auto BeBloomPass::RenderUpsamplePasses() -> void {
     const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-    
+
     uint32_t numberOfPreviousViewports = 1;
     D3D11_VIEWPORT previousViewport;
     context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
-    
-    // Set additive blend state for upsampling (accumulate into mips)
-    ID3D11BlendState* additiveBlendState = nullptr;
-    D3D11_BLEND_DESC blendDesc = {};
-    blendDesc.RenderTarget[0].BlendEnable = TRUE;
-    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
-    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
-    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-    Utils::Check << _renderer->GetDevice()->CreateBlendState(&blendDesc, &additiveBlendState);
-    context->OMSetBlendState(additiveBlendState, nullptr, 0xFFFFFFFF);
 
-    pipeline->BindShader(_kawaseShader, BeShaderType::Vertex | BeShaderType::Pixel);
+    pipeline->BindPipeline(_upsamplePipeline);
 
     for (int32_t mipTarget = BloomMipCount - 2; mipTarget >= 0; --mipTarget) {
         const auto targetMip = BloomMipTextures[mipTarget].lock();
-        
+
         D3D11_VIEWPORT viewport = {};
         viewport.Width = static_cast<float>(targetMip->Width);
         viewport.Height = static_cast<float>(targetMip->Height);
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
         context->RSSetViewports(1, &viewport);
-        
+
         pipeline->BindTargets({ targetMip }, nullptr, false);
-        pipeline->BindMaterialAutomatic(_upsampleMaterials[mipTarget]);
+        pipeline->BindMaterialAutomatic(_upsampleMaterials[mipTarget], _kawaseShader);
 
         pipeline->Draw(4, 0);
 
         pipeline->ClearTargets();
     }
 
-    context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
-    if (additiveBlendState) additiveBlendState->Release();
-
-    pipeline->Clear();
     context->RSSetViewports(1, &previousViewport);
+    pipeline->ResetRenderState();
 }
 
 auto BeBloomPass::RenderAddPass() const -> void {
     const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-    
+
     pipeline->BindTargets({ OutputTexture }, nullptr, false);
-    pipeline->BindShader(_addShader, BeShaderType::Vertex | BeShaderType::Pixel);
-    pipeline->BindMaterialAutomatic(_addMaterial);
-    
+    pipeline->BindPipeline(_addPipeline);
+    pipeline->BindMaterialAutomatic(_addMaterial, _addShader);
+
     pipeline->Draw(4, 0);
 
-    pipeline->Clear();
     pipeline->ClearTargets();
+    pipeline->ResetRenderState();
 }

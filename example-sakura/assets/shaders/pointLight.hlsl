@@ -25,6 +25,9 @@
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
+    "rasterizer": "back-solid",
+    "blend": "additive",
+    "depthStencil": "disable",
     "materials": {
         "main": { "scheme": "point-light-material", "slot": 2, "var": "PointLight" },
     },

@@ -22,8 +22,13 @@ class BePipeline {
     hide
     ComPtr<ID3D11DeviceContext> _context;
 
-    BeShaderType _boundShaderType = BeShaderType::None;
     std::shared_ptr<BeShader> _boundShader;
+
+    // Cached shader COM pointers from last bound pipeline (for binding decisions)
+    ComPtr<ID3D11VertexShader>   _boundVertexShader;
+    ComPtr<ID3D11HullShader>     _boundHullShader;
+    ComPtr<ID3D11DomainShader>   _boundDomainShader;
+    ComPtr<ID3D11PixelShader>    _boundPixelShader;
 
     std::array<uint32_t, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> _vertexResCache;
     std::array<uint32_t, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> _tessResCache;
@@ -47,8 +52,9 @@ class BePipeline {
     auto GetRawContext () -> ComPtr<ID3D11DeviceContext> { return _context; }
     
     expose
-    auto BindShader (const std::shared_ptr<BeShader>& shader, BeShaderType shaderType) -> void;
-    auto BindMaterialAutomatic (const std::shared_ptr<BeMaterial>& material) -> void;
+    auto BindPipeline (SenPipeline pipeline) -> void;
+    auto ResetRenderState() -> void;  // reset render state to defaults (for compatibility between old/new passes)
+    auto BindMaterialAutomatic (const std::shared_ptr<BeMaterial>& material, const std::shared_ptr<BeShader>& shader = nullptr) -> void;
     auto BindMaterialManual (const std::shared_ptr<BeMaterial>& material, const uint8_t materialSlot) -> void;
     auto Clear() -> void;
     auto ClearCache() -> void;

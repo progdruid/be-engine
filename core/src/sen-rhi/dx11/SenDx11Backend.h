@@ -9,6 +9,9 @@
 
 using Microsoft::WRL::ComPtr;
 
+struct ISlangBlob;
+namespace Slang { template <typename T> class ComPtr; }
+
 // ─── resource entries ─────────────────────────────────────────────────────────
 
 struct SenDx11TextureEntry {
@@ -31,10 +34,25 @@ struct SenDx11SamplerEntry {
 
 struct SenDx11ShaderEntry {
     ComPtr<ID3D11DeviceChild> Shader; // polymorphic: ID3D11VertexShader, ID3D11PixelShader, ID3D11HullShader, or ID3D11DomainShader
+    Slang::ComPtr<ISlangBlob>* SlangBlobPtr = nullptr;
 };
 
-struct SenDx11VertexLayoutEntry {
-    ComPtr<ID3D11InputLayout> InputLayout;
+
+struct SenDx11PipelineEntry {
+    // Shader objects
+    ComPtr<ID3D11VertexShader>   VertexShader;
+    ComPtr<ID3D11HullShader>     HullShader;
+    ComPtr<ID3D11DomainShader>   DomainShader;
+    ComPtr<ID3D11PixelShader>    PixelShader;
+
+    // Vertex input
+    ComPtr<ID3D11InputLayout>    InputLayout;
+    D3D11_PRIMITIVE_TOPOLOGY     Topology;
+
+    // Render state
+    ComPtr<ID3D11RasterizerState>   RasterizerState;
+    ComPtr<ID3D11BlendState>        BlendState;
+    ComPtr<ID3D11DepthStencilState> DepthStencilState;
 };
 
 // ─── backend ──────────────────────────────────────────────────────────────────
@@ -59,8 +77,8 @@ class SenDx11Backend {
     std::unordered_map<uint32_t, SenDx11ShaderEntry> _shaders;
     uint32_t _nextShaderId = 1;
 
-    std::unordered_map<uint32_t, SenDx11VertexLayoutEntry> _vertexLayouts;
-    uint32_t _nextVertexLayoutId = 1;
+    std::unordered_map<uint32_t, SenDx11PipelineEntry> _pipelines;
+    uint32_t _nextPipelineId = 1;
 
     expose
     static auto Init     (const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) -> void;
@@ -84,13 +102,13 @@ class SenDx11Backend {
     auto LookupSampler  (SenSampler handle) -> SenDx11SamplerEntry&;
 
     expose // shaders
-    auto CreateShader (const SenShaderDesc& desc) -> SenShader;
+    auto CreateShader (const SenShaderSourceDesc& sourceDesc) -> SenShader;
     auto DestroyShader (SenShader handle) -> void;
     auto LookupShader  (SenShader handle) -> SenDx11ShaderEntry&;
 
-    expose // vertex layouts
-    auto CreateVertexLayout (const SenVertexLayoutDesc& desc) -> SenVertexLayout;
-    auto DestroyVertexLayout (SenVertexLayout handle) -> void;
-    auto LookupVertexLayout  (SenVertexLayout handle) -> SenDx11VertexLayoutEntry&;
+    expose // pipelines
+    auto CreatePipeline (const SenPipelineDesc& desc) -> SenPipeline;
+    auto DestroyPipeline (SenPipeline handle) -> void;
+    auto LookupPipeline  (SenPipeline handle) -> SenDx11PipelineEntry&;
 
 };

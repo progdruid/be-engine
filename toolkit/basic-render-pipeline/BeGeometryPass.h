@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include <memory>
+#include <unordered_map>
+#include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
 
@@ -20,8 +22,9 @@ class BeGeometryPass final : public BeRenderPass {
     std::weak_ptr<BeTexture> OutputTexture3;
     std::weak_ptr<BeTexture> OutputDepthTexture;
 
-    hide 
+    hide
     std::shared_ptr<BeMaterial> _objectMaterial;
+    std::unordered_map<BeShader*, SenPipeline> _shaderPipelines;
     
     expose
     explicit BeGeometryPass();

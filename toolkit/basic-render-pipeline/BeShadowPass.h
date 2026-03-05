@@ -3,12 +3,10 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <unordered_map>
 #include <umbrellas/include-glm.h>
+#include <sen-rhi/SenTypes.h>
 
-#include "BeBRPSubmissionBuffer.h"
-#include "BeBRPSubmissionBuffer.h"
-#include "BeBRPSubmissionBuffer.h"
-#include "BeBRPSubmissionBuffer.h"
 #include "BeBRPSubmissionBuffer.h"
 #include "BeRenderPass.h"
 
@@ -24,6 +22,7 @@ class BeShadowPass final : public BeRenderPass {
 
     hide
     std::shared_ptr<BeMaterial> _objectMaterial;
+    std::unordered_map<BeShader*, SenPipeline> _shaderPipelines;
     
     expose
     explicit BeShadowPass() = default;
@@ -34,8 +33,8 @@ class BeShadowPass final : public BeRenderPass {
     auto GetPassName() const -> const std::string override { return "Shadow Pass"; }
 
     hide
-    auto RenderDirectionalShadows(const BeBRPSunLightEntry& sunLight, const BeBRPSubmissionBuffer& submissionBuffer) const -> void;
-    auto RenderPointLightShadows(const BeBRPPointLightEntry& pointLight, const BeBRPSubmissionBuffer& submissionBuffer) const -> void;
+    auto RenderDirectionalShadows(const BeBRPSunLightEntry& sunLight, const BeBRPSubmissionBuffer& submissionBuffer) -> void;
+    auto RenderPointLightShadows(const BeBRPPointLightEntry& pointLight, const BeBRPSubmissionBuffer& submissionBuffer) -> void;
 
     auto CalculatePointLightFaceViewProjection(const BeBRPPointLightEntry& pointLight, int faceIndex) const -> glm::mat4;
 };

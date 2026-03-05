@@ -12,6 +12,9 @@
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
+    "rasterizer": "back-solid",
+    "blend": "disable",
+    "depthStencil": "disable",
     "materials": {
         "main": { "scheme": "tonemapper-material", "slot": 2 },
     },

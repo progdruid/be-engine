@@ -12,6 +12,9 @@
     "topology": "triangle-strip",
     "vertex": "FullscreenVertexKernel",
     "pixel": "PixelFunction",
+    "rasterizer": "back-solid",
+    "blend": "disable",
+    "depthStencil": "disable",
     "materials": {
         "main": { "scheme": "emissive-add-material", "slot": 2 },
     },

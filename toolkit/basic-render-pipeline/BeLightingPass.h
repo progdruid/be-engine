@@ -1,7 +1,7 @@
 ﻿#pragma once
-#include <d3d11.h>
 #include <memory>
 #include <span>
+#include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
 
@@ -25,14 +25,15 @@ class BeLightingPass final : public BeRenderPass {
     std::weak_ptr<BeTexture> OutputTexture;
     
     hide
-    ComPtr<ID3D11BlendState> _lightingBlendState;
-
     std::shared_ptr<BeShader> _directionalLightShader;
     std::shared_ptr<BeMaterial> _directionalLightMaterial;
+    SenPipeline _directionalLightPipeline;
     std::shared_ptr<BeShader> _pointLightShader;
     std::shared_ptr<BeMaterial> _pointLightMaterial;
+    SenPipeline _pointLightPipeline;
     std::shared_ptr<BeShader> _emissiveAddShader;
     std::shared_ptr<BeMaterial> _emissiveMaterial;
+    SenPipeline _emissivePipeline;
     
     expose
     explicit BeLightingPass();

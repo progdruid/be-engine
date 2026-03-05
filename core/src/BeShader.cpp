@@ -5,8 +5,126 @@
 #include "Utils.h"
 #include <umbrellas/include-libassert.h>
 
-#include "sen-rhi/SenShaderCompiler.h"
 #include <sen-rhi/dx11/SenDx11Backend.h>
+#include <sen-rhi/SenTypes.h>
+
+namespace {
+    auto ParseCullMode(const std::string& str) -> SenCullMode {
+        if (str == "none") return SenCullMode::None;
+        if (str == "front") return SenCullMode::Front;
+        if (str == "back") return SenCullMode::Back;
+        be_assert(false, "Unknown cull mode: " + str);
+        return SenCullMode::Back;
+    }
+
+    auto ParseFillMode(const std::string& str) -> SenFillMode {
+        if (str == "solid") return SenFillMode::Solid;
+        if (str == "wireframe") return SenFillMode::Wireframe;
+        be_assert(false, "Unknown fill mode: " + str);
+        return SenFillMode::Solid;
+    }
+
+    auto ParseRasterizerString(const std::string& str) -> SenRasterizerState {
+        auto state = SenRasterizerState();
+        const auto parts = BeShaderTools::Split(str, "-");
+        be_assert(!parts.empty(), "Invalid rasterizer state format: " + str);
+
+        state.CullMode = ParseCullMode(std::string(parts[0]));
+        if (parts.size() > 1) {
+            state.FillMode = ParseFillMode(std::string(parts[1]));
+        }
+        return state;
+    }
+
+    auto ParseBlendFactor(const std::string& str) -> SenBlendFactor {
+        if (str == "zero") return SenBlendFactor::Zero;
+        if (str == "one") return SenBlendFactor::One;
+        if (str == "src-color") return SenBlendFactor::SrcColor;
+        if (str == "inv-src-color") return SenBlendFactor::InvSrcColor;
+        if (str == "src-alpha") return SenBlendFactor::SrcAlpha;
+        if (str == "inv-src-alpha") return SenBlendFactor::InvSrcAlpha;
+        if (str == "dst-color") return SenBlendFactor::DstColor;
+        if (str == "inv-dst-color") return SenBlendFactor::InvDstColor;
+        if (str == "dst-alpha") return SenBlendFactor::DstAlpha;
+        if (str == "inv-dst-alpha") return SenBlendFactor::InvDstAlpha;
+        be_assert(false, "Unknown blend factor: " + str);
+        return SenBlendFactor::One;
+    }
+
+    auto ParseBlendOp(const std::string& str) -> SenBlendOp {
+        if (str == "add") return SenBlendOp::Add;
+        if (str == "subtract") return SenBlendOp::Subtract;
+        if (str == "reverse-subtract") return SenBlendOp::ReverseSubtract;
+        if (str == "min") return SenBlendOp::Min;
+        if (str == "max") return SenBlendOp::Max;
+        be_assert(false, "Unknown blend op: " + str);
+        return SenBlendOp::Add;
+    }
+
+    auto ParseBlendString(const std::string& str) -> SenBlendState {
+        auto state = SenBlendState();
+        if (str == "disable") {
+            state.Enable = false;
+            return state;
+        }
+        if (str == "alpha") {
+            state.Enable = true;
+            state.SrcBlend = SenBlendFactor::SrcAlpha;
+            state.DstBlend = SenBlendFactor::InvSrcAlpha;
+            state.BlendOp = SenBlendOp::Add;
+            return state;
+        }
+        if (str == "additive") {
+            state.Enable = true;
+            state.SrcBlend = SenBlendFactor::One;
+            state.DstBlend = SenBlendFactor::One;
+            state.BlendOp = SenBlendOp::Add;
+            return state;
+        }
+        if (str == "multiply") {
+            state.Enable = true;
+            state.SrcBlend = SenBlendFactor::DstColor;
+            state.DstBlend = SenBlendFactor::Zero;
+            state.BlendOp = SenBlendOp::Add;
+            return state;
+        }
+        be_assert(false, "Unknown blend preset: " + str);
+        return state;
+    }
+
+    auto ParseBlendObject(const Json& obj) -> SenBlendState {
+        auto state = SenBlendState();
+        state.Enable = true;
+        state.SrcBlend = ParseBlendFactor(std::string(obj.at("src")));
+        state.DstBlend = ParseBlendFactor(std::string(obj.at("dst")));
+        state.BlendOp = ParseBlendOp(std::string(obj.at("op")));
+        return state;
+    }
+
+    auto ParseComparisonFunc(const std::string& str) -> SenComparisonFunc {
+        if (str == "never") return SenComparisonFunc::Never;
+        if (str == "less") return SenComparisonFunc::Less;
+        if (str == "equal") return SenComparisonFunc::Equal;
+        if (str == "less-equal") return SenComparisonFunc::LessEqual;
+        if (str == "greater") return SenComparisonFunc::Greater;
+        if (str == "not-equal") return SenComparisonFunc::NotEqual;
+        if (str == "greater-equal") return SenComparisonFunc::GreaterEqual;
+        if (str == "always") return SenComparisonFunc::Always;
+        be_assert(false, "Unknown comparison func: " + str);
+        return SenComparisonFunc::Less;
+    }
+
+    auto ParseDepthStencilString(const std::string& str) -> SenDepthStencilState {
+        auto state = SenDepthStencilState();
+        if (str == "disable") {
+            state.DepthEnable = false;
+            return state;
+        }
+        state.DepthEnable = true;
+        state.DepthFunc = ParseComparisonFunc(str);
+        return state;
+    }
+}  // namespace
 
 auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader> {
     be_assert(
@@ -54,6 +172,30 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         }
     }
 
+    // Initialize pipeline desc with defaults
+    shader->_pipelineDesc.Topology = shader->Topology;
+    shader->_pipelineDesc.RasterizerState.CullMode = SenCullMode::Back;
+    shader->_pipelineDesc.BlendState.Enable = false;
+    shader->_pipelineDesc.DepthStencilState.DepthEnable = true;
+
+    // Parse render state
+    if (header.contains("rasterizer")) {
+        shader->_pipelineDesc.RasterizerState = ParseRasterizerString(std::string(header.at("rasterizer")));
+    }
+
+    if (header.contains("blend")) {
+        const auto& blendJson = header.at("blend");
+        if (blendJson.is_string()) {
+            shader->_pipelineDesc.BlendState = ParseBlendString(std::string(blendJson));
+        } else if (blendJson.is_object()) {
+            shader->_pipelineDesc.BlendState = ParseBlendObject(blendJson);
+        }
+    }
+
+    if (header.contains("depthStencil")) {
+        shader->_pipelineDesc.DepthStencilState = ParseDepthStencilString(std::string(header.at("depthStencil")));
+    }
+
     auto shaderErrMsg = [&](const std::string& err, const std::string& stage) -> std::string {
         return
             "1. Shader compilation error.\n"
@@ -67,15 +209,13 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         shader->ShaderType = BeShaderType::Vertex;
 
         auto vertexFunctionName = std::string(header.at("vertex"));
-        auto result = SenShaderCompiler::Compile(filePath, vertexFunctionName, SLANG_STAGE_VERTEX);
-        be_assert(result, shaderErrMsg(result.error(), "vertex"));
-        auto& blob = result.value();
-
         shader->ShaderVertex = SenDx11Backend::Get().CreateShader({
-            .Blob = blob->getBufferPointer(),
-            .BlobSize = static_cast<uint32_t>(blob->getBufferSize()),
+            .SourcePath = filePath,
+            .FunctionName = vertexFunctionName,
             .Stage = SenShaderStage::Vertex,
         });
+
+        shader->_pipelineDesc.VertexShader = shader->ShaderVertex;
 
         if (header.contains("vertexLayout")) {
             auto vertexLayoutJson = header["vertexLayout"];
@@ -99,8 +239,8 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                 {"uv2",     56},
             };
 
-            std::vector<SenVertexLayoutDesc::Element> layoutElements;
-            for (const std::string& semantic : vertexLayoutJson) {
+            std::vector<SenVertexLayoutElement> layoutElements;
+            for (const auto& semantic : vertexLayoutJson) {
                 layoutElements.push_back({
                     .Semantic = semantic,
                     .Format = ElementFormats.at(semantic),
@@ -108,11 +248,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
                 });
             }
 
-            shader->VertexLayout = SenDx11Backend::Get().CreateVertexLayout({
-                .Elements = layoutElements,
-                .VertexShaderBytecode = blob->getBufferPointer(),
-                .VertexShaderBytecodeSize = static_cast<uint32_t>(blob->getBufferSize()),
-            });
+            shader->_pipelineDesc.VertexLayout = layoutElements;
         }
     }
 
@@ -123,24 +259,19 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         auto hullFunctionName = std::string(tesselation.at("hull"));
         auto domainFunctionName = std::string(tesselation.at("domain"));
 
-        auto hullResult = SenShaderCompiler::Compile(filePath, hullFunctionName, SLANG_STAGE_HULL);
-        be_assert(hullResult, shaderErrMsg(hullResult.error(), "hull"));
-        auto domainResult = SenShaderCompiler::Compile(filePath, domainFunctionName, SLANG_STAGE_DOMAIN);
-        be_assert(domainResult, shaderErrMsg(domainResult.error(), "domain"));
-
-        auto& hullBlob = hullResult.value();
-        auto& domainBlob = domainResult.value();
-
         shader->ShaderHull = SenDx11Backend::Get().CreateShader({
-            .Blob = hullBlob->getBufferPointer(),
-            .BlobSize = static_cast<uint32_t>(hullBlob->getBufferSize()),
+            .SourcePath = filePath,
+            .FunctionName = hullFunctionName,
             .Stage = SenShaderStage::Hull,
         });
         shader->ShaderDomain = SenDx11Backend::Get().CreateShader({
-            .Blob = domainBlob->getBufferPointer(),
-            .BlobSize = static_cast<uint32_t>(domainBlob->getBufferSize()),
+            .SourcePath = filePath,
+            .FunctionName = domainFunctionName,
             .Stage = SenShaderStage::Domain,
         });
+
+        shader->_pipelineDesc.HullShader = shader->ShaderHull;
+        shader->_pipelineDesc.DomainShader = shader->ShaderDomain;
     }
 
     if (header.contains("pixel")) {
@@ -148,15 +279,13 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         shader->ShaderType = shader->ShaderType | BeShaderType::Pixel;
 
         std::string pixelFunctionName = header.at("pixel");
-        auto result = SenShaderCompiler::Compile(filePath, pixelFunctionName, SLANG_STAGE_PIXEL);
-        be_assert(result, shaderErrMsg(result.error(), "pixel"));
-        auto& blob = result.value();
-
         shader->ShaderPixel = SenDx11Backend::Get().CreateShader({
-            .Blob = blob->getBufferPointer(),
-            .BlobSize = static_cast<uint32_t>(blob->getBufferSize()),
+            .SourcePath = filePath,
+            .FunctionName = pixelFunctionName,
             .Stage = SenShaderStage::Pixel,
         });
+
+        shader->_pipelineDesc.PixelShader = shader->ShaderPixel;
 
         Json targets = header.at("targets");
         for (const auto& target : targets.items()) {
