@@ -75,6 +75,4 @@ auto BeGeometryPass::Render() -> void
             }
         }
     }
-
-    pipeline->ResetRenderState();
 }

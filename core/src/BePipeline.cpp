@@ -58,45 +58,6 @@ auto BePipeline::BindPipeline(SenPipeline pipeline) -> void {
     _context->OMSetDepthStencilState(entry.DepthStencilState.Get(), 0);
 }
 
-auto BePipeline::ResetRenderState() -> void {
-    // Reset render state to sensible defaults (back-cull, no blend, depth test on)
-    // This prevents state leakage to passes still using the old BindShader paradigm
-    ComPtr<ID3D11Device> device;
-    _context->GetDevice(device.GetAddressOf());
-
-    D3D11_RASTERIZER_DESC rd = {};
-    rd.FillMode = D3D11_FILL_SOLID;
-    rd.CullMode = D3D11_CULL_BACK;
-    rd.FrontCounterClockwise = FALSE;
-    rd.DepthBias = 0;
-    rd.DepthBiasClamp = 0.f;
-    rd.SlopeScaledDepthBias = 0.f;
-    rd.DepthClipEnable = TRUE;
-    rd.ScissorEnable = FALSE;
-    rd.MultisampleEnable = FALSE;
-    rd.AntialiasedLineEnable = FALSE;
-    ComPtr<ID3D11RasterizerState> rasterizerState;
-    Utils::Check << device->CreateRasterizerState(&rd, rasterizerState.GetAddressOf());
-    _context->RSSetState(rasterizerState.Get());
-
-    D3D11_BLEND_DESC bd = {};
-    bd.RenderTarget[0].BlendEnable = FALSE;
-    bd.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-    ComPtr<ID3D11BlendState> blendState;
-    Utils::Check << device->CreateBlendState(&bd, blendState.GetAddressOf());
-    float blendFactor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    _context->OMSetBlendState(blendState.Get(), blendFactor, 0xffffffff);
-
-    D3D11_DEPTH_STENCIL_DESC dsd = {};
-    dsd.DepthEnable = TRUE;
-    dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    dsd.DepthFunc = D3D11_COMPARISON_LESS;
-    dsd.StencilEnable = FALSE;
-    ComPtr<ID3D11DepthStencilState> depthStencilState;
-    Utils::Check << device->CreateDepthStencilState(&dsd, depthStencilState.GetAddressOf());
-    _context->OMSetDepthStencilState(depthStencilState.Get(), 0);
-}
-
 auto BePipeline::BindMaterialAutomatic(const std::shared_ptr<BeMaterial>& material, const std::shared_ptr<BeShader>& shader) -> void {
     auto shaderToUse = shader ? shader : _boundShader;
     assert(shaderToUse);

@@ -108,8 +108,6 @@ auto BeShadowPass::RenderDirectionalShadows(
             }
         }
     }
-
-    pipeline->ResetRenderState();
 }
 
 auto BeShadowPass::RenderPointLightShadows(
@@ -186,7 +184,6 @@ auto BeShadowPass::RenderPointLightShadows(
         }
     }
 
-    pipeline->ResetRenderState();
     context->OMSetRenderTargets(0, nullptr, nullptr);
 }
 

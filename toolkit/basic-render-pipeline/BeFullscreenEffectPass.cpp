@@ -30,5 +30,4 @@ auto BeFullscreenEffectPass::Render() -> void {
     }
 
     pipeline->Draw(4, 0);
-    pipeline->ResetRenderState();
 }

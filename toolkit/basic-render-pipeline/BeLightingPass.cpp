@@ -120,6 +120,4 @@ auto BeLightingPass::Render() -> void {
     pipeline->BindPipeline(_emissivePipeline);
     pipeline->BindMaterialAutomatic(_emissiveMaterial, _emissiveAddShader);
     pipeline->Draw(4, 0);
-
-    pipeline->ResetRenderState();
 }

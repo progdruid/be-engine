@@ -43,6 +43,5 @@ auto BeBackbufferPass::Render() -> void {
 
     // cleanup
     context->OMSetRenderTargets(1, Utils::NullRTVs, nullptr);
-    pipeline->ResetRenderState();
 }
 

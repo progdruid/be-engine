@@ -128,7 +128,6 @@ auto BeBloomPass::RenderBrightPass() const -> void {
     pipeline->Draw(4, 0);
 
     pipeline->ClearTargets();
-    pipeline->ResetRenderState();
 }
 
 auto BeBloomPass::RenderDownsamplePasses() -> void {
@@ -161,7 +160,6 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
     }
 
     context->RSSetViewports(1, &previousViewport);
-    pipeline->ResetRenderState();
 }
 
 auto BeBloomPass::RenderUpsamplePasses() -> void {
@@ -193,7 +191,6 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
     }
 
     context->RSSetViewports(1, &previousViewport);
-    pipeline->ResetRenderState();
 }
 
 auto BeBloomPass::RenderAddPass() const -> void {
@@ -207,5 +204,4 @@ auto BeBloomPass::RenderAddPass() const -> void {
     pipeline->Draw(4, 0);
 
     pipeline->ClearTargets();
-    pipeline->ResetRenderState();
 }

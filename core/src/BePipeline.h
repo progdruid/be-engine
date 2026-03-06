@@ -53,7 +53,6 @@ class BePipeline {
     
     expose
     auto BindPipeline (SenPipeline pipeline) -> void;
-    auto ResetRenderState() -> void;  // reset render state to defaults (for compatibility between old/new passes)
     auto BindMaterialAutomatic (const std::shared_ptr<BeMaterial>& material, const std::shared_ptr<BeShader>& shader = nullptr) -> void;
     auto BindMaterialManual (const std::shared_ptr<BeMaterial>& material, const uint8_t materialSlot) -> void;
     auto Clear() -> void;
