@@ -6,6 +6,7 @@
 
 #include "BeRenderer.h"
 #include "BeWindow.h"
+#include <sen-rhi/SenBackend.h>
 
 BeImGuiPass::BeImGuiPass(const std::shared_ptr<BeWindow>& window)
     : _window(window) {
@@ -40,22 +41,17 @@ auto BeImGuiPass::Render() -> void {
 
     ImGui::Render();
 
-    const auto context = _renderer->GetContext();
-    const auto backbuffer = _renderer->GetBackbufferTarget();
-
-    D3D11_VIEWPORT viewport{};
-    viewport.Width = static_cast<float>(_renderer->GetWidth());
-    viewport.Height = static_cast<float>(_renderer->GetHeight());
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
-    context->RSSetViewports(1, &viewport);
-
-    ID3D11RenderTargetView* rtv = backbuffer.Get();
-    context->OMSetRenderTargets(1, &rtv, nullptr);
+    // Begin pass with backbuffer (Load to preserve existing content)
+    SenBackend::BeginPass({
+        .ColorAttachments = {
+            { _renderer->GetBackbufferTexture(), 0, -1, SenLoadOp::Load },
+        },
+        .Viewport = _renderer->GetViewport(),
+    });
 
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-    context->OMSetRenderTargets(0, nullptr, nullptr);
+    SenBackend::EndPass();
 }
 
 auto BeImGuiPass::SetUICallback(const std::function<void()>& callback) -> void {

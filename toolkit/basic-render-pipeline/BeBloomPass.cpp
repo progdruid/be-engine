@@ -7,7 +7,7 @@
 #include "BeShader.h"
 #include "BeTexture.h"
 #include <umbrellas/include-libassert.h>
-#include <sen-rhi/dx11/SenDx11Backend.h>
+#include <sen-rhi/SenBackend.h>
 
 BeBloomPass::BeBloomPass() = default;
 BeBloomPass::~BeBloomPass() = default;
@@ -21,7 +21,7 @@ auto BeBloomPass::Initialise() -> void {
 
     // Create bright pass pipeline
     auto brightPipelineDesc = _brightShader->CreatePipelineDesc();
-    _brightPipeline = SenDx11Backend::Get().CreatePipeline(brightPipelineDesc);
+    _brightPipeline = SenBackend::CreatePipeline(brightPipelineDesc);
     be_assert(_brightPipeline.IsValid(), "BeBloomPass: failed to create bright pipeline");
 
     _kawaseShader = BeAssetRegistry::GetShader("bloom-kawase").lock();
@@ -30,7 +30,7 @@ auto BeBloomPass::Initialise() -> void {
 
     // Create downsample pipeline (normal blending)
     auto downsamplePipelineDesc = _kawaseShader->CreatePipelineDesc();
-    _downsamplePipeline = SenDx11Backend::Get().CreatePipeline(downsamplePipelineDesc);
+    _downsamplePipeline = SenBackend::CreatePipeline(downsamplePipelineDesc);
     be_assert(_downsamplePipeline.IsValid(), "BeBloomPass: failed to create downsample pipeline");
 
     // Create upsample pipeline (additive blending)
@@ -42,7 +42,7 @@ auto BeBloomPass::Initialise() -> void {
     upsamplePipelineDesc.BlendState.SrcBlendAlpha = SenBlendFactor::Zero;
     upsamplePipelineDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
     upsamplePipelineDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
-    _upsamplePipeline = SenDx11Backend::Get().CreatePipeline(upsamplePipelineDesc);
+    _upsamplePipeline = SenBackend::CreatePipeline(upsamplePipelineDesc);
     be_assert(_upsamplePipeline.IsValid(), "BeBloomPass: failed to create upsample pipeline");
 
     // Create downsample materials for each mip level (1 to size-1)
@@ -105,7 +105,7 @@ auto BeBloomPass::Initialise() -> void {
 
     // Create add pipeline
     auto addPipelineDesc = _addShader->CreatePipelineDesc();
-    _addPipeline = SenDx11Backend::Get().CreatePipeline(addPipelineDesc);
+    _addPipeline = SenBackend::CreatePipeline(addPipelineDesc);
     be_assert(_addPipeline.IsValid(), "BeBloomPass: failed to create add pipeline");
 }
 
@@ -117,91 +117,80 @@ auto BeBloomPass::Render() -> void {
 }
 
 auto BeBloomPass::RenderBrightPass() const -> void {
-    const auto context = _renderer->GetContext();
     const auto pipeline = _renderer->GetPipeline();
+    const auto bloomMip0 = BloomMipTextures[0].lock();
 
-    const auto bloomMip0  = BloomMipTextures[0].lock();
-    
-    pipeline->BindTargets({ bloomMip0 }, nullptr, false);
+    SenBackend::BeginPass({
+        .ColorAttachments = {
+            { bloomMip0->Handle, 0, -1, SenLoadOp::Load },
+        },
+        .Viewport = { 0, 0, (float)bloomMip0->Width, (float)bloomMip0->Height, 0, 1 },
+    });
+
     pipeline->BindPipeline(_brightPipeline);
     pipeline->BindMaterialAutomatic(_brightMaterial, _brightShader);
     pipeline->Draw(4, 0);
 
-    pipeline->ClearTargets();
+    SenBackend::EndPass();
 }
 
 auto BeBloomPass::RenderDownsamplePasses() -> void {
-    const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-
-    uint32_t numberOfPreviousViewports = 1;
-    D3D11_VIEWPORT previousViewport;
-    context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
 
     pipeline->BindPipeline(_downsamplePipeline);
 
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
         const auto targetMip = BloomMipTextures[mipTarget].lock();
 
-        // viewport
-        D3D11_VIEWPORT viewport = {};
-        viewport.Width = static_cast<float>(targetMip->Width);
-        viewport.Height = static_cast<float>(targetMip->Height);
-        viewport.MinDepth = 0.0f;
-        viewport.MaxDepth = 1.0f;
-        context->RSSetViewports(1, &viewport);
+        SenBackend::BeginPass({
+            .ColorAttachments = {
+                { targetMip->Handle, 0, -1, SenLoadOp::Load },
+            },
+            .Viewport = { 0, 0, (float)targetMip->Width, (float)targetMip->Height, 0, 1 },
+        });
 
-        pipeline->BindTargets({ targetMip }, nullptr, false);
         pipeline->BindMaterialAutomatic(_downsampleMaterials[mipTarget], _kawaseShader);
-
         pipeline->Draw(4, 0);
 
-        pipeline->ClearTargets();
+        SenBackend::EndPass();
     }
-
-    context->RSSetViewports(1, &previousViewport);
 }
 
 auto BeBloomPass::RenderUpsamplePasses() -> void {
-    const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-
-    uint32_t numberOfPreviousViewports = 1;
-    D3D11_VIEWPORT previousViewport;
-    context->RSGetViewports(&numberOfPreviousViewports, &previousViewport);
 
     pipeline->BindPipeline(_upsamplePipeline);
 
     for (int32_t mipTarget = BloomMipCount - 2; mipTarget >= 0; --mipTarget) {
         const auto targetMip = BloomMipTextures[mipTarget].lock();
 
-        D3D11_VIEWPORT viewport = {};
-        viewport.Width = static_cast<float>(targetMip->Width);
-        viewport.Height = static_cast<float>(targetMip->Height);
-        viewport.MinDepth = 0.0f;
-        viewport.MaxDepth = 1.0f;
-        context->RSSetViewports(1, &viewport);
+        SenBackend::BeginPass({
+            .ColorAttachments = {
+                { targetMip->Handle, 0, -1, SenLoadOp::Load },
+            },
+            .Viewport = { 0, 0, (float)targetMip->Width, (float)targetMip->Height, 0, 1 },
+        });
 
-        pipeline->BindTargets({ targetMip }, nullptr, false);
         pipeline->BindMaterialAutomatic(_upsampleMaterials[mipTarget], _kawaseShader);
-
         pipeline->Draw(4, 0);
 
-        pipeline->ClearTargets();
+        SenBackend::EndPass();
     }
-
-    context->RSSetViewports(1, &previousViewport);
 }
 
 auto BeBloomPass::RenderAddPass() const -> void {
-    const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
 
-    pipeline->BindTargets({ OutputTexture }, nullptr, false);
+    SenBackend::BeginPass({
+        .ColorAttachments = {
+            { OutputTexture.lock()->Handle, 0, -1, SenLoadOp::Load },
+        },
+        .Viewport = _renderer->GetViewport(),
+    });
+
     pipeline->BindPipeline(_addPipeline);
     pipeline->BindMaterialAutomatic(_addMaterial, _addShader);
-
     pipeline->Draw(4, 0);
 
-    pipeline->ClearTargets();
+    SenBackend::EndPass();
 }

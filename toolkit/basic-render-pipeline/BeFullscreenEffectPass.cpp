@@ -6,7 +6,7 @@
 #include "BeShader.h"
 #include "BeTexture.h"
 #include <umbrellas/include-libassert.h>
-#include <sen-rhi/dx11/SenDx11Backend.h>
+#include <sen-rhi/SenBackend.h>
 
 BeFullscreenEffectPass::BeFullscreenEffectPass() = default;
 BeFullscreenEffectPass::~BeFullscreenEffectPass() = default;
@@ -15,14 +15,24 @@ auto BeFullscreenEffectPass::Initialise() -> void {
     auto shader = Shader.lock();
     be_assert(shader, "BeFullscreenEffectPass: shader not set");
     auto pipelineDesc = shader->CreatePipelineDesc();
-    _pipeline = SenDx11Backend::Get().CreatePipeline(pipelineDesc);
+    _pipeline = SenBackend::CreatePipeline(pipelineDesc);
     be_assert(_pipeline.IsValid(), "BeFullscreenEffectPass: failed to create pipeline");
 }
 
 auto BeFullscreenEffectPass::Render() -> void {
     const auto& pipeline = _renderer->GetPipeline();
 
-    pipeline->BindTargets(OutputTextures, nullptr);
+    // Build color attachments from output textures
+    std::vector<SenColorAttachment> colorAttachments;
+    for (const auto& tex : OutputTextures) {
+        colorAttachments.push_back({ tex.lock()->Handle, 0, -1, SenLoadOp::Load });
+    }
+
+    SenBackend::BeginPass({
+        .ColorAttachments = colorAttachments,
+        .Viewport = _renderer->GetViewport(),
+    });
+
     pipeline->BindPipeline(_pipeline);
 
     if (Material) {
@@ -30,4 +40,6 @@ auto BeFullscreenEffectPass::Render() -> void {
     }
 
     pipeline->Draw(4, 0);
+
+    SenBackend::EndPass();
 }

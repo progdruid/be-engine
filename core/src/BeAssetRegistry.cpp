@@ -5,7 +5,7 @@
 #include "BeShader.h"
 #include "BeShaderTools.h"
 #include "BeRenderer.h"
-#include <sen-rhi/dx11/SenDx11Backend.h>
+#include "sen-rhi/SenBackend.h"
 
 std::weak_ptr<BeRenderer> BeAssetRegistry::_renderer;
 
@@ -144,7 +144,7 @@ auto BeAssetRegistry::GetSampler(std::string_view samplerDescString) -> SenSampl
     auto renderer = _renderer.lock();
     be_assert(renderer, "Renderer couldn't be locked");
 
-    auto sampler = SenDx11Backend::Get().CreateSampler({
+    auto sampler = SenBackend::CreateSampler({
         .Filter     = filter,
         .Address    = address,
         .Comparison = hasComparison,

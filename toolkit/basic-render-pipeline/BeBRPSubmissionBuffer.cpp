@@ -2,7 +2,7 @@
 
 #include "Utils.h"
 #include "umbrellas/include-libassert.h"
-#include <sen-rhi/dx11/SenDx11Backend.h>
+#include <sen-rhi/SenBackend.h>
 
 
 auto BeBRPGeometryEntry::CalculateModelMatrix(glm::vec3 pos, glm::quat rot, glm::vec3 scale) -> glm::mat4 {
@@ -95,14 +95,14 @@ auto BeBRPSubmissionBuffer::BakeMeshes() -> void {
         }
     }
 
-    _sharedVertexBuffer = SenDx11Backend::Get().CreateBuffer({
+    _sharedVertexBuffer = SenBackend::CreateBuffer({
         .Usage  = SenBufferUsage::Vertex,
         .Access = SenBufferAccess::Immutable,
         .Size   = static_cast<uint32_t>(fullVertices.size() * sizeof(BeFullVertex)),
         .Data   = fullVertices.data(),
     });
 
-    _sharedIndexBuffer = SenDx11Backend::Get().CreateBuffer({
+    _sharedIndexBuffer = SenBackend::CreateBuffer({
         .Usage  = SenBufferUsage::Index,
         .Access = SenBufferAccess::Immutable,
         .Size   = static_cast<uint32_t>(indices.size() * sizeof(uint32_t)),

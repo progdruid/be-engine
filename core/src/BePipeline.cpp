@@ -4,7 +4,7 @@
 #include "BeMaterial.h"
 #include "BeTexture.h"
 #include <sen-rhi/dx11/SenDx11Convert.h>
-#include <sen-rhi/dx11/SenDx11Backend.h>
+#include "sen-rhi/SenBackend.h"
 
 auto BePipeline::Create(const ComPtr<ID3D11DeviceContext>& context)-> std::shared_ptr<BePipeline> {
     auto pipeline = std::shared_ptr<BePipeline>(new BePipeline());
@@ -15,7 +15,7 @@ auto BePipeline::Create(const ComPtr<ID3D11DeviceContext>& context)-> std::share
 }
 
 auto BePipeline::BindPipeline(SenPipeline pipeline) -> void {
-    auto& entry = SenDx11Backend::Get().LookupPipeline(pipeline);
+    auto& entry = SenBackend::LookupPipeline(pipeline);
 
     // Cache bound shaders for material binding decisions
     // These are extracted from the pipeline desc passed to CreatePipeline
@@ -70,7 +70,7 @@ auto BePipeline::BindMaterialManual(const std::shared_ptr<BeMaterial>& material,
     if (bufferHandle.IsValid()) {
         auto updated = material->UpdateGPUBuffers();
         auto id = material->GetUniqueID();
-        auto* rawBuffer = SenDx11Backend::Get().LookupBuffer(bufferHandle).Buffer.Get();
+        auto* rawBuffer = SenBackend::LookupBuffer(bufferHandle).Buffer.Get();
 
         if (_boundVertexShader && (updated || _vertexCBufferIDCache[materialSlot] != id)) {
             _context->VSSetConstantBuffers(materialSlot, 1, &rawBuffer);
@@ -91,7 +91,7 @@ auto BePipeline::BindMaterialManual(const std::shared_ptr<BeMaterial>& material,
 
     const auto& samplerSlots = material->GetSamplerPairs();
     for (auto& [handle, slot] : samplerSlots | std::views::values) {
-        auto* rawSampler = SenDx11Backend::Get().LookupSampler(handle).Sampler.Get();
+        auto* rawSampler = SenBackend::LookupSampler(handle).Sampler.Get();
         if (_boundVertexShader && _vertexSamplerCache[slot] != handle.ID) {
             _context->VSSetSamplers(slot, 1, &rawSampler);
             _vertexSamplerCache[slot] = handle.ID;
@@ -145,7 +145,7 @@ auto BePipeline::BindMaterialTextures(const BeMaterial& material) -> void {
     
     for (const auto& [texture, slot] : textureSlots | std::views::values) {
 
-        const auto srv = SenDx11Backend::Get().LookupTexture(texture->Handle).SRV;
+        const auto srv = SenBackend::LookupTexture(texture->Handle).SRV;
         const auto id  = texture->Handle.ID;
         
         if (_boundVertexShader && _vertexResCache[slot] != id) {
@@ -174,7 +174,7 @@ auto BePipeline::BindTargets(
     rtvs.reserve(renderTargets.size());
     for (const auto& renderTarget : renderTargets) {
         auto texturePtr = renderTarget.lock();
-        auto rtv = SenDx11Backend::Get().LookupTexture(texturePtr->Handle).MipRTVs[0].Get();
+        auto rtv = SenBackend::LookupTexture(texturePtr->Handle).MipRTVs[0].Get();
         if (clearRTVs)
             _context->ClearRenderTargetView(rtv, glm::value_ptr(glm::vec4(0.0f)));
         rtvs.push_back(rtv);
@@ -183,7 +183,7 @@ auto BePipeline::BindTargets(
     //dsv
     ID3D11DepthStencilView* dsv = nullptr;
     if (depthTarget != nullptr) {
-        dsv = SenDx11Backend::Get().LookupTexture(depthTarget->Handle).DSV.Get();
+        dsv = SenBackend::LookupTexture(depthTarget->Handle).DSV.Get();
         _context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     }
 
@@ -203,19 +203,19 @@ auto BePipeline::ResetTarget(const std::shared_ptr<BeTexture>& texture) const ->
     );
 
     _context->ClearRenderTargetView(
-        SenDx11Backend::Get().LookupTexture(texture->Handle).MipRTVs[0].Get(),
+        SenBackend::LookupTexture(texture->Handle).MipRTVs[0].Get(),
         glm::value_ptr(glm::vec4(0.0f))
     );
 }
 
 auto BePipeline::BindVertexBuffer(SenBuffer buffer, uint32_t stride) const -> void {
-    auto* raw = SenDx11Backend::Get().LookupBuffer(buffer).Buffer.Get();
+    auto* raw = SenBackend::LookupBuffer(buffer).Buffer.Get();
     const UINT offset = 0;
     _context->IASetVertexBuffers(0, 1, &raw, &stride, &offset);
 }
 
 auto BePipeline::BindIndexBuffer(SenBuffer buffer) const -> void {
-    auto* raw = SenDx11Backend::Get().LookupBuffer(buffer).Buffer.Get();
+    auto* raw = SenBackend::LookupBuffer(buffer).Buffer.Get();
     _context->IASetIndexBuffer(raw, DXGI_FORMAT_R32_UINT, 0);
 }
 

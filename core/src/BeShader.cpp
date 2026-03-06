@@ -5,8 +5,8 @@
 #include "Utils.h"
 #include <umbrellas/include-libassert.h>
 
-#include <sen-rhi/dx11/SenDx11Backend.h>
 #include <sen-rhi/SenTypes.h>
+#include "sen-rhi/SenBackend.h"
 
 namespace {
     auto ParseCullMode(const std::string& str) -> SenCullMode {
@@ -209,7 +209,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         shader->ShaderType = BeShaderType::Vertex;
 
         auto vertexFunctionName = std::string(header.at("vertex"));
-        shader->ShaderVertex = SenDx11Backend::Get().CreateShader({
+        shader->ShaderVertex = SenBackend::CreateShader({
             .SourcePath = filePath,
             .FunctionName = vertexFunctionName,
             .Stage = SenShaderStage::Vertex,
@@ -259,12 +259,12 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         auto hullFunctionName = std::string(tesselation.at("hull"));
         auto domainFunctionName = std::string(tesselation.at("domain"));
 
-        shader->ShaderHull = SenDx11Backend::Get().CreateShader({
+        shader->ShaderHull = SenBackend::CreateShader({
             .SourcePath = filePath,
             .FunctionName = hullFunctionName,
             .Stage = SenShaderStage::Hull,
         });
-        shader->ShaderDomain = SenDx11Backend::Get().CreateShader({
+        shader->ShaderDomain = SenBackend::CreateShader({
             .SourcePath = filePath,
             .FunctionName = domainFunctionName,
             .Stage = SenShaderStage::Domain,
@@ -279,7 +279,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         shader->ShaderType = shader->ShaderType | BeShaderType::Pixel;
 
         std::string pixelFunctionName = header.at("pixel");
-        shader->ShaderPixel = SenDx11Backend::Get().CreateShader({
+        shader->ShaderPixel = SenBackend::CreateShader({
             .SourcePath = filePath,
             .FunctionName = pixelFunctionName,
             .Stage = SenShaderStage::Pixel,

@@ -2,10 +2,8 @@
 
 #include <umbrellas/include-glm.h>
 #include <stb_image/stb_image.h>
-
+#include "sen-rhi/SenBackend.h"
 #include "BeAssetRegistry.h"
-#include <sen-rhi/dx11/SenDx11Backend.h>
-
 
 BeTexture::Builder::Builder(std::string name) { _descriptor.Name = std::move(name); }
 
@@ -120,13 +118,13 @@ BeTexture::BeTexture(ComPtr<ID3D11Device> device, const BeTextureDescriptor& des
     senDesc.Cubemap = descriptor.IsCubemap;
     senDesc.Data    = descriptor.Data;
 
-    Handle = SenDx11Backend::Get().CreateTexture(senDesc);
+    Handle = SenBackend::CreateTexture(senDesc);
 
     CreateMipViewports();
 }
 
 BeTexture::~BeTexture() {
-    SenDx11Backend::Get().DestroyTexture(Handle);
+    SenBackend::DestroyTexture(Handle);
 }
 
 

@@ -69,7 +69,7 @@ class BePipeline {
     ) const -> void;
     auto ClearTargets () const -> void;
     auto ResetTarget (const std::shared_ptr<BeTexture>& texture) const -> void;
-    
+
     expose
     auto BindVertexBuffer  (SenBuffer buffer, uint32_t stride) const -> void;
     auto BindIndexBuffer   (SenBuffer buffer) const -> void;

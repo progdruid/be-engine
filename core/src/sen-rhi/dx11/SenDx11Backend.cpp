@@ -151,27 +151,44 @@ static auto CreateTextureCubemap(
     }
 }
 
-// ─── singleton ────────────────────────────────────────────────────────────────
+// ─── static members ───────────────────────────────────────────────────────────
 
-SenDx11Backend* SenDx11Backend::_instance = nullptr;
+ComPtr<ID3D11Device>        SenDx11Backend::_device;
+ComPtr<ID3D11DeviceContext> SenDx11Backend::_context;
+
+std::unordered_map<uint32_t, SenDx11TextureEntry> SenDx11Backend::_textures;
+uint32_t SenDx11Backend::_nextTextureId = 1;
+
+std::unordered_map<uint32_t, SenDx11BufferEntry> SenDx11Backend::_buffers;
+uint32_t SenDx11Backend::_nextBufferId = 1;
+
+std::unordered_map<uint32_t, SenDx11SamplerEntry> SenDx11Backend::_samplers;
+uint32_t SenDx11Backend::_nextSamplerId = 1;
+
+std::unordered_map<uint32_t, SenDx11ShaderEntry> SenDx11Backend::_shaders;
+uint32_t SenDx11Backend::_nextShaderId = 1;
+
+std::unordered_map<uint32_t, SenDx11PipelineEntry> SenDx11Backend::_pipelines;
+uint32_t SenDx11Backend::_nextPipelineId = 1;
+
+// ─── initialization ───────────────────────────────────────────────────────────
 
 auto SenDx11Backend::Init(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) -> void {
-    _instance = new SenDx11Backend();
-    _instance->_device = device;
-    _instance->_context = context;
+    _device = device;
+    _context = context;
 }
 
 auto SenDx11Backend::Shutdown() -> void {
-    for (auto& pair : _instance->_shaders) {
+    for (auto& pair : _shaders) {
         delete pair.second.SlangBlobPtr;
     }
-    delete _instance;
-    _instance = nullptr;
-}
-
-auto SenDx11Backend::Get() -> SenDx11Backend& {
-    be_assert(_instance, "SenDx11Backend: not initialized");
-    return *_instance;
+    _device.Reset();
+    _context.Reset();
+    _textures.clear();
+    _buffers.clear();
+    _samplers.clear();
+    _shaders.clear();
+    _pipelines.clear();
 }
 
 // ─── textures ─────────────────────────────────────────────────────────────────
@@ -465,5 +482,80 @@ auto SenDx11Backend::DestroyPipeline(SenPipeline handle) -> void {
 
 auto SenDx11Backend::LookupPipeline(SenPipeline handle) -> SenDx11PipelineEntry& {
     return _pipelines.at(handle.ID);
+}
+
+// ─── render passes ────────────────────────────────────────────────────────────
+
+auto SenDx11Backend::RegisterBackbuffer(const ComPtr<ID3D11RenderTargetView>& backbufferRTV) -> SenTexture {
+    const SenTexture handle { _nextTextureId++ };
+    auto& entry = _textures[handle.ID];
+    entry.MipRTVs.resize(1);
+    entry.MipRTVs[0] = backbufferRTV;
+    // Don't set Texture, SRV, DSV, CubemapDSVs, CubemapMipRTVs (backbuffer is output-only)
+    return handle;
+}
+
+auto SenDx11Backend::BeginPass(const SenPassDesc& desc) -> void {
+    // Collect RTVs for color attachments
+    std::vector<ID3D11RenderTargetView*> rtvs;
+    rtvs.reserve(desc.ColorAttachments.size());
+
+    for (const auto& attachment : desc.ColorAttachments) {
+        auto& texEntry = _textures.at(attachment.Texture.ID);
+
+        ID3D11RenderTargetView* rtv = nullptr;
+        if (attachment.CubemapFace >= 0) {
+            be_assert(attachment.CubemapFace < 6, "SenDx11Backend::BeginPass: invalid cubemap face");
+            rtv = texEntry.CubemapMipRTVs[attachment.CubemapFace][attachment.MipLevel].Get();
+        } else {
+            rtv = texEntry.MipRTVs[attachment.MipLevel].Get();
+        }
+
+        if (attachment.LoadOp == SenLoadOp::Clear) {
+            _context->ClearRenderTargetView(rtv, glm::value_ptr(attachment.ClearColor));
+        }
+
+        rtvs.push_back(rtv);
+    }
+
+    // Get DSV for depth attachment
+    ID3D11DepthStencilView* dsv = nullptr;
+    if (desc.DepthAttachment.has_value()) {
+        const auto& depthAttach = desc.DepthAttachment.value();
+        auto& texEntry = _textures.at(depthAttach.Texture.ID);
+
+        if (depthAttach.CubemapFace >= 0) {
+            be_assert(depthAttach.CubemapFace < 6, "SenDx11Backend::BeginPass: invalid cubemap face for depth");
+            dsv = texEntry.CubemapDSVs[depthAttach.CubemapFace].Get();
+        } else {
+            dsv = texEntry.DSV.Get();
+        }
+
+        if (depthAttach.LoadOp == SenLoadOp::Clear) {
+            _context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, depthAttach.ClearDepth, depthAttach.ClearStencil);
+        }
+    }
+
+    // Bind render targets
+    _context->OMSetRenderTargets(static_cast<UINT>(rtvs.size()), rtvs.data(), dsv);
+
+    // Set viewport
+    be_assert(
+        desc.Viewport.Width > 0.f && desc.Viewport.Height > 0.f,
+        "SenDx11Backend::BeginPass: viewport width and height must be positive"
+    );
+    D3D11_VIEWPORT vp = {};
+    vp.TopLeftX = desc.Viewport.X;
+    vp.TopLeftY = desc.Viewport.Y;
+    vp.Width    = desc.Viewport.Width;
+    vp.Height   = desc.Viewport.Height;
+    vp.MinDepth = desc.Viewport.MinDepth;
+    vp.MaxDepth = desc.Viewport.MaxDepth;
+    _context->RSSetViewports(1, &vp);
+}
+
+auto SenDx11Backend::EndPass() -> void {
+    // Unbind all render targets
+    _context->OMSetRenderTargets(0, nullptr, nullptr); // comment this out. no need in this if everything works correctly
 }
 

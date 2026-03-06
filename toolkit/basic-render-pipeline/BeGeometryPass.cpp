@@ -3,7 +3,7 @@
 #include <cassert>
 #include <scope_guard/scope_guard.hpp>
 #include <umbrellas/include-glm.h>
-#include <sen-rhi/dx11/SenDx11Backend.h>
+#include <sen-rhi/SenBackend.h>
 
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
@@ -27,8 +27,18 @@ auto BeGeometryPass::Render() -> void
     const auto pipeline = _renderer->GetPipeline();
     const auto submissionBuffer = SubmissionBuffer.lock();
 
-    pipeline->BindTargets({ OutputTexture0, OutputTexture1, OutputTexture2, OutputTexture3 }, OutputDepthTexture.lock().get(), true);
-    SCOPE_EXIT { pipeline->ClearTargets(); };
+    // Begin pass with color and depth attachments
+    SenBackend::BeginPass({
+        .ColorAttachments = {
+            { OutputTexture0.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
+            { OutputTexture1.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
+            { OutputTexture2.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
+            { OutputTexture3.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
+        },
+        .DepthAttachment = SenDepthAttachment{ OutputDepthTexture.lock()->Handle },
+        .Viewport = { 0, 0, (float)_renderer->GetWidth(), (float)_renderer->GetHeight(), 0, 1 },
+    });
+    SCOPE_EXIT { SenBackend::EndPass(); };
     
     // Set vertex and index buffers
     pipeline->BindVertexBuffer(submissionBuffer->GetSharedVertexBuffer(), sizeof(BeFullVertex));
@@ -48,7 +58,7 @@ auto BeGeometryPass::Render() -> void
         // Get or create pipeline for this shader
         if (!_shaderPipelines.contains(shader.get())) {
             auto pipelineDesc = shader->CreatePipelineDesc();
-            _shaderPipelines[shader.get()] = SenDx11Backend::Get().CreatePipeline(pipelineDesc);
+            _shaderPipelines[shader.get()] = SenBackend::CreatePipeline(pipelineDesc);
         }
         pipeline->BindPipeline(_shaderPipelines[shader.get()]);
 

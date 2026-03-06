@@ -2,7 +2,7 @@
 
 #include <scope_guard/scope_guard.hpp>
 #include <umbrellas/include-glm.h>
-#include <sen-rhi/dx11/SenDx11Backend.h>
+#include <sen-rhi/SenBackend.h>
 
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
@@ -48,7 +48,7 @@ void BeLightingPass::Initialise() {
     directionalDesc.BlendState.SrcBlendAlpha = SenBlendFactor::One;
     directionalDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
     directionalDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
-    _directionalLightPipeline = SenDx11Backend::Get().CreatePipeline(directionalDesc);
+    _directionalLightPipeline = SenBackend::CreatePipeline(directionalDesc);
 
     auto pointDesc = _pointLightShader->CreatePipelineDesc();
     pointDesc.BlendState.Enable = true;
@@ -58,7 +58,7 @@ void BeLightingPass::Initialise() {
     pointDesc.BlendState.SrcBlendAlpha = SenBlendFactor::One;
     pointDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
     pointDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
-    _pointLightPipeline = SenDx11Backend::Get().CreatePipeline(pointDesc);
+    _pointLightPipeline = SenBackend::CreatePipeline(pointDesc);
 
     auto emissiveDesc = _emissiveAddShader->CreatePipelineDesc();
     emissiveDesc.BlendState.Enable = true;
@@ -68,16 +68,22 @@ void BeLightingPass::Initialise() {
     emissiveDesc.BlendState.SrcBlendAlpha = SenBlendFactor::One;
     emissiveDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
     emissiveDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
-    _emissivePipeline = SenDx11Backend::Get().CreatePipeline(emissiveDesc);
+    _emissivePipeline = SenBackend::CreatePipeline(emissiveDesc);
 }
 
 auto BeLightingPass::Render() -> void {
     const auto& submissionBuffer = *SubmissionBuffer.lock();
     const auto context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
-    
-    pipeline->BindTargets({ OutputTexture }, nullptr, true);
-    SCOPE_EXIT { pipeline->ClearTargets(); };
+
+    // Begin pass with single color attachment
+    SenBackend::BeginPass({
+        .ColorAttachments = {
+            { OutputTexture.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
+        },
+        .Viewport = _renderer->GetViewport(),
+    });
+    SCOPE_EXIT { SenBackend::EndPass(); };
 
     // directional light
     pipeline->BindPipeline(_directionalLightPipeline);

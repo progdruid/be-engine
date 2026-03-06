@@ -8,8 +8,8 @@
 #include "BeRenderPass.h"
 #include "BeShader.h"
 #include "Utils.h"
-#include <sen-rhi/dx11/SenDx11Backend.h>
 #include <sen-rhi/SenShaderCompiler.h>
+#include "sen-rhi/SenBackend.h"
 
 auto BeRenderer::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
     ComPtr<IDXGIFactory6> f6;
@@ -53,7 +53,7 @@ BeRenderer::BeRenderer(
 {}
 
 BeRenderer::~BeRenderer() {
-    SenDx11Backend::Shutdown();
+    SenBackend::Shutdown();
 }
 
 auto BeRenderer::LaunchDevice() -> void {
@@ -110,7 +110,7 @@ auto BeRenderer::LaunchDevice() -> void {
     Utils::Check << _factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
 
     SenShaderCompiler::Launch();
-    SenDx11Backend::Init(_device, _context);
+    SenBackend::Init(_device, _context);
 
     _pipeline = BePipeline::Create(_context);
     
@@ -118,8 +118,10 @@ auto BeRenderer::LaunchDevice() -> void {
     Utils::Check
     << _swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))
     << _device->CreateRenderTargetView(backBuffer.Get(), nullptr, &_backbufferTarget);
-    
-    _uniformBuffer = SenDx11Backend::Get().CreateBuffer({
+
+    _backbufferTexture = SenBackend::RegisterBackbuffer(_backbufferTarget);
+
+    _uniformBuffer = SenBackend::CreateBuffer({
         .Usage  = SenBufferUsage::Constant,
         .Access = SenBufferAccess::Dynamic,
         .Size   = sizeof(BeUniformBufferGPU),
@@ -178,8 +180,8 @@ auto BeRenderer::Render() -> void {
 
 
     const BeUniformBufferGPU uniformDataGpu(UniformData);
-    SenDx11Backend::Get().WriteBuffer(_uniformBuffer, &uniformDataGpu, sizeof(BeUniformBufferGPU));
-    auto* rawUniformBuffer = SenDx11Backend::Get().LookupBuffer(_uniformBuffer).Buffer.Get();
+    SenBackend::WriteBuffer(_uniformBuffer, &uniformDataGpu, sizeof(BeUniformBufferGPU));
+    auto* rawUniformBuffer = SenBackend::LookupBuffer(_uniformBuffer).Buffer.Get();
     _context->VSSetConstantBuffers(0, 1, &rawUniformBuffer);
     _context->HSSetConstantBuffers(0, 1, &rawUniformBuffer);
     _context->DSSetConstantBuffers(0, 1, &rawUniformBuffer);

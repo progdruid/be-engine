@@ -58,57 +58,57 @@ struct SenDx11PipelineEntry {
 // ─── backend ──────────────────────────────────────────────────────────────────
 
 class SenDx11Backend {
-
-    hide
-    static SenDx11Backend* _instance;
-
-    ComPtr<ID3D11Device>        _device;
-    ComPtr<ID3D11DeviceContext> _context;
-
-    std::unordered_map<uint32_t, SenDx11TextureEntry> _textures;
-    uint32_t _nextTextureId = 1;
-
-    std::unordered_map<uint32_t, SenDx11BufferEntry> _buffers;
-    uint32_t _nextBufferId = 1;
-
-    std::unordered_map<uint32_t, SenDx11SamplerEntry> _samplers;
-    uint32_t _nextSamplerId = 1;
-
-    std::unordered_map<uint32_t, SenDx11ShaderEntry> _shaders;
-    uint32_t _nextShaderId = 1;
-
-    std::unordered_map<uint32_t, SenDx11PipelineEntry> _pipelines;
-    uint32_t _nextPipelineId = 1;
-
     expose
     static auto Init     (const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) -> void;
     static auto Shutdown () -> void;
-    static auto Get      () -> SenDx11Backend&;
 
     expose // textures
-    auto CreateTexture  (const SenTextureDesc& desc) -> SenTexture;
-    auto DestroyTexture (SenTexture handle) -> void;
-    auto LookupTexture  (SenTexture handle) -> SenDx11TextureEntry&;
+    static auto CreateTexture  (const SenTextureDesc& desc) -> SenTexture;
+    static auto DestroyTexture (SenTexture handle) -> void;
+    static auto LookupTexture  (SenTexture handle) -> SenDx11TextureEntry&;
 
     expose // buffers
-    auto CreateBuffer  (const SenBufferDesc& desc) -> SenBuffer;
-    auto DestroyBuffer (SenBuffer handle) -> void;
-    auto LookupBuffer  (SenBuffer handle) -> SenDx11BufferEntry&;
-    auto WriteBuffer   (SenBuffer handle, const void* data, uint32_t size) -> void;
+    static auto CreateBuffer  (const SenBufferDesc& desc) -> SenBuffer;
+    static auto DestroyBuffer (SenBuffer handle) -> void;
+    static auto LookupBuffer  (SenBuffer handle) -> SenDx11BufferEntry&;
+    static auto WriteBuffer   (SenBuffer handle, const void* data, uint32_t size) -> void;
 
     expose // samplers
-    auto CreateSampler  (const SenSamplerDesc& desc) -> SenSampler;
-    auto DestroySampler (SenSampler handle) -> void;
-    auto LookupSampler  (SenSampler handle) -> SenDx11SamplerEntry&;
+    static auto CreateSampler  (const SenSamplerDesc& desc) -> SenSampler;
+    static auto DestroySampler (SenSampler handle) -> void;
+    static auto LookupSampler  (SenSampler handle) -> SenDx11SamplerEntry&;
 
     expose // shaders
-    auto CreateShader (const SenShaderSourceDesc& sourceDesc) -> SenShader;
-    auto DestroyShader (SenShader handle) -> void;
-    auto LookupShader  (SenShader handle) -> SenDx11ShaderEntry&;
+    static auto CreateShader (const SenShaderSourceDesc& sourceDesc) -> SenShader;
+    static auto DestroyShader (SenShader handle) -> void;
+    static auto LookupShader  (SenShader handle) -> SenDx11ShaderEntry&;
 
     expose // pipelines
-    auto CreatePipeline (const SenPipelineDesc& desc) -> SenPipeline;
-    auto DestroyPipeline (SenPipeline handle) -> void;
-    auto LookupPipeline  (SenPipeline handle) -> SenDx11PipelineEntry&;
+    static auto CreatePipeline (const SenPipelineDesc& desc) -> SenPipeline;
+    static auto DestroyPipeline (SenPipeline handle) -> void;
+    static auto LookupPipeline  (SenPipeline handle) -> SenDx11PipelineEntry&;
 
+    expose // render passes
+    static auto RegisterBackbuffer(const ComPtr<ID3D11RenderTargetView>& backbufferRTV) -> SenTexture;
+    static auto BeginPass(const SenPassDesc& desc) -> void;
+    static auto EndPass() -> void;
+
+    hide
+    static ComPtr<ID3D11Device>        _device;
+    static ComPtr<ID3D11DeviceContext> _context;
+
+    static std::unordered_map<uint32_t, SenDx11TextureEntry> _textures;
+    static uint32_t _nextTextureId;
+
+    static std::unordered_map<uint32_t, SenDx11BufferEntry> _buffers;
+    static uint32_t _nextBufferId;
+
+    static std::unordered_map<uint32_t, SenDx11SamplerEntry> _samplers;
+    static uint32_t _nextSamplerId;
+
+    static std::unordered_map<uint32_t, SenDx11ShaderEntry> _shaders;
+    static uint32_t _nextShaderId;
+
+    static std::unordered_map<uint32_t, SenDx11PipelineEntry> _pipelines;
+    static uint32_t _nextPipelineId;
 };

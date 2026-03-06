@@ -8,7 +8,7 @@
 #include "BeRenderer.h"
 #include "BeTexture.h"
 #include "Utils.h"
-#include <sen-rhi/dx11/SenDx11Backend.h>
+#include "sen-rhi/SenBackend.h"
 
 auto BeMaterial::Create(
     std::string_view name,
@@ -41,7 +41,7 @@ BeMaterial::BeMaterial(
     AssembleData();
 
     const uint32_t sizeInBytes = static_cast<uint32_t>(_bufferData.size() * sizeof(float));
-    _cbuffer = SenDx11Backend::Get().CreateBuffer({
+    _cbuffer = SenBackend::CreateBuffer({
         .Usage  = SenBufferUsage::Constant,
         .Access = _isFrequentlyUsed ? SenBufferAccess::Dynamic : SenBufferAccess::Default,
         .Size   = sizeInBytes,
@@ -173,7 +173,7 @@ auto BeMaterial::GetSampler(const std::string& propertyName) const -> SenSampler
 auto BeMaterial::UpdateGPUBuffers() -> bool {
     if (!_cbufferDirty) return false;
 
-    SenDx11Backend::Get().WriteBuffer(
+    SenBackend::WriteBuffer(
         _cbuffer,
         _bufferData.data(),
         static_cast<uint32_t>(_bufferData.size() * sizeof(float))

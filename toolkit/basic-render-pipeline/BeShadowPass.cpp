@@ -2,7 +2,7 @@
 
 #include <umbrellas/include-glm.h>
 #include <scope_guard/scope_guard.hpp>
-#include <sen-rhi/dx11/SenDx11Backend.h>
+#include <sen-rhi/SenBackend.h>
 
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
@@ -18,12 +18,6 @@ auto BeShadowPass::Initialise() -> void {
 
 auto BeShadowPass::Render() -> void {
     const auto context = _renderer->GetContext();
-
-    UINT numViewports = 1;
-    D3D11_VIEWPORT previousViewport = {};
-    context->RSGetViewports(&numViewports,  &previousViewport);
-    SCOPE_EXIT { context->RSSetViewports(1, &previousViewport); };
-
     const auto& submissionBuffer = *SubmissionBuffer.lock();
 
     const auto& sunLights = submissionBuffer.GetSunLightEntries();
@@ -52,17 +46,12 @@ auto BeShadowPass::RenderDirectionalShadows(
     const auto& context = _renderer->GetContext();
     const auto& pipeline = _renderer->GetPipeline();
 
-    // sort out viewport
-    D3D11_VIEWPORT viewport = {};
-    viewport.Width = sunLight.ShadowMapResolution;
-    viewport.Height = sunLight.ShadowMapResolution;
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
-    context->RSSetViewports(1, &viewport);
-
-    // sort out render target
-    pipeline->BindTargets({}, sunLight.ShadowMap.lock().get(), true);
-    SCOPE_EXIT { pipeline->ClearTargets(); };
+    // Begin pass with depth-only target
+    SenBackend::BeginPass({
+        .DepthAttachment = SenDepthAttachment{ sunLight.ShadowMap.lock()->Handle },
+        .Viewport = { 0, 0, (float)sunLight.ShadowMapResolution, (float)sunLight.ShadowMapResolution, 0, 1 },
+    });
+    SCOPE_EXIT { SenBackend::EndPass(); };
 
     // Set vertex and index buffers
     pipeline->BindVertexBuffer(submissionBuffer.GetSharedVertexBuffer(), sizeof(BeFullVertex));
@@ -81,7 +70,7 @@ auto BeShadowPass::RenderDirectionalShadows(
         // Get or create pipeline for this shader
         if (!_shaderPipelines.contains(shader.get())) {
             auto pipelineDesc = shader->CreatePipelineDesc();
-            _shaderPipelines[shader.get()] = SenDx11Backend::Get().CreatePipeline(pipelineDesc);
+            _shaderPipelines[shader.get()] = SenBackend::CreatePipeline(pipelineDesc);
         }
         pipeline->BindPipeline(_shaderPipelines[shader.get()]);
 
@@ -126,21 +115,20 @@ auto BeShadowPass::RenderPointLightShadows(
         pipeline->ClearIndexBuffer();
     };
 
-    // sort out viewport
-    D3D11_VIEWPORT viewport = {};
-    viewport.Width = pointLight.ShadowMapResolution;
-    viewport.Height = pointLight.ShadowMapResolution;
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
-    context->RSSetViewports(1, &viewport);
+    auto shadowMapPtr = pointLight.ShadowMap.lock();
 
     // render each face
     for (int face = 0; face < 6; face++) {
-        // sort out render target
-        auto shadowMapPtr = pointLight.ShadowMap.lock();
-        auto cubemapDSV = SenDx11Backend::Get().LookupTexture(shadowMapPtr->Handle).CubemapDSVs[face].Get();
-        context->ClearDepthStencilView(cubemapDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-        context->OMSetRenderTargets(0, nullptr, cubemapDSV);
+        // Begin pass for this cubemap face
+        SenBackend::BeginPass({
+            .DepthAttachment = SenDepthAttachment{
+                shadowMapPtr->Handle,
+                static_cast<int8_t>(face),
+                SenLoadOp::Clear
+            },
+            .Viewport = { 0, 0, (float)pointLight.ShadowMapResolution, (float)pointLight.ShadowMapResolution, 0, 1 },
+        });
+        SCOPE_EXIT { SenBackend::EndPass(); };
 
         const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
@@ -154,7 +142,7 @@ auto BeShadowPass::RenderPointLightShadows(
             // Get or create pipeline for this shader
             if (!_shaderPipelines.contains(shader.get())) {
                 auto pipelineDesc = shader->CreatePipelineDesc();
-                _shaderPipelines[shader.get()] = SenDx11Backend::Get().CreatePipeline(pipelineDesc);
+                _shaderPipelines[shader.get()] = SenBackend::CreatePipeline(pipelineDesc);
             }
             pipeline->BindPipeline(_shaderPipelines[shader.get()]);
 
@@ -183,8 +171,6 @@ auto BeShadowPass::RenderPointLightShadows(
             }
         }
     }
-
-    context->OMSetRenderTargets(0, nullptr, nullptr);
 }
 
 auto BeShadowPass::CalculatePointLightFaceViewProjection(

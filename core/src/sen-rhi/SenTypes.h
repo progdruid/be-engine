@@ -1,9 +1,11 @@
 #pragma once
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 #include <umbrellas/bitmask.hpp>
+#include <umbrellas/include-glm.h>
 
 
 enum class SenFormat : uint8_t {
@@ -245,4 +247,34 @@ struct SenViewport {
     float Height   = 0.f;
     float MinDepth = 0.f;
     float MaxDepth = 1.f;
+};
+
+
+// ─── render pass ───────────────────────────────────────────────
+enum class SenLoadOp : uint8_t {
+    Load,     // load existing contents of attachment
+    Clear,    // clear attachment to clear value
+    DontCare, // contents undefined, no load/clear needed (optimization)
+};
+
+struct SenColorAttachment {
+    SenTexture Texture;
+    uint8_t    MipLevel    = 0;
+    int8_t     CubemapFace = -1;   // -1 = not a cubemap face, 0-5 = cubemap face index
+    SenLoadOp  LoadOp      = SenLoadOp::Clear;
+    glm::vec4  ClearColor  = {0, 0, 0, 0};
+};
+
+struct SenDepthAttachment {
+    SenTexture Texture;
+    int8_t     CubemapFace  = -1;   // -1 = not a cubemap face, 0-5 = cubemap face index
+    SenLoadOp  LoadOp       = SenLoadOp::Clear;
+    float      ClearDepth   = 1.0f;
+    uint8_t    ClearStencil = 0;
+};
+
+struct SenPassDesc {
+    std::vector<SenColorAttachment>   ColorAttachments;
+    std::optional<SenDepthAttachment> DepthAttachment;
+    SenViewport                       Viewport;
 };
