@@ -1,7 +1,6 @@
 ﻿#include "BeFullscreenEffectPass.h"
 
 #include "BeAssetRegistry.h"
-#include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
@@ -23,7 +22,7 @@ auto BeFullscreenEffectPass::Initialise() -> void {
 }
 
 auto BeFullscreenEffectPass::Render() -> void {
-    const auto& pipeline = _renderer->GetPipeline();
+    auto& cmd = _renderer->GetCommandBuffer();
 
     // Build color attachments from output textures
     std::vector<SenColorAttachment> colorAttachments;
@@ -31,18 +30,18 @@ auto BeFullscreenEffectPass::Render() -> void {
         colorAttachments.push_back({ tex.lock()->Handle, 0, -1, SenLoadOp::Load });
     }
 
-    SenBackend::BeginPass({
+    cmd.BeginPass({
         .ColorAttachments = colorAttachments,
         .Viewport = _renderer->GetViewport(),
     });
 
-    pipeline->BindPipeline(_pipeline);
+    cmd.SetPipeline(_pipeline);
 
     if (Material) {
-        pipeline->SetBindGroup(_binding.Resolve(), 1);
+        cmd.SetBindGroup(_binding.Resolve(), 1);
     }
 
-    pipeline->Draw(4, 0);
+    cmd.Draw(4, 0);
 
-    SenBackend::EndPass();
+    cmd.EndPass();
 }

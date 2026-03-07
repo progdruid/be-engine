@@ -3,7 +3,6 @@
 #include "BeRenderer.h"
 #include "BeAssetRegistry.h"
 #include "BeMaterial.h"
-#include "BePipeline.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include <umbrellas/include-libassert.h>
@@ -121,80 +120,80 @@ auto BeBloomPass::Render() -> void {
 }
 
 auto BeBloomPass::RenderBrightPass() -> void {
-    const auto pipeline = _renderer->GetPipeline();
+    auto& cmd = _renderer->GetCommandBuffer();
     const auto bloomMip0 = BloomMipTextures[0].lock();
 
-    SenBackend::BeginPass({
+    cmd.BeginPass({
         .ColorAttachments = {
             { bloomMip0->Handle, 0, -1, SenLoadOp::Load },
         },
         .Viewport = { 0, 0, (float)bloomMip0->Width, (float)bloomMip0->Height, 0, 1 },
     });
 
-    pipeline->BindPipeline(_brightPipeline);
-    pipeline->SetBindGroup(_brightBinding.Resolve(), 1);
-    pipeline->Draw(4, 0);
+    cmd.SetPipeline(_brightPipeline);
+    cmd.SetBindGroup(_brightBinding.Resolve(), 1);
+    cmd.Draw(4, 0);
 
-    SenBackend::EndPass();
+    cmd.EndPass();
 }
 
 auto BeBloomPass::RenderDownsamplePasses() -> void {
-    const auto& pipeline = _renderer->GetPipeline();
+    auto& cmd = _renderer->GetCommandBuffer();
 
-    pipeline->BindPipeline(_downsamplePipeline);
+    cmd.SetPipeline(_downsamplePipeline);
 
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
         const auto targetMip = BloomMipTextures[mipTarget].lock();
 
-        SenBackend::BeginPass({
+        cmd.BeginPass({
             .ColorAttachments = {
                 { targetMip->Handle, 0, -1, SenLoadOp::Load },
             },
             .Viewport = { 0, 0, (float)targetMip->Width, (float)targetMip->Height, 0, 1 },
         });
 
-        pipeline->SetBindGroup(_downsampleBindings[mipTarget].Resolve(), 1);
-        pipeline->Draw(4, 0);
+        cmd.SetBindGroup(_downsampleBindings[mipTarget].Resolve(), 1);
+        cmd.Draw(4, 0);
 
-        SenBackend::EndPass();
+        cmd.EndPass();
     }
 }
 
 auto BeBloomPass::RenderUpsamplePasses() -> void {
-    const auto& pipeline = _renderer->GetPipeline();
+    auto& cmd = _renderer->GetCommandBuffer();
 
-    pipeline->BindPipeline(_upsamplePipeline);
+    cmd.SetPipeline(_upsamplePipeline);
 
     for (int32_t mipTarget = BloomMipCount - 2; mipTarget >= 0; --mipTarget) {
         const auto targetMip = BloomMipTextures[mipTarget].lock();
 
-        SenBackend::BeginPass({
+        cmd.BeginPass({
             .ColorAttachments = {
                 { targetMip->Handle, 0, -1, SenLoadOp::Load },
             },
             .Viewport = { 0, 0, (float)targetMip->Width, (float)targetMip->Height, 0, 1 },
         });
 
-        pipeline->SetBindGroup(_upsampleBindings[mipTarget].Resolve(), 1);
-        pipeline->Draw(4, 0);
+        cmd.SetBindGroup(_upsampleBindings[mipTarget].Resolve(), 1);
+        cmd.Draw(4, 0);
 
-        SenBackend::EndPass();
+        cmd.EndPass();
     }
 }
 
 auto BeBloomPass::RenderAddPass() -> void {
-    const auto& pipeline = _renderer->GetPipeline();
+    auto& cmd = _renderer->GetCommandBuffer();
 
-    SenBackend::BeginPass({
+    cmd.BeginPass({
         .ColorAttachments = {
             { OutputTexture.lock()->Handle, 0, -1, SenLoadOp::Load },
         },
         .Viewport = _renderer->GetViewport(),
     });
 
-    pipeline->BindPipeline(_addPipeline);
-    pipeline->SetBindGroup(_addBinding.Resolve(), 1);
-    pipeline->Draw(4, 0);
+    cmd.SetPipeline(_addPipeline);
+    cmd.SetBindGroup(_addBinding.Resolve(), 1);
+    cmd.Draw(4, 0);
 
-    SenBackend::EndPass();
+    cmd.EndPass();
 }

@@ -42,7 +42,8 @@ auto BeImGuiPass::Render() -> void {
     ImGui::Render();
 
     // Begin pass with backbuffer (Load to preserve existing content)
-    SenBackend::BeginPass({
+    auto& cmd = _renderer->GetCommandBuffer();
+    cmd.BeginPass({
         .ColorAttachments = {
             { _renderer->GetBackbufferTexture(), 0, -1, SenLoadOp::Load },
         },
@@ -51,7 +52,7 @@ auto BeImGuiPass::Render() -> void {
 
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-    SenBackend::EndPass();
+    cmd.EndPass();
 }
 
 auto BeImGuiPass::SetUICallback(const std::function<void()>& callback) -> void {

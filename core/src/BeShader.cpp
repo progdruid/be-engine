@@ -132,7 +132,6 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         "Shader file doesn't exist: " + filePath.string()
     );
 
-    const auto& device = renderer.GetDevice();
     auto shader = std::make_shared<BeShader>();
 
     auto src = BeShaderTools::ReadFile(filePath);

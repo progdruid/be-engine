@@ -13,7 +13,6 @@
     "EmissiveTexture: texture2d(2) = white",
 
     "InputSampler: sampler(0) = linear-clamp",
-    //"InputSampler: sampler(0) = point-clamp",
 ]
 @be-end
 
@@ -44,6 +43,7 @@
 @be-end
 
 */
+
 
 /*========================================================*/
 // region @be-auto-boilerplate
@@ -84,6 +84,7 @@ struct PixelOutput {
 
 // endregion
 /*========================================================*/
+
 
 struct Interpolators {
     float4 Position : SV_POSITION;

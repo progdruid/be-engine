@@ -8,7 +8,6 @@
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
 #include "BeMaterial.h"
-#include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
@@ -25,11 +24,11 @@ auto BeGeometryPass::Initialise() -> void {
 auto BeGeometryPass::Render() -> void
 {
     const auto context = _renderer->GetContext();
-    const auto pipeline = _renderer->GetPipeline();
+    auto& cmd = _renderer->GetCommandBuffer();
     const auto submissionBuffer = SubmissionBuffer.lock();
 
     // Begin pass with color and depth attachments
-    SenBackend::BeginPass({
+    cmd.BeginPass({
         .ColorAttachments = {
             { OutputTexture0.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
             { OutputTexture1.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
@@ -39,17 +38,17 @@ auto BeGeometryPass::Render() -> void
         .DepthAttachment = SenDepthAttachment{ OutputDepthTexture.lock()->Handle },
         .Viewport = { 0, 0, (float)_renderer->GetWidth(), (float)_renderer->GetHeight(), 0, 1 },
     });
-    SCOPE_EXIT { SenBackend::EndPass(); };
-    
+    SCOPE_EXIT { cmd.EndPass(); };
+
     // Set vertex and index buffers
-    pipeline->BindVertexBuffer(submissionBuffer->GetSharedVertexBuffer(), sizeof(BeFullVertex));
-    pipeline->BindIndexBuffer(submissionBuffer->GetSharedIndexBuffer());
+    cmd.SetVertexBuffer(submissionBuffer->GetSharedVertexBuffer(), sizeof(BeFullVertex));
+    cmd.SetIndexBuffer(submissionBuffer->GetSharedIndexBuffer());
     SCOPE_EXIT {
-        pipeline->ClearVertexBuffer();
-        pipeline->ClearIndexBuffer();
+        cmd.ClearVertexBuffer();
+        cmd.ClearIndexBuffer();
     };
 
-    
+
     // Draw all objects
     const auto& entries = SubmissionBuffer.lock()->GetGeometryEntries();
     for (const auto& entry : entries) {
@@ -62,12 +61,12 @@ auto BeGeometryPass::Render() -> void
             _shaderPipelines[shader.get()] = SenBackend::CreatePipeline(pipelineDesc);
             _objectBindings[shader.get()].Make(_objectMaterial, shader);
         }
-        pipeline->BindPipeline(_shaderPipelines[shader.get()]);
+        cmd.SetPipeline(_shaderPipelines[shader.get()]);
 
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", _renderer->UniformData.ProjectionView);
         _objectMaterial->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
-        pipeline->SetBindGroup(_objectBindings[shader.get()].Resolve(), 1);
+        cmd.SetBindGroup(_objectBindings[shader.get()].Resolve(), 1);
 
         const auto& meshSlices = submissionBuffer->GetMeshSlices(entry.Prop->Mesh.get());
         for (size_t i = 0; i < meshSlices.size(); ++i) {
@@ -78,8 +77,8 @@ auto BeGeometryPass::Render() -> void
                 context->RSSetState(_renderer->GetRasterizerCullNone().Get());
             }
 
-            pipeline->SetBindGroup(propSlice.Binding.Resolve(), 2);
-            pipeline->DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
+            cmd.SetBindGroup(propSlice.Binding.Resolve(), 2);
+            cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
 
             if (propSlice.TwoSided) {
                 context->RSSetState(_renderer->GetRasterizerCullBack().Get());

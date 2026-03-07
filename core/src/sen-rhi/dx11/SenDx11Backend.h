@@ -90,8 +90,6 @@ class SenDx11Backend {
 
     expose // render passes
     static auto RegisterBackbuffer(const ComPtr<ID3D11RenderTargetView>& backbufferRTV) -> SenTexture;
-    static auto BeginPass(const SenPassDesc& desc) -> void;
-    static auto EndPass() -> void;
 
     expose // bind groups
     static auto CreateBindGroup  (const SenBindGroupDesc& desc) -> SenBindGroup;

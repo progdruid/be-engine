@@ -4,7 +4,6 @@
 #include <scope_guard/scope_guard.hpp>
 #include <dxgi1_6.h>
 
-#include "BePipeline.h"
 #include "BeRenderPass.h"
 #include "BeShader.h"
 #include "Utils.h"
@@ -112,8 +111,8 @@ auto BeRenderer::LaunchDevice() -> void {
     SenShaderCompiler::Launch();
     SenBackend::Init(_device, _context);
 
-    _pipeline = BePipeline::Create(_context);
-    
+    _commandBuffer = SenCommandBuffer(_context);
+
     ComPtr<ID3D11Texture2D> backBuffer;
     Utils::Check
     << _swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))

@@ -7,7 +7,6 @@
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
 #include "BeMaterial.h"
-#include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
@@ -77,20 +76,19 @@ void BeLightingPass::Initialise() {
 
 auto BeLightingPass::Render() -> void {
     const auto& submissionBuffer = *SubmissionBuffer.lock();
-    const auto context = _renderer->GetContext();
-    const auto& pipeline = _renderer->GetPipeline();
+    auto& cmd = _renderer->GetCommandBuffer();
 
     // Begin pass with single color attachment
-    SenBackend::BeginPass({
+    cmd.BeginPass({
         .ColorAttachments = {
             { OutputTexture.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
         },
         .Viewport = _renderer->GetViewport(),
     });
-    SCOPE_EXIT { SenBackend::EndPass(); };
+    SCOPE_EXIT { cmd.EndPass(); };
 
     // directional light
-    pipeline->BindPipeline(_directionalLightPipeline);
+    cmd.SetPipeline(_directionalLightPipeline);
 
     const auto& sunLight = submissionBuffer.GetSunLightEntries()[0];
     _directionalLightMaterial->SetFloat("HasShadowMap", sunLight.CastsShadows ? 1.0f : 0.0f);
@@ -100,14 +98,14 @@ auto BeLightingPass::Render() -> void {
     _directionalLightMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
     _directionalLightMaterial->SetFloat("TexelSize", 1.0f / sunLight.ShadowMapResolution);
     _directionalLightMaterial->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
-    pipeline->SetBindGroup(_directionalLightBinding.Resolve(), 1);
+    cmd.SetBindGroup(_directionalLightBinding.Resolve(), 1);
 
-    pipeline->Draw(4, 0);
+    cmd.Draw(4, 0);
     _directionalLightMaterial->SetTexture("ShadowMap", nullptr);
 
 
     // point lights
-    pipeline->BindPipeline(_pointLightPipeline);
+    cmd.SetPipeline(_pointLightPipeline);
     for (const auto& pointLight : submissionBuffer.GetPointLightEntries()) {
         _pointLightMaterial->SetFloat3("Position", pointLight.Position);
         _pointLightMaterial->SetFloat("Radius", pointLight.Radius);
@@ -118,16 +116,16 @@ auto BeLightingPass::Render() -> void {
         _pointLightMaterial->SetFloat("ShadowNearPlane", pointLight.ShadowNearPlane);
         // TODO: super uncool, material shouldnt own anything ideally. or should it?
         _pointLightMaterial->SetTexture("PointLightShadowMap", pointLight.ShadowMap.lock());
-        pipeline->SetBindGroup(_pointLightBinding.Resolve(), 1);
+        cmd.SetBindGroup(_pointLightBinding.Resolve(), 1);
 
-        pipeline->Draw(4, 0);
+        cmd.Draw(4, 0);
     }
 
     _pointLightMaterial->SetTexture("PointLightShadowMap", nullptr);
-    
-    
+
+
     // emissive add
-    pipeline->BindPipeline(_emissivePipeline);
-    pipeline->SetBindGroup(_emissiveBinding.Resolve(), 1);
-    pipeline->Draw(4, 0);
+    cmd.SetPipeline(_emissivePipeline);
+    cmd.SetBindGroup(_emissiveBinding.Resolve(), 1);
+    cmd.Draw(4, 0);
 }

@@ -2,7 +2,6 @@
 
 #include "BeAssetRegistry.h"
 #include "BeMaterial.h"
-#include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
 #include "BeShader.h"
@@ -17,33 +16,24 @@ auto BeBackbufferPass::Initialise() -> void {
     _backbufferMaterial = BeMaterial::Create("Backbuffer Material", scheme, false, *_renderer);
     _backbufferMaterial->SetTexture("InputTexture", InputTexture.lock());
 
-    // Create graphics pipeline
     auto pipelineDesc = _backbufferShader->CreatePipelineDesc();
     _pipeline = SenBackend::CreatePipeline(pipelineDesc);
     _backbufferBinding.Make(_backbufferMaterial, _backbufferShader);
 }
 
 auto BeBackbufferPass::Render() -> void {
-    const auto& pipeline = _renderer->GetPipeline();
+    auto& cmd = _renderer->GetCommandBuffer();
 
-    // Begin pass with backbuffer
-    SenBackend::BeginPass({
+    cmd.BeginPass({
         .ColorAttachments = {
             { _renderer->GetBackbufferTexture(), 0, -1, SenLoadOp::Clear, glm::vec4(ClearColor, 1.0f) },
         },
         .Viewport = _renderer->GetViewport(),
     });
 
-    // bind pipeline (shaders + state)
-    pipeline->BindPipeline(_pipeline);
-
-    // bind material
-    pipeline->SetBindGroup(_backbufferBinding.Resolve(), 1);
-
-    // draw
-    pipeline->Draw(4, 0);
-
-    // End pass (automatically unbinds)
-    SenBackend::EndPass();
+    cmd.SetPipeline(_pipeline);
+    cmd.SetBindGroup(_backbufferBinding.Resolve(), 1);
+    cmd.Draw(4, 0);
+    cmd.EndPass();
 }
 

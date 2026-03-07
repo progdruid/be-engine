@@ -7,7 +7,6 @@
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
 #include "BeMaterial.h"
-#include "BePipeline.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
@@ -46,21 +45,21 @@ auto BeShadowPass::RenderDirectionalShadows(
     const BeBRPSubmissionBuffer& submissionBuffer
 ) -> void {
     const auto& context = _renderer->GetContext();
-    const auto& pipeline = _renderer->GetPipeline();
+    auto& cmd = _renderer->GetCommandBuffer();
 
     // Begin pass with depth-only target
-    SenBackend::BeginPass({
+    cmd.BeginPass({
         .DepthAttachment = SenDepthAttachment{ sunLight.ShadowMap.lock()->Handle },
         .Viewport = { 0, 0, (float)sunLight.ShadowMapResolution, (float)sunLight.ShadowMapResolution, 0, 1 },
     });
-    SCOPE_EXIT { SenBackend::EndPass(); };
+    SCOPE_EXIT { cmd.EndPass(); };
 
     // Set vertex and index buffers
-    pipeline->BindVertexBuffer(submissionBuffer.GetSharedVertexBuffer(), sizeof(BeFullVertex));
-    pipeline->BindIndexBuffer(submissionBuffer.GetSharedIndexBuffer());
+    cmd.SetVertexBuffer(submissionBuffer.GetSharedVertexBuffer(), sizeof(BeFullVertex));
+    cmd.SetIndexBuffer(submissionBuffer.GetSharedIndexBuffer());
     SCOPE_EXIT {
-        pipeline->ClearVertexBuffer();
-        pipeline->ClearIndexBuffer();
+        cmd.ClearVertexBuffer();
+        cmd.ClearIndexBuffer();
     };
 
     const auto& entries = submissionBuffer.GetGeometryEntries();
@@ -75,12 +74,12 @@ auto BeShadowPass::RenderDirectionalShadows(
             _shaderPipelines[shader.get()] = SenBackend::CreatePipeline(pipelineDesc);
             _objectBindings[shader.get()].Make(_objectMaterial, shader);
         }
-        pipeline->BindPipeline(_shaderPipelines[shader.get()]);
+        cmd.SetPipeline(_shaderPipelines[shader.get()]);
 
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
         _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
-        pipeline->SetBindGroup(_objectBindings[shader.get()].Resolve(), 1);
+        cmd.SetBindGroup(_objectBindings[shader.get()].Resolve(), 1);
 
         const auto& meshSlices = submissionBuffer.GetMeshSlices(entry.Prop->Mesh.get());
         for (size_t i = 0; i < meshSlices.size(); ++i) {
@@ -91,8 +90,8 @@ auto BeShadowPass::RenderDirectionalShadows(
                 context->RSSetState(_renderer->GetRasterizerCullNone().Get());
             }
 
-            pipeline->SetBindGroup(propSlice.Binding.Resolve(), 2);
-            context->DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
+            cmd.SetBindGroup(propSlice.Binding.Resolve(), 2);
+            cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
 
             if (propSlice.TwoSided) {
                 context->RSSetState(_renderer->GetRasterizerCullBack().Get());
@@ -107,14 +106,14 @@ auto BeShadowPass::RenderPointLightShadows(
 ) -> void {
     // get what we need
     const auto& context = _renderer->GetContext();
-    const auto& pipeline = _renderer->GetPipeline();
+    auto& cmd = _renderer->GetCommandBuffer();
 
     // sort out vertex and index buffers
-    pipeline->BindVertexBuffer(submissionBuffer.GetSharedVertexBuffer(), sizeof(BeFullVertex));
-    pipeline->BindIndexBuffer(submissionBuffer.GetSharedIndexBuffer());
+    cmd.SetVertexBuffer(submissionBuffer.GetSharedVertexBuffer(), sizeof(BeFullVertex));
+    cmd.SetIndexBuffer(submissionBuffer.GetSharedIndexBuffer());
     SCOPE_EXIT {
-        pipeline->ClearVertexBuffer();
-        pipeline->ClearIndexBuffer();
+        cmd.ClearVertexBuffer();
+        cmd.ClearIndexBuffer();
     };
 
     auto shadowMapPtr = pointLight.ShadowMap.lock();
@@ -122,7 +121,7 @@ auto BeShadowPass::RenderPointLightShadows(
     // render each face
     for (int face = 0; face < 6; face++) {
         // Begin pass for this cubemap face
-        SenBackend::BeginPass({
+        cmd.BeginPass({
             .DepthAttachment = SenDepthAttachment{
                 shadowMapPtr->Handle,
                 static_cast<int8_t>(face),
@@ -130,7 +129,7 @@ auto BeShadowPass::RenderPointLightShadows(
             },
             .Viewport = { 0, 0, (float)pointLight.ShadowMapResolution, (float)pointLight.ShadowMapResolution, 0, 1 },
         });
-        SCOPE_EXIT { SenBackend::EndPass(); };
+        SCOPE_EXIT { cmd.EndPass(); };
 
         const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
@@ -147,12 +146,12 @@ auto BeShadowPass::RenderPointLightShadows(
                 _shaderPipelines[shader.get()] = SenBackend::CreatePipeline(pipelineDesc);
                 _objectBindings[shader.get()].Make(_objectMaterial, shader);
             }
-            pipeline->BindPipeline(_shaderPipelines[shader.get()]);
+            cmd.SetPipeline(_shaderPipelines[shader.get()]);
 
             _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
             _objectMaterial->SetMatrix("ProjectionView", faceViewProj);
             _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
-            pipeline->SetBindGroup(_objectBindings[shader.get()].Resolve(), 1);
+            cmd.SetBindGroup(_objectBindings[shader.get()].Resolve(), 1);
 
             // draw
             const auto& meshSlices = submissionBuffer.GetMeshSlices(entry.Prop->Mesh.get());
@@ -164,8 +163,8 @@ auto BeShadowPass::RenderPointLightShadows(
                     context->RSSetState(_renderer->GetRasterizerCullNone().Get());
                 }
 
-                pipeline->SetBindGroup(propSlice.Binding.Resolve(), 2);
-                context->DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
+                cmd.SetBindGroup(propSlice.Binding.Resolve(), 2);
+                cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
 
                 if (propSlice.TwoSided) {
                     context->RSSetState(_renderer->GetRasterizerCullBack().Get());

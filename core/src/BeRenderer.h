@@ -8,10 +8,9 @@
 #include <umbrellas/access-modifiers.hpp>
 
 #include "BeBuffers.h"
-#include <sen-rhi/SenTypes.h>
+#include <sen-rhi/SenCommandBuffer.h>
 
 class BeWindow;
-class BePipeline;
 class BeRenderPass;
 class BeShader;
 using Microsoft::WRL::ComPtr;
@@ -40,7 +39,7 @@ class BeRenderer {
     ComPtr<IDXGISwapChain1> _swapchain;
     ComPtr<ID3D11RenderTargetView> _backbufferTarget;
     SenTexture _backbufferTexture;
-    std::shared_ptr<BePipeline> _pipeline = nullptr;
+    SenCommandBuffer _commandBuffer;
 
     SenBuffer _uniformBuffer;
     ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
@@ -71,7 +70,7 @@ class BeRenderer {
 
     [[nodiscard]] auto GetDevice() const -> ComPtr<ID3D11Device> { return _device; }
     [[nodiscard]] auto GetContext() const -> ComPtr<ID3D11DeviceContext> { return _context; }
-    [[nodiscard]] auto GetPipeline() const -> std::shared_ptr<BePipeline> { return _pipeline; }
+    [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer& { return _commandBuffer; }
     [[nodiscard]] auto GetBackbufferTarget() const -> ComPtr<ID3D11RenderTargetView> { return _backbufferTarget; }
     [[nodiscard]] auto GetBackbufferTexture() const -> SenTexture { return _backbufferTexture; }
 
