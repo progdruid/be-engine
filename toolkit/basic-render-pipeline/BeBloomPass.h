@@ -6,6 +6,7 @@
 #include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
+#include "BeMaterialBinding.h"
 
 class BeTexture;
 class BeMaterial;
@@ -23,16 +24,20 @@ class BeBloomPass final : public BeRenderPass {
     hide
     std::shared_ptr<BeShader> _brightShader;
     std::shared_ptr<BeMaterial> _brightMaterial;
+    BeMaterialBinding _brightBinding;
     SenPipeline _brightPipeline;
 
     std::shared_ptr<BeShader> _kawaseShader;
     std::vector<std::shared_ptr<BeMaterial>> _downsampleMaterials;
+    std::vector<BeMaterialBinding> _downsampleBindings;
     std::vector<std::shared_ptr<BeMaterial>> _upsampleMaterials;
+    std::vector<BeMaterialBinding> _upsampleBindings;
     SenPipeline _downsamplePipeline;
     SenPipeline _upsamplePipeline;
 
     std::shared_ptr<BeShader> _addShader;
     std::shared_ptr<BeMaterial> _addMaterial;
+    BeMaterialBinding _addBinding;
     SenPipeline _addPipeline;
     
     expose
@@ -46,8 +51,8 @@ class BeBloomPass final : public BeRenderPass {
     auto GetBrightMaterial() const -> std::weak_ptr<BeMaterial> { return _brightMaterial; }
     
     hide
-    auto RenderBrightPass() const -> void;
+    auto RenderBrightPass() -> void;
     auto RenderDownsamplePasses() -> void;
     auto RenderUpsamplePasses() -> void;
-    auto RenderAddPass() const -> void;
+    auto RenderAddPass() -> void;
 };

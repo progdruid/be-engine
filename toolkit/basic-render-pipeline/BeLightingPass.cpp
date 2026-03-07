@@ -39,6 +39,10 @@ void BeLightingPass::Initialise() {
     _emissiveMaterial = BeMaterial::Create("EmissiveMaterial", emissiveScheme, false, *_renderer);
     _emissiveMaterial->SetTexture("InputEmissive", InputTexture3.lock());
 
+    _directionalLightBinding.Make(_directionalLightMaterial, _directionalLightShader);
+    _pointLightBinding.Make(_pointLightMaterial, _pointLightShader);
+    _emissiveBinding.Make(_emissiveMaterial, _emissiveAddShader);
+
     // Create pipelines for each shader with additive blending
     auto directionalDesc = _directionalLightShader->CreatePipelineDesc();
     directionalDesc.BlendState.Enable = true;
@@ -96,7 +100,7 @@ auto BeLightingPass::Render() -> void {
     _directionalLightMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
     _directionalLightMaterial->SetFloat("TexelSize", 1.0f / sunLight.ShadowMapResolution);
     _directionalLightMaterial->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
-    pipeline->BindMaterialAutomatic(_directionalLightMaterial, _directionalLightShader);
+    pipeline->SetBindGroup(_directionalLightBinding.Resolve(), 1);
 
     pipeline->Draw(4, 0);
     _directionalLightMaterial->SetTexture("ShadowMap", nullptr);
@@ -114,7 +118,7 @@ auto BeLightingPass::Render() -> void {
         _pointLightMaterial->SetFloat("ShadowNearPlane", pointLight.ShadowNearPlane);
         // TODO: super uncool, material shouldnt own anything ideally. or should it?
         _pointLightMaterial->SetTexture("PointLightShadowMap", pointLight.ShadowMap.lock());
-        pipeline->BindMaterialAutomatic(_pointLightMaterial, _pointLightShader);
+        pipeline->SetBindGroup(_pointLightBinding.Resolve(), 1);
 
         pipeline->Draw(4, 0);
     }
@@ -124,6 +128,6 @@ auto BeLightingPass::Render() -> void {
     
     // emissive add
     pipeline->BindPipeline(_emissivePipeline);
-    pipeline->BindMaterialAutomatic(_emissiveMaterial, _emissiveAddShader);
+    pipeline->SetBindGroup(_emissiveBinding.Resolve(), 1);
     pipeline->Draw(4, 0);
 }

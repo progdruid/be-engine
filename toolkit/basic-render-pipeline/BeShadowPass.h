@@ -8,6 +8,7 @@
 #include <sen-rhi/SenTypes.h>
 
 #include "BeBRPSubmissionBuffer.h"
+#include "BeMaterialBinding.h"
 #include "BeRenderPass.h"
 
 class BeBRPSubmissionBuffer;
@@ -23,6 +24,7 @@ class BeShadowPass final : public BeRenderPass {
     hide
     std::shared_ptr<BeMaterial> _objectMaterial;
     std::unordered_map<BeShader*, SenPipeline> _shaderPipelines;
+    std::unordered_map<BeShader*, BeMaterialBinding> _objectBindings;
     
     expose
     explicit BeShadowPass() = default;

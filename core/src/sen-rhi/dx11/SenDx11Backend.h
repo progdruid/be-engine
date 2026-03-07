@@ -93,6 +93,11 @@ class SenDx11Backend {
     static auto BeginPass(const SenPassDesc& desc) -> void;
     static auto EndPass() -> void;
 
+    expose // bind groups
+    static auto CreateBindGroup  (const SenBindGroupDesc& desc) -> SenBindGroup;
+    static auto DestroyBindGroup (SenBindGroup handle) -> void;
+    static auto LookupBindGroup  (SenBindGroup handle) -> SenBindGroupDesc&;
+
     hide
     static ComPtr<ID3D11Device>        _device;
     static ComPtr<ID3D11DeviceContext> _context;
@@ -111,4 +116,7 @@ class SenDx11Backend {
 
     static std::unordered_map<uint32_t, SenDx11PipelineEntry> _pipelines;
     static uint32_t _nextPipelineId;
+
+    static std::unordered_map<uint32_t, SenBindGroupDesc> _bindGroups;
+    static uint32_t _nextBindGroupId;
 };

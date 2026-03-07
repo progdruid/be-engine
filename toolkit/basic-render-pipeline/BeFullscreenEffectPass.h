@@ -5,6 +5,7 @@
 #include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
+#include "BeMaterialBinding.h"
 
 class BeTexture;
 class BeMaterial;
@@ -18,6 +19,7 @@ class BeFullscreenEffectPass final : public BeRenderPass {
 
     hide
     SenPipeline _pipeline;
+    BeMaterialBinding _binding;
 
     expose
     explicit BeFullscreenEffectPass();

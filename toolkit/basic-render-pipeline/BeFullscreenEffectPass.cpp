@@ -17,6 +17,9 @@ auto BeFullscreenEffectPass::Initialise() -> void {
     auto pipelineDesc = shader->CreatePipelineDesc();
     _pipeline = SenBackend::CreatePipeline(pipelineDesc);
     be_assert(_pipeline.IsValid(), "BeFullscreenEffectPass: failed to create pipeline");
+    if (Material) {
+        _binding.Make(Material, Shader);
+    }
 }
 
 auto BeFullscreenEffectPass::Render() -> void {
@@ -36,7 +39,7 @@ auto BeFullscreenEffectPass::Render() -> void {
     pipeline->BindPipeline(_pipeline);
 
     if (Material) {
-        pipeline->BindMaterialAutomatic(Material, Shader.lock());
+        pipeline->SetBindGroup(_binding.Resolve(), 1);
     }
 
     pipeline->Draw(4, 0);

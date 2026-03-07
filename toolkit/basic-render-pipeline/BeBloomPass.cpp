@@ -18,6 +18,7 @@ auto BeBloomPass::Initialise() -> void {
     auto brightScheme = BeAssetRegistry::GetMaterialScheme("bloom-bright-material");
     _brightMaterial = BeMaterial::Create("Bright Pass Material", brightScheme, false, *_renderer);
     _brightMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
+    _brightBinding.Make(_brightMaterial, _brightShader);
 
     // Create bright pass pipeline
     auto brightPipelineDesc = _brightShader->CreatePipelineDesc();
@@ -47,6 +48,7 @@ auto BeBloomPass::Initialise() -> void {
 
     // Create downsample materials for each mip level (1 to size-1)
     _downsampleMaterials.resize(BloomMipCount);
+    _downsampleBindings.resize(BloomMipCount);
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
         auto mat = BeMaterial::Create(
             "Downsample Mip " + std::to_string(mipTarget),
@@ -65,12 +67,13 @@ auto BeBloomPass::Initialise() -> void {
         mat->SetFloat2("TexelSize", glm::vec2(texelSizeX, texelSizeY));
         mat->SetFloat("PassRadius", passRadius);
         mat->SetTexture("BloomMipInput", sourceMip);
-        mat->UpdateGPUBuffers();
 
         _downsampleMaterials[mipTarget] = mat;
+        _downsampleBindings[mipTarget].Make(mat, _kawaseShader);
     }
 
     _upsampleMaterials.resize(BloomMipCount);
+    _upsampleBindings.resize(BloomMipCount);
     for (uint32_t mipTarget = 0; mipTarget < BloomMipCount-1; ++mipTarget) {
         const auto mat = BeMaterial::Create(
             "Upsample Mip " + std::to_string(mipTarget),
@@ -90,9 +93,9 @@ auto BeBloomPass::Initialise() -> void {
         mat->SetFloat2("TexelSize", glm::vec2(texelSizeX, texelSizeY));
         mat->SetFloat("PassRadius", upsampleRadius);
         mat->SetTexture("BloomMipInput", sourceMip);
-        mat->UpdateGPUBuffers();
 
         _upsampleMaterials[mipTarget] = mat;
+        _upsampleBindings[mipTarget].Make(mat, _kawaseShader);
     }
 
     _addShader = BeAssetRegistry::GetShader("bloom-add").lock();
@@ -102,6 +105,7 @@ auto BeBloomPass::Initialise() -> void {
     _addMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
     _addMaterial->SetTexture("BloomInput", BloomMipTextures[0].lock());
     _addMaterial->SetTexture("DirtTexture", DirtTexture.lock());
+    _addBinding.Make(_addMaterial, _addShader);
 
     // Create add pipeline
     auto addPipelineDesc = _addShader->CreatePipelineDesc();
@@ -116,7 +120,7 @@ auto BeBloomPass::Render() -> void {
     RenderAddPass();
 }
 
-auto BeBloomPass::RenderBrightPass() const -> void {
+auto BeBloomPass::RenderBrightPass() -> void {
     const auto pipeline = _renderer->GetPipeline();
     const auto bloomMip0 = BloomMipTextures[0].lock();
 
@@ -128,7 +132,7 @@ auto BeBloomPass::RenderBrightPass() const -> void {
     });
 
     pipeline->BindPipeline(_brightPipeline);
-    pipeline->BindMaterialAutomatic(_brightMaterial, _brightShader);
+    pipeline->SetBindGroup(_brightBinding.Resolve(), 1);
     pipeline->Draw(4, 0);
 
     SenBackend::EndPass();
@@ -149,7 +153,7 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
             .Viewport = { 0, 0, (float)targetMip->Width, (float)targetMip->Height, 0, 1 },
         });
 
-        pipeline->BindMaterialAutomatic(_downsampleMaterials[mipTarget], _kawaseShader);
+        pipeline->SetBindGroup(_downsampleBindings[mipTarget].Resolve(), 1);
         pipeline->Draw(4, 0);
 
         SenBackend::EndPass();
@@ -171,14 +175,14 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
             .Viewport = { 0, 0, (float)targetMip->Width, (float)targetMip->Height, 0, 1 },
         });
 
-        pipeline->BindMaterialAutomatic(_upsampleMaterials[mipTarget], _kawaseShader);
+        pipeline->SetBindGroup(_upsampleBindings[mipTarget].Resolve(), 1);
         pipeline->Draw(4, 0);
 
         SenBackend::EndPass();
     }
 }
 
-auto BeBloomPass::RenderAddPass() const -> void {
+auto BeBloomPass::RenderAddPass() -> void {
     const auto& pipeline = _renderer->GetPipeline();
 
     SenBackend::BeginPass({
@@ -189,7 +193,7 @@ auto BeBloomPass::RenderAddPass() const -> void {
     });
 
     pipeline->BindPipeline(_addPipeline);
-    pipeline->BindMaterialAutomatic(_addMaterial, _addShader);
+    pipeline->SetBindGroup(_addBinding.Resolve(), 1);
     pipeline->Draw(4, 0);
 
     SenBackend::EndPass();

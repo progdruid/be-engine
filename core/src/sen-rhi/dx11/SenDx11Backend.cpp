@@ -171,6 +171,9 @@ uint32_t SenDx11Backend::_nextShaderId = 1;
 std::unordered_map<uint32_t, SenDx11PipelineEntry> SenDx11Backend::_pipelines;
 uint32_t SenDx11Backend::_nextPipelineId = 1;
 
+std::unordered_map<uint32_t, SenBindGroupDesc> SenDx11Backend::_bindGroups;
+uint32_t SenDx11Backend::_nextBindGroupId = 1;
+
 // ─── initialization ───────────────────────────────────────────────────────────
 
 auto SenDx11Backend::Init(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) -> void {
@@ -189,6 +192,7 @@ auto SenDx11Backend::Shutdown() -> void {
     _samplers.clear();
     _shaders.clear();
     _pipelines.clear();
+    _bindGroups.clear();
 }
 
 // ─── textures ─────────────────────────────────────────────────────────────────
@@ -556,6 +560,23 @@ auto SenDx11Backend::BeginPass(const SenPassDesc& desc) -> void {
 
 auto SenDx11Backend::EndPass() -> void {
     // Unbind all render targets
-    _context->OMSetRenderTargets(0, nullptr, nullptr); // comment this out. no need in this if everything works correctly
+    //_context->OMSetRenderTargets(0, nullptr, nullptr); // comment this out. no need in this if everything works correctly
+}
+
+
+// ─── bind groups ──────────────────────────────────────────────────────────────
+
+auto SenDx11Backend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindGroup {
+    const SenBindGroup handle { _nextBindGroupId++ };
+    _bindGroups[handle.ID] = desc;
+    return handle;
+}
+
+auto SenDx11Backend::DestroyBindGroup(SenBindGroup handle) -> void {
+    _bindGroups.erase(handle.ID);
+}
+
+auto SenDx11Backend::LookupBindGroup(SenBindGroup handle) -> SenBindGroupDesc& {
+    return _bindGroups.at(handle.ID);
 }
 

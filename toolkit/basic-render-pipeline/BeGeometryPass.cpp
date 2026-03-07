@@ -10,6 +10,7 @@
 #include "BeMaterial.h"
 #include "BePipeline.h"
 #include "BeRenderer.h"
+#include "BeShader.h"
 #include "BeTexture.h"
 #include "Utils.h"
 
@@ -59,25 +60,25 @@ auto BeGeometryPass::Render() -> void
         if (!_shaderPipelines.contains(shader.get())) {
             auto pipelineDesc = shader->CreatePipelineDesc();
             _shaderPipelines[shader.get()] = SenBackend::CreatePipeline(pipelineDesc);
+            _objectBindings[shader.get()].Make(_objectMaterial, shader);
         }
         pipeline->BindPipeline(_shaderPipelines[shader.get()]);
 
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", _renderer->UniformData.ProjectionView);
         _objectMaterial->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
-        _objectMaterial->UpdateGPUBuffers();
-        pipeline->BindMaterialAutomatic(_objectMaterial, shader);
+        pipeline->SetBindGroup(_objectBindings[shader.get()].Resolve(), 1);
 
         const auto& meshSlices = submissionBuffer->GetMeshSlices(entry.Prop->Mesh.get());
         for (size_t i = 0; i < meshSlices.size(); ++i) {
             const auto& meshSlice = meshSlices[i];
-            const auto& propSlice = entry.Prop->Slices[i];
+            auto& propSlice = entry.Prop->Slices[i];
 
             if (propSlice.TwoSided) {
                 context->RSSetState(_renderer->GetRasterizerCullNone().Get());
             }
 
-            pipeline->BindMaterialAutomatic(propSlice.Material, shader);
+            pipeline->SetBindGroup(propSlice.Binding.Resolve(), 2);
             pipeline->DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
 
             if (propSlice.TwoSided) {

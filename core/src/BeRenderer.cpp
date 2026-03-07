@@ -198,7 +198,6 @@ auto BeRenderer::Render() -> void {
     _context->DSSetConstantBuffers(0, 1, emptyBuffers);
     _context->PSSetConstantBuffers(0, 1, emptyBuffers);
 
-    _pipeline->ClearCache();
     _swapchain->Present(1, 0);
 }
 

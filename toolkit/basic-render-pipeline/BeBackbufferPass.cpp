@@ -20,6 +20,7 @@ auto BeBackbufferPass::Initialise() -> void {
     // Create graphics pipeline
     auto pipelineDesc = _backbufferShader->CreatePipelineDesc();
     _pipeline = SenBackend::CreatePipeline(pipelineDesc);
+    _backbufferBinding.Make(_backbufferMaterial, _backbufferShader);
 }
 
 auto BeBackbufferPass::Render() -> void {
@@ -37,7 +38,7 @@ auto BeBackbufferPass::Render() -> void {
     pipeline->BindPipeline(_pipeline);
 
     // bind material
-    pipeline->BindMaterialAutomatic(_backbufferMaterial, _backbufferShader);
+    pipeline->SetBindGroup(_backbufferBinding.Resolve(), 1);
 
     // draw
     pipeline->Draw(4, 0);

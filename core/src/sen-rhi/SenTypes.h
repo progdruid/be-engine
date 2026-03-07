@@ -278,3 +278,31 @@ struct SenPassDesc {
     std::optional<SenDepthAttachment> DepthAttachment;
     SenViewport                       Viewport;
 };
+
+
+// ─── bind group ──────────────────────────────────────────────────
+struct SenBindGroup {
+    uint32_t ID = 0;
+    auto IsValid() const -> bool { return ID != 0; }
+};
+
+struct SenBindGroupDesc {
+    struct TextureEntry {
+        SenTexture Texture;
+        uint8_t    Slot;
+    };
+
+    struct SamplerEntry {
+        SenSampler Sampler;
+        uint8_t    Slot;
+    };
+
+    struct BufferEntry {
+        SenBuffer Buffer;
+        uint8_t   Slot;
+    };
+    
+    std::vector<TextureEntry> Textures;
+    std::vector<SamplerEntry> Samplers;
+    std::vector<BufferEntry>  ConstantBuffers;
+};

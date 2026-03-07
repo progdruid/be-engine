@@ -28,6 +28,7 @@ class BeMaterial {
     bool _isFrequentlyUsed;
     BeMaterialScheme _scheme;
     uint32_t _uniqueID;
+    uint32_t _version;
 
     std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>> _textures;
     std::unordered_map<std::string, std::pair<SenSampler, uint8_t>> _samplers;
@@ -61,6 +62,12 @@ class BeMaterial {
     expose
     auto GetSchemeName () const -> std::string { return _scheme.Name; }
     auto GetUniqueID () const -> uint32_t { return _uniqueID; }
+    auto GetVersion () const -> uint32_t { return _version; }
+    
+    auto FlushBuffer () -> void;
+    auto BuildBindGroupDesc(uint8_t cbufferSlot) const -> SenBindGroupDesc;
+
+    auto Print() const -> std::string;
     
     auto SetFloat  (const std::string& propertyName, float value) -> void;
     auto SetFloat2 (const std::string& propertyName, glm::vec2 value) -> void;
@@ -80,13 +87,6 @@ class BeMaterial {
     auto SetSampler(const std::string& propertyName, SenSampler sampler) -> void;
     auto GetSampler(const std::string& propertyName) const -> SenSampler;
     
-    auto UpdateGPUBuffers () -> bool;
-    auto GetBuffer () const -> SenBuffer { return _cbuffer; }
-    auto GetTexturePairs () const -> const std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>>& { return _textures; }
-    auto GetSamplerPairs () const -> const std::unordered_map<std::string, std::pair<SenSampler, uint8_t>>& { return _samplers; }
-    
-    auto Print() const -> std::string;
-
     // internal ////////////////////////////////////////////////////////////////////////////////////////////////////////
-    hide auto AssembleData() -> void;
+    hide auto AssembleData    () -> void;
 };

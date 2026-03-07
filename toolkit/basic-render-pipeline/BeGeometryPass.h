@@ -5,6 +5,7 @@
 #include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
+#include "BeMaterialBinding.h"
 
 class BeBRPSubmissionBuffer;
 class BeTexture;
@@ -25,6 +26,7 @@ class BeGeometryPass final : public BeRenderPass {
     hide
     std::shared_ptr<BeMaterial> _objectMaterial;
     std::unordered_map<BeShader*, SenPipeline> _shaderPipelines;
+    std::unordered_map<BeShader*, BeMaterialBinding> _objectBindings;
     
     expose
     explicit BeGeometryPass();
