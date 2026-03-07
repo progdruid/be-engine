@@ -21,7 +21,7 @@ class SakuraScene : public BaseScene {
     std::unique_ptr<FreeCameraController> _freeCameraController;
     bool _useOrbitCamera = false;
     
-    std::shared_ptr<BeProp> _cube, _anvil, _sakura, _sakura2, _emissiveCube;
+    std::shared_ptr<BeProp> _cube, _anvil, _sakura, _sakura2, _emissiveCube, _moon;
     
     expose
     explicit SakuraScene(Game* game);

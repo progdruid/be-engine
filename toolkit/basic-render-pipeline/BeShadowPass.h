@@ -1,9 +1,9 @@
-﻿#pragma once
-#include <d3d11.h>
+#pragma once
 #include <memory>
 #include <span>
 #include <string>
 #include <unordered_map>
+#include <functional>
 #include <umbrellas/include-glm.h>
 #include <sen-rhi/SenTypes.h>
 
@@ -18,14 +18,30 @@ struct BeDirectionalLight;
 
 class BeShadowPass final : public BeRenderPass {
 
+    hide
+    struct PipelineKey {
+        BeShader* Shader;
+        bool TwoSided;
+
+        auto operator==(const PipelineKey& other) const -> bool {
+            return Shader == other.Shader && TwoSided == other.TwoSided;
+        }
+    };
+
+    struct PipelineKeyHash {
+        auto operator()(const PipelineKey& key) const -> size_t {
+            return std::hash<BeShader*>()(key.Shader) ^ (std::hash<bool>()(key.TwoSided) << 1);
+        }
+    };
+
     expose
     std::weak_ptr<BeBRPSubmissionBuffer> SubmissionBuffer;
 
     hide
     std::shared_ptr<BeMaterial> _objectMaterial;
-    std::unordered_map<BeShader*, SenPipeline> _shaderPipelines;
+    std::unordered_map<PipelineKey, SenPipeline, PipelineKeyHash> _shaderPipelines;
     std::unordered_map<BeShader*, BeMaterialBinding> _objectBindings;
-    
+
     expose
     explicit BeShadowPass() = default;
     ~BeShadowPass() override = default;

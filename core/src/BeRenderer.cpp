@@ -125,7 +125,11 @@ auto BeRenderer::LaunchDevice() -> void {
         .Access = SenBufferAccess::Dynamic,
         .Size   = sizeof(BeUniformBufferGPU),
     });
-    
+
+    _uniformBindGroup = SenBackend::CreateBindGroup({
+        .ConstantBuffers = {{ _uniformBuffer, 0 }},
+    });
+
     D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {};
     depthStencilStateDescriptor.DepthEnable = true;
     depthStencilStateDescriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
@@ -167,35 +171,15 @@ auto BeRenderer::InitialisePasses() const -> void {
 auto BeRenderer::Render() -> void {
     Utils::BeDebugAnnotation frameAnnotation(_context, "Frame");
 
-    // Set viewport
-    D3D11_VIEWPORT viewport;
-    viewport.TopLeftX = 0;
-    viewport.TopLeftY = 0;
-    viewport.Width = static_cast<FLOAT>(_width);
-    viewport.Height = static_cast<FLOAT>(_height);
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
-    _context->RSSetViewports(1, &viewport);
-
-
     const BeUniformBufferGPU uniformDataGpu(UniformData);
     SenBackend::WriteBuffer(_uniformBuffer, &uniformDataGpu, sizeof(BeUniformBufferGPU));
-    auto* rawUniformBuffer = SenBackend::LookupBuffer(_uniformBuffer).Buffer.Get();
-    _context->VSSetConstantBuffers(0, 1, &rawUniformBuffer);
-    _context->HSSetConstantBuffers(0, 1, &rawUniformBuffer);
-    _context->DSSetConstantBuffers(0, 1, &rawUniformBuffer);
-    _context->PSSetConstantBuffers(0, 1, &rawUniformBuffer);
+
+    _commandBuffer.SetBindGroup(_uniformBindGroup, 0);
 
     for (const auto& pass : _passes) {
         Utils::BeDebugAnnotation passAnnotation(_context, std::string(pass->GetPassName()));
         pass->Render();
     }
-
-    ID3D11Buffer* emptyBuffers[1] = { nullptr };
-    _context->VSSetConstantBuffers(0, 1, emptyBuffers);
-    _context->HSSetConstantBuffers(0, 1, emptyBuffers);
-    _context->DSSetConstantBuffers(0, 1, emptyBuffers);
-    _context->PSSetConstantBuffers(0, 1, emptyBuffers);
 
     _swapchain->Present(1, 0);
 }

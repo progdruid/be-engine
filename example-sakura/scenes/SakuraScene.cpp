@@ -66,6 +66,9 @@ auto SakuraScene::Prepare() -> void {
 
     _emissiveCube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, *GameIns->Renderer);
     _emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.99f, 0.8f, 0.6f) * 1.7f);
+    
+    _moon = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, *GameIns->Renderer);
+    _moon->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 2.1f);
 
     _anvil = BeProp::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
     _anvil->Materials[0]->SetFloat3("SpecularColor", glm::vec3(1.0f));
@@ -82,6 +85,7 @@ auto SakuraScene::Prepare() -> void {
     GameIns->SubmissionBuffer->RegisterMesh(_sakura->Mesh);
     GameIns->SubmissionBuffer->RegisterMesh(_sakura2->Mesh);
     GameIns->SubmissionBuffer->RegisterMesh(_emissiveCube->Mesh);
+    GameIns->SubmissionBuffer->RegisterMesh(_moon->Mesh);
 
     GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
 
@@ -263,6 +267,8 @@ auto SakuraScene::OnLoad() -> void {
 
     CreateEntity(_registry
         ,NameComponent { .Name = "Moon" }
+        ,TransformComponent { .Position = glm::vec3(100, 150, 100), .Scale = glm::vec3(6.f) }
+        ,RenderComponent { .Prop = _moon, .CastShadows = false }
         ,SunLightComponent {
             .Direction = { -1, -1, -1 },
             .Color = glm::vec3(0.7f, 0.7f, 0.99),

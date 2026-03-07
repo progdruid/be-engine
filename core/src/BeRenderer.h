@@ -42,10 +42,11 @@ class BeRenderer {
     SenCommandBuffer _commandBuffer;
 
     SenBuffer _uniformBuffer;
+    SenBindGroup _uniformBindGroup;
     ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
     ComPtr<ID3D11RasterizerState> _rasterizerCullBack;
     ComPtr<ID3D11RasterizerState> _rasterizerCullNone;
-    
+
     std::vector<BeRenderPass*> _passes;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////

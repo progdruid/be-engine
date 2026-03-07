@@ -18,7 +18,6 @@ auto BeShadowPass::Initialise() -> void {
 }
 
 auto BeShadowPass::Render() -> void {
-    const auto context = _renderer->GetContext();
     const auto& submissionBuffer = *SubmissionBuffer.lock();
 
     const auto& sunLights = submissionBuffer.GetSunLightEntries();
@@ -26,7 +25,6 @@ auto BeShadowPass::Render() -> void {
         if (!sunLights[i].CastsShadows)
             continue;
 
-        Utils::BeDebugAnnotation directionalLightAnnotation(context, "Directional Light Shadows " + std::to_string(i));
         RenderDirectionalShadows(sunLights[0], submissionBuffer);
     }
 
@@ -35,7 +33,6 @@ auto BeShadowPass::Render() -> void {
         if (!pointLights[i].CastsShadows)
             continue;
 
-        Utils::BeDebugAnnotation pointLightAnnotation(context, "Point Light Shadows " + std::to_string(i));
         RenderPointLightShadows(pointLights[i], submissionBuffer);
     }
 }
@@ -44,17 +41,14 @@ auto BeShadowPass::RenderDirectionalShadows(
     const BeBRPSunLightEntry& sunLight,
     const BeBRPSubmissionBuffer& submissionBuffer
 ) -> void {
-    const auto& context = _renderer->GetContext();
     auto& cmd = _renderer->GetCommandBuffer();
 
-    // Begin pass with depth-only target
     cmd.BeginPass({
         .DepthAttachment = SenDepthAttachment{ sunLight.ShadowMap.lock()->Handle },
         .Viewport = { 0, 0, (float)sunLight.ShadowMapResolution, (float)sunLight.ShadowMapResolution, 0, 1 },
     });
     SCOPE_EXIT { cmd.EndPass(); };
 
-    // Set vertex and index buffers
     cmd.SetVertexBuffer(submissionBuffer.GetSharedVertexBuffer(), sizeof(BeFullVertex));
     cmd.SetIndexBuffer(submissionBuffer.GetSharedIndexBuffer());
     SCOPE_EXIT {
@@ -68,13 +62,10 @@ auto BeShadowPass::RenderDirectionalShadows(
             continue;
 
         const auto shader = entry.Prop->Shader;
-        // Get or create pipeline for this shader
-        if (!_shaderPipelines.contains(shader.get())) {
-            auto pipelineDesc = shader->CreatePipelineDesc();
-            _shaderPipelines[shader.get()] = SenBackend::CreatePipeline(pipelineDesc);
+
+        if (!_objectBindings.contains(shader.get())) {
             _objectBindings[shader.get()].Make(_objectMaterial, shader);
         }
-        cmd.SetPipeline(_shaderPipelines[shader.get()]);
 
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
@@ -86,16 +77,16 @@ auto BeShadowPass::RenderDirectionalShadows(
             const auto& meshSlice = meshSlices[i];
             auto& propSlice = entry.Prop->Slices[i];
 
-            if (propSlice.TwoSided) {
-                context->RSSetState(_renderer->GetRasterizerCullNone().Get());
+            PipelineKey key{ shader.get(), propSlice.TwoSided };
+            if (!_shaderPipelines.contains(key)) {
+                auto pipelineDesc = shader->CreatePipelineDesc();
+                pipelineDesc.RasterizerState.CullMode = propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back;
+                _shaderPipelines[key] = SenBackend::CreatePipeline(pipelineDesc);
             }
+            cmd.SetPipeline(_shaderPipelines[key]);
 
             cmd.SetBindGroup(propSlice.Binding.Resolve(), 2);
             cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
-
-            if (propSlice.TwoSided) {
-                context->RSSetState(_renderer->GetRasterizerCullBack().Get());
-            }
         }
     }
 }
@@ -104,11 +95,8 @@ auto BeShadowPass::RenderPointLightShadows(
     const BeBRPPointLightEntry& pointLight,
     const BeBRPSubmissionBuffer& submissionBuffer
 ) -> void {
-    // get what we need
-    const auto& context = _renderer->GetContext();
     auto& cmd = _renderer->GetCommandBuffer();
 
-    // sort out vertex and index buffers
     cmd.SetVertexBuffer(submissionBuffer.GetSharedVertexBuffer(), sizeof(BeFullVertex));
     cmd.SetIndexBuffer(submissionBuffer.GetSharedIndexBuffer());
     SCOPE_EXIT {
@@ -118,9 +106,7 @@ auto BeShadowPass::RenderPointLightShadows(
 
     auto shadowMapPtr = pointLight.ShadowMap.lock();
 
-    // render each face
     for (int face = 0; face < 6; face++) {
-        // Begin pass for this cubemap face
         cmd.BeginPass({
             .DepthAttachment = SenDepthAttachment{
                 shadowMapPtr->Handle,
@@ -133,42 +119,37 @@ auto BeShadowPass::RenderPointLightShadows(
 
         const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
-        // for each object
         const auto& entries = submissionBuffer.GetGeometryEntries();
         for (const auto& entry : entries) {
             if (!entry.CastShadows)
                 continue;
 
             const auto shader = entry.Prop->Shader;
-            // Get or create pipeline for this shader
-            if (!_shaderPipelines.contains(shader.get())) {
-                auto pipelineDesc = shader->CreatePipelineDesc();
-                _shaderPipelines[shader.get()] = SenBackend::CreatePipeline(pipelineDesc);
+
+            if (!_objectBindings.contains(shader.get())) {
                 _objectBindings[shader.get()].Make(_objectMaterial, shader);
             }
-            cmd.SetPipeline(_shaderPipelines[shader.get()]);
 
             _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
             _objectMaterial->SetMatrix("ProjectionView", faceViewProj);
             _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
             cmd.SetBindGroup(_objectBindings[shader.get()].Resolve(), 1);
 
-            // draw
             const auto& meshSlices = submissionBuffer.GetMeshSlices(entry.Prop->Mesh.get());
             for (size_t i = 0; i < meshSlices.size(); ++i) {
                 const auto& meshSlice = meshSlices[i];
                 auto& propSlice = entry.Prop->Slices[i];
 
-                if (propSlice.TwoSided) {
-                    context->RSSetState(_renderer->GetRasterizerCullNone().Get());
+                PipelineKey key{ shader.get(), propSlice.TwoSided };
+                if (!_shaderPipelines.contains(key)) {
+                    auto pipelineDesc = shader->CreatePipelineDesc();
+                    pipelineDesc.RasterizerState.CullMode = propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back;
+                    _shaderPipelines[key] = SenBackend::CreatePipeline(pipelineDesc);
                 }
+                cmd.SetPipeline(_shaderPipelines[key]);
 
                 cmd.SetBindGroup(propSlice.Binding.Resolve(), 2);
                 cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
-
-                if (propSlice.TwoSided) {
-                    context->RSSetState(_renderer->GetRasterizerCullBack().Get());
-                }
             }
         }
     }

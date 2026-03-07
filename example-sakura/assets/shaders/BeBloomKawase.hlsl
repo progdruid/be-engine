@@ -55,23 +55,26 @@ struct PixelOutput {
 PixelOutput PixelFunction(FullscreenVSOutput input) {
     float2 offset = _Main.TexelSize * _Main.PassRadius;
     
-    static const float2 offsets[6] = {
-        float2( 0.0,      1.384),
-        float2( 0.0,     -1.384),
-        float2( 1.120,   -0.492),
-        float2( 1.120,    0.492),
-        float2(-1.120,    0.492),
-        float2(-1.120,   -0.492)
+    static const float2 offsets[8] = {
+        float2(-0.7, -0.7),  // top-left
+        float2( 0.0, -1.0),  // top
+        float2( 0.7, -0.7),  // top-right
+        float2(-1.0,  0.0),  // left
+        // float2(0.0, 0.0), // center - skip for ring blur
+        float2( 1.0,  0.0),  // right
+        float2(-0.7,  0.7),  // bottom-left
+        float2( 0.0,  1.0),  // bottom
+        float2( 0.7,  0.7)   // bottom-right
     };
 
     float3 color = float3(0.0, 0.0, 0.0);
 
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 8; ++i) {
         float2 sampleUV = input.UV + offsets[i] * offset;
         color += BloomMipInput.Sample(InputSampler, sampleUV).rgb;
     }
 
     PixelOutput output;
-    output.BloomMipOutput = color * 0.166666;
+    output.BloomMipOutput = color * 0.125;
     return output;
 }
