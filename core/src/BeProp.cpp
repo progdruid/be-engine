@@ -181,8 +181,6 @@ auto BeProp::LoadTextureFromAssimpPath(
     const BeRenderer& renderer
 )
     -> std::shared_ptr<BeTexture> {
-    const auto device = renderer.GetDevice();
-
     static int tempCount = -1;
     tempCount++;
     auto builder =
@@ -202,7 +200,7 @@ auto BeProp::LoadTextureFromAssimpPath(
         return builder
             .LoadFromFile(path)
             .AddToRegistry()
-            .Build(device);
+            .Build();
     }
 
     char* endPtr;
@@ -216,7 +214,7 @@ auto BeProp::LoadTextureFromAssimpPath(
         if (!decoded) throw std::runtime_error("Failed to decode embedded texture");
 
         const auto & resource = builder
-            .SetSize(w, h).FillFromMemory(decoded).AddToRegistry().Build(device);
+            .SetSize(w, h).FillFromMemory(decoded).AddToRegistry().Build();
         stbi_image_free(decoded);
         return resource;
     }
@@ -232,7 +230,7 @@ auto BeProp::LoadTextureFromAssimpPath(
         converted[i * 4 + 3] = srcData[i * 4 + 3]; // A
     }
     const auto & resource = builder
-        .SetSize(aiTex->mWidth, aiTex->mHeight).FillFromMemory(converted).AddToRegistry().Build(device);
+        .SetSize(aiTex->mWidth, aiTex->mHeight).FillFromMemory(converted).AddToRegistry().Build();
     free(converted);
     return resource;
 }

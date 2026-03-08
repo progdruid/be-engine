@@ -86,21 +86,21 @@ auto BeTexture::Builder::FlipVertically(const uint32_t w, const uint32_t h, uint
 auto BeTexture::Builder::AddToRegistry() -> Builder&& { _addToRegistry = true; return std::move(*this); }
 
 
-auto BeTexture::Builder::Build(const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeTexture> {
-    std::shared_ptr<BeTexture> resource(new BeTexture(device, _descriptor));
+auto BeTexture::Builder::Build() -> std::shared_ptr<BeTexture> {
+    std::shared_ptr<BeTexture> resource(new BeTexture(_descriptor));
     if (_addToRegistry)
         BeAssetRegistry::AddTexture(_descriptor.Name, resource);
     return resource;
 }
 
-auto BeTexture::Builder::BuildNoReturn(const ComPtr<ID3D11Device>& device) -> void {
-    const std::shared_ptr<BeTexture> resource(new BeTexture(device, _descriptor));
+auto BeTexture::Builder::BuildNoReturn() -> void {
+    const std::shared_ptr<BeTexture> resource(new BeTexture(_descriptor));
     if (_addToRegistry)
         BeAssetRegistry::AddTexture(_descriptor.Name, resource);
 }
 
 
-BeTexture::BeTexture(ComPtr<ID3D11Device> device, const BeTextureDescriptor& descriptor)
+BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
 : Name(descriptor.Name)
 , Width(descriptor.Width)
 , Height(descriptor.Height)

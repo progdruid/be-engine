@@ -52,8 +52,8 @@ class BeTexture {
 
         expose auto AddToRegistry () -> Builder&&;
 
-        expose auto Build(const ComPtr<ID3D11Device>& device) -> std::shared_ptr<BeTexture>;
-        expose auto BuildNoReturn(const ComPtr<ID3D11Device>& device) -> void;
+        expose auto Build() -> std::shared_ptr<BeTexture>;
+        expose auto BuildNoReturn() -> void;
 
         friend class BeTexture;
     }; 
@@ -74,7 +74,7 @@ class BeTexture {
     hide std::vector<SenViewport> _mipViewports;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
-    hide explicit BeTexture(ComPtr<ID3D11Device> device, const BeTextureDescriptor& descriptor);
+    hide explicit BeTexture(const BeTextureDescriptor& descriptor);
     expose ~BeTexture();
 
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////

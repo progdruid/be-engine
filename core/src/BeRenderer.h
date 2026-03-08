@@ -70,8 +70,10 @@ class BeRenderer {
     auto InitialisePasses() const -> void;
     auto Render() -> void;
 
-    [[nodiscard]] auto GetDevice() const -> ComPtr<ID3D11Device> { return _device; }
-    [[nodiscard]] auto GetContext() const -> ComPtr<ID3D11DeviceContext> { return _context; }
+    // Temp DX11-specific: for ImGui initialization until Vulkan migration
+    [[nodiscard]] auto GetTempImGuiDX11Device() const -> ComPtr<ID3D11Device> { return _device; }
+    [[nodiscard]] auto GetTempImGuiDX11Context() const -> ComPtr<ID3D11DeviceContext> { return _context; }
+
     [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer& { return _commandBuffer; }
     [[nodiscard]] auto GetBackbufferTarget() const -> ComPtr<ID3D11RenderTargetView> { return _backbufferTarget; }
     [[nodiscard]] auto GetBackbufferTexture() const -> SenTexture { return _backbufferTexture; }
@@ -82,6 +84,4 @@ class BeRenderer {
     [[nodiscard]] auto GetViewport () const -> SenViewport {
         return { 0, 0, (float)_width, (float)_height, 0, 1 };
     }
-    [[nodiscard]] auto GetRasterizerCullBack () const -> ComPtr<ID3D11RasterizerState> { return _rasterizerCullBack; }
-    [[nodiscard]] auto GetRasterizerCullNone () const -> ComPtr<ID3D11RasterizerState> { return _rasterizerCullNone; }
 };

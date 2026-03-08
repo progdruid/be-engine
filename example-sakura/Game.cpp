@@ -29,10 +29,8 @@ auto Game::Run() -> int {
     Height = Window->GetHeight();
     Renderer = std::make_shared<BeRenderer>(Width, Height, Window->GetHwnd());
     Renderer->LaunchDevice();
-    const auto device = Renderer->GetDevice();
-    
+
     SubmissionBuffer = std::make_shared<BeBRPSubmissionBuffer>();
-    SubmissionBuffer->Init(device);
     Input = std::make_unique<BeInput>(Window->GetGlfwWindow());
     
     
@@ -44,14 +42,14 @@ auto Game::Run() -> int {
     .SetFormat(SenFormat::RGBA8_Unorm)
     .FillWithColor(glm::vec4(1.f))
     .AddToRegistry()
-    .BuildNoReturn(device);
+    .BuildNoReturn();
     BeTexture::Create("black")
     .SetSize(1, 1)
     .SetUsage(SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::RGBA8_Unorm)
     .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
     .AddToRegistry()
-    .BuildNoReturn(device);
+    .BuildNoReturn();
     
     SetupScenes();
 

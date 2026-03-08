@@ -32,7 +32,7 @@ auto MainScene::Prepare() -> void {
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
     
-    const auto device = GameIns->Renderer->GetDevice();
+    
     
     BeTexture::Create("white")
     .SetSize(1, 1)
@@ -40,7 +40,7 @@ auto MainScene::Prepare() -> void {
     .SetFormat(SenFormat::RGBA8_Unorm)
     .FillWithColor(glm::vec4(1.f))
     .AddToRegistry()
-    .BuildNoReturn(device);
+    .BuildNoReturn();
 
     BeTexture::Create("black")
     .SetSize(1, 1)
@@ -48,7 +48,7 @@ auto MainScene::Prepare() -> void {
     .SetFormat(SenFormat::RGBA8_Unorm)
     .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
     .AddToRegistry()
-    .BuildNoReturn(device);
+    .BuildNoReturn();
 
     BeAssetRegistry::InjectRenderer(GameIns->Renderer);
     BeAssetRegistry::IndexShaderFiles({ 
@@ -111,7 +111,7 @@ auto MainScene::Prepare() -> void {
     .SetFormat(SenFormat::Depth32)
     .SetSize(_directionalLight->ShadowMapResolution, _directionalLight->ShadowMapResolution)
     .AddToRegistry()
-    .Build(device);
+    .Build();
     _directionalLight->CalculateMatrix();
 
     for (uint32_t i = 0; i < 4; ++i) {
@@ -131,7 +131,7 @@ auto MainScene::Prepare() -> void {
             .SetCubemap(true)
             .SetSize(pointLight.ShadowMapResolution, pointLight.ShadowMapResolution)
             .AddToRegistry()
-            .Build(device);
+            .Build();
 
         _pointLights.push_back(pointLight);
     }
@@ -145,35 +145,35 @@ auto MainScene::Prepare() -> void {
     .SetFormat(SenFormat::Depth32)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("BaseColor")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("WorldNormal")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::RGBA16_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("Specular-Shininess")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::RGBA8_Unorm)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("HDR-Input")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     for (int mip = 0; mip < 5; ++mip) {
         const float multiplier = glm::pow(0.5f, mip);
@@ -185,7 +185,7 @@ auto MainScene::Prepare() -> void {
         .SetFormat(SenFormat::R11G11B10_Float)
         .SetSize(mipWidth, mipHeight)
         .AddToRegistry()
-        .Build(device);
+        .Build();
     }
 
     BeTexture::Create("BloomOutput")
@@ -193,14 +193,14 @@ auto MainScene::Prepare() -> void {
     .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("TonemapperOutput")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 }
 
 auto MainScene::OnLoad() -> void {
@@ -231,7 +231,7 @@ auto MainScene::OnLoad() -> void {
     BeTexture::Create("BloomDirtTexture")
     .LoadFromFile("assets/bloom-dirt-mask.png")
     .AddToRegistry()
-    .BuildNoReturn(GameIns->Renderer->GetDevice());
+    .BuildNoReturn();
     const auto bloomPass = new BeBloomPass();
     GameIns->Renderer->AddRenderPass(bloomPass);
     bloomPass->InputHDRTexture = BeAssetRegistry::GetTexture("HDR-Input");

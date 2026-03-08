@@ -22,9 +22,6 @@ auto BeBRPSunLightEntry::CalculateViewProj(glm::vec3 direction, float shadowCame
     return lightOrtho * lightView;
 }
 
-auto BeBRPSubmissionBuffer::Init(const ComPtr<ID3D11Device>& device) -> void {
-    _device = device;
-}
 
 auto BeBRPSubmissionBuffer::ClearEntries() -> void {
     _geometryEntries.clear();
@@ -61,8 +58,6 @@ auto BeBRPSubmissionBuffer::RegisterMesh(const std::shared_ptr<BeMesh>& mesh) ->
 }
 
 auto BeBRPSubmissionBuffer::BakeMeshes() -> void {
-    be_assert(_device, "No device given. Submission buffer is probably uninitialized. Call Init.");
-
     //vbo + ibo
     size_t totalVerticesNumber = 0;
     size_t totalIndicesNumber = 0;

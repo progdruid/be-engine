@@ -61,46 +61,46 @@ void ShowcaseScene::Prepare() {
 auto ShowcaseScene::CreateTargetTextures() -> void {
     const uint32_t screenWidth = GameIns->Window->GetWidth();
     const uint32_t screenHeight = GameIns->Window->GetHeight();
-    const auto device = GameIns->Renderer->GetDevice();
+    
     
     BeTexture::Create("S_DepthStencil")
     .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::Depth32)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("S_BaseColor")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("S_WorldNormal")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::RGBA16_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("S_Specular-Shininess")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::RGBA8_Unorm)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("S_Emissive")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 }
 
 auto ShowcaseScene::LoadModels() -> void {
-    auto device = GameIns->Renderer->GetDevice();
+    
     
     auto standardShader = BeAssetRegistry::GetShader("standard");
     
@@ -157,7 +157,7 @@ auto ShowcaseScene::LoadModels() -> void {
 
 auto ShowcaseScene::CreateObjects() -> void {
     
-    auto device = GameIns->Renderer->GetDevice();
+    
     
     CreateEntity(_registry
         ,NameComponent { .Name = "showcased-object" }
@@ -188,7 +188,7 @@ auto ShowcaseScene::CreateObjects() -> void {
                 .SetFormat(SenFormat::Depth32)
                 .SetSize(4096, 4096)
                 .AddToRegistry()
-                .Build(device)
+                .Build()
         }
     );
 }
@@ -199,7 +199,7 @@ void ShowcaseScene::OnLoad() {
 }
 
 auto ShowcaseScene::LoadPasses() -> void {
-    const auto& device = GameIns->Renderer->GetDevice();
+    
     
     GameIns->Renderer->ClearPasses();
 

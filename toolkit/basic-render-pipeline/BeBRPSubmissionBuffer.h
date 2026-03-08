@@ -1,19 +1,15 @@
 #pragma once
-#include <d3d11.h>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 #include <umbrellas/access-modifiers.hpp>
 #include <umbrellas/include-glm.h>
-#include <wrl/client.h>
 
 #include "BeMesh.h"
 #include "BeProp.h"
 #include <sen-rhi/SenTypes.h>
 
 class BeTexture;
-
-using Microsoft::WRL::ComPtr;
 
 struct BeBRPGeometryEntry {
     glm::mat4 ModelMatrix;
@@ -63,9 +59,6 @@ struct BeBRPPointLightEntry {
 class BeBRPSubmissionBuffer {
 
     hide
-    ComPtr<ID3D11Device> _device;
-
-    hide
     std::vector<BeBRPGeometryEntry> _geometryEntries;
     std::vector<BeBRPSunLightEntry> _sunLightEntries;
     std::vector<BeBRPPointLightEntry> _pointLightEntries;
@@ -78,8 +71,6 @@ class BeBRPSubmissionBuffer {
     expose
     explicit BeBRPSubmissionBuffer() = default;
     ~BeBRPSubmissionBuffer() = default;
-
-    auto Init (const ComPtr<ID3D11Device>& device) -> void;
 
     expose
     auto ClearEntries () -> void;

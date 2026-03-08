@@ -36,7 +36,7 @@ auto SakuraScene::Prepare() -> void {
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
     
-    const auto device = GameIns->Renderer->GetDevice();
+    
 
     BeAssetRegistry::IndexShaderFiles({ 
         "assets/shaders/objectMaterial.hlsl", 
@@ -61,7 +61,7 @@ auto SakuraScene::Prepare() -> void {
         BeTexture::Create("Checkerboard")
         .LoadFromFile("assets/checkerboard.png")
         .AddToRegistry()
-        .Build(device)
+        .Build()
     );
 
     _emissiveCube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, *GameIns->Renderer);
@@ -97,42 +97,42 @@ auto SakuraScene::Prepare() -> void {
     .SetFormat(SenFormat::Depth32)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("BaseColor")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("WorldNormal")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::RGBA16_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("Specular-Shininess")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::RGBA8_Unorm)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("Emissive")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
     
     BeTexture::Create("HDR-Input")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     for (int mip = 0; mip < 5; ++mip) {
         const float multiplier = glm::pow(0.5f, mip);
@@ -144,7 +144,7 @@ auto SakuraScene::Prepare() -> void {
         .SetFormat(SenFormat::R11G11B10_Float)
         .SetSize(mipWidth, mipHeight)
         .AddToRegistry()
-        .Build(device);
+        .Build();
     }
 
     BeTexture::Create("BloomOutput")
@@ -152,18 +152,18 @@ auto SakuraScene::Prepare() -> void {
     .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 
     BeTexture::Create("TonemapperOutput")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::R11G11B10_Float)
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
-    .Build(device);
+    .Build();
 }
 
 auto SakuraScene::OnLoad() -> void {
-    const auto& device = GameIns->Renderer->GetDevice();
+    
 
     // Clear all entities from previous load
     _registry.clear();
@@ -196,7 +196,7 @@ auto SakuraScene::OnLoad() -> void {
     BeTexture::Create("BloomDirtTexture")
     .LoadFromFile("assets/bloom-dirt-mask.png")
     .AddToRegistry()
-    .BuildNoReturn(device);
+    .BuildNoReturn();
     const auto bloomPass = new BeBloomPass();
     GameIns->Renderer->AddRenderPass(bloomPass);
     bloomPass->InputHDRTexture = BeAssetRegistry::GetTexture("HDR-Input");
@@ -284,7 +284,7 @@ auto SakuraScene::OnLoad() -> void {
                 .SetFormat(SenFormat::Depth32)
                 .SetSize(4096, 4096)
                 .AddToRegistry()
-                .Build(device)
+                .Build()
         }
     );
     
@@ -306,7 +306,7 @@ auto SakuraScene::OnLoad() -> void {
                     .SetCubemap(true)
                     .SetSize(2048, 2048)
                     .AddToRegistry()
-                    .Build(device)
+                    .Build()
             }
             ,RenderComponent {
                 .Prop = _emissiveCube,
