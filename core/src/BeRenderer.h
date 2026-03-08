@@ -1,52 +1,34 @@
 ﻿#pragma once
 
-#include <d3d11.h>
-#include <dxgi1_2.h>
 #include <vector>
-#include <wrl/client.h>
 #include <memory>
 #include <umbrellas/access-modifiers.hpp>
 
 #include "BeBuffers.h"
 #include <sen-rhi/SenCommandBuffer.h>
+#include <sen-rhi/SenTypes.h>
 
 class BeWindow;
 class BeRenderPass;
 class BeShader;
-using Microsoft::WRL::ComPtr;
 
 
 class BeRenderer {
-
-    // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
-    hide static auto GetBestAdapter() -> ComPtr<IDXGIAdapter1>;
-    
-    
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose BeUniformData UniformData;
 
     hide
     uint32_t _width;
     uint32_t _height;
-    HWND _hwnd;
+    void* _nativeWindow;
 
-    // dx11 core components
-    ComPtr<ID3D11Device> _device;
-    ComPtr<ID3D11DeviceContext> _context;
-    ComPtr<IDXGIDevice> _dxgiDevice;
-    ComPtr<IDXGIAdapter> _adapter;
-    ComPtr<IDXGIFactory2> _factory;
-    ComPtr<IDXGISwapChain1> _swapchain;
-    ComPtr<ID3D11RenderTargetView> _backbufferTarget;
+    SenSwapchain _swapchain;
     SenTexture _backbufferTexture;
     SenCommandBuffer _commandBuffer;
 
     SenBuffer _uniformBuffer;
     SenBindGroupLayout _uniformBindGroupLayout;
     SenBindGroup _uniformBindGroup;
-    ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
-    ComPtr<ID3D11RasterizerState> _rasterizerCullBack;
-    ComPtr<ID3D11RasterizerState> _rasterizerCullNone;
 
     std::vector<BeRenderPass*> _passes;
 
@@ -55,7 +37,7 @@ class BeRenderer {
     explicit BeRenderer(
         uint32_t width,
         uint32_t height,
-        HWND window
+        void* nativeWindow
     );
     ~BeRenderer();
     
@@ -70,12 +52,7 @@ class BeRenderer {
     auto InitialisePasses() const -> void;
     auto Render() -> void;
 
-    // Temp DX11-specific: for ImGui initialization until Vulkan migration
-    [[nodiscard]] auto GetTempImGuiDX11Device() const -> ComPtr<ID3D11Device> { return _device; }
-    [[nodiscard]] auto GetTempImGuiDX11Context() const -> ComPtr<ID3D11DeviceContext> { return _context; }
-
     [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer& { return _commandBuffer; }
-    [[nodiscard]] auto GetBackbufferTarget() const -> ComPtr<ID3D11RenderTargetView> { return _backbufferTarget; }
     [[nodiscard]] auto GetBackbufferTexture() const -> SenTexture { return _backbufferTexture; }
     [[nodiscard]] auto GetUniformBindGroupLayout() const -> SenBindGroupLayout { return _uniformBindGroupLayout; }
 

@@ -141,43 +141,6 @@ namespace Utils {
 
     inline ErrorStream Check;
 
-
-    inline ID3D11Buffer* NullBuffers            [D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT] = {};
-    inline ID3D11SamplerState* NullSamplers     [D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT] = {};
-    inline ID3D11ShaderResourceView* NullSRVs   [D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
-    inline ID3D11RenderTargetView* NullRTVs     [D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
-
-    // debug annotation helper for RenderDoc
-    class BeDebugAnnotation {
-    public:
-        explicit BeDebugAnnotation(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, const std::string& label)
-            : _context(context) {
-            if (!_context) return;
-
-            _context->QueryInterface(IID_PPV_ARGS(&_annotation));
-
-            if (_annotation) {
-                std::wstring wideLabel(label.begin(), label.end());
-                _annotation->BeginEvent(wideLabel.c_str());
-            }
-        }
-
-        ~BeDebugAnnotation() {
-            if (_annotation) {
-                _annotation->EndEvent();
-            }
-        }
-
-        BeDebugAnnotation(const BeDebugAnnotation&) = delete;
-        BeDebugAnnotation& operator=(const BeDebugAnnotation&) = delete;
-        BeDebugAnnotation(BeDebugAnnotation&&) = delete;
-        BeDebugAnnotation& operator=(BeDebugAnnotation&&) = delete;
-
-    private:
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext> _context;
-        Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> _annotation;
-    };
-
 }
 
 

@@ -22,7 +22,7 @@ auto Game::Run() -> int {
     Height = 1080;
     
     Window = std::make_shared<BeWindow>(Width, Height, "be: example game 1");
-    Renderer = std::make_shared<BeRenderer>(Width, Height, Window->GetHwnd());
+    Renderer = std::make_shared<BeRenderer>(Width, Height, static_cast<void*>(Window->GetHwnd()));
     Renderer->LaunchDevice();
     
     Input = std::make_unique<BeInput>(Window->GetGlfwWindow());

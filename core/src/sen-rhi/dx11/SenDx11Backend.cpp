@@ -1,7 +1,10 @@
 #include "SenDx11Backend.h"
 
+#include <d3d11.h>
+#include <dxgi1_2.h>
+#include <dxgi1_6.h>
 #include <unordered_map>
-#include "Utils.h"
+#include <Utils.h>
 #include <umbrellas/include-libassert.h>
 #include <sen-rhi/dx11/SenDx11Convert.h>
 #include <sen-rhi/SenShaderCompiler.h>
@@ -155,6 +158,11 @@ static auto CreateTextureCubemap(
 
 ComPtr<ID3D11Device>        SenDx11Backend::_device;
 ComPtr<ID3D11DeviceContext> SenDx11Backend::_context;
+ComPtr<IDXGIFactory2>       SenDx11Backend::_factory;
+ComPtr<ID3D11DepthStencilState> SenDx11Backend::_defaultDepthStencilState;
+ComPtr<ID3D11RasterizerState>   SenDx11Backend::_rasterizerCullBack;
+ComPtr<ID3D11RasterizerState>   SenDx11Backend::_rasterizerCullNone;
+ComPtr<ID3DUserDefinedAnnotation> SenDx11Backend::_annotation;
 
 std::unordered_map<uint32_t, SenDx11TextureEntry> SenDx11Backend::_textures;
 uint32_t SenDx11Backend::_nextTextureId = 1;
@@ -171,17 +179,113 @@ uint32_t SenDx11Backend::_nextShaderId = 1;
 std::unordered_map<uint32_t, SenDx11PipelineEntry> SenDx11Backend::_pipelines;
 uint32_t SenDx11Backend::_nextPipelineId = 1;
 
+std::unordered_map<uint32_t, SenDx11SwapchainEntry> SenDx11Backend::_swapchains;
+uint32_t SenDx11Backend::_nextSwapchainId = 1;
+
 std::unordered_map<uint32_t, SenBindGroupLayoutDesc> SenDx11Backend::_bindGroupLayouts;
 uint32_t SenDx11Backend::_nextBindGroupLayoutId = 1;
 
 std::unordered_map<uint32_t, SenBindGroupDesc> SenDx11Backend::_bindGroups;
 uint32_t SenDx11Backend::_nextBindGroupId = 1;
 
+// ─── device adapter selection ───────────────────────────────────
+
+auto SenDx11Backend::GetBestAdapter() -> ComPtr<IDXGIAdapter1> {
+    ComPtr<IDXGIFactory6> f6;
+    Utils::Check << CreateDXGIFactory1(IID_PPV_ARGS(&f6));
+
+    uint32_t adapterIndex = 0;
+    bool outOfAdapters = false;
+    while (!outOfAdapters) {
+        ComPtr<IDXGIAdapter1> adapter;
+        HRESULT hr = f6->EnumAdapterByGpuPreference(
+            adapterIndex,
+            DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+            IID_PPV_ARGS(&adapter)
+        );
+        if (FAILED(hr)) {
+            outOfAdapters = true;
+            continue;
+        }
+
+        DXGI_ADAPTER_DESC1 desc{};
+        Utils::Check << adapter->GetDesc1(&desc);
+
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
+            adapterIndex++;
+            continue;
+        }
+
+        return adapter; // first high-perf adapter
+    }
+    return nullptr;
+}
+
+
 // ─── initialization ───────────────────────────────────────────────────────────
 
-auto SenDx11Backend::Init(const ComPtr<ID3D11Device>& device, const ComPtr<ID3D11DeviceContext>& context) -> void {
-    _device = device;
-    _context = context;
+auto SenDx11Backend::Init(const SenDeviceDesc& desc) -> void {
+    SenShaderCompiler::Launch();
+
+    UINT deviceFlags = 0;
+#if defined(_DEBUG)
+    deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    if (desc.DebugLayer) {
+        deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    }
+#endif
+
+    D3D_FEATURE_LEVEL featureLevelOut{};
+    static constexpr D3D_FEATURE_LEVEL featureLevels[] = {
+        D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0
+    };
+
+    const ComPtr<IDXGIAdapter1> adapter = GetBestAdapter();
+
+    // Device and context
+    Utils::Check << D3D11CreateDevice(
+        adapter.Get(),
+        D3D_DRIVER_TYPE_UNKNOWN,
+        nullptr,
+        deviceFlags,
+        featureLevels,
+        std::size(featureLevels),
+        D3D11_SDK_VERSION,
+        &_device,
+        nullptr,
+        &_context
+    );
+
+    // DXGI interfaces
+    ComPtr<IDXGIDevice> dxgiDevice;
+    ComPtr<IDXGIAdapter> adapterFromDevice;
+    Utils::Check
+    << _device.As(&dxgiDevice)
+    << dxgiDevice->GetAdapter(&adapterFromDevice)
+    << adapterFromDevice->GetParent(IID_PPV_ARGS(&_factory));
+
+    // Setup default render states (for safety)
+    {
+        D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {};
+        depthStencilStateDescriptor.DepthEnable = true;
+        depthStencilStateDescriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+        depthStencilStateDescriptor.DepthFunc = D3D11_COMPARISON_LESS;
+        depthStencilStateDescriptor.StencilEnable = false;
+        Utils::Check << _device->CreateDepthStencilState(&depthStencilStateDescriptor, _defaultDepthStencilState.GetAddressOf());
+        _context->OMSetDepthStencilState(_defaultDepthStencilState.Get(), 1);
+
+        D3D11_RASTERIZER_DESC rasterDesc = {};
+        rasterDesc.FillMode = D3D11_FILL_SOLID;
+        rasterDesc.CullMode = D3D11_CULL_BACK;
+        rasterDesc.FrontCounterClockwise = FALSE;
+        rasterDesc.DepthClipEnable = TRUE;
+        Utils::Check << _device->CreateRasterizerState(&rasterDesc, _rasterizerCullBack.GetAddressOf());
+
+        rasterDesc.CullMode = D3D11_CULL_NONE;
+        Utils::Check << _device->CreateRasterizerState(&rasterDesc, _rasterizerCullNone.GetAddressOf());
+
+        _context->RSSetState(_rasterizerCullBack.Get());
+    }
 }
 
 auto SenDx11Backend::Shutdown() -> void {
@@ -190,13 +294,132 @@ auto SenDx11Backend::Shutdown() -> void {
     }
     _device.Reset();
     _context.Reset();
+    _factory.Reset();
+    _annotation.Reset();
+    _defaultDepthStencilState.Reset();
+    _rasterizerCullBack.Reset();
+    _rasterizerCullNone.Reset();
     _textures.clear();
     _buffers.clear();
     _samplers.clear();
     _shaders.clear();
     _pipelines.clear();
+    _swapchains.clear();
     _bindGroups.clear();
 }
+
+
+// ─── swapchain ────────────────────────────────────────────────────────────────
+
+auto SenDx11Backend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapchain {
+    const SenSwapchain handle { _nextSwapchainId++ };
+    auto& entry = _swapchains[handle.ID];
+
+    entry.Width = desc.Width;
+    entry.Height = desc.Height;
+
+    DXGI_SWAP_CHAIN_DESC1 scDesc = {
+        .Width = desc.Width,
+        .Height = desc.Height,
+        .Format = Sen::Dx11::ToFormat(desc.Format),
+        .SampleDesc = { .Count = 1 },
+        .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+        .BufferCount = desc.BufferCount,
+        .Scaling = DXGI_SCALING_STRETCH,
+        .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+        .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
+    };
+
+    HWND hwnd = static_cast<HWND>(desc.NativeWindowHandle);
+    Utils::Check << _factory->CreateSwapChainForHwnd(_device.Get(), hwnd, &scDesc, nullptr, nullptr, &entry.Swapchain);
+    Utils::Check << _factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
+
+    // Create backbuffer texture handle and RTV
+    ComPtr<ID3D11Texture2D> backBuffer;
+    Utils::Check
+    << entry.Swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))
+    << _device->CreateRenderTargetView(backBuffer.Get(), nullptr, &entry.BackbufferRTV);
+
+    // Register backbuffer as texture handle
+    entry.BackbufferTextureHandle = { _nextTextureId++ };
+    auto& textureEntry = _textures[entry.BackbufferTextureHandle.ID];
+    textureEntry.MipRTVs.resize(1);
+    textureEntry.MipRTVs[0] = entry.BackbufferRTV;
+
+    return handle;
+}
+
+auto SenDx11Backend::DestroySwapchain(SenSwapchain handle) -> void {
+    auto& entry = _swapchains.at(handle.ID);
+    _textures.erase(entry.BackbufferTextureHandle.ID);
+    _swapchains.erase(handle.ID);
+}
+
+auto SenDx11Backend::ResizeSwapchain(SenSwapchain handle, uint32_t width, uint32_t height) -> void {
+    auto& entry = _swapchains.at(handle.ID);
+    entry.Width = width;
+    entry.Height = height;
+
+    // Unregister old backbuffer texture
+    _textures.erase(entry.BackbufferTextureHandle.ID);
+    entry.BackbufferRTV.Reset();
+
+    // Resize swapchain
+    Utils::Check << entry.Swapchain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+
+    // Recreate backbuffer RTV
+    ComPtr<ID3D11Texture2D> backBuffer;
+    Utils::Check
+    << entry.Swapchain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))
+    << _device->CreateRenderTargetView(backBuffer.Get(), nullptr, &entry.BackbufferRTV);
+
+    // Re-register backbuffer as texture handle (same ID)
+    auto& textureEntry = _textures[entry.BackbufferTextureHandle.ID];
+    textureEntry.MipRTVs.resize(1);
+    textureEntry.MipRTVs[0] = entry.BackbufferRTV;
+}
+
+auto SenDx11Backend::BeginFrame(SenSwapchain handle) -> SenTexture {
+    auto& entry = _swapchains.at(handle.ID);
+    return entry.BackbufferTextureHandle;
+}
+
+auto SenDx11Backend::EndFrame(SenSwapchain handle) -> void {
+    auto& entry = _swapchains.at(handle.ID);
+    Utils::Check << entry.Swapchain->Present(1, 0);
+}
+
+auto SenDx11Backend::CreateCommandBuffer() -> SenCommandBuffer {
+    return SenCommandBuffer(_context);
+}
+
+auto SenDx11Backend::GetNativeDevice() -> void* {
+    return _device.Get();
+}
+
+auto SenDx11Backend::GetNativeContext() -> void* {
+    return _context.Get();
+}
+
+auto SenDx11Backend::BeginDebugEvent(const std::string& label) -> void {
+    if (!_context) {
+        return;
+    }
+
+    _context->QueryInterface(IID_PPV_ARGS(&_annotation));
+
+    if (_annotation) {
+        std::wstring wideLabel(label.begin(), label.end());
+        _annotation->BeginEvent(wideLabel.c_str());
+    }
+}
+
+auto SenDx11Backend::EndDebugEvent() -> void {
+    if (_annotation) {
+        _annotation->EndEvent();
+    }
+}
+
 
 // ─── textures ─────────────────────────────────────────────────────────────────
 
@@ -490,18 +713,6 @@ auto SenDx11Backend::DestroyPipeline(SenPipeline handle) -> void {
 auto SenDx11Backend::LookupPipeline(SenPipeline handle) -> SenDx11PipelineEntry& {
     return _pipelines.at(handle.ID);
 }
-
-// ─── render passes ────────────────────────────────────────────────────────────
-
-auto SenDx11Backend::RegisterBackbuffer(const ComPtr<ID3D11RenderTargetView>& backbufferRTV) -> SenTexture {
-    const SenTexture handle { _nextTextureId++ };
-    auto& entry = _textures[handle.ID];
-    entry.MipRTVs.resize(1);
-    entry.MipRTVs[0] = backbufferRTV;
-    // Don't set Texture, SRV, DSV, CubemapDSVs, CubemapMipRTVs (backbuffer is output-only)
-    return handle;
-}
-
 
 // ─── bind group layouts ───────────────────────────────────────────────────────
 

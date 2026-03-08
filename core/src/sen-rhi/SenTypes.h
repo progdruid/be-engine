@@ -323,3 +323,34 @@ struct SenPassDesc {
     std::optional<SenDepthAttachment> DepthAttachment;
     SenViewport                       Viewport;
 };
+
+
+// ─── device ─────────────────────────────────────────────────────
+
+struct SenDeviceDesc {
+    bool DebugLayer = false;
+};
+
+
+// ─── swapchain ──────────────────────────────────────────────────
+
+enum class SenPresentMode : uint8_t {
+    Immediate,  // no vsync  — DX11: Present(0), Vulkan: IMMEDIATE_KHR
+    VSync,      // vsync     — DX11: Present(1), Vulkan: FIFO_KHR
+    Mailbox,    // triple-buf — Vulkan: MAILBOX_KHR, DX11: falls back to VSync
+};
+
+struct SenSwapchain {
+    uint32_t ID = 0;
+    auto IsValid() const -> bool { return ID != 0; }
+};
+
+struct SenSwapchainDesc {
+    void*          NativeWindowHandle = nullptr;  // HWND on Windows
+    uint32_t       Width       = 0;
+    uint32_t       Height      = 0;
+    SenFormat      Format      = SenFormat::RGBA8_Unorm;
+    uint32_t       BufferCount = 2;
+    SenPresentMode PresentMode = SenPresentMode::VSync;
+};
+

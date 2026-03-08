@@ -24,7 +24,10 @@ auto BeImGuiPass::Initialise() -> void {
     ImGui::StyleColorsDark();
 
     ImGui_ImplGlfw_InitForOther(_window->GetGlfwWindow(), true);
-    ImGui_ImplDX11_Init(_renderer->GetTempImGuiDX11Device().Get(), _renderer->GetTempImGuiDX11Context().Get());
+    ImGui_ImplDX11_Init(
+        static_cast<ID3D11Device*>(SenBackend::GetNativeDevice()),
+        static_cast<ID3D11DeviceContext*>(SenBackend::GetNativeContext())
+    );
 }
 
 auto BeImGuiPass::Render() -> void {

@@ -27,7 +27,7 @@ auto Game::Run() -> int {
     Window = std::make_shared<BeWindow>(0, 0, "be: example sakura", BeWindowMode::BorderlessFullscreen);
     Width = Window->GetWidth();
     Height = Window->GetHeight();
-    Renderer = std::make_shared<BeRenderer>(Width, Height, Window->GetHwnd());
+    Renderer = std::make_shared<BeRenderer>(Width, Height, static_cast<void*>(Window->GetHwnd()));
     Renderer->LaunchDevice();
 
     SubmissionBuffer = std::make_shared<BeBRPSubmissionBuffer>();
