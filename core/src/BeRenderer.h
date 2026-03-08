@@ -42,6 +42,7 @@ class BeRenderer {
     SenCommandBuffer _commandBuffer;
 
     SenBuffer _uniformBuffer;
+    SenBindGroupLayout _uniformBindGroupLayout;
     SenBindGroup _uniformBindGroup;
     ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
     ComPtr<ID3D11RasterizerState> _rasterizerCullBack;
@@ -74,6 +75,7 @@ class BeRenderer {
     [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer& { return _commandBuffer; }
     [[nodiscard]] auto GetBackbufferTarget() const -> ComPtr<ID3D11RenderTargetView> { return _backbufferTarget; }
     [[nodiscard]] auto GetBackbufferTexture() const -> SenTexture { return _backbufferTexture; }
+    [[nodiscard]] auto GetUniformBindGroupLayout() const -> SenBindGroupLayout { return _uniformBindGroupLayout; }
 
     [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }
     [[nodiscard]] auto GetHeight () const -> uint32_t { return _height; }

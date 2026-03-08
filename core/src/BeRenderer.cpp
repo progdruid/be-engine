@@ -126,8 +126,13 @@ auto BeRenderer::LaunchDevice() -> void {
         .Size   = sizeof(BeUniformBufferGPU),
     });
 
+    _uniformBindGroupLayout = SenBackend::CreateBindGroupLayout({ 
+        .BufferEntries = {SenBindGroupLayoutEntry { .Slot = 0}} 
+    });
+
     _uniformBindGroup = SenBackend::CreateBindGroup({
-        .ConstantBuffers = {{ _uniformBuffer, 0 }},
+        .Layout = _uniformBindGroupLayout,
+        .ConstantBuffers = {_uniformBuffer },
     });
 
     D3D11_DEPTH_STENCIL_DESC depthStencilStateDescriptor = {};

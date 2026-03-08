@@ -96,6 +96,48 @@ struct SenSamplerDesc {
 };
 
 
+// ─── bind group layout ───────────────────────────────────────────
+enum class SenShaderStageFlags : uint8_t {
+    None   = 0,
+    Vertex = 1 << 0,
+    Pixel  = 1 << 1,
+    Hull   = 1 << 2,
+    Domain = 1 << 3,
+    All    = Vertex | Pixel | Hull | Domain,
+};
+ENABLE_BITMASK(SenShaderStageFlags);
+
+struct SenBindGroupLayoutEntry {
+    uint8_t             Slot;
+    SenShaderStageFlags Stages = SenShaderStageFlags::All;
+};
+
+struct SenBindGroupLayout {
+    uint32_t ID = 0;
+    auto IsValid() const -> bool { return ID != 0; }
+};
+
+struct SenBindGroupLayoutDesc {
+    std::vector<SenBindGroupLayoutEntry> TextureEntries;
+    std::vector<SenBindGroupLayoutEntry> SamplerEntries;
+    std::vector<SenBindGroupLayoutEntry> BufferEntries;
+};
+
+
+// ─── bind group ──────────────────────────────────────────────────
+struct SenBindGroup {
+    uint32_t ID = 0;
+    auto IsValid() const -> bool { return ID != 0; }
+};
+
+struct SenBindGroupDesc {
+    SenBindGroupLayout          Layout;
+    std::vector<SenTexture>     Textures = {};
+    std::vector<SenSampler>     Samplers = {};
+    std::vector<SenBuffer>      ConstantBuffers = {};
+};
+
+
 // ─── blend state ───────────────────────────────────────────────
 enum class SenBlendFactor : uint8_t {
     Zero,
@@ -234,6 +276,9 @@ struct SenPipelineDesc {
     SenBlendState         BlendState;
     SenDepthStencilState  DepthStencilState;
 
+    // Bind group layouts (ordered by set index: 0, 1, 2, ...)
+    std::vector<SenBindGroupLayout> BindGroupLayouts;
+
     // Optional: render target formats (for validation/compatibility checking)
     std::vector<SenFormat> RenderTargetFormats;
 };
@@ -277,32 +322,4 @@ struct SenPassDesc {
     std::vector<SenColorAttachment>   ColorAttachments;
     std::optional<SenDepthAttachment> DepthAttachment;
     SenViewport                       Viewport;
-};
-
-
-// ─── bind group ──────────────────────────────────────────────────
-struct SenBindGroup {
-    uint32_t ID = 0;
-    auto IsValid() const -> bool { return ID != 0; }
-};
-
-struct SenBindGroupDesc {
-    struct TextureEntry {
-        SenTexture Texture;
-        uint8_t    Slot;
-    };
-
-    struct SamplerEntry {
-        SenSampler Sampler;
-        uint8_t    Slot;
-    };
-
-    struct BufferEntry {
-        SenBuffer Buffer;
-        uint8_t   Slot;
-    };
-    
-    std::vector<TextureEntry> Textures;
-    std::vector<SamplerEntry> Samplers;
-    std::vector<BufferEntry>  ConstantBuffers;
 };

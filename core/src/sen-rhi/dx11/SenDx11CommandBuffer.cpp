@@ -110,46 +110,54 @@ auto SenDx11CommandBuffer::SetPipeline(SenPipeline pipeline) -> void {
 
 auto SenDx11CommandBuffer::SetBindGroup(SenBindGroup group, uint8_t index) -> void {
     const auto& desc = SenDx11Backend::LookupBindGroup(group);
-
-    for (const auto& entry : desc.Textures) {
-        auto* srv = SenDx11Backend::LookupTexture(entry.Texture).SRV.Get();
+    const auto& layout = SenDx11Backend::LookupBindGroupLayout(desc.Layout);
+    
+    be_assert(desc.Textures.size() == layout.TextureEntries.size());
+    be_assert(desc.Samplers.size() == layout.SamplerEntries.size());
+    be_assert(desc.ConstantBuffers.size() == layout.BufferEntries.size());
+    
+    for (size_t i = 0; i < desc.Textures.size(); ++i) {
+        auto* srv = SenDx11Backend::LookupTexture(desc.Textures[i]).SRV.Get();
+        auto slot = layout.TextureEntries[i].Slot;
         if (_boundVertexShader) {
-            _context->VSSetShaderResources(entry.Slot, 1, &srv);
+            _context->VSSetShaderResources(slot, 1, &srv);
         }
         if (_boundHullShader && _boundDomainShader) {
-            _context->HSSetShaderResources(entry.Slot, 1, &srv);
-            _context->DSSetShaderResources(entry.Slot, 1, &srv);
+            _context->HSSetShaderResources(slot, 1, &srv);
+            _context->DSSetShaderResources(slot, 1, &srv);
         }
         if (_boundPixelShader) {
-            _context->PSSetShaderResources(entry.Slot, 1, &srv);
+            _context->PSSetShaderResources(slot, 1, &srv);
         }
     }
 
-    for (const auto& entry : desc.Samplers) {
-        auto* sampler = SenDx11Backend::LookupSampler(entry.Sampler).Sampler.Get();
+    for (size_t i = 0; i < desc.Samplers.size(); ++i) {
+        auto* sampler = SenDx11Backend::LookupSampler(desc.Samplers[i]).Sampler.Get();
+        auto slot = layout.SamplerEntries[i].Slot;
         if (_boundVertexShader) {
-            _context->VSSetSamplers(entry.Slot, 1, &sampler);
+            _context->VSSetSamplers(slot, 1, &sampler);
         }
         if (_boundHullShader && _boundDomainShader) {
-            _context->HSSetSamplers(entry.Slot, 1, &sampler);
-            _context->DSSetSamplers(entry.Slot, 1, &sampler);
+            _context->HSSetSamplers(slot, 1, &sampler);
+            _context->DSSetSamplers(slot, 1, &sampler);
         }
         if (_boundPixelShader) {
-            _context->PSSetSamplers(entry.Slot, 1, &sampler);
+            _context->PSSetSamplers(slot, 1, &sampler);
         }
     }
 
-    for (const auto& entry : desc.ConstantBuffers) {
-        auto* buffer = SenDx11Backend::LookupBuffer(entry.Buffer).Buffer.Get();
+    for (size_t i = 0; i < desc.ConstantBuffers.size(); ++i) {
+        auto* buffer = SenDx11Backend::LookupBuffer(desc.ConstantBuffers[i]).Buffer.Get();
+        auto slot = layout.BufferEntries[i].Slot;
         if (_boundVertexShader) {
-            _context->VSSetConstantBuffers(entry.Slot, 1, &buffer);
+            _context->VSSetConstantBuffers(slot, 1, &buffer);
         }
         if (_boundHullShader && _boundDomainShader) {
-            _context->HSSetConstantBuffers(entry.Slot, 1, &buffer);
-            _context->DSSetConstantBuffers(entry.Slot, 1, &buffer);
+            _context->HSSetConstantBuffers(slot, 1, &buffer);
+            _context->DSSetConstantBuffers(slot, 1, &buffer);
         }
         if (_boundPixelShader) {
-            _context->PSSetConstantBuffers(entry.Slot, 1, &buffer);
+            _context->PSSetConstantBuffers(slot, 1, &buffer);
         }
     }
 }

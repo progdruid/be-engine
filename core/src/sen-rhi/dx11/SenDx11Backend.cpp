@@ -171,6 +171,9 @@ uint32_t SenDx11Backend::_nextShaderId = 1;
 std::unordered_map<uint32_t, SenDx11PipelineEntry> SenDx11Backend::_pipelines;
 uint32_t SenDx11Backend::_nextPipelineId = 1;
 
+std::unordered_map<uint32_t, SenBindGroupLayoutDesc> SenDx11Backend::_bindGroupLayouts;
+uint32_t SenDx11Backend::_nextBindGroupLayoutId = 1;
+
 std::unordered_map<uint32_t, SenBindGroupDesc> SenDx11Backend::_bindGroups;
 uint32_t SenDx11Backend::_nextBindGroupId = 1;
 
@@ -497,6 +500,23 @@ auto SenDx11Backend::RegisterBackbuffer(const ComPtr<ID3D11RenderTargetView>& ba
     entry.MipRTVs[0] = backbufferRTV;
     // Don't set Texture, SRV, DSV, CubemapDSVs, CubemapMipRTVs (backbuffer is output-only)
     return handle;
+}
+
+
+// ─── bind group layouts ───────────────────────────────────────────────────────
+
+auto SenDx11Backend::CreateBindGroupLayout(const SenBindGroupLayoutDesc& desc) -> SenBindGroupLayout {
+    const SenBindGroupLayout handle { _nextBindGroupLayoutId++ };
+    _bindGroupLayouts[handle.ID] = desc;
+    return handle;
+}
+
+auto SenDx11Backend::DestroyBindGroupLayout(SenBindGroupLayout handle) -> void {
+    _bindGroupLayouts.erase(handle.ID);
+}
+
+auto SenDx11Backend::LookupBindGroupLayout(SenBindGroupLayout handle) -> SenBindGroupLayoutDesc& {
+    return _bindGroupLayouts.at(handle.ID);
 }
 
 

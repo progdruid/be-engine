@@ -91,6 +91,11 @@ class SenDx11Backend {
     expose // render passes
     static auto RegisterBackbuffer(const ComPtr<ID3D11RenderTargetView>& backbufferRTV) -> SenTexture;
 
+    expose // bind group layouts
+    static auto CreateBindGroupLayout  (const SenBindGroupLayoutDesc& desc) -> SenBindGroupLayout;
+    static auto DestroyBindGroupLayout (SenBindGroupLayout handle) -> void;
+    static auto LookupBindGroupLayout  (SenBindGroupLayout handle) -> SenBindGroupLayoutDesc&;
+
     expose // bind groups
     static auto CreateBindGroup  (const SenBindGroupDesc& desc) -> SenBindGroup;
     static auto DestroyBindGroup (SenBindGroup handle) -> void;
@@ -114,6 +119,9 @@ class SenDx11Backend {
 
     static std::unordered_map<uint32_t, SenDx11PipelineEntry> _pipelines;
     static uint32_t _nextPipelineId;
+
+    static std::unordered_map<uint32_t, SenBindGroupLayoutDesc> _bindGroupLayouts;
+    static uint32_t _nextBindGroupLayoutId;
 
     static std::unordered_map<uint32_t, SenBindGroupDesc> _bindGroups;
     static uint32_t _nextBindGroupId;

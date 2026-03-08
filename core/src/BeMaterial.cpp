@@ -72,25 +72,49 @@ auto BeMaterial::FlushBuffer() -> void {
     _cbufferDirty = false;
 }
 
-auto BeMaterial::BuildBindGroupDesc(uint8_t cbufferSlot) const -> SenBindGroupDesc {
-    SenBindGroupDesc desc;
+auto BeMaterial::BuildBindGroupLayoutDesc(uint8_t cbufferSlot) const -> SenBindGroupLayoutDesc {
+    SenBindGroupLayoutDesc desc;
 
     for (const auto& [name, pair] : _textures) {
         const auto& [texture, slot] = pair;
         if (texture && texture->Handle.IsValid()) {
-            desc.Textures.push_back({ texture->Handle, slot });
+            desc.TextureEntries.push_back({ slot });
         }
     }
 
     for (const auto& [name, pair] : _samplers) {
         const auto& [sampler, slot] = pair;
         if (sampler.IsValid()) {
-            desc.Samplers.push_back({ sampler, slot });
+            desc.SamplerEntries.push_back({ slot });
         }
     }
 
     if (_cbuffer.IsValid()) {
-        desc.ConstantBuffers.push_back({ _cbuffer, cbufferSlot });
+        desc.BufferEntries.push_back({ cbufferSlot });
+    }
+
+    return desc;
+}
+
+auto BeMaterial::BuildBindGroupDesc() const -> SenBindGroupDesc {
+    SenBindGroupDesc desc;
+
+    for (const auto& [_, pair] : _textures) {
+        const auto& [texture, _] = pair;
+        if (texture && texture->Handle.IsValid()) {
+            desc.Textures.push_back(texture->Handle);
+        }
+    }
+
+    for (const auto& [_, pair] : _samplers) {
+        const auto& [sampler, _] = pair;
+        if (sampler.IsValid()) {
+            desc.Samplers.push_back(sampler);
+        }
+    }
+
+    if (_cbuffer.IsValid()) {
+        desc.ConstantBuffers.push_back(_cbuffer);
     }
 
     return desc;
