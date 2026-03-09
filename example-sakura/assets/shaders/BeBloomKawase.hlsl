@@ -54,17 +54,17 @@ struct PixelOutput {
 
 PixelOutput PixelFunction(FullscreenVSOutput input) {
     float2 offset = _Main.TexelSize * _Main.PassRadius;
-    
+
+    // Kawase filter: 4 cardinal + 4 diagonal directions (normalized)
     static const float2 offsets[8] = {
-        float2(-0.7, -0.7),  // top-left
-        float2( 0.0, -1.0),  // top
-        float2( 0.7, -0.7),  // top-right
-        float2(-1.0,  0.0),  // left
-        // float2(0.0, 0.0), // center - skip for ring blur
         float2( 1.0,  0.0),  // right
-        float2(-0.7,  0.7),  // bottom-left
-        float2( 0.0,  1.0),  // bottom
-        float2( 0.7,  0.7)   // bottom-right
+        float2(-1.0,  0.0),  // left
+        float2( 0.0,  1.0),  // down
+        float2( 0.0, -1.0),  // up
+        float2( 0.7071,  0.7071),  // diagonal down-right
+        float2(-0.7071,  0.7071),  // diagonal down-left
+        float2( 0.7071, -0.7071),  // diagonal up-right
+        float2(-0.7071, -0.7071)   // diagonal up-left
     };
 
     float3 color = float3(0.0, 0.0, 0.0);

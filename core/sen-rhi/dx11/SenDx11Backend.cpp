@@ -1,10 +1,11 @@
 #include "SenDx11Backend.h"
 
 #include <d3d11.h>
+#include <d3d11_1.h>
 #include <dxgi1_2.h>
 #include <dxgi1_6.h>
 #include <unordered_map>
-#include <Utils.h>
+#include <sen-rhi/dx11/SenDx11Utils.h>
 #include <umbrellas/include-libassert.h>
 #include <sen-rhi/dx11/SenDx11Convert.h>
 #include <sen-rhi/SenShaderCompiler.h>

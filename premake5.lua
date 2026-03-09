@@ -1,28 +1,60 @@
 -- premake5.lua
+local Be     = require("build/be")
+local Vendor = require("build/vendor")
 
-include "premake-helpers.lua"
 
-if _ACTION == "vs2022" or _ACTION == "vs2019" then
-    cleanGenerated()
-end
+-- options ----------------------------------------------------------------------
 
-newaction {
+newoption {
     trigger = "clean",
-    description = "Clean all generated project files",
-    onStart = function() cleanGenerated() end
+    description = "Also clean bin/ and obj/ build outputs"
 }
 
 
-workspace "be"
-    configurations { "Debug", "Release" }
-    system "windows"
-    architecture "x86_64"
-    location "."
+-- actions ----------------------------------------------------------------------
 
-include "premake-vendors.lua"
-include "premake-core.lua"
-include "premake-toolkit.lua"
-include "premake-misc-configuration.lua"
-include "premake-example-game-1.lua"
-include "premake-example-sakura.lua"
-include "premake-devtool-shader-boilerplate-autogen.lua"
+newaction {
+    trigger = "clean",
+    description = "Clean all generated project files and build outputs",
+    onStart = function()
+        Be.CleanProjectFiles()
+        Be.CleanBinaries()
+        Vendor.CleanProjectFiles()
+        Vendor.CleanBinaries()
+    end
+}
+
+newaction {
+    trigger = "cook-vendors",
+    description = "Clean and rebuild all vendor libraries for all configurations",
+    onStart = function()
+        print("--- Cleaning leftovers ---")
+        Vendor.CleanProjectFiles()
+        Vendor.CleanBinaries()
+
+        print("--- Ordering vendor solution ---")
+        local premake = 'premake5.exe --file=premake5-vendor.lua vs2022'
+        assert(os.execute(premake), "Failed to generate vendor solution")
+
+        local configurations = { "Debug", "Release" }
+        for _, cfg in ipairs(configurations) do
+            print("--- Cooking vendor " .. cfg .. " ---")
+            local cmd = 'msbuild vendor.sln /p:Configuration=' .. cfg .. ' /p:Platform=x64 /m /v:minimal'
+            assert(os.execute(cmd), "Failed to build vendor " .. cfg)
+        end
+
+        print("--- Vendor served. Doneness: Medium-rare ---")
+    end
+}
+
+
+
+-- generation -------------------------------------------------------------------
+
+if _ACTION == "vs2022" or _ACTION == "vs2019" then
+    Be.CleanProjectFiles()
+    if _OPTIONS["clean"] then
+        Be.CleanBinaries()
+    end
+    Be.Declare()
+end

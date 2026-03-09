@@ -252,7 +252,7 @@ auto MainScene::OnLoad() -> void {
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     GameIns->Renderer->AddRenderPass(tonemapperPass);
-    tonemapperPass->OutputTextureNames = {"TonemapperOutput"};
+    tonemapperPass->OutputTextures = { BeAssetRegistry::GetTexture("TonemapperOutput") };
     tonemapperPass->Shader = tonemapperShader;
     tonemapperPass->Material = tonemapperMaterial;
 

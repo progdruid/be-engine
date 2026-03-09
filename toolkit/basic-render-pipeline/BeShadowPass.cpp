@@ -10,7 +10,6 @@
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
-#include "Utils.h"
 
 auto BeShadowPass::Initialise() -> void {
     auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");

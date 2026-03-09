@@ -2,7 +2,6 @@
 
 #include "BeRenderer.h"
 #include "BeShaderTools.h"
-#include "Utils.h"
 #include <umbrellas/include-libassert.h>
 
 #include <sen-rhi/SenTypes.h>

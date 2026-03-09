@@ -1,7 +1,5 @@
 ﻿#pragma once
 #include <cstdint>
-#include <wrl/client.h>
-#include <d3d11.h>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -9,8 +7,6 @@
 #include <umbrellas/include-glm.h>
 #include <umbrellas/access-modifiers.hpp>
 #include <sen-rhi/SenTypes.h>
-
-using Microsoft::WRL::ComPtr;
 
 class BeTexture {
 

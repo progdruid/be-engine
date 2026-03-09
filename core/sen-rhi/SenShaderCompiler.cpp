@@ -5,7 +5,7 @@
 
 Slang::ComPtr<slang::IGlobalSession> SenShaderCompiler::_globalSession;
 std::string SenShaderCompiler::AssetShadersPath = "assets/shaders/";
-std::string SenShaderCompiler::StandardShadersPath = "src/shaders/";
+std::string SenShaderCompiler::StandardShadersPath = "shaders/";
 
 auto SenShaderCompiler::Launch() -> void {
     SlangResult result = slang::createGlobalSession(_globalSession.writeRef());

@@ -38,22 +38,25 @@ cbuffer MaterialConstants : register(b2) {
 
 float3 PixelFunction(FullscreenVSOutput input) : SV_TARGET {
     float2 offset = TexelSize * PassRadius;
-    
-    static const float2 offsets[6] = {
-        float2( 0.0,      1.384),
-        float2( 0.0,     -1.384),
-        float2( 1.120,   -0.492),
-        float2( 1.120,    0.492),
-        float2(-1.120,    0.492),
-        float2(-1.120,   -0.492)
+
+    // Kawase filter: 4 cardinal + 4 diagonal directions (normalized)
+    static const float2 offsets[8] = {
+        float2( 1.0,  0.0),  // right
+        float2(-1.0,  0.0),  // left
+        float2( 0.0,  1.0),  // down
+        float2( 0.0, -1.0),  // up
+        float2( 0.7071,  0.7071),  // diagonal down-right
+        float2(-0.7071,  0.7071),  // diagonal down-left
+        float2( 0.7071, -0.7071),  // diagonal up-right
+        float2(-0.7071, -0.7071)   // diagonal up-left
     };
 
     float3 color = float3(0.0, 0.0, 0.0);
 
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 8; ++i) {
         float2 sampleUV = input.UV + offsets[i] * offset;
         color += BloomMipInput.Sample(sLinear, sampleUV).rgb;
     }
 
-    return color * 0.166666;
+    return color * 0.125;
 }

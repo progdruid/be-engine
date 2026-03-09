@@ -8,7 +8,7 @@
 #include <umbrellas/access-modifiers.hpp>
 #include <sen-rhi/SenTypes.h>
 
-#include "Utils.h"
+#include <umbrellas/bitmask.hpp>
 
 class BeShaderIncludeHandler;
 class BeRenderer;

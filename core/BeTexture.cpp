@@ -21,7 +21,7 @@ auto BeTexture::Builder::SetSize      (uint32_t w, uint32_t h)   -> Builder&& { 
 auto BeTexture::Builder::SetCubemap   (bool cubemap)             -> Builder&& { _descriptor.IsCubemap = cubemap; return std::move(*this); }
 
 auto BeTexture::Builder::FillWithColor(const glm::vec4& color) -> Builder&& {
-    const size_t size = _descriptor.Width * _descriptor.Height;
+    const auto size = size_t(_descriptor.Width * _descriptor.Height);
     const auto data = static_cast<uint8_t*>(malloc(size * 4 * sizeof(uint8_t)));
 
     for (size_t i = 0; i < size; ++i) {

@@ -11,9 +11,9 @@ std::weak_ptr<BeRenderer> BeAssetRegistry::_renderer;
 
 std::unordered_map<std::filesystem::path, std::string> BeAssetRegistry::_shaderSources;
 
-std::unordered_map<std::string, std::shared_ptr<BeShader>> BeAssetRegistry::_shaders;
 std::unordered_map<std::string, BeMaterialScheme> BeAssetRegistry::_materialSchemes;
 std::unordered_map<std::string, SenSampler> BeAssetRegistry::_samplers;
+std::unordered_map<std::string, std::shared_ptr<BeShader>> BeAssetRegistry::_shaders;
 std::unordered_map<std::string, std::shared_ptr<BeMaterial>> BeAssetRegistry::_materials;
 std::unordered_map<std::string, std::shared_ptr<BeTexture>> BeAssetRegistry::_textures;
 std::unordered_map<std::string, std::shared_ptr<BeProp>> BeAssetRegistry::_props;

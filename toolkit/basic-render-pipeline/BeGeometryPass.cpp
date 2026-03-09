@@ -11,7 +11,6 @@
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
-#include "Utils.h"
 
 BeGeometryPass::BeGeometryPass() = default;
 BeGeometryPass::~BeGeometryPass() = default;

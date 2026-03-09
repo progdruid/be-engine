@@ -12,7 +12,6 @@
 #include "BeMaterial.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
-#include "Utils.h"
 
 auto BeProp::Create(
     const std::filesystem::path& modelPath,

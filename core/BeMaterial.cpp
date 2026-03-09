@@ -7,7 +7,6 @@
 #include "BeAssetRegistry.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
-#include "Utils.h"
 #include "sen-rhi/SenBackend.h"
 
 auto BeMaterial::Create(

@@ -4,7 +4,6 @@
 
 #include "BeRenderPass.h"
 #include "BeShader.h"
-#include "Utils.h"
 #include <sen-rhi/SenBackend.h>
 
 BeRenderer::BeRenderer(

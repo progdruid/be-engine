@@ -50,7 +50,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     
     float dirt = dot(dirtColor, float3(0.333, 0.333, 0.333));
     
-    float3 finalColor = hdrColor + bloomColor * (1.0 + dirt * 4.0);
+    float3 finalColor = hdrColor + bloomColor * (1.0 + dirt * 6.0);
     
     PixelOutput output;
     output.BloomOutput = finalColor;
