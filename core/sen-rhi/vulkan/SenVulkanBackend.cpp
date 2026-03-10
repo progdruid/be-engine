@@ -1,16 +1,23 @@
 #include "SenVulkanBackend.h"
+#include <windows.h>
 #include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_win32.h>
+#include <sen-rhi/vulkan/SenVulkanConvert.h>
+#include <sen-rhi/SenShaderCompiler.h>
 
-#include "umbrellas/include-libassert.h"
+#define VMA_IMPLEMENTATION
+#include <vma/vk_mem_alloc.h>
 
-// ─── static members ────────────────────────────────────────────────────────────────
+#include <umbrellas/include-libassert.h>
+
+// region ────────── static members ────────────────────────────────────────────────────────────────
 VkInstance SenVulkanBackend::_instance;
 VkPhysicalDevice SenVulkanBackend::_physicalDevice;
 VkDevice SenVulkanBackend::_device;
 VkQueue SenVulkanBackend::_queue;
 uint32_t SenVulkanBackend::_queueFamilyIndex;
 VkCommandPool SenVulkanBackend::_commandPool;
+VmaAllocator SenVulkanBackend::_allocator;
 
 std::unordered_map<uint32_t, SenVulkanTextureEntry> SenVulkanBackend::_textures;
 uint32_t SenVulkanBackend::_nextTextureId = 1;
@@ -30,14 +37,20 @@ uint32_t SenVulkanBackend::_nextPipelineId = 1;
 std::unordered_map<uint32_t, SenVulkanSwapchainEntry> SenVulkanBackend::_swapchains;
 uint32_t SenVulkanBackend::_nextSwapchainId = 1;
 
-std::unordered_map<uint32_t, SenBindGroupLayoutDesc> SenVulkanBackend::_bindGroupLayouts;
+std::unordered_map<uint32_t, SenVulkanBindGroupLayoutEntry> SenVulkanBackend::_bindGroupLayouts;
 uint32_t SenVulkanBackend::_nextBindGroupLayoutId = 1;
 
-std::unordered_map<uint32_t, SenBindGroupDesc> SenVulkanBackend::_bindGroups;
+std::unordered_map<uint32_t, SenVulkanBindGroupEntry> SenVulkanBackend::_bindGroups;
 uint32_t SenVulkanBackend::_nextBindGroupId = 1;
 
+VkDescriptorPool SenVulkanBackend::_descriptorPool = VK_NULL_HANDLE;
 
-// ─── backend ────────────────────────────────────────────────────────────────
+PFN_vkCmdBeginRenderingKHR SenVulkanBackend::_vkCmdBeginRenderingKHR = nullptr;
+PFN_vkCmdEndRenderingKHR   SenVulkanBackend::_vkCmdEndRenderingKHR   = nullptr;
+VkCommandBuffer            SenVulkanBackend::_activeCommandBuffer     = VK_NULL_HANDLE;
+//endregion
+
+// region ────────── backend ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     // instance
     VkApplicationInfo appInfo {
@@ -50,9 +63,16 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
         .apiVersion         = VK_API_VERSION_1_0,
     };
 
+    const char* instanceExtensions[] = {
+        VK_KHR_SURFACE_EXTENSION_NAME,
+        VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+    };
+
     VkInstanceCreateInfo createInfo {
-        .sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pApplicationInfo = &appInfo,
+        .sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pApplicationInfo        = &appInfo,
+        .enabledExtensionCount   = 2,
+        .ppEnabledExtensionNames = instanceExtensions,
     };
 
     VkResult result = vkCreateInstance(&createInfo, nullptr, &_instance);
@@ -88,12 +108,24 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     };
 
     // logical device
+    const char* deviceExtensions[] = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+    };
+
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeatures {
+        .sType            = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+        .dynamicRendering = VK_TRUE,
+    };
     VkPhysicalDeviceFeatures deviceFeatures {};
     VkDeviceCreateInfo deviceCreateInfo {
-        .sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos    = &queueCreateInfo,
-        .pEnabledFeatures     = &deviceFeatures,
+        .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext                   = &dynamicRenderingFeatures,
+        .queueCreateInfoCount    = 1,
+        .pQueueCreateInfos       = &queueCreateInfo,
+        .enabledExtensionCount   = uint32_t(std::size(deviceExtensions)),
+        .ppEnabledExtensionNames = deviceExtensions,
+        .pEnabledFeatures        = &deviceFeatures,
     };
 
     result = vkCreateDevice(_physicalDevice, &deviceCreateInfo, nullptr, &_device);
@@ -102,15 +134,43 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     
     
     // command pool
-    VkCommandPoolCreateInfo poolInfo {
+    VkCommandPoolCreateInfo cmdPoolInfo {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = _queueFamilyIndex,
     };
     
-    result = vkCreateCommandPool(_device, &poolInfo, nullptr, &_commandPool);
+    result = vkCreateCommandPool(_device, &cmdPoolInfo, nullptr, &_commandPool);
     be_assert(result == VK_SUCCESS, "Failed to create command pool!");
-    
+
+    // VMA allocator
+    VmaAllocatorCreateInfo allocatorInfo {
+        .physicalDevice = _physicalDevice,
+        .device         = _device,
+        .instance       = _instance,
+    };
+    result = vmaCreateAllocator(&allocatorInfo, &_allocator);
+    be_assert(result == VK_SUCCESS, "Failed to create VMA allocator!");
+
+    // Descriptor pool for bind groups (max 256 sets, with plenty of descriptors)
+    std::array<VkDescriptorPoolSize, 3> poolSizes {
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 256 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER, 256 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 256 },
+    };
+    VkDescriptorPoolCreateInfo descPoolInfo {
+        .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+        .maxSets       = 256,
+        .poolSizeCount = uint32_t(poolSizes.size()),
+        .pPoolSizes    = poolSizes.data(),
+    };
+    result = vkCreateDescriptorPool(_device, &descPoolInfo, nullptr, &_descriptorPool);
+    be_assert(result == VK_SUCCESS, "Failed to create descriptor pool!");
+
+    _vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(_device, "vkCmdBeginRenderingKHR");
+    _vkCmdEndRenderingKHR   = (PFN_vkCmdEndRenderingKHR)  vkGetDeviceProcAddr(_device, "vkCmdEndRenderingKHR");
+    be_assert(_vkCmdBeginRenderingKHR && _vkCmdEndRenderingKHR, "Failed to load dynamic rendering functions!");
 }
 
 auto SenVulkanBackend::Shutdown() -> void {
@@ -123,13 +183,15 @@ auto SenVulkanBackend::Shutdown() -> void {
         DestroySwapchain(SenSwapchain { id });
     }
 
-    if (_commandPool)   { vkDestroyCommandPool(_device, _commandPool, nullptr); _commandPool = VK_NULL_HANDLE; }
-    if (_device)        { vkDestroyDevice(_device, nullptr);                    _device = VK_NULL_HANDLE; }
-    if (_instance)      { vkDestroyInstance(_instance, nullptr);                _instance = VK_NULL_HANDLE; }
+    if (_commandPool)      { vkDestroyCommandPool(_device, _commandPool, nullptr); _commandPool = VK_NULL_HANDLE; }
+    if (_descriptorPool)   { vkDestroyDescriptorPool(_device, _descriptorPool, nullptr); _descriptorPool = VK_NULL_HANDLE; }
+    if (_allocator)        { vmaDestroyAllocator(_allocator);                      _allocator = VK_NULL_HANDLE; }
+    if (_device)           { vkDestroyDevice(_device, nullptr);                    _device = VK_NULL_HANDLE; }
+    if (_instance)         { vkDestroyInstance(_instance, nullptr);                _instance = VK_NULL_HANDLE; }
 }
+//endregion
 
-
-// ─── swapchain ────────────────────────────────────────────────────────────────
+// region ────────── swapchain ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapchain {
     SenVulkanSwapchainEntry entry {};
 
@@ -140,23 +202,23 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
         .hwnd      = (HWND)desc.NativeWindowHandle,
     };
 
-    VkResult result = vkCreateWin32SurfaceKHR(_instance, &surfaceInfo, nullptr, &entry.surface);
+    VkResult result = vkCreateWin32SurfaceKHR(_instance, &surfaceInfo, nullptr, &entry.Surface);
     be_assert(result == VK_SUCCESS, "Failed to create surface!");
 
     // 2. Query surface capabilities
     VkSurfaceCapabilitiesKHR capabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, entry.surface, &capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, entry.Surface, &capabilities);
 
     // Query supported formats
     uint32_t formatCount = 0;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, entry.surface, &formatCount, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, entry.Surface, &formatCount, nullptr);
     std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, entry.surface, &formatCount, surfaceFormats.data());
+    vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, entry.Surface, &formatCount, surfaceFormats.data());
 
-    // Choose format (prefer SRGB if available)
+    // Choose format (prefer R8G8B8A8_UNORM to match SenFormat::RGBA8_Unorm)
     VkSurfaceFormatKHR chosenFormat = surfaceFormats[0];
     for (const auto& format : surfaceFormats) {
-        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        if (format.format == VK_FORMAT_R8G8B8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             chosenFormat = format;
             break;
         }
@@ -164,9 +226,9 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
 
     // Query supported present modes
     uint32_t presentModeCount = 0;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, entry.surface, &presentModeCount, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, entry.Surface, &presentModeCount, nullptr);
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, entry.surface, &presentModeCount, presentModes.data());
+    vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, entry.Surface, &presentModeCount, presentModes.data());
 
     // Choose present mode
     VkPresentModeKHR chosenPresentMode = VK_PRESENT_MODE_FIFO_KHR;  // FIFO is always available
@@ -183,7 +245,7 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     // 3. Create swapchain
     VkSwapchainCreateInfoKHR swapchainInfo {
         .sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface          = entry.surface,
+        .surface          = entry.Surface,
         .minImageCount    = desc.BufferCount,
         .imageFormat      = chosenFormat.format,
         .imageColorSpace  = chosenFormat.colorSpace,
@@ -197,21 +259,21 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
         .clipped          = VK_TRUE,
     };
 
-    result = vkCreateSwapchainKHR(_device, &swapchainInfo, nullptr, &entry.swapchain);
+    result = vkCreateSwapchainKHR(_device, &swapchainInfo, nullptr, &entry.Swapchain);
     be_assert(result == VK_SUCCESS, "Failed to create swapchain!");
 
     // 4. Get swapchain images
     uint32_t imageCount = 0;
-    vkGetSwapchainImagesKHR(_device, entry.swapchain, &imageCount, nullptr);
-    entry.images.resize(imageCount);
-    vkGetSwapchainImagesKHR(_device, entry.swapchain, &imageCount, entry.images.data());
+    vkGetSwapchainImagesKHR(_device, entry.Swapchain, &imageCount, nullptr);
+    entry.Images.resize(imageCount);
+    vkGetSwapchainImagesKHR(_device, entry.Swapchain, &imageCount, entry.Images.data());
 
     // 5. Create image views
-    entry.imageViews.resize(imageCount);
+    entry.ImageViews.resize(imageCount);
     for (uint32_t i = 0; i < imageCount; i++) {
         VkImageViewCreateInfo imageViewInfo {
             .sType      = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image      = entry.images[i],
+            .image      = entry.Images[i],
             .viewType   = VK_IMAGE_VIEW_TYPE_2D,
             .format     = chosenFormat.format,
             .components = {
@@ -229,16 +291,45 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
             },
         };
 
-        result = vkCreateImageView(_device, &imageViewInfo, nullptr, &entry.imageViews[i]);
+        result = vkCreateImageView(_device, &imageViewInfo, nullptr, &entry.ImageViews[i]);
         be_assert(result == VK_SUCCESS, "Failed to create image view!");
     }
 
-    entry.format = desc.Format;
-    entry.width = desc.Width;
-    entry.height = desc.Height;
+    entry.NativeWindowHandle = desc.NativeWindowHandle;
+    entry.Width       = desc.Width;
+    entry.Height      = desc.Height;
+    entry.BufferCount = desc.BufferCount;
+    entry.Format      = Sen::Vulkan::FromVkFormat(chosenFormat.format);
+    entry.PresentMode = desc.PresentMode;
+
+    // 6. Register each swapchain image as a SenTexture (MipRTVs[0] = image view)
+    entry.Textures.resize(imageCount);
+    for (uint32_t i = 0; i < imageCount; i++) {
+        SenVulkanTextureEntry texEntry {};
+        texEntry.Image  = entry.Images[i];
+        texEntry.Format = chosenFormat.format;
+        texEntry.MipRTVs.push_back(entry.ImageViews[i]);
+
+        const SenTexture texHandle { _nextTextureId++ };
+        _textures[texHandle.ID] = texEntry;
+        entry.Textures[i] = texHandle;
+    }
+
+    // 7. Create sync objects
+    VkSemaphoreCreateInfo semaphoreInfo { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+    VkFenceCreateInfo fenceInfo {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,  // start signaled so first frame doesn't wait forever
+    };
+    result = vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &entry.ImageAvailableSemaphore);
+    be_assert(result == VK_SUCCESS, "Failed to create semaphore!");
+    result = vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &entry.RenderFinishedSemaphore);
+    be_assert(result == VK_SUCCESS, "Failed to create semaphore!");
+    result = vkCreateFence(_device, &fenceInfo, nullptr, &entry.InFlightFence);
+    be_assert(result == VK_SUCCESS, "Failed to create fence!");
 
     const SenSwapchain handle { _nextSwapchainId++ };
-    _swapchains[handle.ID] = entry;
+    _swapchains[handle.ID] = std::move(entry);
     return handle;
 }
 
@@ -246,33 +337,135 @@ auto SenVulkanBackend::DestroySwapchain(SenSwapchain handle) -> void {
     auto it = _swapchains.find(handle.ID);
     if (it != _swapchains.end()) {
         auto& entry = it->second;
-        for (auto imageView : entry.imageViews) {
+
+        // Remove swapchain texture entries (image views are owned by swapchain, not VMA)
+        for (const auto& tex : entry.Textures) {
+            _textures.erase(tex.ID);
+        }
+
+        if (entry.InFlightFence)           { vkDestroyFence(_device, entry.InFlightFence, nullptr); }
+        if (entry.ImageAvailableSemaphore) { vkDestroySemaphore(_device, entry.ImageAvailableSemaphore, nullptr); }
+        if (entry.RenderFinishedSemaphore) { vkDestroySemaphore(_device, entry.RenderFinishedSemaphore, nullptr); }
+        for (auto imageView : entry.ImageViews) {
             vkDestroyImageView(_device, imageView, nullptr);
         }
-        if (entry.swapchain) {
-            vkDestroySwapchainKHR(_device, entry.swapchain, nullptr);
-        }
-        if (entry.surface) {
-            vkDestroySurfaceKHR(_instance, entry.surface, nullptr);
-        }
+        if (entry.Swapchain) { vkDestroySwapchainKHR(_device, entry.Swapchain, nullptr); }
+        if (entry.Surface)   { vkDestroySurfaceKHR(_instance, entry.Surface, nullptr); }
+
         _swapchains.erase(it);
     }
 }
 
-auto SenVulkanBackend::ResizeSwapchain(SenSwapchain handle, uint32_t width, uint32_t height) -> void {
+auto SenVulkanBackend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uint32_t height) -> void {
+    auto entry = _swapchains[handle.ID];
+    
+    DestroySwapchain(handle);
+    handle = CreateSwapchain({
+        .NativeWindowHandle = entry.NativeWindowHandle,
+        .Width = width,
+        .Height = height,
+        .BufferCount = entry.BufferCount,
+        .Format = entry.Format,
+        .PresentMode = entry.PresentMode,
+    });
+}
+
+auto SenVulkanBackend::WaitIdle() -> void {
+    vkDeviceWaitIdle(_device);
+}
+
+auto SenVulkanBackend::GetSwapchainFormat(SenSwapchain handle) -> SenFormat {
+    return _swapchains.at(handle.ID).Format;
 }
 
 auto SenVulkanBackend::BeginFrame(SenSwapchain handle) -> SenTexture {
-    return {};
+    auto& entry = _swapchains.at(handle.ID);
+
+    // Wait for GPU to finish the previous frame
+    vkWaitForFences(_device, 1, &entry.InFlightFence, VK_TRUE, UINT64_MAX);
+    vkResetFences(_device, 1, &entry.InFlightFence);
+
+    // Acquire the next swapchain image
+    vkAcquireNextImageKHR(
+        _device, entry.Swapchain, UINT64_MAX,
+        entry.ImageAvailableSemaphore, VK_NULL_HANDLE,
+        &entry.CurrentImageIndex
+    );
+
+    // Reset and begin recording the active command buffer
+    vkResetCommandBuffer(_activeCommandBuffer, 0);
+    VkCommandBufferBeginInfo beginInfo {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
+    vkBeginCommandBuffer(_activeCommandBuffer, &beginInfo);
+
+    // Transition swapchain image UNDEFINED/PRESENT_SRC → COLOR_ATTACHMENT_OPTIMAL
+    auto& texEntry = _textures.at(entry.Textures[entry.CurrentImageIndex].ID);
+    TransitionImageLayout(
+        _activeCommandBuffer, texEntry.Image, VK_IMAGE_ASPECT_COLOR_BIT,
+        texEntry.CurrentLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        1, 1
+    );
+    texEntry.CurrentLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    return entry.Textures[entry.CurrentImageIndex];
 }
 
 auto SenVulkanBackend::EndFrame(SenSwapchain handle) -> void {
-}
+    auto& entry = _swapchains.at(handle.ID);
 
+    // Transition swapchain image COLOR_ATTACHMENT_OPTIMAL → PRESENT_SRC_KHR
+    auto& texEntry = _textures.at(entry.Textures[entry.CurrentImageIndex].ID);
+    TransitionImageLayout(
+        _activeCommandBuffer, texEntry.Image, VK_IMAGE_ASPECT_COLOR_BIT,
+        texEntry.CurrentLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        1, 1
+    );
+    texEntry.CurrentLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    vkEndCommandBuffer(_activeCommandBuffer);
+
+    // Submit: wait on imageAvailable, signal renderFinished, signal fence when done
+    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSubmitInfo submitInfo {
+        .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .waitSemaphoreCount   = 1,
+        .pWaitSemaphores      = &entry.ImageAvailableSemaphore,
+        .pWaitDstStageMask    = &waitStage,
+        .commandBufferCount   = 1,
+        .pCommandBuffers      = &_activeCommandBuffer,
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores    = &entry.RenderFinishedSemaphore,
+    };
+    vkQueueSubmit(_queue, 1, &submitInfo, entry.InFlightFence);
+
+    // Present: wait on renderFinished
+    VkPresentInfoKHR presentInfo {
+        .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores    = &entry.RenderFinishedSemaphore,
+        .swapchainCount     = 1,
+        .pSwapchains        = &entry.Swapchain,
+        .pImageIndices      = &entry.CurrentImageIndex,
+    };
+    vkQueuePresentKHR(_queue, &presentInfo);
+}
+//endregion
 
 // ─── command buffer ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::CreateCommandBuffer() -> SenCommandBuffer {
-    return {};
+    be_assert(_activeCommandBuffer == VK_NULL_HANDLE, "CreateCommandBuffer called more than once");
+
+    VkCommandBufferAllocateInfo allocInfo {
+        .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool        = _commandPool,
+        .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+    VkResult result = vkAllocateCommandBuffers(_device, &allocInfo, &_activeCommandBuffer);
+    be_assert(result == VK_SUCCESS, "Failed to allocate command buffer!");
+    return SenVulkanCommandBuffer(_activeCommandBuffer);
 }
 
 
@@ -294,15 +487,35 @@ auto SenVulkanBackend::EndDebugEvent() -> void {
 }
 
 
-// ─── textures ────────────────────────────────────────────────────────────────
+// region ────────── textures ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     const SenTexture handle { _nextTextureId++ };
-    _textures[handle.ID] = {};
+    auto& entry = _textures[handle.ID];
+
+    if (desc.Cubemap) {
+        CreateTextureCubemap(desc, entry);
+    } else {
+        CreateTexture2D(desc, entry);
+    }
+
     return handle;
 }
 
 auto SenVulkanBackend::DestroyTexture(SenTexture handle) -> void {
-    _textures.erase(handle.ID);
+    auto it = _textures.find(handle.ID);
+    if (it != _textures.end()) {
+        auto& entry = it->second;
+        auto destroy = [&](VkImageView v) { if (v) { vkDestroyImageView(_device, v, nullptr); } };
+
+        destroy(entry.SRV);
+        destroy(entry.DSV);
+        for (auto v : entry.MipRTVs) { destroy(v); }
+        for (auto v : entry.CubemapDSVs) { destroy(v); }
+        for (auto& mips : entry.CubemapMipRTVs) { for (auto v : mips) { destroy(v); } }
+
+        vmaDestroyImage(_allocator, entry.Image, entry.Allocation);
+        _textures.erase(it);
+    }
 }
 
 auto SenVulkanBackend::LookupTexture(SenTexture handle) -> SenVulkanTextureEntry& {
@@ -310,15 +523,323 @@ auto SenVulkanBackend::LookupTexture(SenTexture handle) -> SenVulkanTextureEntry
 }
 
 
-// ─── buffers ────────────────────────────────────────────────────────────────
+
+auto SenVulkanBackend::CreateTexture2D(const SenTextureDesc& desc, SenVulkanTextureEntry& entry) -> void {
+    const VkFormat           format  = Sen::Vulkan::ToFormat(desc.Format);
+    const VkImageUsageFlags  usage   = Sen::Vulkan::ToImageUsageFlags(desc.Usage, desc.Data != nullptr);
+    const bool               isDepth = HasAny(desc.Usage, SenTextureUsage::DepthStencil);
+    const VkImageAspectFlags aspect  = isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    entry.Format = format;
+
+    VkImageCreateInfo imageInfo {
+        .sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType     = VK_IMAGE_TYPE_2D,
+        .format        = format,
+        .extent        = { desc.Width, desc.Height, 1 },
+        .mipLevels     = desc.Mips,
+        .arrayLayers   = 1,
+        .samples       = VK_SAMPLE_COUNT_1_BIT,
+        .tiling        = VK_IMAGE_TILING_OPTIMAL,
+        .usage         = usage,
+        .sharingMode   = VK_SHARING_MODE_EXCLUSIVE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+    VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE };
+    VkResult result = vmaCreateImage(_allocator, &imageInfo, &allocInfo, &entry.Image, &entry.Allocation, nullptr);
+    be_assert(result == VK_SUCCESS, "Failed to create 2D image!");
+
+    if (desc.Data) {
+        const uint32_t dataSize = desc.Width * desc.Height * Sen::Vulkan::BytesPerPixel(desc.Format);
+        UploadToDeviceImage(entry.Image, aspect, desc.Data, dataSize, desc.Width, desc.Height, desc.Mips, 1);
+        entry.CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+
+    if (HasAny(desc.Usage, SenTextureUsage::ShaderResource)) {
+        entry.SRV = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, desc.Mips, 0, 1);
+    }
+    if (HasAny(desc.Usage, SenTextureUsage::DepthStencil)) {
+        entry.DSV = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, 1, 0, 1);
+    }
+    if (HasAny(desc.Usage, SenTextureUsage::RenderTarget)) {
+        entry.MipRTVs.resize(desc.Mips);
+        for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
+            entry.MipRTVs[mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, 0, 1);
+        }
+    }
+}
+
+auto SenVulkanBackend::CreateTextureCubemap(const SenTextureDesc& desc, SenVulkanTextureEntry& entry) -> void {
+    const VkFormat           format  = Sen::Vulkan::ToFormat(desc.Format);
+    const VkImageUsageFlags  usage   = Sen::Vulkan::ToImageUsageFlags(desc.Usage, desc.Data != nullptr);
+    const bool               isDepth = HasAny(desc.Usage, SenTextureUsage::DepthStencil);
+    const VkImageAspectFlags aspect  = isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    entry.Format = format;
+
+    VkImageCreateInfo imageInfo {
+        .sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .flags         = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+        .imageType     = VK_IMAGE_TYPE_2D,
+        .format        = format,
+        .extent        = { desc.Width, desc.Height, 1 },
+        .mipLevels     = desc.Mips,
+        .arrayLayers   = 6,
+        .samples       = VK_SAMPLE_COUNT_1_BIT,
+        .tiling        = VK_IMAGE_TILING_OPTIMAL,
+        .usage         = usage,
+        .sharingMode   = VK_SHARING_MODE_EXCLUSIVE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+    VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE };
+    VkResult result = vmaCreateImage(_allocator, &imageInfo, &allocInfo, &entry.Image, &entry.Allocation, nullptr);
+    be_assert(result == VK_SUCCESS, "Failed to create cubemap image!");
+
+    if (desc.Data) {
+        const uint32_t faceSize = desc.Width * desc.Height * Sen::Vulkan::BytesPerPixel(desc.Format);
+        UploadToDeviceImage(entry.Image, aspect, desc.Data, faceSize * 6, desc.Width, desc.Height, desc.Mips, 6);
+        entry.CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+
+    if (HasAny(desc.Usage, SenTextureUsage::ShaderResource)) {
+        entry.SRV = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_CUBE, aspect, 0, desc.Mips, 0, 6);
+    }
+    if (HasAny(desc.Usage, SenTextureUsage::DepthStencil)) {
+        for (uint32_t face = 0; face < 6; ++face) {
+            entry.CubemapDSVs[face] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, 1, face, 1);
+        }
+    }
+    if (HasAny(desc.Usage, SenTextureUsage::RenderTarget)) {
+        for (uint32_t face = 0; face < 6; ++face) {
+            entry.CubemapMipRTVs[face].resize(desc.Mips);
+            for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
+                entry.CubemapMipRTVs[face][mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, face, 1);
+            }
+        }
+    }
+}
+
+auto SenVulkanBackend::UploadToDeviceImage(VkImage image, VkImageAspectFlags aspect, const void* data, uint32_t dataSize, uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t layerCount) -> void {
+    VkBufferCreateInfo stagingInfo {
+        .sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size        = dataSize,
+        .usage       = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+    VmaAllocationCreateInfo stagingAllocInfo {
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO,
+    };
+    VkBuffer stagingBuffer;
+    VmaAllocation stagingAlloc;
+    VmaAllocationInfo stagingResult;
+    VkResult result = vmaCreateBuffer(_allocator, &stagingInfo, &stagingAllocInfo, &stagingBuffer, &stagingAlloc, &stagingResult);
+    be_assert(result == VK_SUCCESS, "Failed to create texture staging buffer!");
+    memcpy(stagingResult.pMappedData, data, dataSize);
+
+    VkCommandBufferAllocateInfo cmdAlloc {
+        .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool        = _commandPool,
+        .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+    VkCommandBuffer cmd;
+    vkAllocateCommandBuffers(_device, &cmdAlloc, &cmd);
+
+    VkCommandBufferBeginInfo beginInfo {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
+    vkBeginCommandBuffer(cmd, &beginInfo);
+
+    TransitionImageLayout(cmd, image, aspect, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels, layerCount);
+
+    // One copy region per layer (face), data expected to be laid out sequentially face0, face1, ...
+    std::vector<VkBufferImageCopy> regions(layerCount);
+    const uint32_t faceSize = dataSize / layerCount;
+    for (uint32_t layer = 0; layer < layerCount; ++layer) {
+        regions[layer] = {
+            .bufferOffset      = VkDeviceSize(layer * faceSize),
+            .bufferRowLength   = 0,
+            .bufferImageHeight = 0,
+            .imageSubresource  = { aspect, 0, layer, 1 },
+            .imageOffset       = { 0, 0, 0 },
+            .imageExtent       = { width, height, 1 },
+        };
+    }
+    vkCmdCopyBufferToImage(cmd, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layerCount, regions.data());
+
+    TransitionImageLayout(cmd, image, aspect, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels, layerCount);
+
+    vkEndCommandBuffer(cmd);
+
+    VkFenceCreateInfo fenceInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    VkFence fence;
+    vkCreateFence(_device, &fenceInfo, nullptr, &fence);
+    VkSubmitInfo submitInfo { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .commandBufferCount = 1, .pCommandBuffers = &cmd };
+    vkQueueSubmit(_queue, 1, &submitInfo, fence);
+    vkWaitForFences(_device, 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(_device, fence, nullptr);
+    vkFreeCommandBuffers(_device, _commandPool, 1, &cmd);
+    vmaDestroyBuffer(_allocator, stagingBuffer, stagingAlloc);
+}
+
+auto SenVulkanBackend::TransitionImageLayout(VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels, uint32_t layerCount) -> void {
+    VkAccessFlags        srcAccess = 0;
+    VkAccessFlags        dstAccess = 0;
+    VkPipelineStageFlags srcStage  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags dstStage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    switch (oldLayout) {
+        case VK_IMAGE_LAYOUT_UNDEFINED:
+            srcAccess = 0;
+            srcStage  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            srcAccess = VK_ACCESS_TRANSFER_WRITE_BIT;
+            srcStage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            srcAccess = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            srcStage  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            srcAccess = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            srcStage  = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            srcAccess = VK_ACCESS_SHADER_READ_BIT;
+            srcStage  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+            srcAccess = 0;
+            srcStage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            break;
+        default:
+            be_assert(false, "TransitionImageLayout: unsupported old layout");
+    }
+
+    switch (newLayout) {
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            dstAccess = VK_ACCESS_TRANSFER_WRITE_BIT;
+            dstStage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            dstAccess = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            dstStage  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            dstAccess = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            dstStage  = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            dstAccess = VK_ACCESS_SHADER_READ_BIT;
+            dstStage  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+            dstAccess = 0;
+            dstStage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            break;
+        default:
+            be_assert(false, "TransitionImageLayout: unsupported new layout");
+    }
+
+    VkImageMemoryBarrier barrier {
+        .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcAccessMask       = srcAccess,
+        .dstAccessMask       = dstAccess,
+        .oldLayout           = oldLayout,
+        .newLayout           = newLayout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image               = image,
+        .subresourceRange    = { aspect, 0, mipLevels, 0, layerCount },
+    };
+    vkCmdPipelineBarrier(cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
+auto SenVulkanBackend::CreateImageView(VkImage image, VkFormat format, VkImageViewType viewType, VkImageAspectFlags aspect, uint32_t baseMip, uint32_t mipLevels, uint32_t baseLayer, uint32_t layerCount) -> VkImageView {
+    VkImageViewCreateInfo viewInfo {
+        .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image    = image,
+        .viewType = viewType,
+        .format   = format,
+        .subresourceRange = {
+            .aspectMask     = aspect,
+            .baseMipLevel   = baseMip,
+            .levelCount     = mipLevels,
+            .baseArrayLayer = baseLayer,
+            .layerCount     = layerCount,
+        },
+    };
+    VkImageView view;
+    VkResult result = vkCreateImageView(_device, &viewInfo, nullptr, &view);
+    be_assert(result == VK_SUCCESS, "Failed to create image view!");
+    return view;
+}
+//endregion
+
+// region ────────── buffers ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
     const SenBuffer handle { _nextBufferId++ };
-    _buffers[handle.ID] = {};
+    auto& entry = _buffers[handle.ID];
+    entry.Access = desc.Access;
+    entry.Size   = desc.Size;
+
+    VkBufferUsageFlags usageFlags = 0;
+    switch (desc.Usage) {
+        case SenBufferUsage::Vertex:   usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;  break;
+        case SenBufferUsage::Index:    usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;   break;
+        case SenBufferUsage::Constant: usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; break;
+    }
+
+    VkBufferCreateInfo bufferInfo {
+        .sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size        = desc.Size,
+        .usage       = usageFlags,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+
+    if (desc.Access == SenBufferAccess::Dynamic) {
+        // Host-visible, persistently mapped. VMA picks the right heap automatically.
+        VmaAllocationCreateInfo allocInfo {
+            .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO,
+        };
+        VmaAllocationInfo allocResult;
+        VkResult result = vmaCreateBuffer(_allocator, &bufferInfo, &allocInfo, &entry.Buffer, &entry.Allocation, &allocResult);
+        be_assert(result == VK_SUCCESS, "Failed to create dynamic buffer!");
+
+        entry.MappedPtr = allocResult.pMappedData;
+
+        if (desc.Data) {
+            memcpy(entry.MappedPtr, desc.Data, desc.Size);
+        }
+    } else {
+        // Device-local VRAM — GPU reads fastest from here.
+        // CPU uploads go through a temporary staging buffer.
+        bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+        VmaAllocationCreateInfo allocInfo {
+            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+        };
+        VkResult result = vmaCreateBuffer(_allocator, &bufferInfo, &allocInfo, &entry.Buffer, &entry.Allocation, nullptr);
+        be_assert(result == VK_SUCCESS, "Failed to create device-local buffer!");
+
+        if (desc.Data) {
+            UploadToDeviceBuffer(entry.Buffer, desc.Data, desc.Size);
+        }
+    }
+
     return handle;
 }
 
 auto SenVulkanBackend::DestroyBuffer(SenBuffer handle) -> void {
-    _buffers.erase(handle.ID);
+    auto it = _buffers.find(handle.ID);
+    if (it != _buffers.end()) {
+        auto& entry = it->second;
+        vmaDestroyBuffer(_allocator, entry.Buffer, entry.Allocation);
+        _buffers.erase(it);
+    }
 }
 
 auto SenVulkanBackend::LookupBuffer(SenBuffer handle) -> SenVulkanBufferEntry& {
@@ -326,84 +847,539 @@ auto SenVulkanBackend::LookupBuffer(SenBuffer handle) -> SenVulkanBufferEntry& {
 }
 
 auto SenVulkanBackend::WriteBuffer(SenBuffer handle, const void* data, uint32_t size) -> void {
+    auto& entry = _buffers.at(handle.ID);
+    be_assert(entry.Access != SenBufferAccess::Immutable, "Cannot write to an Immutable buffer");
+
+    if (entry.Access == SenBufferAccess::Dynamic) {
+        // Persistent-mapped: just memcpy; VMA ensures coherency for AUTO host-visible allocations
+        memcpy(entry.MappedPtr, data, size);
+    } else {
+        // Default: device-local, upload via staging buffer
+        UploadToDeviceBuffer(entry.Buffer, data, size);
+    }
 }
 
+// For Immutable/Default buffers the destination is device-local (GPU VRAM), which the CPU
+// cannot write to directly. So we:
+//   1. Create a temporary host-visible "staging" buffer and memcpy the data into it.
+//   2. Record a one-time command buffer that does vkCmdCopyBuffer staging → dst.
+//   3. Submit it, wait (fence), then destroy the staging buffer.
+// This is a synchronous stall, but only happens at resource-creation time (or rarely for Default).
+auto SenVulkanBackend::UploadToDeviceBuffer(VkBuffer dst, const void* data, uint32_t size) -> void {
+    // 1. Create staging buffer (host-visible) via VMA
+    VkBufferCreateInfo stagingInfo {
+        .sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size        = size,
+        .usage       = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+    VmaAllocationCreateInfo stagingAllocInfo {
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO,
+    };
 
-// ─── samplers ────────────────────────────────────────────────────────────────
+    VkBuffer stagingBuffer;
+    VmaAllocation stagingAllocation;
+    VmaAllocationInfo stagingAllocResult;
+    VkResult result = vmaCreateBuffer(_allocator, &stagingInfo, &stagingAllocInfo, &stagingBuffer, &stagingAllocation, &stagingAllocResult);
+    be_assert(result == VK_SUCCESS, "Failed to create staging buffer!");
+
+    memcpy(stagingAllocResult.pMappedData, data, size);
+
+    // 2. One-time command buffer: copy staging → dst
+    VkCommandBufferAllocateInfo cmdAlloc {
+        .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool        = _commandPool,
+        .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+    VkCommandBuffer cmd;
+    vkAllocateCommandBuffers(_device, &cmdAlloc, &cmd);
+
+    VkCommandBufferBeginInfo beginInfo {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
+    vkBeginCommandBuffer(cmd, &beginInfo);
+    VkBufferCopy copyRegion { .size = size };
+    vkCmdCopyBuffer(cmd, stagingBuffer, dst, 1, &copyRegion);
+    vkEndCommandBuffer(cmd);
+
+    // 3. Submit and wait
+    VkFenceCreateInfo fenceInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    VkFence fence;
+    vkCreateFence(_device, &fenceInfo, nullptr, &fence);
+
+    VkSubmitInfo submitInfo {
+        .sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .commandBufferCount = 1,
+        .pCommandBuffers    = &cmd,
+    };
+    vkQueueSubmit(_queue, 1, &submitInfo, fence);
+    vkWaitForFences(_device, 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(_device, fence, nullptr);
+    vkFreeCommandBuffers(_device, _commandPool, 1, &cmd);
+    vmaDestroyBuffer(_allocator, stagingBuffer, stagingAllocation);
+}
+// endregion
+
+// region ────────── samplers ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::CreateSampler(const SenSamplerDesc& desc) -> SenSampler {
     const SenSampler handle { _nextSamplerId++ };
-    _samplers[handle.ID] = {};
+    auto& entry = _samplers[handle.ID];
+
+    VkSamplerCreateInfo samplerInfo {
+        .sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter        = Sen::Vulkan::ToFilter(desc.Filter),
+        .minFilter        = Sen::Vulkan::ToFilter(desc.Filter),
+        .mipmapMode       = Sen::Vulkan::ToMipmapMode(desc.Filter),
+        .addressModeU     = Sen::Vulkan::ToAddressMode(desc.Address),
+        .addressModeV     = Sen::Vulkan::ToAddressMode(desc.Address),
+        .addressModeW     = Sen::Vulkan::ToAddressMode(desc.Address),
+        .anisotropyEnable = (desc.Filter == SenFilter::Anisotropic) ? VK_TRUE : VK_FALSE,
+        .maxAnisotropy    = (desc.Filter == SenFilter::Anisotropic) ? 16.f : 1.f,
+        .compareEnable    = desc.Comparison ? VK_TRUE : VK_FALSE,
+        .compareOp        = desc.Comparison ? VK_COMPARE_OP_LESS : VK_COMPARE_OP_NEVER,
+        .minLod           = 0.f,
+        .maxLod           = VK_LOD_CLAMP_NONE,
+    };
+
+    VkResult result = vkCreateSampler(_device, &samplerInfo, nullptr, &entry.Sampler);
+    be_assert(result == VK_SUCCESS, "Failed to create sampler!");
+
     return handle;
 }
 
 auto SenVulkanBackend::DestroySampler(SenSampler handle) -> void {
-    _samplers.erase(handle.ID);
+    auto it = _samplers.find(handle.ID);
+    if (it != _samplers.end()) {
+        vkDestroySampler(_device, it->second.Sampler, nullptr);
+        _samplers.erase(it);
+    }
 }
 
 auto SenVulkanBackend::LookupSampler(SenSampler handle) -> SenVulkanSamplerEntry& {
     return _samplers.at(handle.ID);
 }
+//endregion
 
-
-// ─── bind group layouts ────────────────────────────────────────────────────────────────
+// region ────────── bind group layouts ────────────────────────────────────────────────────────
 auto SenVulkanBackend::CreateBindGroupLayout(const SenBindGroupLayoutDesc& desc) -> SenBindGroupLayout {
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+    // Add texture bindings
+    for (const auto& entry : desc.TextureEntries) {
+        VkDescriptorSetLayoutBinding binding {
+            .binding         = entry.Slot,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .descriptorCount = 1,
+            .stageFlags      = Sen::Vulkan::ToShaderStageFlags(entry.Stages),
+        };
+        bindings.push_back(binding);
+    }
+
+    // Add sampler bindings
+    for (const auto& entry : desc.SamplerEntries) {
+        VkDescriptorSetLayoutBinding binding {
+            .binding         = entry.Slot,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER,
+            .descriptorCount = 1,
+            .stageFlags      = Sen::Vulkan::ToShaderStageFlags(entry.Stages),
+        };
+        bindings.push_back(binding);
+    }
+
+    // Add buffer bindings
+    for (const auto& entry : desc.BufferEntries) {
+        VkDescriptorSetLayoutBinding binding {
+            .binding         = entry.Slot,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags      = Sen::Vulkan::ToShaderStageFlags(entry.Stages),
+        };
+        bindings.push_back(binding);
+    }
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo {
+        .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .bindingCount = uint32_t(bindings.size()),
+        .pBindings    = bindings.data(),
+    };
+
+    SenVulkanBindGroupLayoutEntry entry {};
+    VkResult result = vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &entry.Layout);
+    be_assert(result == VK_SUCCESS, "Failed to create descriptor set layout!");
+
     const SenBindGroupLayout handle { _nextBindGroupLayoutId++ };
-    _bindGroupLayouts[handle.ID] = desc;
+    _bindGroupLayouts[handle.ID] = entry;
     return handle;
 }
 
 auto SenVulkanBackend::DestroyBindGroupLayout(SenBindGroupLayout handle) -> void {
-    _bindGroupLayouts.erase(handle.ID);
+    auto it = _bindGroupLayouts.find(handle.ID);
+    if (it != _bindGroupLayouts.end()) {
+        vkDestroyDescriptorSetLayout(_device, it->second.Layout, nullptr);
+        _bindGroupLayouts.erase(it);
+    }
 }
 
-auto SenVulkanBackend::LookupBindGroupLayout(SenBindGroupLayout handle) -> SenBindGroupLayoutDesc& {
+auto SenVulkanBackend::LookupBindGroupLayout(SenBindGroupLayout handle) -> SenVulkanBindGroupLayoutEntry& {
     return _bindGroupLayouts.at(handle.ID);
 }
+// endregion
 
-
-// ─── bind groups ────────────────────────────────────────────────────────────────
+// region ────────── bind groups ───────────────────────────────────────────────────────────────
 auto SenVulkanBackend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindGroup {
+    const auto& layoutEntry = LookupBindGroupLayout(desc.Layout);
+
+    VkDescriptorSetAllocateInfo allocInfo {
+        .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool     = _descriptorPool,
+        .descriptorSetCount = 1,
+        .pSetLayouts        = &layoutEntry.Layout,
+    };
+
+    SenVulkanBindGroupEntry entry {};
+    VkResult result = vkAllocateDescriptorSets(_device, &allocInfo, &entry.Set);
+    be_assert(result == VK_SUCCESS, "Failed to allocate descriptor set!");
+
+    // Pre-allocate containers to avoid reallocation invalidating pointers
+    size_t imageCount = desc.Textures.size() + desc.Samplers.size();
+    std::vector<VkDescriptorImageInfo> imageInfos(imageCount);
+    std::vector<VkDescriptorBufferInfo> bufferInfos(desc.ConstantBuffers.size());
+    std::vector<VkWriteDescriptorSet> writes;
+    writes.reserve(imageCount + desc.ConstantBuffers.size());
+
+    // Track image textures for rt→sample auto-barrier in SetBindGroup
+    entry.ImageTextures = desc.Textures;
+
+    // Write textures
+    uint32_t imageIdx = 0;
+    uint32_t binding = 0;
+    for (const auto& texture : desc.Textures) {
+        const auto& textureEntry = LookupTexture(texture);
+        imageInfos[imageIdx] = VkDescriptorImageInfo {
+            .imageView   = textureEntry.SRV,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
+        writes.push_back(VkWriteDescriptorSet {
+            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet          = entry.Set,
+            .dstBinding      = binding++,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .pImageInfo      = &imageInfos[imageIdx],
+        });
+        imageIdx++;
+    }
+
+    // Write samplers
+    for (const auto& sampler : desc.Samplers) {
+        const auto& samplerEntry = LookupSampler(sampler);
+        imageInfos[imageIdx] = VkDescriptorImageInfo {
+            .sampler = samplerEntry.Sampler,
+        };
+        writes.push_back(VkWriteDescriptorSet {
+            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet          = entry.Set,
+            .dstBinding      = binding++,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER,
+            .pImageInfo      = &imageInfos[imageIdx],
+        });
+        imageIdx++;
+    }
+
+    // Write buffers
+    uint32_t bufferIdx = 0;
+    for (const auto& buffer : desc.ConstantBuffers) {
+        const auto& bufferEntry = LookupBuffer(buffer);
+        bufferInfos[bufferIdx] = VkDescriptorBufferInfo {
+            .buffer = bufferEntry.Buffer,
+            .offset = 0,
+            .range  = bufferEntry.Size,
+        };
+        writes.push_back(VkWriteDescriptorSet {
+            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet          = entry.Set,
+            .dstBinding      = binding++,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo     = &bufferInfos[bufferIdx],
+        });
+        bufferIdx++;
+    }
+
+    if (!writes.empty()) {
+        vkUpdateDescriptorSets(_device, uint32_t(writes.size()), writes.data(), 0, nullptr);
+    }
+
     const SenBindGroup handle { _nextBindGroupId++ };
-    _bindGroups[handle.ID] = desc;
+    _bindGroups[handle.ID] = entry;
     return handle;
 }
 
 auto SenVulkanBackend::DestroyBindGroup(SenBindGroup handle) -> void {
-    _bindGroups.erase(handle.ID);
+    auto it = _bindGroups.find(handle.ID);
+    if (it != _bindGroups.end()) {
+        vkFreeDescriptorSets(_device, _descriptorPool, 1, &it->second.Set);
+        _bindGroups.erase(it);
+    }
 }
 
-auto SenVulkanBackend::LookupBindGroup(SenBindGroup handle) -> SenBindGroupDesc& {
+auto SenVulkanBackend::LookupBindGroup(SenBindGroup handle) -> SenVulkanBindGroupEntry& {
     return _bindGroups.at(handle.ID);
 }
+// endregion
 
-
-// ─── shaders ────────────────────────────────────────────────────────────────
+// region ────────── shaders ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::CreateShader(const SenShaderSourceDesc& sourceDesc) -> SenShader {
+    SlangStage slangStage = SLANG_STAGE_NONE;
+    switch (sourceDesc.Stage) {
+        case SenShaderStage::Vertex: slangStage = SLANG_STAGE_VERTEX; break;
+        case SenShaderStage::Hull:   slangStage = SLANG_STAGE_HULL;   break;
+        case SenShaderStage::Domain: slangStage = SLANG_STAGE_DOMAIN; break;
+        case SenShaderStage::Pixel:  slangStage = SLANG_STAGE_PIXEL;  break;
+        default: be_assert(false, "SenVulkanBackend::CreateShader: unsupported shader stage"); break;
+    }
+
+    auto compileResult = SenShaderCompiler::Compile(sourceDesc.SourcePath, sourceDesc.FunctionName, slangStage, SLANG_SPIRV);
+    be_assert(compileResult, "SenVulkanBackend::CreateShader: shader compilation failed: " + compileResult.error());
+
+    auto& blob = compileResult.value();
+
+    VkShaderModuleCreateInfo moduleInfo {
+        .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = blob->getBufferSize(),
+        .pCode    = static_cast<const uint32_t*>(blob->getBufferPointer()),
+    };
+
     const SenShader handle { _nextShaderId++ };
-    _shaders[handle.ID] = {};
+    auto& entry = _shaders[handle.ID];
+    entry.Stage = sourceDesc.Stage;
+
+    VkResult result = vkCreateShaderModule(_device, &moduleInfo, nullptr, &entry.Module);
+    be_assert(result == VK_SUCCESS, "Failed to create shader module!");
+
     return handle;
 }
 
 auto SenVulkanBackend::DestroyShader(SenShader handle) -> void {
-    _shaders.erase(handle.ID);
+    auto it = _shaders.find(handle.ID);
+    if (it != _shaders.end()) {
+        vkDestroyShaderModule(_device, it->second.Module, nullptr);
+        _shaders.erase(it);
+    }
 }
 
 auto SenVulkanBackend::LookupShader(SenShader handle) -> SenVulkanShaderEntry& {
     return _shaders.at(handle.ID);
 }
 
+// endregion
 
-// ─── pipelines ────────────────────────────────────────────────────────────────
+// region ────────── pipelines ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
+    SenVulkanPipelineEntry entry {};
+
+    // ── pipeline layout (from bind group layouts) ──────────────────────────────
+    std::vector<VkDescriptorSetLayout> setLayouts;
+    setLayouts.reserve(desc.BindGroupLayouts.size());
+    for (const auto& bgl : desc.BindGroupLayouts) {
+        setLayouts.push_back(LookupBindGroupLayout(bgl).Layout);
+    }
+
+    VkPipelineLayoutCreateInfo layoutInfo {
+        .sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = uint32_t(setLayouts.size()),
+        .pSetLayouts    = setLayouts.data(),
+    };
+    VkResult result = vkCreatePipelineLayout(_device, &layoutInfo, nullptr, &entry.Layout);
+    be_assert(result == VK_SUCCESS, "Failed to create pipeline layout!");
+
+    // ── shader stages ──────────────────────────────────────────────────────────
+    std::vector<VkPipelineShaderStageCreateInfo> stages;
+
+    auto addStage = [&](SenShader shader, VkShaderStageFlagBits stageBit) {
+        if (!shader.IsValid()) { return; }
+        stages.push_back(VkPipelineShaderStageCreateInfo {
+            .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage  = stageBit,
+            .module = LookupShader(shader).Module,
+            .pName  = "main",
+        });
+    };
+    addStage(desc.VertexShader, VK_SHADER_STAGE_VERTEX_BIT);
+    addStage(desc.HullShader,   VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+    addStage(desc.DomainShader, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+    addStage(desc.PixelShader,  VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    // ── vertex input ───────────────────────────────────────────────────────────
+    std::vector<VkVertexInputAttributeDescription> attributes;
+    attributes.reserve(desc.VertexLayout.size());
+    for (const auto& elem : desc.VertexLayout) {
+        attributes.push_back(VkVertexInputAttributeDescription {
+            .location = elem.Location,
+            .binding  = 0,
+            .format   = Sen::Vulkan::ToFormat(elem.Format),
+            .offset   = elem.Offset,
+        });
+    }
+
+    uint32_t vertexStride = desc.VertexLayout.empty() ? 0 : [&] {
+        uint32_t stride = 0;
+        for (const auto& elem : desc.VertexLayout) {
+            stride = std::max(stride, elem.Offset + Sen::Vulkan::BytesPerPixel(elem.Format));
+        }
+        return stride;
+    }();
+
+    VkVertexInputBindingDescription binding {
+        .binding   = 0,
+        .stride    = vertexStride,
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+    };
+
+    VkPipelineVertexInputStateCreateInfo vertexInput {
+        .sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .vertexBindingDescriptionCount   = desc.VertexLayout.empty() ? 0u : 1u,
+        .pVertexBindingDescriptions      = desc.VertexLayout.empty() ? nullptr : &binding,
+        .vertexAttributeDescriptionCount = uint32_t(attributes.size()),
+        .pVertexAttributeDescriptions    = attributes.data(),
+    };
+
+    // ── input assembly ─────────────────────────────────────────────────────────
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly {
+        .sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology               = Sen::Vulkan::ToTopology(desc.Topology),
+        .primitiveRestartEnable = VK_FALSE,
+    };
+
+    // ── tessellation ───────────────────────────────────────────────────────────
+    VkPipelineTessellationStateCreateInfo tessellation {
+        .sType              = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
+        .patchControlPoints = desc.Topology == SenTopology::PatchList3 ? 3u : 1u,
+    };
+
+    // ── viewport (dynamic) ─────────────────────────────────────────────────────
+    VkPipelineViewportStateCreateInfo viewportState {
+        .sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .scissorCount  = 1,
+    };
+
+    // ── rasterizer ─────────────────────────────────────────────────────────────
+    VkPipelineRasterizationStateCreateInfo rasterizer {
+        .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .depthClampEnable        = !desc.RasterizerState.DepthClipEnable,
+        .rasterizerDiscardEnable = VK_FALSE,
+        .polygonMode             = Sen::Vulkan::ToFillMode(desc.RasterizerState.FillMode),
+        .cullMode                = Sen::Vulkan::ToCullMode(desc.RasterizerState.CullMode),
+        .frontFace               = VK_FRONT_FACE_CLOCKWISE,
+        .depthBiasEnable         = desc.RasterizerState.DepthBias != 0.f || desc.RasterizerState.SlopeScaledDepthBias != 0.f,
+        .depthBiasConstantFactor = desc.RasterizerState.DepthBias,
+        .depthBiasSlopeFactor    = desc.RasterizerState.SlopeScaledDepthBias,
+        .lineWidth               = 1.f,
+    };
+
+    // ── multisample ────────────────────────────────────────────────────────────
+    VkPipelineMultisampleStateCreateInfo multisample {
+        .sType                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+    };
+
+    // ── depth stencil ──────────────────────────────────────────────────────────
+    VkPipelineDepthStencilStateCreateInfo depthStencil {
+        .sType            = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable  = desc.DepthStencilState.DepthEnable,
+        .depthWriteEnable = desc.DepthStencilState.DepthWriteEnable,
+        .depthCompareOp   = Sen::Vulkan::ToCompareOp(desc.DepthStencilState.DepthFunc),
+    };
+
+    // ── blend ──────────────────────────────────────────────────────────────────
+    uint32_t rtCount = std::max(uint32_t(1), uint32_t(desc.RenderTargetFormats.size()));
+    VkPipelineColorBlendAttachmentState blendAttachment {
+        .blendEnable         = desc.BlendState.Enable,
+        .srcColorBlendFactor = Sen::Vulkan::ToBlendFactor(desc.BlendState.SrcBlend),
+        .dstColorBlendFactor = Sen::Vulkan::ToBlendFactor(desc.BlendState.DstBlend),
+        .colorBlendOp        = Sen::Vulkan::ToBlendOp(desc.BlendState.BlendOp),
+        .srcAlphaBlendFactor = Sen::Vulkan::ToBlendFactor(desc.BlendState.SrcBlendAlpha),
+        .dstAlphaBlendFactor = Sen::Vulkan::ToBlendFactor(desc.BlendState.DstBlendAlpha),
+        .alphaBlendOp        = Sen::Vulkan::ToBlendOp(desc.BlendState.BlendOpAlpha),
+        .colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                               VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+    };
+    std::vector<VkPipelineColorBlendAttachmentState> blendAttachments(rtCount, blendAttachment);
+
+    VkPipelineColorBlendStateCreateInfo blendState {
+        .sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .attachmentCount = uint32_t(blendAttachments.size()),
+        .pAttachments    = blendAttachments.data(),
+    };
+
+    // ── dynamic state ──────────────────────────────────────────────────────────
+    std::array<VkDynamicState, 2> dynamicStates { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    VkPipelineDynamicStateCreateInfo dynamicState {
+        .sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = uint32_t(dynamicStates.size()),
+        .pDynamicStates    = dynamicStates.data(),
+    };
+
+    // ── dynamic rendering ──────────────────────────────────────────────────────
+    std::vector<VkFormat> colorFormats;
+    colorFormats.reserve(desc.RenderTargetFormats.size());
+    for (const auto& fmt : desc.RenderTargetFormats) {
+        colorFormats.push_back(Sen::Vulkan::ToFormat(fmt));
+    }
+
+    VkPipelineRenderingCreateInfoKHR renderingInfo {
+        .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+        .colorAttachmentCount    = uint32_t(colorFormats.size()),
+        .pColorAttachmentFormats = colorFormats.data(),
+        .depthAttachmentFormat   = desc.DepthStencilState.DepthEnable ? VK_FORMAT_D32_SFLOAT : VK_FORMAT_UNDEFINED,
+    };
+
+    // ── create pipeline ────────────────────────────────────────────────────────
+    VkGraphicsPipelineCreateInfo pipelineInfo {
+        .sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext               = &renderingInfo,
+        .stageCount          = uint32_t(stages.size()),
+        .pStages             = stages.data(),
+        .pVertexInputState   = &vertexInput,
+        .pInputAssemblyState = &inputAssembly,
+        .pTessellationState  = &tessellation,
+        .pViewportState      = &viewportState,
+        .pRasterizationState = &rasterizer,
+        .pMultisampleState   = &multisample,
+        .pDepthStencilState  = &depthStencil,
+        .pColorBlendState    = &blendState,
+        .pDynamicState       = &dynamicState,
+        .layout              = entry.Layout,
+    };
+
+    result = vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &entry.Pipeline);
+    be_assert(result == VK_SUCCESS, "Failed to create graphics pipeline!");
+
     const SenPipeline handle { _nextPipelineId++ };
-    _pipelines[handle.ID] = {};
+    _pipelines[handle.ID] = entry;
     return handle;
 }
 
 auto SenVulkanBackend::DestroyPipeline(SenPipeline handle) -> void {
-    _pipelines.erase(handle.ID);
+    auto it = _pipelines.find(handle.ID);
+    if (it != _pipelines.end()) {
+        vkDestroyPipeline(_device, it->second.Pipeline, nullptr);
+        vkDestroyPipelineLayout(_device, it->second.Layout, nullptr);
+        _pipelines.erase(it);
+    }
 }
 
 auto SenVulkanBackend::LookupPipeline(SenPipeline handle) -> SenVulkanPipelineEntry& {
     return _pipelines.at(handle.ID);
 }
+
+// endregion

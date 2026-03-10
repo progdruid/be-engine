@@ -15,7 +15,8 @@ auto SenShaderCompiler::Launch() -> void {
 auto SenShaderCompiler::Compile(
     const std::filesystem::path& filePath,
     const std::string& entryPoint,
-    SlangStage stage
+    SlangStage stage,
+    SlangCompileTarget target
 ) -> std::expected<Slang::ComPtr<ISlangBlob>, std::string> {
 
     auto extractDiag = [](ISlangBlob* diag) -> std::string {
@@ -25,8 +26,12 @@ auto SenShaderCompiler::Compile(
     };
     
     slang::TargetDesc targetDesc = {};
-    targetDesc.format = SLANG_DXBC;
-    targetDesc.profile = _globalSession->findProfile("sm_5_0");
+    targetDesc.format = target;
+    if (target == SLANG_SPIRV) {
+        targetDesc.profile = _globalSession->findProfile("glsl_450");
+    } else {
+        targetDesc.profile = _globalSession->findProfile("sm_5_0");
+    }
 
     const char* searchPaths[] = { AssetShadersPath.c_str(), StandardShadersPath.c_str() };
 

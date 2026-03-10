@@ -1,6 +1,8 @@
 #pragma once
+#include <array>
 #include <unordered_map>
 #include <vulkan/vulkan_core.h>
+#include <vma/vk_mem_alloc.h>
 
 #include "sen-rhi/SenCommandBuffer.h"
 #include "sen-rhi/SenTypes.h"
@@ -13,45 +15,86 @@ namespace Slang { template <typename T> class ComPtr; }
 // ─── resource entries ─────────────────────────────────────────────────────────
 
 struct SenVulkanTextureEntry {
+    VkImage       Image      = VK_NULL_HANDLE;
+    VmaAllocation Allocation = VK_NULL_HANDLE;
+    VkFormat      Format     = VK_FORMAT_UNDEFINED;
+    VkImageView   SRV        = VK_NULL_HANDLE;                  // for shader sampling (all mips, all layers)
+    VkImageView   DSV        = VK_NULL_HANDLE;                  // depth attachment (2D or per-face for cubemap — see below)
+    std::vector<VkImageView>                MipRTVs;            // [mip]       — color attachment per mip (2D)
+    std::array<VkImageView, 6>              CubemapDSVs  = {};  // [face]      — depth attachment per cubemap face
+    std::array<std::vector<VkImageView>, 6> CubemapMipRTVs;    // [face][mip] — color attachment per cubemap face per mip
+    VkImageLayout CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;    // tracked for automatic barriers
 };
 
 struct SenVulkanBufferEntry {
+    VkBuffer        Buffer     = VK_NULL_HANDLE;
+    VmaAllocation   Allocation = VK_NULL_HANDLE;
+    SenBufferAccess Access     = SenBufferAccess::Dynamic;
+    uint32_t        Size       = 0;
+    void*           MappedPtr  = nullptr;  // non-null for Dynamic buffers (persistently mapped)
 };
 
 struct SenVulkanSamplerEntry {
+    VkSampler Sampler = VK_NULL_HANDLE;
 };
 
 struct SenVulkanShaderEntry {
+    VkShaderModule Module = VK_NULL_HANDLE;
+    SenShaderStage Stage;
 };
 
 
 struct SenVulkanPipelineEntry {
+    VkPipeline       Pipeline = VK_NULL_HANDLE;
+    VkPipelineLayout Layout   = VK_NULL_HANDLE;
+};
+
+struct SenVulkanBindGroupLayoutEntry {
+    VkDescriptorSetLayout Layout = VK_NULL_HANDLE;
+};
+
+struct SenVulkanBindGroupEntry {
+    VkDescriptorSet          Set           = VK_NULL_HANDLE;
+    std::vector<SenTexture>  ImageTextures;  // SenTexture handles for image bindings, for auto rt→sample barriers
 };
 
 struct SenVulkanSwapchainEntry {
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-    std::vector<VkImage> images;
-    std::vector<VkImageView> imageViews;
-    SenFormat format = SenFormat::Unknown;
-    uint32_t width = 0;
-    uint32_t height = 0;
+    VkSurfaceKHR   Surface   = VK_NULL_HANDLE;
+    VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
+    std::vector<VkImage>     Images;
+    std::vector<VkImageView> ImageViews;
+    std::vector<SenTexture>  Textures;   // SenTexture handle per swapchain image
+
+    // per-frame sync
+    VkSemaphore ImageAvailableSemaphore = VK_NULL_HANDLE;
+    VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;
+    VkFence     InFlightFence           = VK_NULL_HANDLE;
+    uint32_t    CurrentImageIndex       = 0;
+
+    void* NativeWindowHandle;
+    uint32_t Width = 0;
+    uint32_t Height = 0;
+    uint32_t BufferCount;
+    SenFormat Format;
+    SenPresentMode PresentMode;
 };
 
 // ─── backend ──────────────────────────────────────────────────────────────────
 
 class SenVulkanBackend {
     expose
-    static auto Init     (const SenDeviceDesc& desc) -> void;
-    static auto Shutdown () -> void;
+    static auto Init      (const SenDeviceDesc& desc) -> void;
+    static auto Shutdown  () -> void;
+    static auto WaitIdle  () -> void;
 
     
     expose // swapchain lifecycle
-    static auto CreateSwapchain  (const SenSwapchainDesc& desc) -> SenSwapchain;
-    static auto DestroySwapchain (SenSwapchain handle) -> void;
-    static auto ResizeSwapchain  (SenSwapchain handle, uint32_t width, uint32_t height) -> void;
-    static auto BeginFrame       (SenSwapchain handle) -> SenTexture;
-    static auto EndFrame         (SenSwapchain handle) -> void;
+    static auto CreateSwapchain       (const SenSwapchainDesc& desc) -> SenSwapchain;
+    static auto DestroySwapchain      (SenSwapchain handle) -> void;
+    static auto ResizeSwapchain       (SenSwapchain& handle, uint32_t width, uint32_t height) -> void;
+    static auto BeginFrame            (SenSwapchain handle) -> SenTexture;
+    static auto EndFrame              (SenSwapchain handle) -> void;
+    static auto GetSwapchainFormat    (SenSwapchain handle) -> SenFormat;
 
     expose // command buffer factory
     static auto CreateCommandBuffer () -> SenCommandBuffer;
@@ -68,12 +111,18 @@ class SenVulkanBackend {
     static auto CreateTexture  (const SenTextureDesc& desc) -> SenTexture;
     static auto DestroyTexture (SenTexture handle) -> void;
     static auto LookupTexture  (SenTexture handle) -> SenVulkanTextureEntry&;
-
+    hide static auto CreateImageView      (VkImage image, VkFormat format, VkImageViewType viewType, VkImageAspectFlags aspect, uint32_t baseMip, uint32_t mipLevels, uint32_t baseLayer, uint32_t layerCount) -> VkImageView;
+    expose static auto TransitionImageLayout(VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels, uint32_t layerCount) -> void;
+    hide static auto UploadToDeviceImage  (VkImage image, VkImageAspectFlags aspect, const void* data, uint32_t dataSize, uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t layerCount) -> void;
+    hide static auto CreateTexture2D      (const SenTextureDesc& desc, SenVulkanTextureEntry& entry) -> void;
+    hide static auto CreateTextureCubemap (const SenTextureDesc& desc, SenVulkanTextureEntry& entry) -> void;
+    
     expose // buffers
     static auto CreateBuffer  (const SenBufferDesc& desc) -> SenBuffer;
     static auto DestroyBuffer (SenBuffer handle) -> void;
     static auto LookupBuffer  (SenBuffer handle) -> SenVulkanBufferEntry&;
     static auto WriteBuffer   (SenBuffer handle, const void* data, uint32_t size) -> void;
+    hide static auto UploadToDeviceBuffer(VkBuffer dst, const void* data, uint32_t size) -> void;
 
     expose // samplers
     static auto CreateSampler  (const SenSamplerDesc& desc) -> SenSampler;
@@ -83,12 +132,12 @@ class SenVulkanBackend {
     expose // bind group layouts
     static auto CreateBindGroupLayout  (const SenBindGroupLayoutDesc& desc) -> SenBindGroupLayout;
     static auto DestroyBindGroupLayout (SenBindGroupLayout handle) -> void;
-    static auto LookupBindGroupLayout  (SenBindGroupLayout handle) -> SenBindGroupLayoutDesc&;
+    static auto LookupBindGroupLayout  (SenBindGroupLayout handle) -> SenVulkanBindGroupLayoutEntry&;
 
     expose // bind groups
     static auto CreateBindGroup  (const SenBindGroupDesc& desc) -> SenBindGroup;
     static auto DestroyBindGroup (SenBindGroup handle) -> void;
-    static auto LookupBindGroup  (SenBindGroup handle) -> SenBindGroupDesc&;
+    static auto LookupBindGroup  (SenBindGroup handle) -> SenVulkanBindGroupEntry&;
 
     
     expose // shaders
@@ -102,6 +151,11 @@ class SenVulkanBackend {
     static auto LookupPipeline  (SenPipeline handle) -> SenVulkanPipelineEntry&;
 
     
+    expose // dynamic rendering extension proc addresses (used by SenVulkanCommandBuffer)
+    static PFN_vkCmdBeginRenderingKHR _vkCmdBeginRenderingKHR;
+    static PFN_vkCmdEndRenderingKHR   _vkCmdEndRenderingKHR;
+    static VkCommandBuffer            _activeCommandBuffer;
+
     hide
     static VkInstance _instance;
     static VkPhysicalDevice _physicalDevice;
@@ -109,7 +163,8 @@ class SenVulkanBackend {
     static VkQueue _queue;
     static uint32_t _queueFamilyIndex;
     static VkCommandPool _commandPool;
-    
+    static VmaAllocator _allocator;
+
     static std::unordered_map<uint32_t, SenVulkanSwapchainEntry> _swapchains;
     static uint32_t _nextSwapchainId;
     
@@ -122,11 +177,13 @@ class SenVulkanBackend {
     static std::unordered_map<uint32_t, SenVulkanSamplerEntry> _samplers;
     static uint32_t _nextSamplerId;
 
-    static std::unordered_map<uint32_t, SenBindGroupLayoutDesc> _bindGroupLayouts;
+    static std::unordered_map<uint32_t, SenVulkanBindGroupLayoutEntry> _bindGroupLayouts;
     static uint32_t _nextBindGroupLayoutId;
 
-    static std::unordered_map<uint32_t, SenBindGroupDesc> _bindGroups;
+    static std::unordered_map<uint32_t, SenVulkanBindGroupEntry> _bindGroups;
     static uint32_t _nextBindGroupId;
+
+    static VkDescriptorPool _descriptorPool;
 
     static std::unordered_map<uint32_t, SenVulkanShaderEntry> _shaders;
     static uint32_t _nextShaderId;

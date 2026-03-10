@@ -9,6 +9,7 @@
 #include <umbrellas/access-modifiers.hpp>
 #include <sen-rhi/SenTypes.h>
 
+#include "SenDx11CommandBuffer.h"
 #include "sen-rhi/SenCommandBuffer.h"
 
 using Microsoft::WRL::ComPtr;
@@ -79,12 +80,12 @@ class SenDx11Backend {
     expose // swapchain lifecycle
     static auto CreateSwapchain  (const SenSwapchainDesc& desc) -> SenSwapchain;
     static auto DestroySwapchain (SenSwapchain handle) -> void;
-    static auto ResizeSwapchain  (SenSwapchain handle, uint32_t width, uint32_t height) -> void;
+    static auto ResizeSwapchain  (SenSwapchain& handle, uint32_t width, uint32_t height) -> void;
     static auto BeginFrame       (SenSwapchain handle) -> SenTexture;
     static auto EndFrame         (SenSwapchain handle) -> void;
 
     expose // command buffer factory
-    static auto CreateCommandBuffer () -> SenCommandBuffer;
+    static auto CreateCommandBuffer () -> SenDx11CommandBuffer;
 
     expose // native API escape hatches (for ImGui, etc.)
     static auto GetNativeDevice  () -> void*;

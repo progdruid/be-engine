@@ -18,6 +18,7 @@ class SenShaderCompiler {
     static auto Compile(
         const std::filesystem::path& filePath,
         const std::string& entryPoint,
-        SlangStage stage
+        SlangStage stage,
+        SlangCompileTarget target
     ) -> std::expected<Slang::ComPtr<ISlangBlob>, std::string>;
 };

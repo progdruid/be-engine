@@ -53,8 +53,10 @@ newaction {
 
 if _ACTION == "vs2022" or _ACTION == "vs2019" then
     Be.CleanProjectFiles()
+    print("Cleaned past project files")
     if _OPTIONS["clean"] then
         Be.CleanBinaries()
+        print("Cleaned binaries")
     end
     Be.Declare()
 end

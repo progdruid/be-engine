@@ -53,9 +53,9 @@ enum class SenBufferUsage : uint8_t {
 };
 
 enum class SenBufferAccess : uint8_t {
-    Immutable, // upload once at creation, never written again      — DX11: USAGE_IMMUTABLE,   Vulkan: device-local via staging
-    Default,   // written rarely (once or a few times per lifetime) — DX11: UpdateSubresource, Vulkan: device-local via staging
-    Dynamic,   // written every frame                               — DX11: Map/Unmap DISCARD, Vulkan: host-visible buffer
+    Immutable, // set at creation, never written again - Vulkan: device-local via staging, assert write - DX11: USAGE_IMMUTABLE
+    Static,    // rarely updated (not per-frame)       - Vulkan: device-local via staging               - DX11: UpdateSubresource
+    Dynamic,   // written every frame                  - Vulkan: host-visible persistent map            - DX11: Map/Unmap DISCARD
 };
 
 struct SenBuffer {
@@ -244,9 +244,10 @@ struct SenShaderSourceDesc {
 
 // ─── vertex layout ─────────────────────────────────────────────
 struct SenVertexLayoutElement {
-    std::string Semantic;
-    SenFormat Format;
-    uint32_t Offset;
+    std::string Semantic;  // HLSL semantic name, used by DX11
+    uint32_t    Location;  // SPIR-V location, used by Vulkan
+    SenFormat   Format;
+    uint32_t    Offset;
 };
 
 struct SenVertexLayoutDesc {
@@ -349,8 +350,8 @@ struct SenSwapchainDesc {
     void*          NativeWindowHandle = nullptr;  // HWND on Windows
     uint32_t       Width       = 0;
     uint32_t       Height      = 0;
-    SenFormat      Format      = SenFormat::RGBA8_Unorm;
     uint32_t       BufferCount = 2;
+    SenFormat      Format      = SenFormat::RGBA8_Unorm;
     SenPresentMode PresentMode = SenPresentMode::VSync;
 };
 

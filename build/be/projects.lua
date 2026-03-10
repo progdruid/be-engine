@@ -7,7 +7,6 @@ function Be.DeclareCore()
 
     includedirs {
         "%{wks.location}/vendor",
-        "%{wks.location}/vendor/slang/include",
         "%{wks.location}/vendor/Assimp/include",
         "%{wks.location}/vendor/libassert/include",
         "%{wks.location}/vendor/cpptrace/include",
@@ -16,7 +15,6 @@ function Be.DeclareCore()
     libdirs {
         "%{wks.location}/vendor/glfw/lib-vc2022",
         "%{wks.location}/vendor/Assimp/lib/x64",
-        "%{wks.location}/vendor/slang/lib",
         "%{wks.location}/vendor/cpptrace/bin/%{cfg.architecture}-%{cfg.buildcfg}",
         "%{wks.location}/vendor/libassert/bin/%{cfg.architecture}-%{cfg.buildcfg}",
     }
@@ -27,15 +25,17 @@ function Be.DeclareCore()
         -- directx 11
         "d3d11",
         "dxgi",
-
-        -- slang
-        "slang-compiler",
-
+        
         -- libassert + cpptrace
         "libassert",
         "cpptrace",
         "dbghelp"
     }
+    
+    -- slang
+    includedirs { "%{wks.location}/vendor/slang/include" }
+    libdirs { "%{wks.location}/vendor/slang/lib" }
+    links { "slang-compiler" }
     
     -- vulkan
     includedirs { "$(VULKAN_SDK)/Include" }
@@ -163,6 +163,10 @@ function Be.DeclareExampleVulkan()
     project "example-vulkan"
     kind "ConsoleApp"
     debugdir "%{prj.location}/bin/%{cfg.architecture}-%{cfg.buildcfg}"
+    includedirs { "%{wks.location}/vendor/slang/include" }
+    postbuildcommands {
+        "{COPY} %{prj.location}/assets %{cfg.targetdir}/assets"
+    }
     Be.CoreUse()
     Be.CorePostBuild()
     Be.Default()

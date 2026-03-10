@@ -35,7 +35,7 @@ BeMaterial::BeMaterial(
     const uint32_t sizeInBytes = static_cast<uint32_t>(_bufferData.size() * sizeof(float));
     _cbuffer = SenBackend::CreateBuffer({
         .Usage  = SenBufferUsage::Constant,
-        .Access = _isFrequentlyUsed ? SenBufferAccess::Dynamic : SenBufferAccess::Default,
+        .Access = _isFrequentlyUsed ? SenBufferAccess::Dynamic : SenBufferAccess::Static,
         .Size   = sizeInBytes,
         .Data   = _bufferData.data(),
     });

@@ -10,6 +10,8 @@
 #include <sen-rhi/dx11/SenDx11Convert.h>
 #include <sen-rhi/SenShaderCompiler.h>
 
+#include "SenDx11CommandBuffer.h"
+
 // ─── texture helpers ──────────────────────────────────────────────────────────
 
 static auto DepthSRVFormat(DXGI_FORMAT textureFormat) -> DXGI_FORMAT {
@@ -356,7 +358,7 @@ auto SenDx11Backend::DestroySwapchain(SenSwapchain handle) -> void {
     _swapchains.erase(handle.ID);
 }
 
-auto SenDx11Backend::ResizeSwapchain(SenSwapchain handle, uint32_t width, uint32_t height) -> void {
+auto SenDx11Backend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uint32_t height) -> void {
     auto& entry = _swapchains.at(handle.ID);
     entry.Width = width;
     entry.Height = height;
@@ -390,8 +392,8 @@ auto SenDx11Backend::EndFrame(SenSwapchain handle) -> void {
     Utils::Check << entry.Swapchain->Present(1, 0);
 }
 
-auto SenDx11Backend::CreateCommandBuffer() -> SenCommandBuffer {
-    return SenCommandBuffer(_context);
+auto SenDx11Backend::CreateCommandBuffer() -> SenDx11CommandBuffer {
+    return SenDx11CommandBuffer(_context);
 }
 
 auto SenDx11Backend::GetNativeDevice() -> void* {
@@ -498,7 +500,7 @@ auto SenDx11Backend::WriteBuffer(
         memcpy(mapped.pData, data, size);
         _context->Unmap(entry.Buffer.Get(), 0);
     }
-    else if (entry.Access == SenBufferAccess::Default) {
+    else if (entry.Access == SenBufferAccess::Static) {
         _context->UpdateSubresource(entry.Buffer.Get(), 0, nullptr, data, 0, 0);
     }
     else {
@@ -548,7 +550,7 @@ auto SenDx11Backend::CreateShader(const SenShaderSourceDesc& sourceDesc) -> SenS
         default: be_assert(false, "SenDx11Backend::CreateShader: unsupported shader stage"); break;
     }
 
-    auto compileResult = SenShaderCompiler::Compile(sourceDesc.SourcePath, sourceDesc.FunctionName, slangStage);
+    auto compileResult = SenShaderCompiler::Compile(sourceDesc.SourcePath, sourceDesc.FunctionName, slangStage, SLANG_DXBC);
     be_assert(compileResult, "SenDx11Backend::CreateShader: shader compilation failed: " + compileResult.error());
 
     const SenShader handle { _nextShaderId++ };

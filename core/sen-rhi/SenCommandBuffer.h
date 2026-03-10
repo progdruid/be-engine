@@ -1,4 +1,4 @@
 #pragma once
-#include <sen-rhi/dx11/SenDx11CommandBuffer.h>
+#include <sen-rhi/vulkan/SenVulkanCommandBuffer.h>
 
-using SenCommandBuffer = SenDx11CommandBuffer;
+using SenCommandBuffer = SenVulkanCommandBuffer;

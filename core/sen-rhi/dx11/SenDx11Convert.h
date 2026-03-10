@@ -67,7 +67,7 @@ namespace Sen::Dx11 {
     inline auto ToBufferAccess(SenBufferAccess access) -> Dx11BufferAccessDesc {
         switch (access) {
             case SenBufferAccess::Dynamic:   return { D3D11_USAGE_DYNAMIC,   D3D11_CPU_ACCESS_WRITE };
-            case SenBufferAccess::Default:   return { D3D11_USAGE_DEFAULT,   0                      };
+            case SenBufferAccess::Static:    return { D3D11_USAGE_DEFAULT,   0                      };
             case SenBufferAccess::Immutable: return { D3D11_USAGE_IMMUTABLE, 0                      };
             default:                         return { D3D11_USAGE_DEFAULT,   0                      };
         }
