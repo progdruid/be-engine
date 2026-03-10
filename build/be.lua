@@ -10,6 +10,7 @@ function Be.CleanProjectFiles()
         "toolkit",
         "example-game-1",
         "example-sakura",
+        "example-vulkan",
         "devtools",
     }
 
@@ -31,6 +32,7 @@ function Be.CleanBinaries()
         "toolkit",
         "example-game-1",
         "example-sakura",
+        "example-vulkan",
         "devtools/shader-boilerplate-autogen",
     }
 
@@ -52,6 +54,7 @@ function Be.Declare()
     Be.DeclareMiscConfiguration()
     Be.DeclareExampleGame1()
     Be.DeclareExampleSakura()
+    Be.DeclareExampleVulkan()
     Be.DeclareDevtools()
 end
 

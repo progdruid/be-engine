@@ -36,7 +36,14 @@ function Be.DeclareCore()
         "cpptrace",
         "dbghelp"
     }
+    
+    -- vulkan
+    includedirs { "$(VULKAN_SDK)/Include" }
+    libdirs { "$(VULKAN_SDK)/Lib" }
+    links { "vulkan-1" }
 
+    
+    
     defines {
         "LIBASSERT_STATIC_DEFINE",
         "CPPTRACE_STATIC_DEFINE",
@@ -57,6 +64,10 @@ function Be.CoreUse()
         "LIBASSERT_STATIC_DEFINE",
         "CPPTRACE_STATIC_DEFINE",
     }
+
+    -- vulkan
+    includedirs { "$(VULKAN_SDK)/Include" }
+
     links { "core" }
 end
 
@@ -144,6 +155,16 @@ function Be.DeclareExampleGame1()
     Be.CoreUse()
     Be.CorePostBuild()
     Be.ToolkitUse()
+    Be.Default()
+end
+
+
+function Be.DeclareExampleVulkan()
+    project "example-vulkan"
+    kind "ConsoleApp"
+    debugdir "%{prj.location}/bin/%{cfg.architecture}-%{cfg.buildcfg}"
+    Be.CoreUse()
+    Be.CorePostBuild()
     Be.Default()
 end
 
