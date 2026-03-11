@@ -238,12 +238,15 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
             };
 
             std::vector<SenVertexLayoutElement> layoutElements;
+            uint32_t location = 0;
             for (const auto& semantic : vertexLayoutJson) {
                 layoutElements.push_back({
                     .Semantic = semantic,
+                    .Location = location,
                     .Format = ElementFormats.at(semantic),
                     .Offset = ElementOffsets.at(semantic),
                 });
+                location++;
             }
 
             shader->_pipelineDesc.VertexLayout = layoutElements;

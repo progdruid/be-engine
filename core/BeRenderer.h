@@ -61,4 +61,5 @@ class BeRenderer {
     [[nodiscard]] auto GetViewport () const -> SenViewport {
         return { 0, 0, (float)_width, (float)_height, 0, 1 };
     }
+    [[nodiscard]] auto GetSwapchainFormat() const -> SenFormat;
 };

@@ -77,7 +77,7 @@ auto Game::SetupScenes() -> void {
     
     SubmissionBuffer->BakeMeshes();
 
-    SceneManager->RequestSceneChange("menu");
+    SceneManager->RequestSceneChange("sakura");
     SceneManager->ApplyPendingSceneChange();
 }
 

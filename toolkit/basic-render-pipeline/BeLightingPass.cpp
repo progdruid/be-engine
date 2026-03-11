@@ -42,7 +42,9 @@ void BeLightingPass::Initialise() {
     _emissiveBinding.Make(_emissiveMaterial, _emissiveAddShader);
 
     // Create pipelines for each shader with additive blending
-    auto directionalDesc = _directionalLightShader->CreatePipelineDesc();
+    const SenFormat outputFormat = OutputTexture.lock()->Format;
+
+    auto directionalDesc = _directionalLightShader->GetPipelineDesc();
     directionalDesc.BlendState.Enable = true;
     directionalDesc.BlendState.SrcBlend = SenBlendFactor::One;
     directionalDesc.BlendState.DstBlend = SenBlendFactor::One;
@@ -50,9 +52,11 @@ void BeLightingPass::Initialise() {
     directionalDesc.BlendState.SrcBlendAlpha = SenBlendFactor::One;
     directionalDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
     directionalDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
+    directionalDesc.RenderTargetFormats = { outputFormat };
+    directionalDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _directionalLightBinding.GetLayout() };
     _directionalLightPipeline = SenBackend::CreatePipeline(directionalDesc);
 
-    auto pointDesc = _pointLightShader->CreatePipelineDesc();
+    auto pointDesc = _pointLightShader->GetPipelineDesc();
     pointDesc.BlendState.Enable = true;
     pointDesc.BlendState.SrcBlend = SenBlendFactor::One;
     pointDesc.BlendState.DstBlend = SenBlendFactor::One;
@@ -60,9 +64,11 @@ void BeLightingPass::Initialise() {
     pointDesc.BlendState.SrcBlendAlpha = SenBlendFactor::One;
     pointDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
     pointDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
+    pointDesc.RenderTargetFormats = { outputFormat };
+    pointDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _pointLightBinding.GetLayout() };
     _pointLightPipeline = SenBackend::CreatePipeline(pointDesc);
 
-    auto emissiveDesc = _emissiveAddShader->CreatePipelineDesc();
+    auto emissiveDesc = _emissiveAddShader->GetPipelineDesc();
     emissiveDesc.BlendState.Enable = true;
     emissiveDesc.BlendState.SrcBlend = SenBlendFactor::One;
     emissiveDesc.BlendState.DstBlend = SenBlendFactor::One;
@@ -70,6 +76,8 @@ void BeLightingPass::Initialise() {
     emissiveDesc.BlendState.SrcBlendAlpha = SenBlendFactor::One;
     emissiveDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
     emissiveDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
+    emissiveDesc.RenderTargetFormats = { outputFormat };
+    emissiveDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _emissiveBinding.GetLayout() };
     _emissivePipeline = SenBackend::CreatePipeline(emissiveDesc);
 }
 

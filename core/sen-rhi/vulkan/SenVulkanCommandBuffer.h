@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <vulkan/vulkan_core.h>
 #include <umbrellas/access-modifiers.hpp>
 #include <sen-rhi/SenTypes.h>
@@ -7,6 +8,13 @@ class SenVulkanCommandBuffer {
     hide
     VkCommandBuffer  _cmd                 = VK_NULL_HANDLE;
     VkPipelineLayout _boundPipelineLayout = VK_NULL_HANDLE;
+    SenPipeline _boundPipeline;
+    
+    static constexpr uint8_t MaxBindGroups = 8;
+    std::array<SenBindGroup, MaxBindGroups> _pendingBindGroups      = {};
+    std::array<bool,         MaxBindGroups> _pendingBindGroupDirty  = {};
+
+    auto FlushPendingBindGroups() -> void;
 
     expose
     SenVulkanCommandBuffer() = default;

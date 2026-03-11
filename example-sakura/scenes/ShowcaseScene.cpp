@@ -10,7 +10,6 @@
 #include "BeMeshPrimitives.h"
 #include "BeProp.h"
 #include "BeRenderer.h"
-#include "BeAssetRegistry.h"
 #include "BeTexture.h"
 #include "BeWindow.h"
 #include "Components.h"
@@ -22,6 +21,7 @@
 #include "basic-render-pipeline/BeLightingPass.h"
 #include "basic-render-pipeline/BeShadowPass.h"
 #include "scenes/BeSceneManager.h"
+#include "BeAssetRegistry.h"
 
 ShowcaseScene::ShowcaseScene(Game* game) : BaseScene(game) {}
 ShowcaseScene::~ShowcaseScene() = default;

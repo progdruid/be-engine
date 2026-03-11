@@ -9,6 +9,7 @@
 #include <umbrellas/access-modifiers.hpp>
 #include <sen-rhi/SenTypes.h>
 
+#include "BeRenderer.h"
 #include "SenDx11CommandBuffer.h"
 #include "sen-rhi/SenCommandBuffer.h"
 
@@ -67,6 +68,7 @@ struct SenDx11SwapchainEntry {
     SenTexture BackbufferTextureHandle;
     uint32_t Width;
     uint32_t Height;
+    SenFormat Format;
 };
 
 // ─── backend ──────────────────────────────────────────────────────────────────
@@ -81,6 +83,7 @@ class SenDx11Backend {
     static auto CreateSwapchain  (const SenSwapchainDesc& desc) -> SenSwapchain;
     static auto DestroySwapchain (SenSwapchain handle) -> void;
     static auto ResizeSwapchain  (SenSwapchain& handle, uint32_t width, uint32_t height) -> void;
+    static auto GetSwapchainFormat(SenSwapchain swapchain) -> SenFormat;
     static auto BeginFrame       (SenSwapchain handle) -> SenTexture;
     static auto EndFrame         (SenSwapchain handle) -> void;
 
@@ -133,7 +136,7 @@ class SenDx11Backend {
     static auto DestroyPipeline (SenPipeline handle) -> void;
     static auto LookupPipeline  (SenPipeline handle) -> SenDx11PipelineEntry&;
 
-    
+
     hide
     static ComPtr<ID3D11Device>        _device;
     static ComPtr<ID3D11DeviceContext> _context;

@@ -28,7 +28,7 @@
     "blend": "additive",
     "depthStencil": "disable",
     "materials": {
-        "main": { "scheme": "directional-light-material", "slot": 2, "var": "DirectionalLight" },
+        "main": { "scheme": "directional-light-material", "slot": 1, "var": "DirectionalLight" },
     },
     "targets": {
         "LightHDR": { "type": "float3", "slot": 0 }
@@ -60,7 +60,7 @@ Texture2D Specular_Shininess : register(t3);
 Texture2D ShadowMap : register(t4);
 SamplerState InputSampler : register(s0);
 
-cbuffer CBuffer2 : register(b2) {
+cbuffer CBuffer1 : register(b1) {
     directional_light_material _DirectionalLight;
 };
 

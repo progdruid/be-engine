@@ -42,13 +42,17 @@ auto BeRenderer::LaunchDevice() -> void {
     });
 
     _uniformBindGroupLayout = SenBackend::CreateBindGroupLayout({
-        .BufferEntries = {SenBindGroupLayoutEntry { .Slot = 0}}
+        .BufferSlots = { 0 }
     });
 
     _uniformBindGroup = SenBackend::CreateBindGroup({
         .Layout = _uniformBindGroupLayout,
         .ConstantBuffers = {_uniformBuffer },
     });
+}
+
+auto BeRenderer::GetSwapchainFormat() const -> SenFormat {
+    return SenBackend::GetSwapchainFormat(_swapchain);
 }
 
 auto BeRenderer::AddRenderPass(BeRenderPass* renderPass) -> void {

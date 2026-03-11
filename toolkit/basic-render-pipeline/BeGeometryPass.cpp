@@ -65,13 +65,20 @@ auto BeGeometryPass::Render() -> void
 
             PipelineKey key{ shader.get(), propSlice.TwoSided };
             if (!_shaderPipelines.contains(key)) {
-                auto pipelineDesc = shader->CreatePipelineDesc();
+                auto pipelineDesc = shader->GetPipelineDesc();
                 pipelineDesc.RasterizerState.CullMode = propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back;
                 pipelineDesc.BindGroupLayouts = {
                     _renderer->GetUniformBindGroupLayout(),          // set 0: renderer uniforms
                     _objectBindings[shader.get()].GetLayout(),       // set 1: object material
                     propSlice.Binding.GetLayout(),                   // set 2: surface material
                 };
+                pipelineDesc.RenderTargetFormats = {
+                    OutputTexture0.lock()->Format,
+                    OutputTexture1.lock()->Format,
+                    OutputTexture2.lock()->Format,
+                    OutputTexture3.lock()->Format,
+                };
+                pipelineDesc.DepthStencilFormat = OutputDepthTexture.lock()->Format;
                 _shaderPipelines[key] = SenBackend::CreatePipeline(pipelineDesc);
             }
             cmd.SetPipeline(_shaderPipelines[key]);

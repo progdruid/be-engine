@@ -16,9 +16,11 @@ auto BeBackbufferPass::Initialise() -> void {
     _backbufferMaterial = BeMaterial::Create("Backbuffer Material", scheme, false, *_renderer);
     _backbufferMaterial->SetTexture("InputTexture", InputTexture.lock());
 
-    auto pipelineDesc = _backbufferShader->CreatePipelineDesc();
-    _pipeline = SenBackend::CreatePipeline(pipelineDesc);
     _backbufferBinding.Make(_backbufferMaterial, _backbufferShader);
+    auto pipelineDesc = _backbufferShader->GetPipelineDesc();
+    pipelineDesc.RenderTargetFormats = { _renderer->GetSwapchainFormat() };
+    pipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _backbufferBinding.GetLayout() };
+    _pipeline = SenBackend::CreatePipeline(pipelineDesc);
 }
 
 auto BeBackbufferPass::Render() -> void {

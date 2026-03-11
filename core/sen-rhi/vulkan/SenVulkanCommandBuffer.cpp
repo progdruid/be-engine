@@ -1,6 +1,7 @@
 #include "SenVulkanCommandBuffer.h"
 #include "SenVulkanBackend.h"
 
+#include <print>
 #include <umbrellas/include-libassert.h>
 #include <umbrellas/include-glm.h>
 
@@ -142,15 +143,17 @@ auto SenVulkanCommandBuffer::EndPass() -> void {
 auto SenVulkanCommandBuffer::SetPipeline(SenPipeline pipeline) -> void {
     auto& entry = SenVulkanBackend::LookupPipeline(pipeline);
     _boundPipelineLayout = entry.Layout;
+    _boundPipeline = pipeline;
     vkCmdBindPipeline(_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, entry.Pipeline);
+    FlushPendingBindGroups();
 }
 
 auto SenVulkanCommandBuffer::SetBindGroup(SenBindGroup group, uint8_t index) -> void {
-    be_assert(_boundPipelineLayout != VK_NULL_HANDLE, "SetBindGroup called before SetPipeline");
+    be_assert(group.IsValid(), "SetBindGroup: invalid SenBindGroup handle (index={})", index);
     auto& groupEntry = SenVulkanBackend::LookupBindGroup(group);
 
     // Auto rt→sample: transition any image in this group that's still in an attachment layout
-    for (const auto& texHandle : groupEntry.ImageTextures) {
+    for (const auto& texHandle : groupEntry.BindGroupDesc.Textures) {
         auto& texEntry = SenVulkanBackend::LookupTexture(texHandle);
         if (texEntry.CurrentLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ||
             texEntry.CurrentLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
@@ -167,6 +170,34 @@ auto SenVulkanCommandBuffer::SetBindGroup(SenBindGroup group, uint8_t index) -> 
         }
     }
 
+    if (_boundPipelineLayout == VK_NULL_HANDLE) {
+        _pendingBindGroups[index]     = group;
+        _pendingBindGroupDirty[index] = true;
+        return;
+    }
+
+    be_assert(_cmd                  != VK_NULL_HANDLE, "SetBindGroup: _cmd is null");
+    be_assert(_boundPipelineLayout  != VK_NULL_HANDLE, "SetBindGroup: _boundPipelineLayout is null");
+    be_assert(groupEntry.Set        != VK_NULL_HANDLE, "SetBindGroup: descriptor set is null (group.ID={})", group.ID);
+
+    std::string msg = "";
+    
+    std::println("\n");
+    std::println("\n");
+    std::println("--- SetBindGroup index={} _cmd={}", index, (void*)_cmd);
+    auto bindGroupStr = SenVulkanBackend::PrintBindGroup(group);
+    msg += bindGroupStr + std::string("\n");
+    std::print("{}", bindGroupStr);
+    std::println("--- BoundLayout");
+    auto& pipelineEntry = SenVulkanBackend::LookupPipeline(_boundPipeline);
+    for (const auto& layout : pipelineEntry.Desc.BindGroupLayouts) {
+        auto layoutStr = SenVulkanBackend::PrintBindGroupLayout(layout);
+        msg += layoutStr + std::string("\n");
+        std::print("{}", layoutStr);
+    }
+    std::println("\n");
+    std::println("\n");
+
     vkCmdBindDescriptorSets(
         _cmd,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -175,6 +206,24 @@ auto SenVulkanCommandBuffer::SetBindGroup(SenBindGroup group, uint8_t index) -> 
         1, &groupEntry.Set,
         0, nullptr
     );
+}
+
+auto SenVulkanCommandBuffer::FlushPendingBindGroups() -> void {
+    for (uint8_t i = 0; i < MaxBindGroups; ++i) {
+        if (!_pendingBindGroupDirty[i]) {
+            continue;
+        }
+        auto& groupEntry = SenVulkanBackend::LookupBindGroup(_pendingBindGroups[i]);
+        vkCmdBindDescriptorSets(
+            _cmd,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            _boundPipelineLayout,
+            i,
+            1, &groupEntry.Set,
+            0, nullptr
+        );
+        _pendingBindGroupDirty[i] = false;
+    }
 }
 
 auto SenVulkanCommandBuffer::SetVertexBuffer(SenBuffer buffer, uint32_t stride) -> void {

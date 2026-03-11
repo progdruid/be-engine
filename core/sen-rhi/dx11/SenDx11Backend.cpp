@@ -320,7 +320,8 @@ auto SenDx11Backend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapcha
 
     entry.Width = desc.Width;
     entry.Height = desc.Height;
-
+    entry.Format = desc.Format;
+    
     DXGI_SWAP_CHAIN_DESC1 scDesc = {
         .Width = desc.Width,
         .Height = desc.Height,
@@ -380,6 +381,11 @@ auto SenDx11Backend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uint3
     auto& textureEntry = _textures[entry.BackbufferTextureHandle.ID];
     textureEntry.MipRTVs.resize(1);
     textureEntry.MipRTVs[0] = entry.BackbufferRTV;
+}
+
+auto SenDx11Backend::GetSwapchainFormat(SenSwapchain swapchain) -> SenFormat {
+    auto & entry = _swapchains.at(swapchain.ID);
+    return entry.Format;
 }
 
 auto SenDx11Backend::BeginFrame(SenSwapchain handle) -> SenTexture {

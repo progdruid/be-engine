@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <string>
 #include <unordered_map>
 #include <vulkan/vulkan_core.h>
 #include <vma/vk_mem_alloc.h>
@@ -45,17 +46,19 @@ struct SenVulkanShaderEntry {
 
 
 struct SenVulkanPipelineEntry {
-    VkPipeline       Pipeline = VK_NULL_HANDLE;
-    VkPipelineLayout Layout   = VK_NULL_HANDLE;
+    VkPipeline Pipeline = VK_NULL_HANDLE;
+    VkPipelineLayout Layout = VK_NULL_HANDLE;
+    SenPipelineDesc Desc;
 };
 
 struct SenVulkanBindGroupLayoutEntry {
     VkDescriptorSetLayout Layout = VK_NULL_HANDLE;
+    SenBindGroupLayoutDesc Desc;
 };
 
 struct SenVulkanBindGroupEntry {
-    VkDescriptorSet          Set           = VK_NULL_HANDLE;
-    std::vector<SenTexture>  ImageTextures;  // SenTexture handles for image bindings, for auto rt→sample barriers
+    VkDescriptorSet Set = VK_NULL_HANDLE;
+    SenBindGroupDesc BindGroupDesc;
 };
 
 struct SenVulkanSwapchainEntry {
@@ -97,7 +100,7 @@ class SenVulkanBackend {
     static auto GetSwapchainFormat    (SenSwapchain handle) -> SenFormat;
 
     expose // command buffer factory
-    static auto CreateCommandBuffer () -> SenCommandBuffer;
+    static auto CreateCommandBuffer () -> SenVulkanCommandBuffer;
 
     expose // native API escape hatches (for ImGui, etc.)
     static auto GetNativeDevice  () -> void*;
@@ -146,11 +149,15 @@ class SenVulkanBackend {
     static auto LookupShader  (SenShader handle) -> SenVulkanShaderEntry&;
 
     expose // pipelines
-    static auto CreatePipeline (const SenPipelineDesc& desc) -> SenPipeline;
+    static auto CreatePipeline  (const SenPipelineDesc& desc) -> SenPipeline;
     static auto DestroyPipeline (SenPipeline handle) -> void;
     static auto LookupPipeline  (SenPipeline handle) -> SenVulkanPipelineEntry&;
 
-    
+    expose // debug print helpers
+    static auto PrintBindGroupLayout (SenBindGroupLayout handle) -> std::string;
+    static auto PrintBindGroup       (SenBindGroup handle) -> std::string;
+
+
     expose // dynamic rendering extension proc addresses (used by SenVulkanCommandBuffer)
     static PFN_vkCmdBeginRenderingKHR _vkCmdBeginRenderingKHR;
     static PFN_vkCmdEndRenderingKHR   _vkCmdEndRenderingKHR;

@@ -77,19 +77,19 @@ auto BeMaterial::BuildBindGroupLayoutDesc(uint8_t cbufferSlot) const -> SenBindG
     for (const auto& [name, pair] : _textures) {
         const auto& [texture, slot] = pair;
         if (texture && texture->Handle.IsValid()) {
-            desc.TextureEntries.push_back({ slot });
+            desc.TextureSlots.push_back(slot);
         }
     }
 
     for (const auto& [name, pair] : _samplers) {
         const auto& [sampler, slot] = pair;
         if (sampler.IsValid()) {
-            desc.SamplerEntries.push_back({ slot });
+            desc.SamplerSlots.push_back({ slot });
         }
     }
 
     if (_cbuffer.IsValid()) {
-        desc.BufferEntries.push_back({ cbufferSlot });
+        desc.BufferSlots.push_back({ cbufferSlot });
     }
 
     return desc;

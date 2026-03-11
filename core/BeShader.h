@@ -38,7 +38,7 @@ class BeShader {
     expose std::unordered_map<std::string, uint32_t> PixelTargets;
     expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
 
-    expose SenPipelineDesc _pipelineDesc;
+    hide SenPipelineDesc _pipelineDesc;
 
     expose bool HasMaterial = false;
     hide std::unordered_map<std::string, std::string> _materialSchemeNames;
@@ -60,7 +60,7 @@ class BeShader {
         return _materialSlotsByScheme.at(schemeName);
     }
 
-    expose auto CreatePipelineDesc() const -> SenPipelineDesc {
+    expose auto GetPipelineDesc() const -> SenPipelineDesc {
         return _pipelineDesc;
     }
 };

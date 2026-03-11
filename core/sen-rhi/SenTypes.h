@@ -107,20 +107,16 @@ enum class SenShaderStageFlags : uint8_t {
 };
 ENABLE_BITMASK(SenShaderStageFlags);
 
-struct SenBindGroupLayoutEntry {
-    uint8_t             Slot;
-    SenShaderStageFlags Stages = SenShaderStageFlags::All;
-};
-
 struct SenBindGroupLayout {
     uint32_t ID = 0;
     auto IsValid() const -> bool { return ID != 0; }
 };
 
 struct SenBindGroupLayoutDesc {
-    std::vector<SenBindGroupLayoutEntry> TextureEntries;
-    std::vector<SenBindGroupLayoutEntry> SamplerEntries;
-    std::vector<SenBindGroupLayoutEntry> BufferEntries;
+    SenShaderStageFlags Stages = SenShaderStageFlags::All;
+    std::vector<uint8_t> TextureSlots;
+    std::vector<uint8_t> SamplerSlots;
+    std::vector<uint8_t> BufferSlots;
 };
 
 
@@ -131,10 +127,10 @@ struct SenBindGroup {
 };
 
 struct SenBindGroupDesc {
-    SenBindGroupLayout          Layout;
-    std::vector<SenTexture>     Textures = {};
-    std::vector<SenSampler>     Samplers = {};
-    std::vector<SenBuffer>      ConstantBuffers = {};
+    SenBindGroupLayout Layout;
+    std::vector<SenTexture> Textures = {};
+    std::vector<SenSampler> Samplers = {};
+    std::vector<SenBuffer> ConstantBuffers = {};
 };
 
 
@@ -280,8 +276,8 @@ struct SenPipelineDesc {
     // Bind group layouts (ordered by set index: 0, 1, 2, ...)
     std::vector<SenBindGroupLayout> BindGroupLayouts;
 
-    // Optional: render target formats (for validation/compatibility checking)
     std::vector<SenFormat> RenderTargetFormats;
+    SenFormat DepthStencilFormat;
 };
 
 

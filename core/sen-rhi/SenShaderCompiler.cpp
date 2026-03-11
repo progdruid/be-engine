@@ -19,6 +19,8 @@ auto SenShaderCompiler::Compile(
     SlangCompileTarget target
 ) -> std::expected<Slang::ComPtr<ISlangBlob>, std::string> {
 
+    be_assert(_globalSession, "SenShaderCompiler was never initialized. Make sure to call Init.");
+    
     auto extractDiag = [](ISlangBlob* diag) -> std::string {
         return diag
         ? std::string(static_cast<const char*>(diag->getBufferPointer()), diag->getBufferSize())

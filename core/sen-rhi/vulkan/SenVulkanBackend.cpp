@@ -1,4 +1,5 @@
 #include "SenVulkanBackend.h"
+#include <print>
 #include <windows.h>
 #include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_win32.h>
@@ -52,6 +53,8 @@ VkCommandBuffer            SenVulkanBackend::_activeCommandBuffer     = VK_NULL_
 
 // region ────────── backend ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
+    SenShaderCompiler::Launch();
+
     // instance
     VkApplicationInfo appInfo {
         .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -454,7 +457,7 @@ auto SenVulkanBackend::EndFrame(SenSwapchain handle) -> void {
 //endregion
 
 // ─── command buffer ────────────────────────────────────────────────────────────────
-auto SenVulkanBackend::CreateCommandBuffer() -> SenCommandBuffer {
+auto SenVulkanBackend::CreateCommandBuffer() -> SenVulkanCommandBuffer {
     be_assert(_activeCommandBuffer == VK_NULL_HANDLE, "CreateCommandBuffer called more than once");
 
     VkCommandBufferAllocateInfo allocInfo {
@@ -969,34 +972,34 @@ auto SenVulkanBackend::CreateBindGroupLayout(const SenBindGroupLayoutDesc& desc)
     std::vector<VkDescriptorSetLayoutBinding> bindings;
 
     // Add texture bindings
-    for (const auto& entry : desc.TextureEntries) {
+    for (const auto& slot : desc.TextureSlots) {
         VkDescriptorSetLayoutBinding binding {
-            .binding         = entry.Slot,
+            .binding         = slot,
             .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .descriptorCount = 1,
-            .stageFlags      = Sen::Vulkan::ToShaderStageFlags(entry.Stages),
+            .stageFlags      = Sen::Vulkan::ToShaderStageFlags(desc.Stages),
         };
         bindings.push_back(binding);
     }
 
     // Add sampler bindings
-    for (const auto& entry : desc.SamplerEntries) {
+    for (const auto& slot : desc.SamplerSlots) {
         VkDescriptorSetLayoutBinding binding {
-            .binding         = entry.Slot,
+            .binding         = slot,
             .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER,
             .descriptorCount = 1,
-            .stageFlags      = Sen::Vulkan::ToShaderStageFlags(entry.Stages),
+            .stageFlags      = Sen::Vulkan::ToShaderStageFlags(desc.Stages),
         };
         bindings.push_back(binding);
     }
 
     // Add buffer bindings
-    for (const auto& entry : desc.BufferEntries) {
+    for (const auto& slot : desc.BufferSlots) {
         VkDescriptorSetLayoutBinding binding {
-            .binding         = entry.Slot,
+            .binding         = slot,
             .descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
-            .stageFlags      = Sen::Vulkan::ToShaderStageFlags(entry.Stages),
+            .stageFlags      = Sen::Vulkan::ToShaderStageFlags(desc.Stages),
         };
         bindings.push_back(binding);
     }
@@ -1008,6 +1011,7 @@ auto SenVulkanBackend::CreateBindGroupLayout(const SenBindGroupLayoutDesc& desc)
     };
 
     SenVulkanBindGroupLayoutEntry entry {};
+    entry.Desc = desc;
     VkResult result = vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &entry.Layout);
     be_assert(result == VK_SUCCESS, "Failed to create descriptor set layout!");
 
@@ -1041,6 +1045,7 @@ auto SenVulkanBackend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindG
     };
 
     SenVulkanBindGroupEntry entry {};
+    entry.BindGroupDesc = desc;
     VkResult result = vkAllocateDescriptorSets(_device, &allocInfo, &entry.Set);
     be_assert(result == VK_SUCCESS, "Failed to allocate descriptor set!");
 
@@ -1050,9 +1055,6 @@ auto SenVulkanBackend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindG
     std::vector<VkDescriptorBufferInfo> bufferInfos(desc.ConstantBuffers.size());
     std::vector<VkWriteDescriptorSet> writes;
     writes.reserve(imageCount + desc.ConstantBuffers.size());
-
-    // Track image textures for rt→sample auto-barrier in SetBindGroup
-    entry.ImageTextures = desc.Textures;
 
     // Write textures
     uint32_t imageIdx = 0;
@@ -1185,6 +1187,7 @@ auto SenVulkanBackend::LookupShader(SenShader handle) -> SenVulkanShaderEntry& {
 // region ────────── pipelines ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
     SenVulkanPipelineEntry entry {};
+    entry.Desc = desc;
 
     // ── pipeline layout (from bind group layouts) ──────────────────────────────
     std::vector<VkDescriptorSetLayout> setLayouts;
@@ -1335,12 +1338,13 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     for (const auto& fmt : desc.RenderTargetFormats) {
         colorFormats.push_back(Sen::Vulkan::ToFormat(fmt));
     }
+    VkFormat depthFormat = Sen::Vulkan::ToFormat(desc.DepthStencilFormat);
 
     VkPipelineRenderingCreateInfoKHR renderingInfo {
         .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
         .colorAttachmentCount    = uint32_t(colorFormats.size()),
         .pColorAttachmentFormats = colorFormats.data(),
-        .depthAttachmentFormat   = desc.DepthStencilState.DepthEnable ? VK_FORMAT_D32_SFLOAT : VK_FORMAT_UNDEFINED,
+        .depthAttachmentFormat   = depthFormat,
     };
 
     // ── create pipeline ────────────────────────────────────────────────────────
@@ -1380,6 +1384,90 @@ auto SenVulkanBackend::DestroyPipeline(SenPipeline handle) -> void {
 
 auto SenVulkanBackend::LookupPipeline(SenPipeline handle) -> SenVulkanPipelineEntry& {
     return _pipelines.at(handle.ID);
+}
+
+// endregion
+
+// region ────────── debug print helpers ───────────────────────────────────────────────────────────
+
+auto SenVulkanBackend::PrintBindGroupLayout(SenBindGroupLayout handle) -> std::string {
+    std::string s;
+    s += std::format("[BindGroupLayout] handle.ID={} valid={}\n", handle.ID, handle.IsValid());
+    if (!handle.IsValid()) { return s; }
+    auto& entry = _bindGroupLayouts.at(handle.ID);
+    s += std::format("\tVkDescriptorSetLayout = {}\n", (void*)entry.Layout);
+    s += std::format("\tTextures ({}):\n", entry.Desc.TextureSlots.size());
+    for (const auto& slot : entry.Desc.TextureSlots) {
+        s += std::format("\t\tslot={}\n", slot);
+    }
+    s += std::format("\tSamplers ({}):\n", entry.Desc.SamplerSlots.size());
+    for (const auto& slot : entry.Desc.SamplerSlots) {
+        s += std::format("\t\tslot={}\n", slot);
+    }
+    s += std::format("\tBuffers ({}):\n", entry.Desc.BufferSlots.size());
+    for (const auto& slot : entry.Desc.BufferSlots) {
+        s += std::format("\t\tslot={}\n", slot);
+    }
+    return s;
+}
+
+auto SenVulkanBackend::PrintBindGroup(SenBindGroup handle) -> std::string {
+    std::string s;
+    s += std::format("[BindGroup] handle.ID={} valid={}\n", handle.ID, handle.IsValid());
+    if (!handle.IsValid()) { return s; }
+
+    auto& entry = _bindGroups.at(handle.ID);
+    s += std::format("\tVkDescriptorSet = {}\n", (void*)entry.Set);
+
+    const auto& desc = entry.BindGroupDesc;
+    s += PrintBindGroupLayout(desc.Layout);
+
+    s += std::format("\tTextures ({}):\n", desc.Textures.size());
+    for (size_t i = 0; i < desc.Textures.size(); ++i) {
+        const auto& tex = desc.Textures[i];
+        s += std::format("\t\t[{}] SenTexture.ID={} valid={}\n", i, tex.ID, tex.IsValid());
+        if (tex.IsValid()) {
+            const auto& t = _textures.at(tex.ID);
+            s += std::format("\t\t\tVkImage       = {}\n", (void*)t.Image);
+            s += std::format("\t\t\tSRV           = {}\n", (void*)t.SRV);
+            s += std::format("\t\t\tVkFormat      = {}\n", (uint32_t)t.Format);
+            s += std::format("\t\t\tCurrentLayout = {}\n", (uint32_t)t.CurrentLayout);
+        }
+    }
+
+    s += std::format("\tSamplers ({}):\n", desc.Samplers.size());
+    for (size_t i = 0; i < desc.Samplers.size(); ++i) {
+        const auto& smp = desc.Samplers[i];
+        s += std::format("\t\t[{}] SenSampler.ID={} valid={}\n", i, smp.ID, smp.IsValid());
+        if (smp.IsValid()) {
+            const auto& s2 = _samplers.at(smp.ID);
+            s += std::format("\t\t\tVkSampler = {}\n", (void*)s2.Sampler);
+        }
+    }
+
+    s += std::format("\tConstantBuffers ({}):\n", desc.ConstantBuffers.size());
+    for (size_t i = 0; i < desc.ConstantBuffers.size(); ++i) {
+        const auto& buf = desc.ConstantBuffers[i];
+        s += std::format("\t\t[{}] SenBuffer.ID={} valid={}\n", i, buf.ID, buf.IsValid());
+        if (buf.IsValid()) {
+            const auto& b = _buffers.at(buf.ID);
+            s += std::format("\t\t\tVkBuffer = {}\n", (void*)b.Buffer);
+            s += std::format("\t\t\tSize     = {}\n", b.Size);
+            s += std::format("\t\t\tAccess   = {}\n", (uint32_t)b.Access);
+        }
+    }
+
+    s += std::format("\tImageTextures for auto-barrier ({}):\n", desc.Textures.size());
+    for (size_t i = 0; i < desc.Textures.size(); ++i) {
+        const auto& tex = desc.Textures[i];
+        s += std::format("\t\t[{}] SenTexture.ID={} valid={}\n", i, tex.ID, tex.IsValid());
+        if (tex.IsValid()) {
+            const auto& t = _textures.at(tex.ID);
+            s += std::format("\t\t\tCurrentLayout = {}\n", (uint32_t)t.CurrentLayout);
+        }
+    }
+
+    return s;
 }
 
 // endregion
