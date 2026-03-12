@@ -9,6 +9,7 @@ namespace Sen::Vulkan {
     inline auto BytesPerPixel(SenFormat format) -> uint32_t {
         switch (format) {
             case SenFormat::RGBA8_Unorm:     return 4;
+            case SenFormat::BGRA8_Unorm:     return 4;
             case SenFormat::RGBA16_Float:    return 8;
             case SenFormat::R11G11B10_Float: return 4;
             case SenFormat::Depth32:         return 4;
@@ -76,6 +77,7 @@ namespace Sen::Vulkan {
     inline auto ToFormat(SenFormat format) -> VkFormat {
         switch (format) {
             case SenFormat::RGBA8_Unorm:     return VK_FORMAT_R8G8B8A8_UNORM;
+            case SenFormat::BGRA8_Unorm:     return VK_FORMAT_B8G8R8A8_UNORM;
             case SenFormat::RGBA16_Float:    return VK_FORMAT_R16G16B16A16_SFLOAT;
             case SenFormat::R11G11B10_Float: return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
             case SenFormat::Depth32:         return VK_FORMAT_D32_SFLOAT;
@@ -89,6 +91,7 @@ namespace Sen::Vulkan {
     inline auto FromVkFormat(VkFormat format) -> SenFormat {
         switch (format) {
             case VK_FORMAT_R8G8B8A8_UNORM:          return SenFormat::RGBA8_Unorm;
+            case VK_FORMAT_B8G8R8A8_UNORM:          return SenFormat::BGRA8_Unorm;
             case VK_FORMAT_R16G16B16A16_SFLOAT:     return SenFormat::RGBA16_Float;
             case VK_FORMAT_B10G11R11_UFLOAT_PACK32: return SenFormat::R11G11B10_Float;
             case VK_FORMAT_D32_SFLOAT:              return SenFormat::Depth32;

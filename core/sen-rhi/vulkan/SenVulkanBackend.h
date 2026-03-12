@@ -16,15 +16,15 @@ namespace Slang { template <typename T> class ComPtr; }
 // ─── resource entries ─────────────────────────────────────────────────────────
 
 struct SenVulkanTextureEntry {
-    VkImage       Image      = VK_NULL_HANDLE;
+    VkImage Image = VK_NULL_HANDLE;
     VmaAllocation Allocation = VK_NULL_HANDLE;
-    VkFormat      Format     = VK_FORMAT_UNDEFINED;
-    VkImageView   SRV        = VK_NULL_HANDLE;                  // for shader sampling (all mips, all layers)
-    VkImageView   DSV        = VK_NULL_HANDLE;                  // depth attachment (2D or per-face for cubemap — see below)
-    std::vector<VkImageView>                MipRTVs;            // [mip]       — color attachment per mip (2D)
-    std::array<VkImageView, 6>              CubemapDSVs  = {};  // [face]      — depth attachment per cubemap face
-    std::array<std::vector<VkImageView>, 6> CubemapMipRTVs;    // [face][mip] — color attachment per cubemap face per mip
-    VkImageLayout CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;    // tracked for automatic barriers
+    VkFormat Format = VK_FORMAT_UNDEFINED;
+    VkImageView SRV = VK_NULL_HANDLE;                       // for shader sampling (all mips, all layers)
+    VkImageView DSV = VK_NULL_HANDLE;                       // depth attachment (2D or per-face for cubemap — see below)
+    std::vector<VkImageView> MipRTVs;                       // [mip]       — color attachment per mip (2D)
+    std::array<VkImageView, 6> CubemapDSVs  = {};           // [face]      — depth attachment per cubemap face
+    std::array<std::vector<VkImageView>, 6> CubemapMipRTVs; // [face][mip] — color attachment per cubemap face per mip
+    VkImageLayout CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;// tracked for automatic barriers
 };
 
 struct SenVulkanBufferEntry {

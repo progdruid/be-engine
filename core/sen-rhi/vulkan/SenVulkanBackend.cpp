@@ -218,10 +218,11 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
     vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, entry.Surface, &formatCount, surfaceFormats.data());
 
-    // Choose format (prefer R8G8B8A8_UNORM to match SenFormat::RGBA8_Unorm)
+    // Choose format: prefer BGRA8 or RGBA8 UNORM with SRGB_NONLINEAR color space
     VkSurfaceFormatKHR chosenFormat = surfaceFormats[0];
     for (const auto& format : surfaceFormats) {
-        if (format.format == VK_FORMAT_R8G8B8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) { continue; }
+        if (format.format == VK_FORMAT_B8G8R8A8_UNORM || format.format == VK_FORMAT_R8G8B8A8_UNORM) {
             chosenFormat = format;
             break;
         }

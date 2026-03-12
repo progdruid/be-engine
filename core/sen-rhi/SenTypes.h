@@ -11,6 +11,7 @@
 enum class SenFormat : uint8_t {
     Unknown,
     RGBA8_Unorm,
+    BGRA8_Unorm,
     RGBA16_Float,
     R11G11B10_Float,
     Depth32,

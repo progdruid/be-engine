@@ -24,7 +24,7 @@ auto Game::Run() -> int {
     Height = 1080;
     
     //Window = std::make_shared<BeWindow>(Width, Height, "be: example game 1");
-    Window = std::make_shared<BeWindow>(0, 0, "be: example sakura", BeWindowMode::BorderlessFullscreen);
+    Window = std::make_shared<BeWindow>(720, 480, "be: example sakura", BeWindowMode::Windowed);
     Width = Window->GetWidth();
     Height = Window->GetHeight();
     Renderer = std::make_shared<BeRenderer>(Width, Height, static_cast<void*>(Window->GetHwnd()));
