@@ -5,7 +5,7 @@
 #include <umbrellas/access-modifiers.hpp>
 
 #include "BeShaderTools.h"
-
+#include "sen-rhi/SenTypes.h"
 
 struct BeMaterialPropertyDescriptor {
     enum class Type : uint8_t {
@@ -44,4 +44,5 @@ class BeMaterialScheme {
     std::vector<BeMaterialPropertyDescriptor> Properties;
     std::vector<BeMaterialTextureDescriptor> Textures;
     std::vector<BeMaterialSamplerDescriptor> Samplers;
+    SenBindGroupDesc BindGroupLayout;
 };

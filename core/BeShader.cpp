@@ -5,6 +5,8 @@
 #include <umbrellas/include-libassert.h>
 
 #include <sen-rhi/SenTypes.h>
+
+#include "BeAssetRegistry.h"
 #include "sen-rhi/SenBackend.h"
 
 namespace {
@@ -141,14 +143,15 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         shader->HasMaterial = true;
         const auto& materialLinksJson = header.at("materials");
 
+        auto i = uint8_t(0);
         for (const auto& materialLinkJson : materialLinksJson.items()) {
-            auto linkName = std::string(materialLinkJson.key());
-            auto schemeName = std::string(materialLinkJson.value()["scheme"]);
-            auto schemeSlot = uint8_t(materialLinkJson.value()["slot"]);
-
-            shader->_materialSchemeNames[linkName] = schemeName;
-            shader->_materialSlots[linkName] = schemeSlot;
-            shader->_materialSlotsByScheme[schemeName] = schemeSlot;
+            auto & entry = shader->_materialSchemes.emplace_back();
+            entry.Link = std::string(materialLinkJson.key());
+            entry.SchemeName = std::string(materialLinkJson.value()["scheme"]);
+            entry.Index = i++;
+            
+            auto scheme = BeAssetRegistry::GetMaterialScheme(entry.SchemeName);
+            shader->_pipelineDesc.BindGroupLayouts.push_back(scheme.BindGroupLayout);
         }
     }
 

@@ -1,4 +1,18 @@
 
+/*
+
+@be-material: uniform-material
+[
+    "CameraProjectionView: matrix",
+    "CameraInverseProjectionView: matrix",
+    "NearFarPlane: float4",
+    "CameraPosition: float3",
+    "AmbientColor: float3",
+    "Time: float",
+]
+
+*/
+
 cbuffer UniformBuffer: register(b0) {
     row_major float4x4 _CameraProjectionView;
     row_major float4x4 _CameraInverseProjectionView;

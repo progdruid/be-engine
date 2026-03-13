@@ -11,7 +11,6 @@ class BeMaterialBinding {
     hide
     std::shared_ptr<BeMaterial> _material;
     std::weak_ptr<BeShader>     _shader;
-    SenBindGroupLayout          _layout;
     SenBindGroup                _bindGroup;
     uint32_t                    _cachedVersion = 0;
 
@@ -30,6 +29,6 @@ class BeMaterialBinding {
     auto Make (std::shared_ptr<BeMaterial> material, std::weak_ptr<BeShader> shader) -> void;
     auto Resolve () -> SenBindGroup;
     auto GetMaterial () const -> std::weak_ptr<BeMaterial>;
-    auto GetLayout () const -> SenBindGroupLayout;
+    auto GetLayout () const -> SenBindGroupDesc;
     //auto IsValid     () const -> bool { return _material != nullptr; } // not sure whether we need this
 };

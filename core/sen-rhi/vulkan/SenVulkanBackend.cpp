@@ -38,9 +38,6 @@ uint32_t SenVulkanBackend::_nextPipelineId = 1;
 std::unordered_map<uint32_t, SenVulkanSwapchainEntry> SenVulkanBackend::_swapchains;
 uint32_t SenVulkanBackend::_nextSwapchainId = 1;
 
-std::unordered_map<uint32_t, SenVulkanBindGroupLayoutEntry> SenVulkanBackend::_bindGroupLayouts;
-uint32_t SenVulkanBackend::_nextBindGroupLayoutId = 1;
-
 std::unordered_map<uint32_t, SenVulkanBindGroupEntry> SenVulkanBackend::_bindGroups;
 uint32_t SenVulkanBackend::_nextBindGroupId = 1;
 
@@ -968,8 +965,121 @@ auto SenVulkanBackend::LookupSampler(SenSampler handle) -> SenVulkanSamplerEntry
 }
 //endregion
 
-// region ────────── bind group layouts ────────────────────────────────────────────────────────
-auto SenVulkanBackend::CreateBindGroupLayout(const SenBindGroupLayoutDesc& desc) -> SenBindGroupLayout {
+// region ────────── bind groups ───────────────────────────────────────────────────────────────
+
+auto SenVulkanBackend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindGroup {
+    // Create descriptor set layout from the bind group descriptor's slot structure
+    VkDescriptorSetLayout layout = CreateDescriptorSetLayoutFromDesc(desc);
+
+    VkDescriptorSetAllocateInfo allocInfo {
+        .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool     = _descriptorPool,
+        .descriptorSetCount = 1,
+        .pSetLayouts        = &layout,
+    };
+
+    SenVulkanBindGroupEntry entry {};
+    entry.BindGroupDesc = desc;
+    VkResult result = vkAllocateDescriptorSets(_device, &allocInfo, &entry.Set);
+    be_assert(result == VK_SUCCESS, "Failed to allocate descriptor set!");
+
+    // Pre-allocate containers to avoid reallocation invalidating pointers
+    size_t imageCount = desc.Textures.size() + desc.Samplers.size();
+    std::vector<VkDescriptorImageInfo> imageInfos(imageCount);
+    std::vector<VkDescriptorBufferInfo> bufferInfos(desc.Buffers.size());
+    std::vector<VkWriteDescriptorSet> writes;
+    writes.reserve(imageCount + desc.Buffers.size());
+
+    // Write textures using their slot indices
+    for (size_t i = 0; i < desc.Textures.size(); ++i) {
+        const auto& texture = desc.Textures[i];
+        const auto& textureEntry = LookupTexture(texture);
+        const uint8_t binding = desc.TextureSlots[i];
+
+        imageInfos[i] = VkDescriptorImageInfo {
+            .imageView   = textureEntry.SRV,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
+        writes.push_back(VkWriteDescriptorSet {
+            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet          = entry.Set,
+            .dstBinding      = binding,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .pImageInfo      = &imageInfos[i],
+        });
+    }
+
+    // Write samplers using their slot indices
+    size_t samplerImageIdx = desc.Textures.size();
+    for (size_t i = 0; i < desc.Samplers.size(); ++i) {
+        const auto& sampler = desc.Samplers[i];
+        const auto& samplerEntry = LookupSampler(sampler);
+        const uint8_t binding = desc.SamplerSlots[i];
+
+        imageInfos[samplerImageIdx] = VkDescriptorImageInfo {
+            .sampler = samplerEntry.Sampler,
+        };
+        writes.push_back(VkWriteDescriptorSet {
+            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet          = entry.Set,
+            .dstBinding      = binding,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER,
+            .pImageInfo      = &imageInfos[samplerImageIdx],
+        });
+        samplerImageIdx++;
+    }
+
+    // Write buffers using their slot indices
+    for (size_t i = 0; i < desc.Buffers.size(); ++i) {
+        const auto& buffer = desc.Buffers[i];
+        const auto& bufferEntry = LookupBuffer(buffer);
+        const uint8_t binding = desc.BufferSlots[i];
+
+        bufferInfos[i] = VkDescriptorBufferInfo {
+            .buffer = bufferEntry.Buffer,
+            .offset = 0,
+            .range  = bufferEntry.Size,
+        };
+        writes.push_back(VkWriteDescriptorSet {
+            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet          = entry.Set,
+            .dstBinding      = binding,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo     = &bufferInfos[i],
+        });
+    }
+
+    if (!writes.empty()) {
+        vkUpdateDescriptorSets(_device, uint32_t(writes.size()), writes.data(), 0, nullptr);
+    }
+
+    vkDestroyDescriptorSetLayout(_device, layout, nullptr);
+
+    const SenBindGroup handle { _nextBindGroupId++ };
+    _bindGroups[handle.ID] = entry;
+    return handle;
+}
+
+auto SenVulkanBackend::DestroyBindGroup(SenBindGroup handle) -> void {
+    auto it = _bindGroups.find(handle.ID);
+    if (it != _bindGroups.end()) {
+        vkFreeDescriptorSets(_device, _descriptorPool, 1, &it->second.Set);
+        _bindGroups.erase(it);
+    }
+}
+
+auto SenVulkanBackend::LookupBindGroup(SenBindGroup handle) -> SenVulkanBindGroupEntry& {
+    return _bindGroups.at(handle.ID);
+}
+
+// Helper: create descriptor set layout from bind group descriptor slot structure
+auto SenVulkanBackend::CreateDescriptorSetLayoutFromDesc(const SenBindGroupDesc& desc) -> VkDescriptorSetLayout {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
 
     // Add texture bindings
@@ -1011,132 +1121,12 @@ auto SenVulkanBackend::CreateBindGroupLayout(const SenBindGroupLayoutDesc& desc)
         .pBindings    = bindings.data(),
     };
 
-    SenVulkanBindGroupLayoutEntry entry {};
-    entry.Desc = desc;
-    VkResult result = vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &entry.Layout);
+    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+    VkResult result = vkCreateDescriptorSetLayout(SenVulkanBackend::_device, &layoutInfo, nullptr, &layout);
     be_assert(result == VK_SUCCESS, "Failed to create descriptor set layout!");
-
-    const SenBindGroupLayout handle { _nextBindGroupLayoutId++ };
-    _bindGroupLayouts[handle.ID] = entry;
-    return handle;
+    return layout;
 }
 
-auto SenVulkanBackend::DestroyBindGroupLayout(SenBindGroupLayout handle) -> void {
-    auto it = _bindGroupLayouts.find(handle.ID);
-    if (it != _bindGroupLayouts.end()) {
-        vkDestroyDescriptorSetLayout(_device, it->second.Layout, nullptr);
-        _bindGroupLayouts.erase(it);
-    }
-}
-
-auto SenVulkanBackend::LookupBindGroupLayout(SenBindGroupLayout handle) -> SenVulkanBindGroupLayoutEntry& {
-    return _bindGroupLayouts.at(handle.ID);
-}
-// endregion
-
-// region ────────── bind groups ───────────────────────────────────────────────────────────────
-auto SenVulkanBackend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindGroup {
-    const auto& layoutEntry = LookupBindGroupLayout(desc.Layout);
-
-    VkDescriptorSetAllocateInfo allocInfo {
-        .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .descriptorPool     = _descriptorPool,
-        .descriptorSetCount = 1,
-        .pSetLayouts        = &layoutEntry.Layout,
-    };
-
-    SenVulkanBindGroupEntry entry {};
-    entry.BindGroupDesc = desc;
-    VkResult result = vkAllocateDescriptorSets(_device, &allocInfo, &entry.Set);
-    be_assert(result == VK_SUCCESS, "Failed to allocate descriptor set!");
-
-    // Pre-allocate containers to avoid reallocation invalidating pointers
-    size_t imageCount = desc.Textures.size() + desc.Samplers.size();
-    std::vector<VkDescriptorImageInfo> imageInfos(imageCount);
-    std::vector<VkDescriptorBufferInfo> bufferInfos(desc.ConstantBuffers.size());
-    std::vector<VkWriteDescriptorSet> writes;
-    writes.reserve(imageCount + desc.ConstantBuffers.size());
-
-    // Write textures
-    uint32_t imageIdx = 0;
-    uint32_t binding = 0;
-    for (const auto& texture : desc.Textures) {
-        const auto& textureEntry = LookupTexture(texture);
-        imageInfos[imageIdx] = VkDescriptorImageInfo {
-            .imageView   = textureEntry.SRV,
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        };
-        writes.push_back(VkWriteDescriptorSet {
-            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet          = entry.Set,
-            .dstBinding      = binding++,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .pImageInfo      = &imageInfos[imageIdx],
-        });
-        imageIdx++;
-    }
-
-    // Write samplers
-    for (const auto& sampler : desc.Samplers) {
-        const auto& samplerEntry = LookupSampler(sampler);
-        imageInfos[imageIdx] = VkDescriptorImageInfo {
-            .sampler = samplerEntry.Sampler,
-        };
-        writes.push_back(VkWriteDescriptorSet {
-            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet          = entry.Set,
-            .dstBinding      = binding++,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER,
-            .pImageInfo      = &imageInfos[imageIdx],
-        });
-        imageIdx++;
-    }
-
-    // Write buffers
-    uint32_t bufferIdx = 0;
-    for (const auto& buffer : desc.ConstantBuffers) {
-        const auto& bufferEntry = LookupBuffer(buffer);
-        bufferInfos[bufferIdx] = VkDescriptorBufferInfo {
-            .buffer = bufferEntry.Buffer,
-            .offset = 0,
-            .range  = bufferEntry.Size,
-        };
-        writes.push_back(VkWriteDescriptorSet {
-            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet          = entry.Set,
-            .dstBinding      = binding++,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .pBufferInfo     = &bufferInfos[bufferIdx],
-        });
-        bufferIdx++;
-    }
-
-    if (!writes.empty()) {
-        vkUpdateDescriptorSets(_device, uint32_t(writes.size()), writes.data(), 0, nullptr);
-    }
-
-    const SenBindGroup handle { _nextBindGroupId++ };
-    _bindGroups[handle.ID] = entry;
-    return handle;
-}
-
-auto SenVulkanBackend::DestroyBindGroup(SenBindGroup handle) -> void {
-    auto it = _bindGroups.find(handle.ID);
-    if (it != _bindGroups.end()) {
-        vkFreeDescriptorSets(_device, _descriptorPool, 1, &it->second.Set);
-        _bindGroups.erase(it);
-    }
-}
-
-auto SenVulkanBackend::LookupBindGroup(SenBindGroup handle) -> SenVulkanBindGroupEntry& {
-    return _bindGroups.at(handle.ID);
-}
 // endregion
 
 // region ────────── shaders ────────────────────────────────────────────────────────────────
@@ -1190,11 +1180,11 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     SenVulkanPipelineEntry entry {};
     entry.Desc = desc;
 
-    // ── pipeline layout (from bind group layouts) ──────────────────────────────
+    // ── pipeline layout (from bind group layout descriptors) ──────────────────────────────
     std::vector<VkDescriptorSetLayout> setLayouts;
     setLayouts.reserve(desc.BindGroupLayouts.size());
     for (const auto& bgl : desc.BindGroupLayouts) {
-        setLayouts.push_back(LookupBindGroupLayout(bgl).Layout);
+        setLayouts.push_back(CreateDescriptorSetLayoutFromDesc(bgl));
     }
 
     VkPipelineLayoutCreateInfo layoutInfo {
@@ -1204,6 +1194,11 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     };
     VkResult result = vkCreatePipelineLayout(_device, &layoutInfo, nullptr, &entry.Layout);
     be_assert(result == VK_SUCCESS, "Failed to create pipeline layout!");
+
+    // Clean up temporary layouts (they're kept alive by the pipeline layout)
+    for (auto layout : setLayouts) {
+        vkDestroyDescriptorSetLayout(_device, layout, nullptr);
+    }
 
     // ── shader stages ──────────────────────────────────────────────────────────
     std::vector<VkPipelineShaderStageCreateInfo> stages;
@@ -1391,27 +1386,6 @@ auto SenVulkanBackend::LookupPipeline(SenPipeline handle) -> SenVulkanPipelineEn
 
 // region ────────── debug print helpers ───────────────────────────────────────────────────────────
 
-auto SenVulkanBackend::PrintBindGroupLayout(SenBindGroupLayout handle) -> std::string {
-    std::string s;
-    s += std::format("[BindGroupLayout] handle.ID={} valid={}\n", handle.ID, handle.IsValid());
-    if (!handle.IsValid()) { return s; }
-    auto& entry = _bindGroupLayouts.at(handle.ID);
-    s += std::format("\tVkDescriptorSetLayout = {}\n", (void*)entry.Layout);
-    s += std::format("\tTextures ({}):\n", entry.Desc.TextureSlots.size());
-    for (const auto& slot : entry.Desc.TextureSlots) {
-        s += std::format("\t\tslot={}\n", slot);
-    }
-    s += std::format("\tSamplers ({}):\n", entry.Desc.SamplerSlots.size());
-    for (const auto& slot : entry.Desc.SamplerSlots) {
-        s += std::format("\t\tslot={}\n", slot);
-    }
-    s += std::format("\tBuffers ({}):\n", entry.Desc.BufferSlots.size());
-    for (const auto& slot : entry.Desc.BufferSlots) {
-        s += std::format("\t\tslot={}\n", slot);
-    }
-    return s;
-}
-
 auto SenVulkanBackend::PrintBindGroup(SenBindGroup handle) -> std::string {
     std::string s;
     s += std::format("[BindGroup] handle.ID={} valid={}\n", handle.ID, handle.IsValid());
@@ -1421,7 +1395,20 @@ auto SenVulkanBackend::PrintBindGroup(SenBindGroup handle) -> std::string {
     s += std::format("\tVkDescriptorSet = {}\n", (void*)entry.Set);
 
     const auto& desc = entry.BindGroupDesc;
-    s += PrintBindGroupLayout(desc.Layout);
+
+    s += std::format("\tLayout structure:\n");
+    s += std::format("\t\tTextureSlots ({}):\n", desc.TextureSlots.size());
+    for (const auto& slot : desc.TextureSlots) {
+        s += std::format("\t\t\tslot={}\n", slot);
+    }
+    s += std::format("\t\tSamplerSlots ({}):\n", desc.SamplerSlots.size());
+    for (const auto& slot : desc.SamplerSlots) {
+        s += std::format("\t\t\tslot={}\n", slot);
+    }
+    s += std::format("\t\tBufferSlots ({}):\n", desc.BufferSlots.size());
+    for (const auto& slot : desc.BufferSlots) {
+        s += std::format("\t\t\tslot={}\n", slot);
+    }
 
     s += std::format("\tTextures ({}):\n", desc.Textures.size());
     for (size_t i = 0; i < desc.Textures.size(); ++i) {
@@ -1446,9 +1433,9 @@ auto SenVulkanBackend::PrintBindGroup(SenBindGroup handle) -> std::string {
         }
     }
 
-    s += std::format("\tConstantBuffers ({}):\n", desc.ConstantBuffers.size());
-    for (size_t i = 0; i < desc.ConstantBuffers.size(); ++i) {
-        const auto& buf = desc.ConstantBuffers[i];
+    s += std::format("\tBuffers ({}):\n", desc.Buffers.size());
+    for (size_t i = 0; i < desc.Buffers.size(); ++i) {
+        const auto& buf = desc.Buffers[i];
         s += std::format("\t\t[{}] SenBuffer.ID={} valid={}\n", i, buf.ID, buf.IsValid());
         if (buf.IsValid()) {
             const auto& b = _buffers.at(buf.ID);

@@ -1,5 +1,7 @@
 #include "BeMaterialScheme.h"
 
+#include "sen-rhi/SenBackend.h"
+
 
 auto BeMaterialScheme::CreateFromJson(
     const std::string& name, 
@@ -16,14 +18,12 @@ auto BeMaterialScheme::CreateFromJson(
         if (parsedProperty.Type == "texture2d" || parsedProperty.Type == "textureCube") {
             auto descriptor = BeMaterialTextureDescriptor();
             descriptor.Name = parsedProperty.Name;
-            descriptor.SlotIndex = parsedProperty.Slot;
             descriptor.DefaultTexturePath = parsedProperty.Default;
             materialScheme.Textures.push_back(descriptor);
         }
         else if (parsedProperty.Type == "sampler") {
             auto descriptor = BeMaterialSamplerDescriptor();
             descriptor.Name = parsedProperty.Name;
-            descriptor.SlotIndex = parsedProperty.Slot;
             descriptor.DefaultSamplerDescString = parsedProperty.Default;
             materialScheme.Samplers.push_back(descriptor);
         }
@@ -83,5 +83,31 @@ auto BeMaterialScheme::CreateFromJson(
         }
     }
     
+    SenBindGroupDesc desc = {};
+    desc.Stages = SenShaderStageFlags::All;
+    
+    if (!materialScheme.Properties.empty()) {
+        desc.BufferSlots = { 0 };
+    }
+    
+    uint8_t textureSlotsStart = 1 + materialScheme.Samplers.size();
+    if (!materialScheme.Samplers.empty()) {
+        auto samplerRange = std::views::iota(uint8_t(1), textureSlotsStart);
+        desc.SamplerSlots = std::vector<uint8_t>(samplerRange.begin(), samplerRange.end());
+        for (size_t i = 0; i < materialScheme.Samplers.size(); ++i) {
+            materialScheme.Samplers[i].SlotIndex = 1 + uint8_t(i);
+        }
+    }
+
+    if (!materialScheme.Textures.empty()) {
+        uint8_t textureSlotsEnd = textureSlotsStart + materialScheme.Textures.size();
+        auto textureRange = std::views::iota(textureSlotsStart, textureSlotsEnd);
+        desc.TextureSlots = std::vector<uint8_t>(textureRange.begin(), textureRange.end());
+        for (size_t i = 0; i < materialScheme.Textures.size(); ++i) {
+            materialScheme.Textures[i].SlotIndex = textureSlotsStart + uint8_t(i);
+        }
+    }
+    
+    materialScheme.BindGroupLayout = desc;
     return materialScheme;
 }

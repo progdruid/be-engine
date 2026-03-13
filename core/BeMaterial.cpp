@@ -16,33 +16,35 @@ auto BeMaterial::Create(
 {
     auto material = std::make_shared<BeMaterial>(std::string(name), frequentlyUsed, scheme, renderer);
     material->InitialiseSlotMaps();
+    material->RebuildBindGroup();
     return material;
 }
 
 BeMaterial::BeMaterial(
-    std::string name, const bool frequentlyUsed, BeMaterialScheme descriptor, const BeRenderer& renderer
-)   : Name(std::move(name)), _isFrequentlyUsed(frequentlyUsed), _scheme(std::move(descriptor))  
+    std::string name, const bool frequentlyUsed, BeMaterialScheme scheme, const BeRenderer& renderer
+)   : Name(std::move(name)), _isFrequentlyUsed(frequentlyUsed), _scheme(std::move(scheme))
 {
     static uint32_t materialCount = 0;
     _uniqueID = ++materialCount;
-    _version = 1;
 
-    if (_scheme.Properties.empty())
-        return;
+    if (!_scheme.Properties.empty()) {
+        AssembleData();
 
-    AssembleData();
-
-    const uint32_t sizeInBytes = static_cast<uint32_t>(_bufferData.size() * sizeof(float));
-    _cbuffer = SenBackend::CreateBuffer({
-        .Usage  = SenBufferUsage::Constant,
-        .Access = _isFrequentlyUsed ? SenBufferAccess::Dynamic : SenBufferAccess::Static,
-        .Size   = sizeInBytes,
-        .Data   = _bufferData.data(),
-    });
+        const uint32_t sizeInBytes = static_cast<uint32_t>(_bufferData.size() * sizeof(float));
+        _cbuffer = SenBackend::CreateBuffer({
+            .Usage  = SenBufferUsage::Constant,
+            .Access = _isFrequentlyUsed ? SenBufferAccess::Dynamic : SenBufferAccess::Static,
+            .Size   = sizeInBytes,
+            .Data   = _bufferData.data(),
+        });
+    }
 }
 
-//BeMaterial::BeMaterial() = default;
-BeMaterial::~BeMaterial() = default;
+BeMaterial::~BeMaterial() {
+    if (_bindGroup.IsValid()) {
+        SenBackend::DestroyBindGroup(_bindGroup);
+    }
+}
 
 auto BeMaterial::InitialiseSlotMaps() -> void {
     for (const auto& property : _scheme.Textures) {
@@ -71,49 +73,52 @@ auto BeMaterial::FlushBuffer() -> void {
     _cbufferDirty = false;
 }
 
-auto BeMaterial::BuildBindGroupLayoutDesc(uint8_t cbufferSlot) const -> SenBindGroupLayoutDesc {
-    SenBindGroupLayoutDesc desc;
-
-    for (const auto& [name, pair] : _textures) {
-        const auto& [texture, slot] = pair;
-        if (texture && texture->Handle.IsValid()) {
-            desc.TextureSlots.push_back(slot);
-        }
+auto BeMaterial::GetBindGroup() -> SenBindGroup {
+    FlushBuffer();
+    if (_bindGroupDirty) {
+        RebuildBindGroup();
     }
+    return _bindGroup;
+}
 
-    for (const auto& [name, pair] : _samplers) {
-        const auto& [sampler, slot] = pair;
-        if (sampler.IsValid()) {
-            desc.SamplerSlots.push_back({ slot });
-        }
+auto BeMaterial::RebuildBindGroup() -> void {
+    if (_bindGroup.IsValid()) {
+        SenBackend::DestroyBindGroup(_bindGroup);
     }
-
-    if (_cbuffer.IsValid()) {
-        desc.BufferSlots.push_back({ cbufferSlot });
-    }
-
-    return desc;
+    _bindGroup = SenBackend::CreateBindGroup(BuildBindGroupDesc());
+    _bindGroupDirty = false;
 }
 
 auto BeMaterial::BuildBindGroupDesc() const -> SenBindGroupDesc {
-    SenBindGroupDesc desc;
+    SenBindGroupDesc desc = _scheme.BindGroupLayout;
 
-    for (const auto& [_, pair] : _textures) {
-        const auto& [texture, _] = pair;
-        if (texture && texture->Handle.IsValid()) {
-            desc.Textures.push_back(texture->Handle);
+    desc.Textures.clear();
+    desc.Textures.reserve(desc.TextureSlots.size());
+    for (const auto textureSlot : desc.TextureSlots) {
+        for (const auto& [_, pair] : _textures) {
+            const auto& [texture, slot] = pair;
+            if (slot == textureSlot && texture && texture->Handle.IsValid()) {
+                desc.Textures.push_back(texture->Handle);
+                break;
+            }
         }
     }
 
-    for (const auto& [_, pair] : _samplers) {
-        const auto& [sampler, _] = pair;
-        if (sampler.IsValid()) {
-            desc.Samplers.push_back(sampler);
+    desc.Samplers.clear();
+    desc.Samplers.reserve(desc.SamplerSlots.size());
+    for (const auto samplerSlot : desc.SamplerSlots) {
+        for (const auto& [_, pair] : _samplers) {
+            const auto& [sampler, slot] = pair;
+            if (slot == samplerSlot && sampler.IsValid()) {
+                desc.Samplers.push_back(sampler);
+                break;
+            }
         }
     }
 
+    desc.Buffers.clear();
     if (_cbuffer.IsValid()) {
-        desc.ConstantBuffers.push_back(_cbuffer);
+        desc.Buffers.push_back(_cbuffer);
     }
 
     return desc;
@@ -248,7 +253,7 @@ auto BeMaterial::GetMatrix(const std::string& propertyName) const -> glm::mat4x4
 auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void {
     assert(_textures.contains(propertyName));
     _textures.at(propertyName).first = texture;
-    _version++;
+    _bindGroupDirty = true;
 }
 
 auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture> {
@@ -261,7 +266,7 @@ auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::share
 auto BeMaterial::SetSampler(const std::string& propertyName, SenSampler sampler) -> void {
     assert(_samplers.contains(propertyName));
     _samplers.at(propertyName).first = sampler;
-     _version++;
+    _bindGroupDirty = true;
 }
 
 auto BeMaterial::GetSampler(const std::string& propertyName) const -> SenSampler {

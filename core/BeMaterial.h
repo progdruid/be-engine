@@ -21,18 +21,16 @@ class BeMaterial {
     ) -> std::shared_ptr<BeMaterial>;
 
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose
-    std::string Name;
+    expose std::string Name;
+    hide uint32_t _uniqueID;
+    hide bool _isFrequentlyUsed;
     
-    hide
-    bool _isFrequentlyUsed;
     BeMaterialScheme _scheme;
-    uint32_t _uniqueID;
-    uint32_t _version;
+    SenBindGroup _bindGroup;
+    bool _bindGroupDirty;
 
     std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>> _textures;
     std::unordered_map<std::string, std::pair<SenSampler, uint8_t>> _samplers;
-
     std::unordered_map<std::string, uint32_t> _propertyOffsets;
     std::vector<float> _bufferData;
     SenBuffer _cbuffer;
@@ -40,7 +38,6 @@ class BeMaterial {
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
-    //BeMaterial();
     ~BeMaterial();
 
     BeMaterial(const BeMaterial& other) = default;
@@ -51,7 +48,7 @@ class BeMaterial {
     explicit BeMaterial(
         std::string name,
         const bool frequentlyUsed,
-        BeMaterialScheme descriptor,
+        BeMaterialScheme scheme,
         const BeRenderer& renderer
     );
 
@@ -62,11 +59,9 @@ class BeMaterial {
     expose
     auto GetSchemeName () const -> std::string { return _scheme.Name; }
     auto GetUniqueID () const -> uint32_t { return _uniqueID; }
-    auto GetVersion () const -> uint32_t { return _version; }
 
-    auto FlushBuffer () -> void;
-    auto BuildBindGroupLayoutDesc(uint8_t cbufferSlot) const -> SenBindGroupLayoutDesc;
-    auto BuildBindGroupDesc() const -> SenBindGroupDesc;
+    auto FlushBuffer  () -> void;
+    auto GetBindGroup () -> SenBindGroup;
 
     auto Print() const -> std::string;
     
@@ -89,5 +84,8 @@ class BeMaterial {
     auto GetSampler(const std::string& propertyName) const -> SenSampler;
     
     // internal ////////////////////////////////////////////////////////////////////////////////////////////////////////
-    hide auto AssembleData    () -> void;
+    hide
+    auto AssembleData        () -> void;
+    auto BuildBindGroupDesc  () const -> SenBindGroupDesc;
+    auto RebuildBindGroup    () -> void;
 };

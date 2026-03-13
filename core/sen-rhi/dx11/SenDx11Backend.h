@@ -114,11 +114,6 @@ class SenDx11Backend {
     static auto CreateSampler  (const SenSamplerDesc& desc) -> SenSampler;
     static auto DestroySampler (SenSampler handle) -> void;
     static auto LookupSampler  (SenSampler handle) -> SenDx11SamplerEntry&;
-    
-    expose // bind group layouts
-    static auto CreateBindGroupLayout  (const SenBindGroupLayoutDesc& desc) -> SenBindGroupLayout;
-    static auto DestroyBindGroupLayout (SenBindGroupLayout handle) -> void;
-    static auto LookupBindGroupLayout  (SenBindGroupLayout handle) -> SenBindGroupLayoutDesc&;
 
     expose // bind groups
     static auto CreateBindGroup  (const SenBindGroupDesc& desc) -> SenBindGroup;
@@ -157,9 +152,6 @@ class SenDx11Backend {
 
     static std::unordered_map<uint32_t, SenDx11SamplerEntry> _samplers;
     static uint32_t _nextSamplerId;
-
-    static std::unordered_map<uint32_t, SenBindGroupLayoutDesc> _bindGroupLayouts;
-    static uint32_t _nextBindGroupLayoutId;
 
     static std::unordered_map<uint32_t, SenBindGroupDesc> _bindGroups;
     static uint32_t _nextBindGroupId;

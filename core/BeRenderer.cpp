@@ -41,14 +41,12 @@ auto BeRenderer::LaunchDevice() -> void {
         .Size   = sizeof(BeUniformBufferGPU),
     });
 
-    _uniformBindGroupLayout = SenBackend::CreateBindGroupLayout({
-        .BufferSlots = { 0 }
-    });
+    _uniformBindGroupDesc = {
+        .BufferSlots = { 0 },
+        .Buffers = { _uniformBuffer },
+    };
 
-    _uniformBindGroup = SenBackend::CreateBindGroup({
-        .Layout = _uniformBindGroupLayout,
-        .ConstantBuffers = {_uniformBuffer },
-    });
+    _uniformBindGroup = SenBackend::CreateBindGroup(_uniformBindGroupDesc);
 }
 
 auto BeRenderer::GetSwapchainFormat() const -> SenFormat {

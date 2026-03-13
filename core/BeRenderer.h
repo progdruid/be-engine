@@ -27,7 +27,7 @@ class BeRenderer {
     SenCommandBuffer _commandBuffer;
 
     SenBuffer _uniformBuffer;
-    SenBindGroupLayout _uniformBindGroupLayout;
+    SenBindGroupDesc _uniformBindGroupDesc;
     SenBindGroup _uniformBindGroup;
 
     std::vector<BeRenderPass*> _passes;
@@ -54,7 +54,7 @@ class BeRenderer {
 
     [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer& { return _commandBuffer; }
     [[nodiscard]] auto GetBackbufferTexture() const -> SenTexture { return _backbufferTexture; }
-    [[nodiscard]] auto GetUniformBindGroupLayout() const -> SenBindGroupLayout { return _uniformBindGroupLayout; }
+    [[nodiscard]] auto GetUniformBindGroupLayout() const -> SenBindGroupDesc { return _uniformBindGroupDesc; }
 
     [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }
     [[nodiscard]] auto GetHeight () const -> uint32_t { return _height; }

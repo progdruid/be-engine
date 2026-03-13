@@ -51,11 +51,6 @@ struct SenVulkanPipelineEntry {
     SenPipelineDesc Desc;
 };
 
-struct SenVulkanBindGroupLayoutEntry {
-    VkDescriptorSetLayout Layout = VK_NULL_HANDLE;
-    SenBindGroupLayoutDesc Desc;
-};
-
 struct SenVulkanBindGroupEntry {
     VkDescriptorSet Set = VK_NULL_HANDLE;
     SenBindGroupDesc BindGroupDesc;
@@ -131,17 +126,12 @@ class SenVulkanBackend {
     static auto CreateSampler  (const SenSamplerDesc& desc) -> SenSampler;
     static auto DestroySampler (SenSampler handle) -> void;
     static auto LookupSampler  (SenSampler handle) -> SenVulkanSamplerEntry&;
-    
-    expose // bind group layouts
-    static auto CreateBindGroupLayout  (const SenBindGroupLayoutDesc& desc) -> SenBindGroupLayout;
-    static auto DestroyBindGroupLayout (SenBindGroupLayout handle) -> void;
-    static auto LookupBindGroupLayout  (SenBindGroupLayout handle) -> SenVulkanBindGroupLayoutEntry&;
 
     expose // bind groups
     static auto CreateBindGroup  (const SenBindGroupDesc& desc) -> SenBindGroup;
     static auto DestroyBindGroup (SenBindGroup handle) -> void;
     static auto LookupBindGroup  (SenBindGroup handle) -> SenVulkanBindGroupEntry&;
-
+    hide static auto CreateDescriptorSetLayoutFromDesc(const SenBindGroupDesc& desc) -> VkDescriptorSetLayout;
     
     expose // shaders
     static auto CreateShader (const SenShaderSourceDesc& sourceDesc) -> SenShader;
@@ -154,8 +144,7 @@ class SenVulkanBackend {
     static auto LookupPipeline  (SenPipeline handle) -> SenVulkanPipelineEntry&;
 
     expose // debug print helpers
-    static auto PrintBindGroupLayout (SenBindGroupLayout handle) -> std::string;
-    static auto PrintBindGroup       (SenBindGroup handle) -> std::string;
+    static auto PrintBindGroup (SenBindGroup handle) -> std::string;
 
 
     expose // dynamic rendering extension proc addresses (used by SenVulkanCommandBuffer)
@@ -183,9 +172,6 @@ class SenVulkanBackend {
 
     static std::unordered_map<uint32_t, SenVulkanSamplerEntry> _samplers;
     static uint32_t _nextSamplerId;
-
-    static std::unordered_map<uint32_t, SenVulkanBindGroupLayoutEntry> _bindGroupLayouts;
-    static uint32_t _nextBindGroupLayoutId;
 
     static std::unordered_map<uint32_t, SenVulkanBindGroupEntry> _bindGroups;
     static uint32_t _nextBindGroupId;

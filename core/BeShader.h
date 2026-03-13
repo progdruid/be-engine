@@ -10,6 +10,8 @@
 
 #include <umbrellas/bitmask.hpp>
 
+#include "umbrellas/include-libassert.h"
+
 class BeShaderIncludeHandler;
 class BeRenderer;
 
@@ -37,13 +39,16 @@ class BeShader {
     expose SenShader ShaderPixel;
     expose std::unordered_map<std::string, uint32_t> PixelTargets;
     expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
-
+    
     hide SenPipelineDesc _pipelineDesc;
 
     expose bool HasMaterial = false;
-    hide std::unordered_map<std::string, std::string> _materialSchemeNames;
-    hide std::unordered_map<std::string, uint8_t> _materialSlots;
-    hide std::unordered_map<std::string, uint8_t> _materialSlotsByScheme;
+    expose struct MaterialSchemeEntry {
+        expose std::string Link;
+        expose std::string SchemeName;
+        expose uint8_t Index;
+    };
+    hide std::vector<MaterialSchemeEntry> _materialSchemes;
 
     // lifecycle ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose BeShader() = default;
@@ -51,14 +56,32 @@ class BeShader {
 
     // interface ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose auto GetMaterialSchemeName (const std::string& linkName) const -> std::string {
-        return _materialSchemeNames.at(linkName);
+        for (const auto & scheme : _materialSchemes) {
+            if (scheme.Link == linkName) {
+                return scheme.SchemeName;
+            }
+        }
+        be_assert(false, "BeShader: didnt find material schemes under such link name.");
+        return {};
     }
     expose auto GetMaterialSlot (const std::string& linkName) const -> uint8_t {
-        return _materialSlots.at(linkName);
+        for (const auto & scheme : _materialSchemes) {
+            if (scheme.Link == linkName) {
+                return scheme.Index;
+            }
+        }
+        be_assert(false, "BeShader: didnt find material schemes under such link name.");
+        return {};
     }
     expose auto GetMaterialSlotByScheme (const std::string& schemeName) const -> uint8_t {
-        return _materialSlotsByScheme.at(schemeName);
-    }
+        for (const auto & scheme : _materialSchemes) {
+            if (scheme.SchemeName == schemeName) {
+                return scheme.Index;
+            }
+        }
+        be_assert(false, "BeShader: didnt find material schemes under such link name.");
+        return {};
+    } // all this bullshit will be deleted
 
     expose auto GetPipelineDesc() const -> SenPipelineDesc {
         return _pipelineDesc;

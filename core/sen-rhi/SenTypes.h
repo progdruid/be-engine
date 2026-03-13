@@ -108,17 +108,8 @@ enum class SenShaderStageFlags : uint8_t {
 };
 ENABLE_BITMASK(SenShaderStageFlags);
 
-struct SenBindGroupLayout {
-    uint32_t ID = 0;
-    auto IsValid() const -> bool { return ID != 0; }
-};
-
-struct SenBindGroupLayoutDesc {
-    SenShaderStageFlags Stages = SenShaderStageFlags::All;
-    std::vector<uint8_t> TextureSlots;
-    std::vector<uint8_t> SamplerSlots;
-    std::vector<uint8_t> BufferSlots;
-};
+// Note: SenBindGroupLayout no longer exists as a handle type.
+// Descriptor set layouts are created on-demand from SenBindGroupDesc in the backend.
 
 
 // ─── bind group ──────────────────────────────────────────────────
@@ -128,10 +119,13 @@ struct SenBindGroup {
 };
 
 struct SenBindGroupDesc {
-    SenBindGroupLayout Layout;
-    std::vector<SenTexture> Textures = {};
+    SenShaderStageFlags Stages = SenShaderStageFlags::All;
+    std::vector<uint8_t> BufferSlots;
+    std::vector<uint8_t> SamplerSlots;
+    std::vector<uint8_t> TextureSlots;
+    std::vector<SenBuffer> Buffers = {};
     std::vector<SenSampler> Samplers = {};
-    std::vector<SenBuffer> ConstantBuffers = {};
+    std::vector<SenTexture> Textures = {};
 };
 
 
@@ -275,7 +269,8 @@ struct SenPipelineDesc {
     SenDepthStencilState  DepthStencilState;
 
     // Bind group layouts (ordered by set index: 0, 1, 2, ...)
-    std::vector<SenBindGroupLayout> BindGroupLayouts;
+    // Pipeline only cares about structure (slot vectors), not actual resources
+    std::vector<SenBindGroupDesc> BindGroupLayouts;
 
     std::vector<SenFormat> RenderTargetFormats;
     SenFormat DepthStencilFormat;
