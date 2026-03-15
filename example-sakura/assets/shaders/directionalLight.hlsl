@@ -28,6 +28,7 @@
     "blend": "additive",
     "depthStencil": "disable",
     "materials": {
+        "frame": { "scheme": "uniform-material", "slot": 0 },
         "main": { "scheme": "directional-light-material", "slot": 1, "var": "DirectionalLight" },
     },
     "targets": {
@@ -38,12 +39,13 @@
 
 */
 
-#include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
 #include "fullscreen-vertex.hlsl"
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "uniform-material.hlsl"
+
 struct directional_light_material {
     float HasShadowMap;
     float3 Direction;
@@ -51,6 +53,10 @@ struct directional_light_material {
     float Power;
     float4x4 ProjectionView;
     float TexelSize;
+};
+
+cbuffer CBuffer_0 : register(b0, space0) {
+    uniform_material _Frame;
 };
 
 cbuffer CBuffer_1 : register(b0, space1) {
@@ -92,7 +98,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 worldNormal = WorldNormal.Sample(InputSampler, input.UV).xyz;
     float4 specular_shininess = Specular_Shininess.Sample(InputSampler, input.UV).rgba;
 
-    float3 worldPos = ReconstructWorldPosition(input.UV, depth, _CameraInverseProjectionView);
+    float3 worldPos = ReconstructWorldPosition(input.UV, depth, _Frame.CameraInverseProjectionView);
 
     float4 lightSpacePos = mul(float4(worldPos, 1.0), _DirectionalLight.ProjectionView);
     lightSpacePos /= lightSpacePos.w;
@@ -101,7 +107,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     float currentShadowDepth = lightSpacePos.z;
     float shadowAbsenceFactor = PCFShadow(ShadowMap, InputSampler, shadowUV, _DirectionalLight.TexelSize, currentShadowDepth);
     
-    float3 viewVec = _CameraPosition - worldPos;
+    float3 viewVec = _Frame.CameraPosition - worldPos;
     float3 lit = StandardLambertBlinnPhong(
         worldNormal,
         viewVec,

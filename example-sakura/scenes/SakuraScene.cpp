@@ -39,6 +39,7 @@ auto SakuraScene::Prepare() -> void {
     
 
     BeAssetRegistry::IndexShaderFiles({ 
+        "assets/shaders/uniform-material.hlsl", 
         "assets/shaders/objectMaterial.hlsl", 
         "assets/shaders/standard.hlsl",
         "assets/shaders/checkerboard.hlsl",
@@ -87,7 +88,9 @@ auto SakuraScene::Prepare() -> void {
     GameIns->SubmissionBuffer->RegisterMesh(_emissiveCube->Mesh);
     GameIns->SubmissionBuffer->RegisterMesh(_moon->Mesh);
 
-    GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
+    auto uniformScheme = BeAssetRegistry::GetMaterialScheme("uniform-material");
+    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false, *GameIns->Renderer);
+    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
     const uint32_t screenWidth = GameIns->Window->GetWidth();
     const uint32_t screenHeight = GameIns->Window->GetHeight();
@@ -163,7 +166,8 @@ auto SakuraScene::Prepare() -> void {
 }
 
 auto SakuraScene::OnLoad() -> void {
-    
+
+    GameIns->SubmissionBuffer->UniformMaterial = _uniformMaterial;
 
     // Clear all entities from previous load
     _registry.clear();
@@ -199,6 +203,7 @@ auto SakuraScene::OnLoad() -> void {
     .BuildNoReturn();
     const auto bloomPass = new BeBloomPass();
     GameIns->Renderer->AddRenderPass(bloomPass);
+    bloomPass->SubmissionBuffer = GameIns->SubmissionBuffer;
     bloomPass->InputHDRTexture = BeAssetRegistry::GetTexture("HDR-Input");
     bloomPass->BloomMipTextures = {
         BeAssetRegistry::GetTexture("Bloom_Mip0"),
@@ -217,12 +222,14 @@ auto SakuraScene::OnLoad() -> void {
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     GameIns->Renderer->AddRenderPass(tonemapperPass);
+    tonemapperPass->SubmissionBuffer = GameIns->SubmissionBuffer;
     tonemapperPass->OutputTextures = { BeAssetRegistry::GetTexture("TonemapperOutput") };
     tonemapperPass->Shader = tonemapperShader;
     tonemapperPass->Material = tonemapperMaterial;
 
     const auto backbufferPass = new BeBackbufferPass();
     GameIns->Renderer->AddRenderPass(backbufferPass);
+    backbufferPass->SubmissionBuffer = GameIns->SubmissionBuffer;
     backbufferPass->InputTexture = BeAssetRegistry::GetTexture("TonemapperOutput");
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
     
@@ -363,9 +370,12 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         _freeCameraController->Update(deltaTime, GameIns->Input.get());
     }
 
-    GameIns->Renderer->UniformData.NearFarPlane = {_camera->NearPlane, _camera->FarPlane};
-    GameIns->Renderer->UniformData.ProjectionView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
-    GameIns->Renderer->UniformData.CameraPosition = _camera->Position;
+    auto& uniformMat = *_uniformMaterial;
+    const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
+    uniformMat.SetMatrix("CameraProjectionView", projView);
+    uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));
+    uniformMat.SetFloat4("NearFarPlane", {_camera->NearPlane, _camera->FarPlane, 1.0f / _camera->NearPlane, 1.0f / _camera->FarPlane});
+    uniformMat.SetFloat3("CameraPosition", _camera->Position);
 
     {
         static float angle = 0.0f;

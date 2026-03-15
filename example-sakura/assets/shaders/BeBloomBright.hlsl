@@ -21,6 +21,7 @@
     "blend": "disable",
     "depthStencil": "disable",
     "materials": {
+        "frame": { "scheme": "uniform-material", "slot": 0 },
         "main": { "scheme": "bloom-bright-material", "slot": 1 },
     },
     "targets": {
@@ -33,10 +34,16 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "uniform-material.hlsl"
+
 struct bloom_bright_material {
     float Threshold;
     float Intensity;
     float Knee;
+};
+
+cbuffer CBuffer_0 : register(b0, space0) {
+    uniform_material _Frame;
 };
 
 cbuffer CBuffer_1 : register(b0, space1) {

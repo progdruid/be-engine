@@ -28,6 +28,7 @@
     "pixel": "PixelFunction",
     
     "materials": {
+        "frame": { "scheme": "uniform-material", "slot": 0 },
         "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
         "geometry-main": { "scheme": "standard-material-for-geometry-pass", "slot": 2 },
     },
@@ -40,12 +41,12 @@
     }
 }
 @be-end
-
 */
 
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "uniform-material.hlsl"
 #include "objectMaterial.hlsl"
 
 struct standard_material_for_geometry_pass {
@@ -53,6 +54,10 @@ struct standard_material_for_geometry_pass {
     float3 SpecularColor;
     float Shininess;
     float3 EmissiveColor;
+};
+
+cbuffer CBuffer_0 : register(b0, space0) {
+    uniform_material _Frame;
 };
 
 cbuffer CBuffer_1 : register(b0, space1) {

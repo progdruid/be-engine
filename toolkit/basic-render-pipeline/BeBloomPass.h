@@ -10,10 +10,12 @@
 class BeTexture;
 class BeMaterial;
 class BeShader;
+class BeBRPSubmissionBuffer;
 
 class BeBloomPass final : public BeRenderPass {
 
     expose
+    std::weak_ptr<BeBRPSubmissionBuffer> SubmissionBuffer;
     std::weak_ptr<BeTexture> InputHDRTexture;
     std::vector<std::weak_ptr<BeTexture>> BloomMipTextures;
     uint32_t BloomMipCount;

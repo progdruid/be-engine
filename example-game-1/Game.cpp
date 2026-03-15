@@ -65,7 +65,8 @@ auto Game::MainLoop() -> void {
         const float dt = static_cast<float>(now - lastTime);
         lastTime = now;
 
-        Renderer->UniformData.Time = now;
+        if (const auto mat = SubmissionBuffer->UniformMaterial.lock())
+            mat->SetFloat("Time", static_cast<float>(now));
 
         const auto activeScene = SceneManager->GetActiveScene<BaseScene>();
         if (activeScene) {

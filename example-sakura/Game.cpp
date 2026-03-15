@@ -24,7 +24,7 @@ auto Game::Run() -> int {
     Height = 1080;
     
     //Window = std::make_shared<BeWindow>(Width, Height, "be: example game 1");
-    Window = std::make_shared<BeWindow>(720, 480, "be: example sakura", BeWindowMode::Windowed);
+    Window = std::make_shared<BeWindow>(0, 0, "be: example sakura", BeWindowMode::BorderlessFullscreen);
     Width = Window->GetWidth();
     Height = Window->GetHeight();
     Renderer = std::make_shared<BeRenderer>(Width, Height, static_cast<void*>(Window->GetHwnd()));
@@ -92,7 +92,8 @@ auto Game::MainLoop() -> void {
         const float dt = static_cast<float>(now - lastTime);
         lastTime = now;
 
-        Renderer->UniformData.Time = now;
+        if (const auto mat = SubmissionBuffer->UniformMaterial.lock())
+            mat->SetFloat("Time", static_cast<float>(now));
 
         const auto activeScene = SceneManager->GetActiveScene<BaseScene>();
         if (activeScene) {

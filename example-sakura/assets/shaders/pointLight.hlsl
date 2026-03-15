@@ -29,6 +29,7 @@
     "blend": "additive",
     "depthStencil": "disable",
     "materials": {
+        "frame": { "scheme": "uniform-material", "slot": 0 },
         "main": { "scheme": "point-light-material", "slot": 1, "var": "PointLight" },
     },
     "targets": {
@@ -41,6 +42,8 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "uniform-material.hlsl"
+
 struct point_light_material {
     float3 Position;
     float Radius;
@@ -49,6 +52,10 @@ struct point_light_material {
     float HasShadowMap;
     float ShadowMapResolution;
     float ShadowNearPlane;
+};
+
+cbuffer CBuffer_0 : register(b0, space0) {
+    uniform_material _Frame;
 };
 
 cbuffer CBuffer_1 : register(b0, space1) {
@@ -68,7 +75,6 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include <BeUniformBuffer.hlsli>
 #include <BeFunctions.hlsli>
 #include "fullscreen-vertex.hlsl"
 
@@ -103,7 +109,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 worldNormal = WorldNormal.Sample(InputSampler, input.UV).xyz;
     float4 specular_shininess = Specular_Shininess.Sample(InputSampler, input.UV).rgba;
 
-    float3 worldPos = ReconstructWorldPosition(input.UV, depth, _CameraInverseProjectionView);
+    float3 worldPos = ReconstructWorldPosition(input.UV, depth, _Frame.CameraInverseProjectionView);
     float3 lightDir = _PointLight.Position - worldPos;
     float distanceToLight = length(lightDir);
     if (distanceToLight > _PointLight.Radius) {
@@ -118,7 +124,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     float attenuation = saturate(1.0 - (distanceToLight / _PointLight.Radius));
     attenuation *= attenuation;
     
-    float3 viewVec = _CameraPosition - worldPos;
+    float3 viewVec = _Frame.CameraPosition - worldPos;
     float3 lit = StandardLambertBlinnPhong(
         worldNormal,
         viewVec,

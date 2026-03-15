@@ -9,11 +9,13 @@
 class BeTexture;
 class BeMaterial;
 class BeShader;
+class BeBRPSubmissionBuffer;
 
 class BeBackbufferPass final : public BeRenderPass {
 
 public:
     glm::vec3 ClearColor;
+    std::weak_ptr<BeBRPSubmissionBuffer> SubmissionBuffer;
 
     std::weak_ptr <BeTexture> InputTexture;
 

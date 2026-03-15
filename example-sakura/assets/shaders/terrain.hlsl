@@ -26,6 +26,7 @@
     },
     "pixel": "PixelFunction",
     "materials": {
+        "frame": { "scheme": "uniform-material", "slot": 0 },
         "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
         "geometry-main": { "scheme": "terrain-main-material-for-geometry-pass", "slot": 2, "var": "Terrain" },
     },
@@ -41,6 +42,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "uniform-material.hlsl"
 #include "objectMaterial.hlsl"
 
 struct terrain_main_material_for_geometry_pass {
@@ -51,6 +53,10 @@ struct terrain_main_material_for_geometry_pass {
     float HeightScale;
     float NoiseResolution;
     float Speed;
+};
+
+cbuffer CBuffer_0 : register(b0, space0) {
+    uniform_material _Frame;
 };
 
 cbuffer CBuffer_1 : register(b0, space1) {
@@ -77,8 +83,6 @@ struct PixelOutput {
 
 // endregion
 /*========================================================*/
-
-#include <BeUniformBuffer.hlsli>
 
 struct Interpolators {
     float4 Position : SV_POSITION;
@@ -165,7 +169,7 @@ float terrainFunc (float2 uv, float2 noiseUV) {
 Interpolators VertexFunction(VertexInput input) {
     float2 terrainUV = input.UV;
     terrainUV *= _Terrain.NoiseResolution;
-    terrainUV += (_Time * _Terrain.Speed).rr;
+    terrainUV += (_Frame.Time * _Terrain.Speed).rr;
     float terrainHeight = terrainFunc(input.UV, terrainUV) - 0.5;
 
     float3 displacedPos = input.Position * float3(_Terrain.TerrainScale, 1.0, _Terrain.TerrainScale);

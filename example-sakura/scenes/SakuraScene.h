@@ -12,6 +12,7 @@ class FreeCameraController;
 class BeWindow;
 class BeRenderer;
 class BeBRPSubmissionBuffer;
+class BeMaterial;
 
 class SakuraScene : public BaseScene {
     hide
@@ -22,6 +23,7 @@ class SakuraScene : public BaseScene {
     bool _useOrbitCamera = false;
     
     std::shared_ptr<BeProp> _cube, _anvil, _sakura, _sakura2, _emissiveCube, _moon;
+    std::shared_ptr<BeMaterial> _uniformMaterial;
     
     expose
     explicit SakuraScene(Game* game);

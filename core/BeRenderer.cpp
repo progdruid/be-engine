@@ -1,4 +1,4 @@
-﻿#include "BeRenderer.h"
+#include "BeRenderer.h"
 
 #include <cassert>
 
@@ -34,19 +34,6 @@ auto BeRenderer::LaunchDevice() -> void {
     });
 
     _commandBuffer = SenBackend::CreateCommandBuffer();
-
-    _uniformBuffer = SenBackend::CreateBuffer({
-        .Usage  = SenBufferUsage::Constant,
-        .Access = SenBufferAccess::Dynamic,
-        .Size   = sizeof(BeUniformBufferGPU),
-    });
-
-    _uniformBindGroupDesc = {
-        .BufferSlots = { 0 },
-        .Buffers = { _uniformBuffer },
-    };
-
-    _uniformBindGroup = SenBackend::CreateBindGroup(_uniformBindGroupDesc);
 }
 
 auto BeRenderer::GetSwapchainFormat() const -> SenFormat {
@@ -65,7 +52,7 @@ auto BeRenderer::ClearPasses() -> void {
     _passes.clear();
 }
 
-auto BeRenderer::InitialisePasses() const -> void {
+auto BeRenderer::InitialisePasses() -> void {
     for (const auto& pass : _passes)
         pass->Initialise();
 }
@@ -74,11 +61,6 @@ auto BeRenderer::Render() -> void {
     SenBackend::BeginDebugEvent("Frame");
 
     _backbufferTexture = SenBackend::BeginFrame(_swapchain);
-
-    const BeUniformBufferGPU uniformDataGpu(UniformData);
-    SenBackend::WriteBuffer(_uniformBuffer, &uniformDataGpu, sizeof(BeUniformBufferGPU));
-
-    _commandBuffer.SetBindGroup(_uniformBindGroup, 0);
 
     for (const auto& pass : _passes) {
         SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
@@ -89,4 +71,3 @@ auto BeRenderer::Render() -> void {
     SenBackend::EndFrame(_swapchain);
     SenBackend::EndDebugEvent();
 }
-

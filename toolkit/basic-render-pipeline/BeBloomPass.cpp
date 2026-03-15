@@ -2,6 +2,7 @@
 
 #include "BeRenderer.h"
 #include "BeAssetRegistry.h"
+#include "BeBRPSubmissionBuffer.h"
 #include "BeMaterial.h"
 #include "BeShader.h"
 #include "BeTexture.h"
@@ -20,7 +21,6 @@ auto BeBloomPass::Initialise() -> void {
 
     auto brightPipelineDesc = _brightShader->GetPipelineDesc();
     brightPipelineDesc.RenderTargetFormats = { BloomMipTextures[0].lock()->Format };
-    brightPipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _brightMaterial->GetBindGroupLayout() };
     _brightPipeline = SenBackend::CreatePipeline(brightPipelineDesc);
     be_assert(_brightPipeline.IsValid(), "BeBloomPass: failed to create bright pipeline");
 
@@ -82,7 +82,6 @@ auto BeBloomPass::Initialise() -> void {
 
     auto downsamplePipelineDesc = _kawaseShader->GetPipelineDesc();
     downsamplePipelineDesc.RenderTargetFormats = { mipFormat };
-    downsamplePipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _downsampleMaterials[1]->GetBindGroupLayout() };
     _downsamplePipeline = SenBackend::CreatePipeline(downsamplePipelineDesc);
     be_assert(_downsamplePipeline.IsValid(), "BeBloomPass: failed to create downsample pipeline");
 
@@ -95,7 +94,6 @@ auto BeBloomPass::Initialise() -> void {
     upsamplePipelineDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
     upsamplePipelineDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
     upsamplePipelineDesc.RenderTargetFormats = { mipFormat };
-    upsamplePipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _upsampleMaterials[0]->GetBindGroupLayout() };
     _upsamplePipeline = SenBackend::CreatePipeline(upsamplePipelineDesc);
     be_assert(_upsamplePipeline.IsValid(), "BeBloomPass: failed to create upsample pipeline");
 
@@ -109,12 +107,12 @@ auto BeBloomPass::Initialise() -> void {
 
     auto addPipelineDesc = _addShader->GetPipelineDesc();
     addPipelineDesc.RenderTargetFormats = { OutputTexture.lock()->Format };
-    addPipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _addMaterial->GetBindGroupLayout() };
     _addPipeline = SenBackend::CreatePipeline(addPipelineDesc);
     be_assert(_addPipeline.IsValid(), "BeBloomPass: failed to create add pipeline");
 }
 
 auto BeBloomPass::Render() -> void {
+    _renderer->GetCommandBuffer().SetBindGroup(SubmissionBuffer.lock()->UniformMaterial.lock()->GetBindGroup(), 0);
     RenderBrightPass();
     RenderDownsamplePasses();
     RenderUpsamplePasses();

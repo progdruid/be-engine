@@ -1,6 +1,7 @@
 ﻿#include "BeFullscreenEffectPass.h"
 
 #include "BeAssetRegistry.h"
+#include "BeBRPSubmissionBuffer.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
@@ -19,11 +20,6 @@ auto BeFullscreenEffectPass::Initialise() -> void {
     for (const auto& tex : OutputTextures) {
         pipelineDesc.RenderTargetFormats.push_back(tex.lock()->Format);
     }
-    if (Material) {
-        pipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), Material->GetBindGroupLayout() };
-    } else {
-        pipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout() };
-    }
     _pipeline = SenBackend::CreatePipeline(pipelineDesc);
     be_assert(_pipeline.IsValid(), "BeFullscreenEffectPass: failed to create pipeline");
 }
@@ -33,6 +29,7 @@ auto BeFullscreenEffectPass::Render() -> void {
 
     // Build color attachments from output textures
     std::vector<SenColorAttachment> colorAttachments;
+    colorAttachments.reserve(OutputTextures.size());
     for (const auto& tex : OutputTextures) {
         colorAttachments.push_back({ tex.lock()->Handle, 0, -1, SenLoadOp::Load });
     }
@@ -42,6 +39,7 @@ auto BeFullscreenEffectPass::Render() -> void {
         .Viewport = _renderer->GetViewport(),
     });
 
+    cmd.SetBindGroup(SubmissionBuffer.lock()->UniformMaterial.lock()->GetBindGroup(), 0);
     cmd.SetPipeline(_pipeline);
 
     if (Material) {

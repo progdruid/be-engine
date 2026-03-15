@@ -19,6 +19,7 @@
     "blend": "disable",
     "depthStencil": "disable",
     "materials": {
+        "frame": { "scheme": "uniform-material", "slot": 0 },
         "main": { "scheme": "bloom-kawase-material", "slot": 1 },
     },
     "targets": {
@@ -33,9 +34,15 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "uniform-material.hlsl"
+
 struct bloom_kawase_material {
     float2 TexelSize;
     float PassRadius;
+};
+
+cbuffer CBuffer_0 : register(b0, space0) {
+    uniform_material _Frame;
 };
 
 cbuffer CBuffer_1 : register(b0, space1) {

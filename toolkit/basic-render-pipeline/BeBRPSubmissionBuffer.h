@@ -6,6 +6,7 @@
 #include <umbrellas/access-modifiers.hpp>
 #include <umbrellas/include-glm.h>
 
+#include "BeMaterial.h"
 #include "BeMesh.h"
 #include "BeProp.h"
 #include <sen-rhi/SenTypes.h>
@@ -60,6 +61,9 @@ struct BeBRPPointLightEntry {
 };
 
 class BeBRPSubmissionBuffer {
+
+    expose
+    std::weak_ptr<BeMaterial> UniformMaterial;
 
     hide
     std::vector<BeBRPGeometryEntry> _geometryEntries;

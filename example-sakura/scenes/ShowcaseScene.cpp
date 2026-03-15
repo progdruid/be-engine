@@ -36,8 +36,9 @@ void ShowcaseScene::Prepare() {
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
     
-    BeAssetRegistry::IndexShaderFiles({ 
-        "assets/shaders/objectMaterial.hlsl", 
+    BeAssetRegistry::IndexShaderFiles({
+        "assets/shaders/uniform-material.hlsl",
+        "assets/shaders/objectMaterial.hlsl",
         "assets/shaders/standard.hlsl",
         "assets/shaders/checkerboard.hlsl",
         "assets/shaders/fullscreen-vertex.hlsl", 
@@ -54,8 +55,10 @@ void ShowcaseScene::Prepare() {
     CreateTargetTextures();
     LoadModels();
     CreateObjects();
-    
-    GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
+
+    auto uniformScheme = BeAssetRegistry::GetMaterialScheme("uniform-material");
+    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false, *GameIns->Renderer);
+    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 }
 
 auto ShowcaseScene::CreateTargetTextures() -> void {
@@ -199,8 +202,9 @@ void ShowcaseScene::OnLoad() {
 }
 
 auto ShowcaseScene::LoadPasses() -> void {
-    
-    
+
+    GameIns->SubmissionBuffer->UniformMaterial = _uniformMaterial;
+
     GameIns->Renderer->ClearPasses();
 
     const auto shadowPass = new BeShadowPass();
@@ -218,6 +222,7 @@ auto ShowcaseScene::LoadPasses() -> void {
 
     const auto backbufferPass = new BeBackbufferPass();
     GameIns->Renderer->AddRenderPass(backbufferPass);
+    backbufferPass->SubmissionBuffer = GameIns->SubmissionBuffer;
     backbufferPass->InputTexture = BeAssetRegistry::GetTexture("S_BaseColor");
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
     
@@ -276,9 +281,12 @@ void ShowcaseScene::Tick(float deltaTime) {
         _freeCameraController->Update(deltaTime, GameIns->Input.get());
     }
 
-    GameIns->Renderer->UniformData.NearFarPlane = {_camera->NearPlane, _camera->FarPlane};
-    GameIns->Renderer->UniformData.ProjectionView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
-    GameIns->Renderer->UniformData.CameraPosition = _camera->Position;
+    auto& uniformMat = *_uniformMaterial;
+    const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
+    uniformMat.SetMatrix("CameraProjectionView", projView);
+    uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));
+    uniformMat.SetFloat4("NearFarPlane", {_camera->NearPlane, _camera->FarPlane, 1.0f / _camera->NearPlane, 1.0f / _camera->FarPlane});
+    uniformMat.SetFloat3("CameraPosition", _camera->Position);
 
     static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
     static const auto SunView = _registry.view<SunLightComponent>();

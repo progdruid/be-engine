@@ -801,17 +801,19 @@ auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
     };
 
     if (desc.Access == SenBufferAccess::Dynamic) {
-        // Device-local; updated each frame via vkCmdUpdateBuffer (must be outside render pass).
-        bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
+        // Host-visible, persistently mapped — CPU writes via memcpy, GPU reads after submit.
         VmaAllocationCreateInfo allocInfo {
-            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+            .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO,
         };
-        VkResult result = vmaCreateBuffer(_allocator, &bufferInfo, &allocInfo, &entry.Buffer, &entry.Allocation, nullptr);
+        VmaAllocationInfo allocResult;
+        VkResult result = vmaCreateBuffer(_allocator, &bufferInfo, &allocInfo, &entry.Buffer, &entry.Allocation, &allocResult);
         be_assert(result == VK_SUCCESS, "Failed to create dynamic buffer!");
 
+        entry.MappedPtr = allocResult.pMappedData;
+
         if (desc.Data) {
-            UploadToDeviceBuffer(entry.Buffer, desc.Data, desc.Size);
+            memcpy(entry.MappedPtr, desc.Data, desc.Size);
         }
     } else {
         // Device-local VRAM — GPU reads fastest from here.
@@ -850,11 +852,10 @@ auto SenVulkanBackend::WriteBuffer(SenBuffer handle, const void* data, uint32_t 
     be_assert(entry.Access != SenBufferAccess::Immutable, "Cannot write to an Immutable buffer");
 
     if (entry.Access == SenBufferAccess::Dynamic) {
-        be_assert(size <= 65536, "WriteBuffer: vkCmdUpdateBuffer size limit is 65536 bytes");
-        be_assert(_activeCommandBuffer != VK_NULL_HANDLE, "WriteBuffer(Dynamic): no active command buffer");
-        vkCmdUpdateBuffer(_activeCommandBuffer, entry.Buffer, 0, size, data);
+        // Persistent-mapped: memcpy is coherent for VMA_MEMORY_USAGE_AUTO host-visible allocations.
+        memcpy(entry.MappedPtr, data, size);
     } else {
-        // Default/Static: device-local, upload via staging buffer
+        // Static: device-local, upload via staging buffer
         UploadToDeviceBuffer(entry.Buffer, data, size);
     }
 }

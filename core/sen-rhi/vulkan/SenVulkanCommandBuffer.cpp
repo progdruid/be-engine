@@ -114,22 +114,6 @@ auto SenVulkanCommandBuffer::BeginPass(const SenPassDesc& desc) -> void {
         .pDepthAttachment     = hasDepth ? &depthAttachmentInfo : nullptr,
     };
 
-    // Flush any vkCmdUpdateBuffer writes (Dynamic uniform buffers) before shaders read them.
-    VkMemoryBarrier uniformBarrier {
-        .sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
-        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT,
-    };
-    vkCmdPipelineBarrier(
-        _cmd,
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        0,
-        1, &uniformBarrier,
-        0, nullptr,
-        0, nullptr
-    );
-
     SenVulkanBackend::_vkCmdBeginRenderingKHR(_cmd, &renderingInfo);
 
     // Flip viewport Y so NDC Y+ = up (matches DX11/GLM convention).

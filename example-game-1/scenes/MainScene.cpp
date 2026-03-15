@@ -4,6 +4,7 @@
 #include <glfw/glfw3.h>
 
 #include "BeAssetRegistry.h"
+#include "BeBuffers.h"
 #include "BeCamera.h"
 #include "BeInput.h"
 #include "BeMaterial.h"
@@ -51,9 +52,10 @@ auto MainScene::Prepare() -> void {
     .BuildNoReturn();
 
     BeAssetRegistry::InjectRenderer(GameIns->Renderer);
-    BeAssetRegistry::IndexShaderFiles({ 
-        "assets/shaders/standard.hlsl", 
-        "assets/shaders/tessellated.hlsl", 
+    BeAssetRegistry::IndexShaderFiles({
+        "assets/shaders/uniform-material.hlsl",
+        "assets/shaders/standard.hlsl",
+        "assets/shaders/tessellated.hlsl",
         "assets/shaders/terrain.hlsl", 
         "assets/shaders/objectMaterial.hlsl", 
         "assets/shaders/fullscreen-vertex.hlsl", 
@@ -93,7 +95,9 @@ auto MainScene::Prepare() -> void {
     GameIns->SubmissionBuffer->RegisterMesh(_disks->Mesh);
     GameIns->SubmissionBuffer->RegisterMesh(_anvil->Mesh);
 
-    GameIns->Renderer->UniformData.AmbientColor = glm::vec3(0.1f);
+    auto uniformScheme = BeAssetRegistry::GetMaterialScheme("uniform-material");
+    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false, *GameIns->Renderer);
+    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
     _directionalLight = std::make_shared<BeDirectionalLight>();
     _directionalLight->Direction = glm::normalize(glm::vec3(-0.8f, -1.0f, -0.8f));
@@ -204,7 +208,9 @@ auto MainScene::Prepare() -> void {
 }
 
 auto MainScene::OnLoad() -> void {
-    
+
+    GameIns->SubmissionBuffer->UniformMaterial = _uniformMaterial;
+
     GameIns->Renderer->ClearPasses();
 
     const auto shadowPass = new BeShadowPass();
@@ -234,6 +240,7 @@ auto MainScene::OnLoad() -> void {
     .BuildNoReturn();
     const auto bloomPass = new BeBloomPass();
     GameIns->Renderer->AddRenderPass(bloomPass);
+    bloomPass->SubmissionBuffer = GameIns->SubmissionBuffer;
     bloomPass->InputHDRTexture = BeAssetRegistry::GetTexture("HDR-Input");
     bloomPass->BloomMipTextures = {
         BeAssetRegistry::GetTexture("Bloom_Mip0"),
@@ -252,12 +259,14 @@ auto MainScene::OnLoad() -> void {
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     GameIns->Renderer->AddRenderPass(tonemapperPass);
+    tonemapperPass->SubmissionBuffer = GameIns->SubmissionBuffer;
     tonemapperPass->OutputTextures = { BeAssetRegistry::GetTexture("TonemapperOutput") };
     tonemapperPass->Shader = tonemapperShader;
     tonemapperPass->Material = tonemapperMaterial;
 
     const auto backbufferPass = new BeBackbufferPass();
     GameIns->Renderer->AddRenderPass(backbufferPass);
+    backbufferPass->SubmissionBuffer = GameIns->SubmissionBuffer;
     backbufferPass->InputTexture = BeAssetRegistry::GetTexture("TonemapperOutput");
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
     
@@ -363,9 +372,12 @@ auto MainScene::Tick(float deltaTime) -> void {
 
     {
         _camera->Update();
-        GameIns->Renderer->UniformData.NearFarPlane = {_camera->NearPlane, _camera->FarPlane};
-        GameIns->Renderer->UniformData.ProjectionView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
-        GameIns->Renderer->UniformData.CameraPosition = _camera->Position;
+        auto& uniformMat = *_uniformMaterial;
+        const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
+        uniformMat.SetMatrix("CameraProjectionView", projView);
+        uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));
+        uniformMat.SetFloat4("NearFarPlane", {_camera->NearPlane, _camera->FarPlane, 1.0f / _camera->NearPlane, 1.0f / _camera->FarPlane});
+        uniformMat.SetFloat3("CameraPosition", _camera->Position);
     }
 
     {

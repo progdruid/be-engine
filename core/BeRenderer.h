@@ -1,10 +1,9 @@
-﻿#pragma once
+#pragma once
 
 #include <vector>
 #include <memory>
 #include <umbrellas/access-modifiers.hpp>
 
-#include "BeBuffers.h"
 #include <sen-rhi/SenCommandBuffer.h>
 #include <sen-rhi/SenTypes.h>
 
@@ -15,8 +14,6 @@ class BeShader;
 
 class BeRenderer {
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose BeUniformData UniformData;
-
     hide
     uint32_t _width;
     uint32_t _height;
@@ -25,10 +22,6 @@ class BeRenderer {
     SenSwapchain _swapchain;
     SenTexture _backbufferTexture;
     SenCommandBuffer _commandBuffer;
-
-    SenBuffer _uniformBuffer;
-    SenBindGroupDesc _uniformBindGroupDesc;
-    SenBindGroup _uniformBindGroup;
 
     std::vector<BeRenderPass*> _passes;
 
@@ -40,21 +33,20 @@ class BeRenderer {
         void* nativeWindow
     );
     ~BeRenderer();
-    
+
     auto LaunchDevice () -> void;
 
 
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
-    
+
     expose
     auto AddRenderPass(BeRenderPass* renderPass) -> void;
     auto ClearPasses() -> void;
-    auto InitialisePasses() const -> void;
+    auto InitialisePasses() -> void;
     auto Render() -> void;
 
     [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer& { return _commandBuffer; }
     [[nodiscard]] auto GetBackbufferTexture() const -> SenTexture { return _backbufferTexture; }
-    [[nodiscard]] auto GetUniformBindGroupLayout() const -> SenBindGroupDesc { return _uniformBindGroupDesc; }
 
     [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }
     [[nodiscard]] auto GetHeight () const -> uint32_t { return _height; }

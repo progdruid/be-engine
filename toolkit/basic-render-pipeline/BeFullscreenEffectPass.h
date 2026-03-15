@@ -9,9 +9,11 @@
 class BeTexture;
 class BeMaterial;
 class BeShader;
+class BeBRPSubmissionBuffer;
 
 class BeFullscreenEffectPass final : public BeRenderPass {
     expose
+    std::weak_ptr<BeBRPSubmissionBuffer> SubmissionBuffer;
     std::vector<std::weak_ptr<BeTexture>> OutputTextures;
     std::weak_ptr<BeShader> Shader;
     std::shared_ptr<BeMaterial> Material;

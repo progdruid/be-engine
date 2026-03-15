@@ -26,6 +26,7 @@
     },
     "pixel": "PixelFunction",
     "materials": {
+        "frame": { "scheme": "uniform-material", "slot": 0 },
         "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1, "var": "Object" },
         "geometry-main": { "scheme": "tesselated-main-material-for-geometry-pass", "slot": 2, "var": "Tesselated" },
     },
@@ -40,6 +41,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "uniform-material.hlsl"
 #include "objectMaterial.hlsl"
 
 struct tesselated_main_material_for_geometry_pass {
@@ -50,6 +52,10 @@ struct tesselated_main_material_for_geometry_pass {
     float DisplacementStrength;
     float AnimationSpeed;
     float NoiseFrequency;
+};
+
+cbuffer CBuffer_0 : register(b0, space0) {
+    uniform_material _Frame;
 };
 
 cbuffer CBuffer_1 : register(b0, space1) {
@@ -77,7 +83,6 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include <BeUniformBuffer.hlsli>
 struct Interpolators {
     float4 Position : SV_POSITION;
     float3 Normal : NORMAL;
@@ -134,9 +139,9 @@ float fbm(float3 p, int octaves) {
 
 float GetDisplacement(float3 worldPos) {
     float distFromOrigin = length(worldPos.xz);
-    float ripple = sin(distFromOrigin * 3.0 + _Time * _Tesselated.AnimationSpeed * 2.0) * 0.5 + 0.5;
+    float ripple = sin(distFromOrigin * 3.0 + _Frame.Time * _Tesselated.AnimationSpeed * 2.0) * 0.5 + 0.5;
 
-    float3 noisePos = worldPos * _Tesselated.NoiseFrequency + _Time * _Tesselated.AnimationSpeed * float3(0.3, 0.5, 0.7);
+    float3 noisePos = worldPos * _Tesselated.NoiseFrequency + _Frame.Time * _Tesselated.AnimationSpeed * float3(0.3, 0.5, 0.7);
     float fbmVal = fbm(noisePos, 2);
 
     float result = lerp(fbmVal - 0.5, ripple, 0.6);

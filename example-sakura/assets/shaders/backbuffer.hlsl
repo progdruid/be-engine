@@ -16,6 +16,7 @@
     "blend": "disable",
     "depthStencil": "disable",
     "materials": {
+        "frame": { "scheme": "uniform-material", "slot": 0 },
         "main": { "scheme": "backbuffer-material", "slot": 1 },
     },
     "targets": {
@@ -24,10 +25,17 @@
 }
 @be-end
 
+
 */
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "uniform-material.hlsl"
+
+cbuffer CBuffer_0 : register(b0, space0) {
+    uniform_material _Frame;
+};
+
 SamplerState InputSampler : register(s1, space1);
 Texture2D InputTexture : register(t2, space1);
 

@@ -18,6 +18,7 @@
     "blend": "disable",
     "depthStencil": "disable",
     "materials": {
+        "frame": { "scheme": "uniform-material", "slot": 0 },
         "main": { "scheme": "bloom-add-material", "slot": 1 },
     },
     "targets": {
@@ -29,6 +30,12 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "uniform-material.hlsl"
+
+cbuffer CBuffer_0 : register(b0, space0) {
+    uniform_material _Frame;
+};
+
 SamplerState InputSampler : register(s1, space1);
 Texture2D HDRInput : register(t2, space1);
 Texture2D BloomInput : register(t3, space1);

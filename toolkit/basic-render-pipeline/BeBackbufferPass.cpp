@@ -1,6 +1,7 @@
 ﻿#include "BeBackbufferPass.h"
 
 #include "BeAssetRegistry.h"
+#include "BeBRPSubmissionBuffer.h"
 #include "BeMaterial.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
@@ -18,12 +19,13 @@ auto BeBackbufferPass::Initialise() -> void {
 
     auto pipelineDesc = _backbufferShader->GetPipelineDesc();
     pipelineDesc.RenderTargetFormats = { _renderer->GetSwapchainFormat() };
-    pipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _backbufferMaterial->GetBindGroupLayout() };
     _pipeline = SenBackend::CreatePipeline(pipelineDesc);
 }
 
 auto BeBackbufferPass::Render() -> void {
     auto& cmd = _renderer->GetCommandBuffer();
+
+    cmd.SetBindGroup(SubmissionBuffer.lock()->UniformMaterial.lock()->GetBindGroup(), 0);
 
     cmd.BeginPass({
         .ColorAttachments = {

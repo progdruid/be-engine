@@ -14,6 +14,7 @@ struct BeProp;
 struct BeMesh;
 struct BePointLight;
 struct BeDirectionalLight;
+class BeMaterial;
 
 struct TransformComponent {
     glm::vec3 Position = {0.f, 0.f, 0.f};
@@ -38,6 +39,7 @@ class MainScene : public BaseScene {
     std::vector<BePointLight> _pointLights;
 
     std::shared_ptr<BeProp> _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil;
+    std::shared_ptr<BeMaterial> _uniformMaterial;
 
     expose
     explicit MainScene(Game* game);

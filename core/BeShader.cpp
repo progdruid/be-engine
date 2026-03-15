@@ -145,14 +145,15 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
         const auto& materialLinksJson = header.at("materials");
 
         auto i = uint8_t(0);
+        shader->_pipelineDesc.BindGroupLayouts.resize(materialLinksJson.size());
         for (const auto& materialLinkJson : materialLinksJson.items()) {
             auto & entry = shader->_materialSchemes.emplace_back();
             entry.Link = std::string(materialLinkJson.key());
             entry.SchemeName = std::string(materialLinkJson.value()["scheme"]);
-            entry.Index = i++;
+            entry.Index = uint8_t(materialLinkJson.value()["slot"]);
             
             auto scheme = BeAssetRegistry::GetMaterialScheme(entry.SchemeName);
-            shader->_pipelineDesc.BindGroupLayouts.push_back(scheme.BindGroupLayout);
+            shader->_pipelineDesc.BindGroupLayouts[entry.Index] = scheme.BindGroupLayout;
         }
     }
 
