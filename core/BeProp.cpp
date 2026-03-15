@@ -140,7 +140,6 @@ auto BeProp::Create(
             .Material = assimpIndexToMaterial.at(mesh->mMaterialIndex),
             .TwoSided = assimpIndexToTwoSided.contains(mesh->mMaterialIndex),
         });
-        prop->Slices.back().Binding.Make(prop->Slices.back().Material, usedShaderForMaterials);
 
         vertexOffset += mesh->mNumVertices;
         indexOffset += mesh->mNumFaces * 3;
@@ -167,7 +166,6 @@ auto BeProp::FromMesh(
             .Material = material,
             .TwoSided = false,
         });
-        prop->Slices.back().Binding.Make(material, shader);
     }
 
     return prop;

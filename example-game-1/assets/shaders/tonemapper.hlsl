@@ -2,8 +2,8 @@
 
 @be-material: tonemapper-material
 [
-    "HDRInput: texture2d(0) = black",
-    "InputSampler: sampler(0) = point-clamp",
+    "HDRInput: texture2d = black",
+    "InputSampler: sampler = point-clamp",
 ]
 @be-end
 

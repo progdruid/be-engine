@@ -73,6 +73,11 @@ auto BeMaterial::FlushBuffer() -> void {
     _cbufferDirty = false;
 }
 
+auto BeMaterial::GetBindGroupLayout() const -> SenBindGroupDesc {
+    return _scheme.BindGroupLayout;
+}
+
+// rename to RetrieveBindGroup
 auto BeMaterial::GetBindGroup() -> SenBindGroup {
     FlushBuffer();
     if (_bindGroupDirty) {

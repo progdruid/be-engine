@@ -280,12 +280,13 @@ void ShowcaseScene::Tick(float deltaTime) {
     GameIns->Renderer->UniformData.ProjectionView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
     GameIns->Renderer->UniformData.CameraPosition = _camera->Position;
 
-    static const auto GeometryView = _registry.view<TransformComponent, RenderComponent>();
+    static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
     static const auto SunView = _registry.view<SunLightComponent>();
 
     GameIns->SubmissionBuffer->ClearEntries();
-    for (const auto [entity, transform, render] : GeometryView.each()) {
+    for (const auto [entity, name, transform, render] : GeometryView.each()) {
         auto entry = BeBRPGeometryEntry();
+        entry.Name = name.Name;
         entry.Prop = render.Prop;
         entry.CastShadows = render.CastShadows;
         entry.ModelMatrix = BeBRPGeometryEntry::CalculateModelMatrix(

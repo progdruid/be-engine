@@ -8,10 +8,10 @@
     "Shininess: float = 0.0",
     "TileScale: float = 1.0",
 
-    "DiffuseTexture: texture2d(0) = black",
-    "SpecularTexture: texture2d(1) = black",
+    "DiffuseTexture: texture2d = black",
+    "SpecularTexture: texture2d = black",
 
-    "InputSampler: sampler(0) = point-wrap",
+    "InputSampler: sampler = point-wrap",
 ]
 @be-end
 
@@ -48,17 +48,16 @@ struct checkerboard_material_for_geometry_pass {
     float TileScale;
 };
 
-Texture2D DiffuseTexture : register(t0);
-Texture2D SpecularTexture : register(t1);
-SamplerState InputSampler : register(s0);
-
-cbuffer CBuffer1 : register(b1) {
+cbuffer CBuffer_1 : register(b0, space1) {
     object_material_for_geometry_pass _GeometryObject;
 };
 
-cbuffer CBuffer2 : register(b2) {
+cbuffer CBuffer_2 : register(b0, space2) {
     checkerboard_material_for_geometry_pass _GeometryMain;
 };
+SamplerState InputSampler : register(s1, space2);
+Texture2D DiffuseTexture : register(t2, space2);
+Texture2D SpecularTexture : register(t3, space2);
 
 struct VertexInput {
     float3 Position : POSITION;

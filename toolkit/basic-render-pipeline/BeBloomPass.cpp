@@ -17,12 +17,10 @@ auto BeBloomPass::Initialise() -> void {
     auto brightScheme = BeAssetRegistry::GetMaterialScheme("bloom-bright-material");
     _brightMaterial = BeMaterial::Create("Bright Pass Material", brightScheme, false, *_renderer);
     _brightMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
-    _brightBinding.Make(_brightMaterial, _brightShader);
 
-    // Create bright pass pipeline (bright binding already exists)
     auto brightPipelineDesc = _brightShader->GetPipelineDesc();
     brightPipelineDesc.RenderTargetFormats = { BloomMipTextures[0].lock()->Format };
-    brightPipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _brightBinding.GetLayout() };
+    brightPipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _brightMaterial->GetBindGroupLayout() };
     _brightPipeline = SenBackend::CreatePipeline(brightPipelineDesc);
     be_assert(_brightPipeline.IsValid(), "BeBloomPass: failed to create bright pipeline");
 
@@ -33,7 +31,6 @@ auto BeBloomPass::Initialise() -> void {
     // Create downsample materials for each mip level (1 to size-1)
     // (kawase pipelines are created after these loops so we can get binding layouts)
     _downsampleMaterials.resize(BloomMipCount);
-    _downsampleBindings.resize(BloomMipCount);
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
         auto mat = BeMaterial::Create(
             "Downsample Mip " + std::to_string(mipTarget),
@@ -54,11 +51,9 @@ auto BeBloomPass::Initialise() -> void {
         mat->SetTexture("BloomMipInput", sourceMip);
 
         _downsampleMaterials[mipTarget] = mat;
-        _downsampleBindings[mipTarget].Make(mat, _kawaseShader);
     }
 
     _upsampleMaterials.resize(BloomMipCount);
-    _upsampleBindings.resize(BloomMipCount);
     for (uint32_t mipTarget = 0; mipTarget < BloomMipCount-1; ++mipTarget) {
         const auto mat = BeMaterial::Create(
             "Upsample Mip " + std::to_string(mipTarget),
@@ -80,15 +75,14 @@ auto BeBloomPass::Initialise() -> void {
         mat->SetTexture("BloomMipInput", sourceMip);
 
         _upsampleMaterials[mipTarget] = mat;
-        _upsampleBindings[mipTarget].Make(mat, _kawaseShader);
     }
 
-    // Create kawase pipelines now that bindings exist for layout queries
+    // Create kawase pipelines
     const SenFormat mipFormat = BloomMipTextures[0].lock()->Format;
 
     auto downsamplePipelineDesc = _kawaseShader->GetPipelineDesc();
     downsamplePipelineDesc.RenderTargetFormats = { mipFormat };
-    downsamplePipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _downsampleBindings[1].GetLayout() };
+    downsamplePipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _downsampleMaterials[1]->GetBindGroupLayout() };
     _downsamplePipeline = SenBackend::CreatePipeline(downsamplePipelineDesc);
     be_assert(_downsamplePipeline.IsValid(), "BeBloomPass: failed to create downsample pipeline");
 
@@ -101,7 +95,7 @@ auto BeBloomPass::Initialise() -> void {
     upsamplePipelineDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
     upsamplePipelineDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
     upsamplePipelineDesc.RenderTargetFormats = { mipFormat };
-    upsamplePipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _upsampleBindings[0].GetLayout() };
+    upsamplePipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _upsampleMaterials[0]->GetBindGroupLayout() };
     _upsamplePipeline = SenBackend::CreatePipeline(upsamplePipelineDesc);
     be_assert(_upsamplePipeline.IsValid(), "BeBloomPass: failed to create upsample pipeline");
 
@@ -112,12 +106,10 @@ auto BeBloomPass::Initialise() -> void {
     _addMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
     _addMaterial->SetTexture("BloomInput", BloomMipTextures[0].lock());
     _addMaterial->SetTexture("DirtTexture", DirtTexture.lock());
-    _addBinding.Make(_addMaterial, _addShader);
 
-    // Create add pipeline
     auto addPipelineDesc = _addShader->GetPipelineDesc();
     addPipelineDesc.RenderTargetFormats = { OutputTexture.lock()->Format };
-    addPipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _addBinding.GetLayout() };
+    addPipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _addMaterial->GetBindGroupLayout() };
     _addPipeline = SenBackend::CreatePipeline(addPipelineDesc);
     be_assert(_addPipeline.IsValid(), "BeBloomPass: failed to create add pipeline");
 }
@@ -141,7 +133,7 @@ auto BeBloomPass::RenderBrightPass() -> void {
     });
 
     cmd.SetPipeline(_brightPipeline);
-    cmd.SetBindGroup(_brightBinding.Resolve(), 1);
+    cmd.SetBindGroup(_brightMaterial->GetBindGroup(), 1);
     cmd.Draw(4, 0);
 
     cmd.EndPass();
@@ -162,7 +154,7 @@ auto BeBloomPass::RenderDownsamplePasses() -> void {
             .Viewport = { 0, 0, (float)targetMip->Width, (float)targetMip->Height, 0, 1 },
         });
 
-        cmd.SetBindGroup(_downsampleBindings[mipTarget].Resolve(), 1);
+        cmd.SetBindGroup(_downsampleMaterials[mipTarget]->GetBindGroup(), 1);
         cmd.Draw(4, 0);
 
         cmd.EndPass();
@@ -184,7 +176,7 @@ auto BeBloomPass::RenderUpsamplePasses() -> void {
             .Viewport = { 0, 0, (float)targetMip->Width, (float)targetMip->Height, 0, 1 },
         });
 
-        cmd.SetBindGroup(_upsampleBindings[mipTarget].Resolve(), 1);
+        cmd.SetBindGroup(_upsampleMaterials[mipTarget]->GetBindGroup(), 1);
         cmd.Draw(4, 0);
 
         cmd.EndPass();
@@ -202,7 +194,7 @@ auto BeBloomPass::RenderAddPass() -> void {
     });
 
     cmd.SetPipeline(_addPipeline);
-    cmd.SetBindGroup(_addBinding.Resolve(), 1);
+    cmd.SetBindGroup(_addMaterial->GetBindGroup(), 1);
     cmd.Draw(4, 0);
 
     cmd.EndPass();

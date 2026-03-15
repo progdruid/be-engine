@@ -5,13 +5,13 @@
     "DiffuseColor: float3 = [0.28, 0.39, 1.0]",
     "SpecularColor: float3 = [1.0, 1.0, 1.0]",
     "Shininess: float = 100.0",
-    "DiffuseTexture: texture2d(0) = white",
+    "DiffuseTexture: texture2d = white",
     "TessellationLevel: float = 1024.0",
     "DisplacementStrength: float = -1.0",
     "AnimationSpeed: float = 1.5",
     "NoiseFrequency: float = 30.0",
 
-    "InputSampler: sampler(0) = point-clamp",
+    "InputSampler: sampler = point-clamp",
 ]
 @be-end
 

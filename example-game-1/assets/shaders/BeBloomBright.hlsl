@@ -6,8 +6,8 @@
     "Intensity: float = 17.0",
     "Knee: float = 1.25",
 
-    "HDRInput: texture2d(0) = black",
-    "InputSampler: sampler(0) = linear-clamp",
+    "HDRInput: texture2d = black",
+    "InputSampler: sampler = linear-clamp",
 ]
 @be-end
 

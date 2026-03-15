@@ -8,14 +8,13 @@
     "Shininess: float = 0.0",
     "EmissiveColor: float3 = [0.0, 0.0, 0.0]",
 
-    "DiffuseTexture: texture2d(0) = white",
-    "SpecularTexture: texture2d(1) = black",
-    "EmissiveTexture: texture2d(2) = white",
+    "DiffuseTexture: texture2d = white",
+    "SpecularTexture: texture2d = black",
+    "EmissiveTexture: texture2d = white",
 
-    "InputSampler: sampler(0) = linear-clamp",
+    "InputSampler: sampler = linear-clamp",
 ]
 @be-end
-
 
 @be-shader: standard
 {
@@ -56,18 +55,17 @@ struct standard_material_for_geometry_pass {
     float3 EmissiveColor;
 };
 
-Texture2D DiffuseTexture : register(t0);
-Texture2D SpecularTexture : register(t1);
-Texture2D EmissiveTexture : register(t2);
-SamplerState InputSampler : register(s0);
-
-cbuffer CBuffer1 : register(b1) {
+cbuffer CBuffer_1 : register(b0, space1) {
     object_material_for_geometry_pass _GeometryObject;
 };
 
-cbuffer CBuffer2 : register(b2) {
+cbuffer CBuffer_2 : register(b0, space2) {
     standard_material_for_geometry_pass _GeometryMain;
 };
+SamplerState InputSampler : register(s1, space2);
+Texture2D DiffuseTexture : register(t2, space2);
+Texture2D SpecularTexture : register(t3, space2);
+Texture2D EmissiveTexture : register(t4, space2);
 
 struct VertexInput {
     float3 Position : POSITION;

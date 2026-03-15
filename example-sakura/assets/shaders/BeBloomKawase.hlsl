@@ -5,8 +5,8 @@
     "TexelSize: float2 = [0.001, 0.001]",
     "PassRadius: float = 0.5",
 
-    "BloomMipInput: texture2d(0) = black",
-    "InputSampler: sampler(0) = linear-clamp",
+    "BloomMipInput: texture2d = black",
+    "InputSampler: sampler = linear-clamp",
 ]
 @be-end
 
@@ -19,7 +19,7 @@
     "blend": "disable",
     "depthStencil": "disable",
     "materials": {
-        "main": { "scheme": "bloom-kawase-material", "slot": 2 },
+        "main": { "scheme": "bloom-kawase-material", "slot": 1 },
     },
     "targets": {
         "BloomMipOutput": { "type": "float3", "slot": 0 }
@@ -38,12 +38,11 @@ struct bloom_kawase_material {
     float PassRadius;
 };
 
-Texture2D BloomMipInput : register(t0);
-SamplerState InputSampler : register(s0);
-
-cbuffer CBuffer2 : register(b2) {
+cbuffer CBuffer_1 : register(b0, space1) {
     bloom_kawase_material _Main;
 };
+SamplerState InputSampler : register(s1, space1);
+Texture2D BloomMipInput : register(t2, space1);
 
 struct PixelOutput {
     float3 BloomMipOutput : SV_Target0;

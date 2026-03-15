@@ -801,19 +801,17 @@ auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
     };
 
     if (desc.Access == SenBufferAccess::Dynamic) {
-        // Host-visible, persistently mapped. VMA picks the right heap automatically.
+        // Device-local; updated each frame via vkCmdUpdateBuffer (must be outside render pass).
+        bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
         VmaAllocationCreateInfo allocInfo {
-            .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            .usage = VMA_MEMORY_USAGE_AUTO,
+            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
         };
-        VmaAllocationInfo allocResult;
-        VkResult result = vmaCreateBuffer(_allocator, &bufferInfo, &allocInfo, &entry.Buffer, &entry.Allocation, &allocResult);
+        VkResult result = vmaCreateBuffer(_allocator, &bufferInfo, &allocInfo, &entry.Buffer, &entry.Allocation, nullptr);
         be_assert(result == VK_SUCCESS, "Failed to create dynamic buffer!");
 
-        entry.MappedPtr = allocResult.pMappedData;
-
         if (desc.Data) {
-            memcpy(entry.MappedPtr, desc.Data, desc.Size);
+            UploadToDeviceBuffer(entry.Buffer, desc.Data, desc.Size);
         }
     } else {
         // Device-local VRAM — GPU reads fastest from here.
@@ -852,10 +850,11 @@ auto SenVulkanBackend::WriteBuffer(SenBuffer handle, const void* data, uint32_t 
     be_assert(entry.Access != SenBufferAccess::Immutable, "Cannot write to an Immutable buffer");
 
     if (entry.Access == SenBufferAccess::Dynamic) {
-        // Persistent-mapped: just memcpy; VMA ensures coherency for AUTO host-visible allocations
-        memcpy(entry.MappedPtr, data, size);
+        be_assert(size <= 65536, "WriteBuffer: vkCmdUpdateBuffer size limit is 65536 bytes");
+        be_assert(_activeCommandBuffer != VK_NULL_HANDLE, "WriteBuffer(Dynamic): no active command buffer");
+        vkCmdUpdateBuffer(_activeCommandBuffer, entry.Buffer, 0, size, data);
     } else {
-        // Default: device-local, upload via staging buffer
+        // Default/Static: device-local, upload via staging buffer
         UploadToDeviceBuffer(entry.Buffer, data, size);
     }
 }
@@ -1229,13 +1228,7 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
         });
     }
 
-    uint32_t vertexStride = desc.VertexLayout.empty() ? 0 : [&] {
-        uint32_t stride = 0;
-        for (const auto& elem : desc.VertexLayout) {
-            stride = std::max(stride, elem.Offset + Sen::Vulkan::BytesPerPixel(elem.Format));
-        }
-        return stride;
-    }();
+    uint32_t vertexStride = desc.VertexStride;
 
     VkVertexInputBindingDescription binding {
         .binding   = 0,

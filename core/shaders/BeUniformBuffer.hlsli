@@ -14,8 +14,8 @@
 */
 
 cbuffer UniformBuffer: register(b0) {
-    row_major float4x4 _CameraProjectionView;
-    row_major float4x4 _CameraInverseProjectionView;
+    float4x4 _CameraProjectionView;
+    float4x4 _CameraInverseProjectionView;
     // x = near, y = far, z = 1/near, w = 1/far
     float4 _NearFarPlane;
     float3 _CameraPosition;

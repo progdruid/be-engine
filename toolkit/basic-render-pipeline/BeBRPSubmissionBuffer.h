@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 #include <umbrellas/access-modifiers.hpp>
@@ -12,6 +13,7 @@
 class BeTexture;
 
 struct BeBRPGeometryEntry {
+    std::string Name;
     glm::mat4 ModelMatrix;
     std::shared_ptr<BeProp> Prop;
     bool CastShadows;
@@ -45,6 +47,7 @@ struct BeBRPSunLightEntry {
 };
 
 struct BeBRPPointLightEntry {
+    std::string Name;
     glm::vec3 Position;
     float Radius;
     glm::vec3 Color;

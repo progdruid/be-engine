@@ -5,13 +5,13 @@
     "DiffuseColor: float3 = [0.5, 0.5, 0.5]",
     "SpecularColor: float3 = [-0.2, -0.2, -0.1]", 
     "Shininess: float = 0.0",
-    "DiffuseTexture: texture2d(0) = white",
+    "DiffuseTexture: texture2d = white",
     "TerrainScale: float = 1.0",
     "HeightScale: float = 1.0",
     "NoiseResolution: float = 4.0",
     "Speed: float = 0.2",
 
-    "InputSampler: sampler(0) = point-clamp"    
+    "InputSampler: sampler = point-clamp"    
 ]
 @be-end
 
@@ -53,16 +53,15 @@ struct terrain_main_material_for_geometry_pass {
     float Speed;
 };
 
-Texture2D DiffuseTexture : register(t0);
-SamplerState InputSampler : register(s0);
-
-cbuffer CBuffer1 : register(b1) {
+cbuffer CBuffer_1 : register(b0, space1) {
     object_material_for_geometry_pass _GeometryObject;
 };
 
-cbuffer CBuffer2 : register(b2) {
+cbuffer CBuffer_2 : register(b0, space2) {
     terrain_main_material_for_geometry_pass _Terrain;
 };
+SamplerState InputSampler : register(s1, space2);
+Texture2D DiffuseTexture : register(t2, space2);
 
 struct VertexInput {
     float3 Position : POSITION;

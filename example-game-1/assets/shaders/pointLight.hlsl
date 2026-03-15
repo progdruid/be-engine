@@ -10,13 +10,13 @@
     "ShadowMapResolution: float = 0",
     "ShadowNearPlane: float = 0",
     
-    "Depth: texture2d(0) = black",
-    "Diffuse: texture2d(1) = black",
-    "WorldNormal: texture2d(2) = black",
-    "Specular_Shininess: texture2d(3) = black",
-    "PointLightShadowMap: texture2d(4) = black",
+    "Depth: texture2d = black",
+    "Diffuse: texture2d = black",
+    "WorldNormal: texture2d = black",
+    "Specular_Shininess: texture2d = black",
+    "PointLightShadowMap: texture2d = black",
 
-    "InputSampler: sampler(0) = point-clamp"
+    "InputSampler: sampler = point-clamp"
 ]
 @be-end
 

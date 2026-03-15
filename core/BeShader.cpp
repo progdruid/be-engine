@@ -1,6 +1,7 @@
 #include "BeShader.h"
 
 #include "BeRenderer.h"
+#include "BeMesh.h"
 #include "BeShaderTools.h"
 #include <umbrellas/include-libassert.h>
 
@@ -253,6 +254,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, const BeRenderer& r
             }
 
             shader->_pipelineDesc.VertexLayout = layoutElements;
+            shader->_pipelineDesc.VertexStride = sizeof(BeFullVertex);
         }
     }
 

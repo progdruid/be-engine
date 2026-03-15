@@ -2,8 +2,8 @@
 
 @be-material: tonemapper-material
 [
-    "HDRInput: texture2d(0) = black",
-    "InputSampler: sampler(0) = point-clamp",
+    "HDRInput: texture2d = black",
+    "InputSampler: sampler = point-clamp",
 ]
 @be-end
 
@@ -16,7 +16,7 @@
     "blend": "disable",
     "depthStencil": "disable",
     "materials": {
-        "main": { "scheme": "tonemapper-material", "slot": 2 },
+        "main": { "scheme": "tonemapper-material", "slot": 1 },
     },
     "targets": {
         "HDRTarget": { "type": "float3", "slot": 0 }
@@ -27,8 +27,8 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-Texture2D HDRInput : register(t0);
-SamplerState InputSampler : register(s0);
+SamplerState InputSampler : register(s1, space1);
+Texture2D HDRInput : register(t2, space1);
 
 struct PixelOutput {
     float3 HDRTarget : SV_Target0;

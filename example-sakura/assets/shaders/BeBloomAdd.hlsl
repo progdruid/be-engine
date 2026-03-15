@@ -2,10 +2,10 @@
 
 @be-material: bloom-add-material
 [
-    "HDRInput: texture2d(0) = black",
-    "BloomInput: texture2d(1) = black",
-    "DirtTexture: texture2d(2) = black",
-    "InputSampler: sampler(0) = linear-clamp",
+    "HDRInput: texture2d = black",
+    "BloomInput: texture2d = black",
+    "DirtTexture: texture2d = black",
+    "InputSampler: sampler = linear-clamp",
 ]
 @be-end
 
@@ -18,7 +18,7 @@
     "blend": "disable",
     "depthStencil": "disable",
     "materials": {
-        "main": { "scheme": "bloom-add-material", "slot": 2 },
+        "main": { "scheme": "bloom-add-material", "slot": 1 },
     },
     "targets": {
         "BloomOutput": { "type": "float3", "slot": 0 }
@@ -29,10 +29,10 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-Texture2D HDRInput : register(t0);
-Texture2D BloomInput : register(t1);
-Texture2D DirtTexture : register(t2);
-SamplerState InputSampler : register(s0);
+SamplerState InputSampler : register(s1, space1);
+Texture2D HDRInput : register(t2, space1);
+Texture2D BloomInput : register(t3, space1);
+Texture2D DirtTexture : register(t4, space1);
 
 struct PixelOutput {
     float3 BloomOutput : SV_Target0;

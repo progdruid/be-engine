@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "BeMesh.h"
-#include "BeMaterialBinding.h"
 
 struct aiScene;
 struct aiString;
@@ -15,7 +14,6 @@ class BeRenderer;
 
 struct BePropSlice {
     std::shared_ptr<BeMaterial> Material;
-    BeMaterialBinding Binding;
     bool TwoSided = false;
 };
 

@@ -1,10 +1,12 @@
 ﻿#pragma once
 #include <memory>
 #include <span>
+#include <string>
+#include <unordered_map>
 #include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
-#include "BeMaterialBinding.h"
+#include "BeMaterialScheme.h"
 
 class BeBRPSubmissionBuffer;
 class BeTexture;
@@ -28,15 +30,13 @@ class BeLightingPass final : public BeRenderPass {
     hide
     std::shared_ptr<BeShader> _directionalLightShader;
     std::shared_ptr<BeMaterial> _directionalLightMaterial;
-    BeMaterialBinding _directionalLightBinding;
     SenPipeline _directionalLightPipeline;
     std::shared_ptr<BeShader> _pointLightShader;
-    std::shared_ptr<BeMaterial> _pointLightMaterial;
-    BeMaterialBinding _pointLightBinding;
+    BeMaterialScheme _pointLightScheme;
+    std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _pointLightMaterials;
     SenPipeline _pointLightPipeline;
     std::shared_ptr<BeShader> _emissiveAddShader;
     std::shared_ptr<BeMaterial> _emissiveMaterial;
-    BeMaterialBinding _emissiveBinding;
     SenPipeline _emissivePipeline;
     
     expose

@@ -10,13 +10,13 @@
     "ShadowMapResolution: float = 0",
     "ShadowNearPlane: float = 0",
     
-    "Depth: texture2d(0) = black",
-    "Diffuse: texture2d(1) = black",
-    "WorldNormal: texture2d(2) = black",
-    "Specular_Shininess: texture2d(3) = black",
-    "PointLightShadowMap: textureCube(4) = black",
+    "Depth: texture2d = black",
+    "Diffuse: texture2d = black",
+    "WorldNormal: texture2d = black",
+    "Specular_Shininess: texture2d = black",
+    "PointLightShadowMap: textureCube = black",
 
-    "InputSampler: sampler(0) = point-clamp"
+    "InputSampler: sampler = point-clamp"
 ]
 @be-end
 
@@ -29,7 +29,7 @@
     "blend": "additive",
     "depthStencil": "disable",
     "materials": {
-        "main": { "scheme": "point-light-material", "slot": 2, "var": "PointLight" },
+        "main": { "scheme": "point-light-material", "slot": 1, "var": "PointLight" },
     },
     "targets": {
         "LightHDR": { "type": "float3", "slot": 0 }
@@ -51,16 +51,15 @@ struct point_light_material {
     float ShadowNearPlane;
 };
 
-Texture2D Depth : register(t0);
-Texture2D Diffuse : register(t1);
-Texture2D WorldNormal : register(t2);
-Texture2D Specular_Shininess : register(t3);
-TextureCube PointLightShadowMap : register(t4);
-SamplerState InputSampler : register(s0);
-
-cbuffer CBuffer2 : register(b2) {
+cbuffer CBuffer_1 : register(b0, space1) {
     point_light_material _PointLight;
 };
+SamplerState InputSampler : register(s1, space1);
+Texture2D Depth : register(t2, space1);
+Texture2D Diffuse : register(t3, space1);
+Texture2D WorldNormal : register(t4, space1);
+Texture2D Specular_Shininess : register(t5, space1);
+TextureCube PointLightShadowMap : register(t6, space1);
 
 struct PixelOutput {
     float3 LightHDR : SV_Target0;

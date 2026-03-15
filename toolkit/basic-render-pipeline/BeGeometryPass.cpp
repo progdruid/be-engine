@@ -1,4 +1,4 @@
-﻿#include "BeGeometryPass.h"
+#include "BeGeometryPass.h"
 
 #include <cassert>
 #include <scope_guard/scope_guard.hpp>
@@ -15,16 +15,30 @@
 BeGeometryPass::BeGeometryPass() = default;
 BeGeometryPass::~BeGeometryPass() = default;
 
-auto BeGeometryPass::Initialise() -> void {
-    auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
-    _objectMaterial = BeMaterial::Create("object", objectScheme, true, *_renderer);
-}
+auto BeGeometryPass::Initialise() -> void {}
 
 auto BeGeometryPass::Render() -> void
 {
     auto& cmd = _renderer->GetCommandBuffer();
     const auto submissionBuffer = SubmissionBuffer.lock();
+    const auto& entries = submissionBuffer->GetGeometryEntries();
 
+    // Phase 1 (BEFORE BeginPass): update per-object uniform buffers via vkCmdUpdateBuffer.
+    // vkCmdUpdateBuffer must be called outside a render pass.
+    auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
+    for (const auto& entry : entries) {
+        if (!_objectMaterials.contains(entry.Name)) {
+            _objectMaterials[entry.Name] = BeMaterial::Create("object_" + entry.Name, objectScheme, true, *_renderer);
+        }
+        auto& mat = _objectMaterials[entry.Name];
+        mat->SetMatrix("Model", entry.ModelMatrix);
+        mat->SetMatrix("ProjectionView", _renderer->UniformData.ProjectionView);
+        mat->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
+        mat->GetBindGroup();  // flushes dirty cbuffer + rebuilds descriptor set if needed
+    }
+
+    // Phase 2 (INSIDE BeginPass): bind pre-warmed materials and draw.
+    // BeginPass inserts a TRANSFER→UNIFORM barrier so the updates above are visible.
     cmd.BeginPass({
         .ColorAttachments = {
             { OutputTexture0.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
@@ -44,33 +58,26 @@ auto BeGeometryPass::Render() -> void
         cmd.ClearIndexBuffer();
     };
 
-    const auto& entries = SubmissionBuffer.lock()->GetGeometryEntries();
     for (const auto& entry : entries) {
         const auto shader = entry.Prop->Shader;
         be_assert(shader);
 
-        if (!_objectBindings.contains(shader.get())) {
-            _objectBindings[shader.get()].Make(_objectMaterial, shader);
-        }
-
-        _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
-        _objectMaterial->SetMatrix("ProjectionView", _renderer->UniformData.ProjectionView);
-        _objectMaterial->SetFloat3("ViewerPosition", _renderer->UniformData.CameraPosition);
-        cmd.SetBindGroup(_objectBindings[shader.get()].Resolve(), 1);
+        auto& mat = _objectMaterials[entry.Name];
+        cmd.SetBindGroup(mat->GetBindGroup(), 1);  // not dirty, returns cached set
 
         const auto& meshSlices = submissionBuffer->GetMeshSlices(entry.Prop->Mesh.get());
-        for (size_t i = 0; i < meshSlices.size(); ++i) {
-            const auto& meshSlice = meshSlices[i];
-            auto& propSlice = entry.Prop->Slices[i];
+        for (size_t j = 0; j < meshSlices.size(); ++j) {
+            const auto& meshSlice = meshSlices[j];
+            auto& propSlice = entry.Prop->Slices[j];
 
             PipelineKey key{ shader.get(), propSlice.TwoSided };
             if (!_shaderPipelines.contains(key)) {
                 auto pipelineDesc = shader->GetPipelineDesc();
                 pipelineDesc.RasterizerState.CullMode = propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back;
                 pipelineDesc.BindGroupLayouts = {
-                    _renderer->GetUniformBindGroupLayout(),          // set 0: renderer uniforms
-                    _objectBindings[shader.get()].GetLayout(),       // set 1: object material
-                    propSlice.Binding.GetLayout(),                   // set 2: surface material
+                    _renderer->GetUniformBindGroupLayout(),  // set 0: renderer uniforms
+                    mat->GetBindGroupLayout(),               // set 1: object material
+                    propSlice.Material->GetBindGroupLayout(),// set 2: surface material
                 };
                 pipelineDesc.RenderTargetFormats = {
                     OutputTexture0.lock()->Format,
@@ -83,7 +90,7 @@ auto BeGeometryPass::Render() -> void
             }
             cmd.SetPipeline(_shaderPipelines[key]);
 
-            cmd.SetBindGroup(propSlice.Binding.Resolve(), 2);
+            cmd.SetBindGroup(propSlice.Material->GetBindGroup(), 2);
             cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }
     }

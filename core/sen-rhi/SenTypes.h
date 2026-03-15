@@ -261,6 +261,7 @@ struct SenPipelineDesc {
 
     // Vertex input
     std::vector<SenVertexLayoutElement> VertexLayout;
+    uint32_t    VertexStride = 0;  // full stride of the vertex buffer (0 = no vertex input)
     SenTopology Topology = SenTopology::TriangleList;
 
     // Render state

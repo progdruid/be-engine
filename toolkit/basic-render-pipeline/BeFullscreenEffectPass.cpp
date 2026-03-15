@@ -7,21 +7,20 @@
 #include <umbrellas/include-libassert.h>
 #include <sen-rhi/SenBackend.h>
 
+#include "BeMaterial.h"
+
 BeFullscreenEffectPass::BeFullscreenEffectPass() = default;
 BeFullscreenEffectPass::~BeFullscreenEffectPass() = default;
 
 auto BeFullscreenEffectPass::Initialise() -> void {
     auto shader = Shader.lock();
     be_assert(shader, "BeFullscreenEffectPass: shader not set");
-    if (Material) {
-        _binding.Make(Material, Shader);
-    }
     auto pipelineDesc = shader->GetPipelineDesc();
     for (const auto& tex : OutputTextures) {
         pipelineDesc.RenderTargetFormats.push_back(tex.lock()->Format);
     }
     if (Material) {
-        pipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), _binding.GetLayout() };
+        pipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout(), Material->GetBindGroupLayout() };
     } else {
         pipelineDesc.BindGroupLayouts = { _renderer->GetUniformBindGroupLayout() };
     }
@@ -46,7 +45,7 @@ auto BeFullscreenEffectPass::Render() -> void {
     cmd.SetPipeline(_pipeline);
 
     if (Material) {
-        cmd.SetBindGroup(_binding.Resolve(), 1);
+        cmd.SetBindGroup(Material->GetBindGroup(), 1);
     }
 
     cmd.Draw(4, 0);

@@ -11,10 +11,7 @@
 #include "BeShader.h"
 #include "BeTexture.h"
 
-auto BeShadowPass::Initialise() -> void {
-    auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
-    _objectMaterial = BeMaterial::Create("object", objectScheme, true, *_renderer);
-}
+auto BeShadowPass::Initialise() -> void {}
 
 auto BeShadowPass::Render() -> void {
     const auto& submissionBuffer = *SubmissionBuffer.lock();
@@ -41,7 +38,24 @@ auto BeShadowPass::RenderDirectionalShadows(
     const BeBRPSubmissionBuffer& submissionBuffer
 ) -> void {
     auto& cmd = _renderer->GetCommandBuffer();
+    const auto& entries = submissionBuffer.GetGeometryEntries();
 
+    // Phase 1: update all per-object materials BEFORE BeginPass.
+    auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
+    for (const auto& entry : entries) {
+        if (!entry.CastShadows)
+            continue;
+        if (!_objectMaterials.contains(entry.Name)) {
+            _objectMaterials[entry.Name] = BeMaterial::Create("shadow_" + entry.Name, objectScheme, true, *_renderer);
+        }
+        auto& mat = _objectMaterials[entry.Name];
+        mat->SetMatrix("Model", entry.ModelMatrix);
+        mat->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
+        mat->SetFloat3("ViewerPosition", glm::vec3(0.f));
+        mat->GetBindGroup();
+    }
+
+    // Phase 2: BeginPass with barrier, bind, draw.
     cmd.BeginPass({
         .DepthAttachment = SenDepthAttachment{ sunLight.ShadowMap.lock()->Handle },
         .Viewport = { 0, 0, (float)sunLight.ShadowMapResolution, (float)sunLight.ShadowMapResolution, 0, 1 },
@@ -55,35 +69,27 @@ auto BeShadowPass::RenderDirectionalShadows(
         cmd.ClearIndexBuffer();
     };
 
-    const auto& entries = submissionBuffer.GetGeometryEntries();
     for (const auto& entry : entries) {
         if (!entry.CastShadows)
             continue;
 
         const auto shader = entry.Prop->Shader;
-
-        if (!_objectBindings.contains(shader.get())) {
-            _objectBindings[shader.get()].Make(_objectMaterial, shader);
-        }
-
-        _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
-        _objectMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
-        _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
-        cmd.SetBindGroup(_objectBindings[shader.get()].Resolve(), 1);
+        auto& mat = _objectMaterials[entry.Name];
+        cmd.SetBindGroup(mat->GetBindGroup(), 1);
 
         const auto& meshSlices = submissionBuffer.GetMeshSlices(entry.Prop->Mesh.get());
-        for (size_t i = 0; i < meshSlices.size(); ++i) {
-            const auto& meshSlice = meshSlices[i];
-            auto& propSlice = entry.Prop->Slices[i];
+        for (size_t j = 0; j < meshSlices.size(); ++j) {
+            const auto& meshSlice = meshSlices[j];
+            auto& propSlice = entry.Prop->Slices[j];
 
             PipelineKey key{ shader.get(), propSlice.TwoSided };
             if (!_shaderPipelines.contains(key)) {
                 auto pipelineDesc = shader->GetPipelineDesc();
                 pipelineDesc.RasterizerState.CullMode = propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back;
                 pipelineDesc.BindGroupLayouts = {
-                    _renderer->GetUniformBindGroupLayout(),          // set 0: renderer uniforms
-                    _objectBindings[shader.get()].GetLayout(),       // set 1: object material
-                    propSlice.Binding.GetLayout(),                   // set 2: surface material
+                    _renderer->GetUniformBindGroupLayout(),
+                    mat->GetBindGroupLayout(),
+                    propSlice.Material->GetBindGroupLayout(),
                 };
                 pipelineDesc.RenderTargetFormats = {};
                 pipelineDesc.DepthStencilFormat = sunLight.ShadowMap.lock()->Format;
@@ -91,7 +97,7 @@ auto BeShadowPass::RenderDirectionalShadows(
             }
             cmd.SetPipeline(_shaderPipelines[key]);
 
-            cmd.SetBindGroup(propSlice.Binding.Resolve(), 2);
+            cmd.SetBindGroup(propSlice.Material->GetBindGroup(), 2);
             cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }
     }
@@ -102,6 +108,9 @@ auto BeShadowPass::RenderPointLightShadows(
     const BeBRPSubmissionBuffer& submissionBuffer
 ) -> void {
     auto& cmd = _renderer->GetCommandBuffer();
+    const auto& entries = submissionBuffer.GetGeometryEntries();
+    auto shadowMapPtr = pointLight.ShadowMap.lock();
+    auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
 
     cmd.SetVertexBuffer(submissionBuffer.GetSharedVertexBuffer(), sizeof(BeFullVertex));
     cmd.SetIndexBuffer(submissionBuffer.GetSharedIndexBuffer());
@@ -110,9 +119,24 @@ auto BeShadowPass::RenderPointLightShadows(
         cmd.ClearIndexBuffer();
     };
 
-    auto shadowMapPtr = pointLight.ShadowMap.lock();
-
     for (int face = 0; face < 6; face++) {
+        const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
+
+        // Phase 1: update pool for this face BEFORE BeginPass.
+        for (const auto& entry : entries) {
+            if (!entry.CastShadows)
+                continue;
+            if (!_objectMaterials.contains(entry.Name)) {
+                _objectMaterials[entry.Name] = BeMaterial::Create("shadow_" + entry.Name, objectScheme, true, *_renderer);
+            }
+            auto& mat = _objectMaterials[entry.Name];
+            mat->SetMatrix("Model", entry.ModelMatrix);
+            mat->SetMatrix("ProjectionView", faceViewProj);
+            mat->SetFloat3("ViewerPosition", pointLight.Position);
+            mat->GetBindGroup();
+        }
+
+        // Phase 2: BeginPass with barrier, bind, draw.
         cmd.BeginPass({
             .DepthAttachment = SenDepthAttachment{
                 shadowMapPtr->Handle,
@@ -123,37 +147,27 @@ auto BeShadowPass::RenderPointLightShadows(
         });
         SCOPE_EXIT { cmd.EndPass(); };
 
-        const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
-
-        const auto& entries = submissionBuffer.GetGeometryEntries();
         for (const auto& entry : entries) {
             if (!entry.CastShadows)
                 continue;
 
             const auto shader = entry.Prop->Shader;
-
-            if (!_objectBindings.contains(shader.get())) {
-                _objectBindings[shader.get()].Make(_objectMaterial, shader);
-            }
-
-            _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
-            _objectMaterial->SetMatrix("ProjectionView", faceViewProj);
-            _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
-            cmd.SetBindGroup(_objectBindings[shader.get()].Resolve(), 1);
+            auto& mat = _objectMaterials[entry.Name];
+            cmd.SetBindGroup(mat->GetBindGroup(), 1);
 
             const auto& meshSlices = submissionBuffer.GetMeshSlices(entry.Prop->Mesh.get());
-            for (size_t i = 0; i < meshSlices.size(); ++i) {
-                const auto& meshSlice = meshSlices[i];
-                auto& propSlice = entry.Prop->Slices[i];
+            for (size_t j = 0; j < meshSlices.size(); ++j) {
+                const auto& meshSlice = meshSlices[j];
+                auto& propSlice = entry.Prop->Slices[j];
 
                 PipelineKey key{ shader.get(), propSlice.TwoSided };
                 if (!_shaderPipelines.contains(key)) {
                     auto pipelineDesc = shader->GetPipelineDesc();
                     pipelineDesc.RasterizerState.CullMode = propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back;
                     pipelineDesc.BindGroupLayouts = {
-                        _renderer->GetUniformBindGroupLayout(),          // set 0: renderer uniforms
-                        _objectBindings[shader.get()].GetLayout(),       // set 1: object material
-                        propSlice.Binding.GetLayout(),                   // set 2: surface material
+                        _renderer->GetUniformBindGroupLayout(),
+                        mat->GetBindGroupLayout(),
+                        propSlice.Material->GetBindGroupLayout(),
                     };
                     pipelineDesc.RenderTargetFormats = {};
                     pipelineDesc.DepthStencilFormat = shadowMapPtr->Format;
@@ -161,7 +175,7 @@ auto BeShadowPass::RenderPointLightShadows(
                 }
                 cmd.SetPipeline(_shaderPipelines[key]);
 
-                cmd.SetBindGroup(propSlice.Binding.Resolve(), 2);
+                cmd.SetBindGroup(propSlice.Material->GetBindGroup(), 2);
                 cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
             }
         }

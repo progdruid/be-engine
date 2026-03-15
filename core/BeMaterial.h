@@ -60,8 +60,9 @@ class BeMaterial {
     auto GetSchemeName () const -> std::string { return _scheme.Name; }
     auto GetUniqueID () const -> uint32_t { return _uniqueID; }
 
-    auto FlushBuffer  () -> void;
+    auto FlushBuffer () -> void;
     auto GetBindGroup () -> SenBindGroup;
+    auto GetBindGroupLayout () const -> SenBindGroupDesc;
 
     auto Print() const -> std::string;
     

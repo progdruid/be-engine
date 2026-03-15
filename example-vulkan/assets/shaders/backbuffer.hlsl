@@ -2,8 +2,8 @@
 
 @be-material: backbuffer-material
 [
-    "InputTexture: texture2d(0) = white",
-    "InputSampler: sampler(0) = point-clamp",
+    "InputTexture: texture2d = white",
+    "InputSampler: sampler = point-clamp",
 ]
 @be-end
 

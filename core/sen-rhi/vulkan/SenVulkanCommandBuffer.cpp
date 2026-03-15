@@ -114,13 +114,31 @@ auto SenVulkanCommandBuffer::BeginPass(const SenPassDesc& desc) -> void {
         .pDepthAttachment     = hasDepth ? &depthAttachmentInfo : nullptr,
     };
 
+    // Flush any vkCmdUpdateBuffer writes (Dynamic uniform buffers) before shaders read them.
+    VkMemoryBarrier uniformBarrier {
+        .sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+        .dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT,
+    };
+    vkCmdPipelineBarrier(
+        _cmd,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        0,
+        1, &uniformBarrier,
+        0, nullptr,
+        0, nullptr
+    );
+
     SenVulkanBackend::_vkCmdBeginRenderingKHR(_cmd, &renderingInfo);
 
+    // Flip viewport Y so NDC Y+ = up (matches DX11/GLM convention).
+    // Vulkan default has Y+ = down in NDC; negative height reverses this.
     VkViewport vp {
         .x        = desc.Viewport.X,
-        .y        = desc.Viewport.Y,
+        .y        = desc.Viewport.Y + desc.Viewport.Height,
         .width    = desc.Viewport.Width,
-        .height   = desc.Viewport.Height,
+        .height   = -desc.Viewport.Height,
         .minDepth = desc.Viewport.MinDepth,
         .maxDepth = desc.Viewport.MaxDepth,
     };
@@ -175,28 +193,6 @@ auto SenVulkanCommandBuffer::SetBindGroup(SenBindGroup group, uint8_t index) -> 
         _pendingBindGroupDirty[index] = true;
         return;
     }
-
-    be_assert(_cmd                  != VK_NULL_HANDLE, "SetBindGroup: _cmd is null");
-    be_assert(_boundPipelineLayout  != VK_NULL_HANDLE, "SetBindGroup: _boundPipelineLayout is null");
-    be_assert(groupEntry.Set        != VK_NULL_HANDLE, "SetBindGroup: descriptor set is null (group.ID={})", group.ID);
-
-    std::string msg = "";
-    
-    std::println("\n");
-    std::println("\n");
-    std::println("--- SetBindGroup index={} _cmd={}", index, (void*)_cmd);
-    auto bindGroupStr = SenVulkanBackend::PrintBindGroup(group);
-    msg += bindGroupStr + std::string("\n");
-    std::print("{}", bindGroupStr);
-    std::println("--- BoundLayout");
-    auto& pipelineEntry = SenVulkanBackend::LookupPipeline(_boundPipeline);
-    for (const auto& layout : pipelineEntry.Desc.BindGroupLayouts) {
-        auto layoutStr = SenVulkanBackend::PrintBindGroupLayout(layout);
-        msg += layoutStr + std::string("\n");
-        std::print("{}", layoutStr);
-    }
-    std::println("\n");
-    std::println("\n");
 
     vkCmdBindDescriptorSets(
         _cmd,

@@ -9,13 +9,13 @@
     "ProjectionView: matrix",
     "TexelSize: float = 0",
     
-    "Depth: texture2d(0) = black",
-    "Diffuse: texture2d(1) = black",
-    "WorldNormal: texture2d(2) = black",
-    "Specular_Shininess: texture2d(3) = black",
-    "ShadowMap: texture2d(4) = black",
+    "Depth: texture2d = black",
+    "Diffuse: texture2d = black",
+    "WorldNormal: texture2d = black",
+    "Specular_Shininess: texture2d = black",
+    "ShadowMap: texture2d = black",
 
-    "InputSampler: sampler(0) = point-clamp",
+    "InputSampler: sampler = point-clamp",
 ]
 @be-end
 

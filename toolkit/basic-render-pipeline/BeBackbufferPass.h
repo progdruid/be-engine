@@ -5,7 +5,6 @@
 #include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
-#include "BeMaterialBinding.h"
 
 class BeTexture;
 class BeMaterial;
@@ -22,7 +21,6 @@ private:
     std::shared_ptr<BeShader> _backbufferShader = nullptr;
     std::shared_ptr<BeMaterial> _backbufferMaterial = nullptr;
     SenPipeline _pipeline;
-    BeMaterialBinding _backbufferBinding;
     
 public:
     explicit BeBackbufferPass();

@@ -7,11 +7,11 @@
     "SpecularColor: float3 = [1.0, 1.0, 1.0]",
     "Shininess: float = 0.0",
 
-    "DiffuseTexture: texture2d(0) = white",
-    "SpecularTexture: texture2d(1) = black",
+    "DiffuseTexture: texture2d = white",
+    "SpecularTexture: texture2d = black",
 
-    "InputSampler: sampler(0) = linear-clamp",
-    //"InputSampler: sampler(0) = point-clamp",
+    "InputSampler: sampler = linear-clamp",
+    //"InputSampler: sampler = point-clamp",
 ]
 @be-end
 

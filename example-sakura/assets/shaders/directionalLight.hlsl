@@ -9,13 +9,13 @@
     "ProjectionView: matrix",
     "TexelSize: float = 0",
     
-    "Depth: texture2d(0) = black",
-    "Diffuse: texture2d(1) = black",
-    "WorldNormal: texture2d(2) = black",
-    "Specular_Shininess: texture2d(3) = black",
-    "ShadowMap: texture2d(4) = black",
+    "Depth: texture2d = black",
+    "Diffuse: texture2d = black",
+    "WorldNormal: texture2d = black",
+    "Specular_Shininess: texture2d = black",
+    "ShadowMap: texture2d = black",
 
-    "InputSampler: sampler(0) = point-clamp",
+    "InputSampler: sampler = point-clamp",
 ]
 @be-end
 
@@ -53,16 +53,15 @@ struct directional_light_material {
     float TexelSize;
 };
 
-Texture2D Depth : register(t0);
-Texture2D Diffuse : register(t1);
-Texture2D WorldNormal : register(t2);
-Texture2D Specular_Shininess : register(t3);
-Texture2D ShadowMap : register(t4);
-SamplerState InputSampler : register(s0);
-
-cbuffer CBuffer1 : register(b1) {
+cbuffer CBuffer_1 : register(b0, space1) {
     directional_light_material _DirectionalLight;
 };
+SamplerState InputSampler : register(s1, space1);
+Texture2D Depth : register(t2, space1);
+Texture2D Diffuse : register(t3, space1);
+Texture2D WorldNormal : register(t4, space1);
+Texture2D Specular_Shininess : register(t5, space1);
+Texture2D ShadowMap : register(t6, space1);
 
 struct PixelOutput {
     float3 LightHDR : SV_Target0;

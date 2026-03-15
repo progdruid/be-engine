@@ -6,8 +6,8 @@
     "Intensity: float = 10.0",
     "Knee: float = 1.25",
 
-    "HDRInput: texture2d(0) = black",
-    "InputSampler: sampler(0) = linear-clamp",
+    "HDRInput: texture2d = black",
+    "InputSampler: sampler = linear-clamp",
 ]
 @be-end
 
@@ -21,7 +21,7 @@
     "blend": "disable",
     "depthStencil": "disable",
     "materials": {
-        "main": { "scheme": "bloom-bright-material", "slot": 2 },
+        "main": { "scheme": "bloom-bright-material", "slot": 1 },
     },
     "targets": {
         "BloomMip": { "type": "float3", "slot": 0 }
@@ -39,12 +39,11 @@ struct bloom_bright_material {
     float Knee;
 };
 
-Texture2D HDRInput : register(t0);
-SamplerState InputSampler : register(s0);
-
-cbuffer CBuffer2 : register(b2) {
+cbuffer CBuffer_1 : register(b0, space1) {
     bloom_bright_material _Main;
 };
+SamplerState InputSampler : register(s1, space1);
+Texture2D HDRInput : register(t2, space1);
 
 struct PixelOutput {
     float3 BloomMip : SV_Target0;

@@ -110,15 +110,10 @@ auto SenDx11CommandBuffer::SetPipeline(SenPipeline pipeline) -> void {
 
 auto SenDx11CommandBuffer::SetBindGroup(SenBindGroup group, uint8_t index) -> void {
     const auto& desc = SenDx11Backend::LookupBindGroup(group);
-    const auto& layout = SenDx11Backend::LookupBindGroupLayout(desc.Layout);
-    
-    be_assert(desc.Textures.size() == layout.TextureSlots.size());
-    be_assert(desc.Samplers.size() == layout.SamplerSlots.size());
-    be_assert(desc.ConstantBuffers.size() == layout.BufferSlots.size());
-    
+
     for (size_t i = 0; i < desc.Textures.size(); ++i) {
         auto* srv = SenDx11Backend::LookupTexture(desc.Textures[i]).SRV.Get();
-        auto slot = layout.TextureSlots[i];
+        auto slot = desc.TextureSlots[i];
         if (_boundVertexShader) {
             _context->VSSetShaderResources(slot, 1, &srv);
         }
@@ -133,7 +128,7 @@ auto SenDx11CommandBuffer::SetBindGroup(SenBindGroup group, uint8_t index) -> vo
 
     for (size_t i = 0; i < desc.Samplers.size(); ++i) {
         auto* sampler = SenDx11Backend::LookupSampler(desc.Samplers[i]).Sampler.Get();
-        auto slot = layout.SamplerSlots[i];
+        auto slot = desc.SamplerSlots[i];
         if (_boundVertexShader) {
             _context->VSSetSamplers(slot, 1, &sampler);
         }
@@ -146,9 +141,9 @@ auto SenDx11CommandBuffer::SetBindGroup(SenBindGroup group, uint8_t index) -> vo
         }
     }
 
-    for (size_t i = 0; i < desc.ConstantBuffers.size(); ++i) {
-        auto* buffer = SenDx11Backend::LookupBuffer(desc.ConstantBuffers[i]).Buffer.Get();
-        auto slot = layout.BufferSlots[i];
+    for (size_t i = 0; i < desc.Buffers.size(); ++i) {
+        auto* buffer = SenDx11Backend::LookupBuffer(desc.Buffers[i]).Buffer.Get();
+        auto slot = desc.BufferSlots[i];
         if (_boundVertexShader) {
             _context->VSSetConstantBuffers(slot, 1, &buffer);
         }

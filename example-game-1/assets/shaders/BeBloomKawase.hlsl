@@ -5,8 +5,8 @@
     "TexelSize: float2 = [0.001, 0.001]",
     "PassRadius: float = 0.5",
 
-    "BloomMipInput: texture2d(0) = black",
-    "InputSampler: sampler(0) = linear-clamp",
+    "BloomMipInput: texture2d = black",
+    "InputSampler: sampler = linear-clamp",
 ]
 @be-end
 

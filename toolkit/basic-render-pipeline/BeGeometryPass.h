@@ -1,12 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <functional>
 #include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
-#include "BeMaterialBinding.h"
 
 class BeBRPSubmissionBuffer;
 class BeTexture;
@@ -41,9 +41,8 @@ class BeGeometryPass final : public BeRenderPass {
     std::weak_ptr<BeTexture> OutputDepthTexture;
 
     hide
-    std::shared_ptr<BeMaterial> _objectMaterial;
+    std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _objectMaterials;
     std::unordered_map<PipelineKey, SenPipeline, PipelineKeyHash> _shaderPipelines;
-    std::unordered_map<BeShader*, BeMaterialBinding> _objectBindings;
 
     expose
     explicit BeGeometryPass();

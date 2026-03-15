@@ -346,9 +346,9 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     }
 
 
-    static const auto GeometryView = _registry.view<TransformComponent, RenderComponent>();
+    static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
     static const auto SunView = _registry.view<SunLightComponent>();
-    static const auto PointLightView = _registry.view<TransformComponent, PointLightComponent>();
+    static const auto PointLightView = _registry.view<NameComponent, TransformComponent, PointLightComponent>();
 
     // Toggle between cameras with [C]
     if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
@@ -374,7 +374,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
             angle -= glm::two_pi<float>();
 
         auto i = size_t(0);
-        for (const auto [entity, transform, _] : PointLightView.each()) {
+        for (const auto [entity, name, transform, _] : PointLightView.each()) {
             constexpr float radius = 13.0f;
 
             const auto add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(PointLightView.size_hint()));
@@ -387,8 +387,9 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     }
 
     GameIns->SubmissionBuffer->ClearEntries();
-    for (const auto [entity, transform, render] : GeometryView.each()) {
+    for (const auto [entity, name, transform, render] : GeometryView.each()) {
         auto entry = BeBRPGeometryEntry();
+        entry.Name = name.Name;
         entry.Prop = render.Prop;
         entry.CastShadows = render.CastShadows;
         entry.ModelMatrix = BeBRPGeometryEntry::CalculateModelMatrix(
@@ -396,7 +397,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
             transform.Rotation,
             transform.Scale
         );
-        
+
         GameIns->SubmissionBuffer->SubmitGeometry(entry);
     }
     
@@ -419,8 +420,9 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         GameIns->SubmissionBuffer->SubmitSunLight(entry);
     }
     
-    for (const auto [entity, transform, pointLight] : PointLightView.each()) {
+    for (const auto [entity, name, transform, pointLight] : PointLightView.each()) {
         auto entry = BeBRPPointLightEntry{
+            .Name = name.Name,
             .Position = transform.Position,
             .Radius = pointLight.Radius,
             .Color = pointLight.Color,

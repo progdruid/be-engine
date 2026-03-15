@@ -102,16 +102,6 @@ static auto BuildRegistry(const std::vector<std::filesystem::path>& files) -> Sc
 
 // -------------------------------------------------------------------------
 
-static auto HasStructFields(const MaterialBlock& mat) -> bool {
-    if (!mat.Properties.is_array()) return false;
-    for (const auto& propJson : mat.Properties) {
-        if (!propJson.is_string()) continue;
-        auto type = std::string(BeShaderTools::ParseMaterialProperty(propJson.get<std::string>()).Type);
-        if (type != "texture2d" && type != "textureCube" && type != "sampler")
-            return true;
-    }
-    return false;
-}
 
 static auto VertexFieldForLayout(const std::string& layout) -> std::string {
     if (layout == "position") return "float3 Position : POSITION;";
@@ -128,42 +118,18 @@ static auto GenerateMaterialBlock(const MaterialBlock& mat) -> std::string {
     if (!mat.Properties.is_array()) return "";
 
     auto structFields = std::string();
-    auto bindings     = std::string();
 
     for (const auto& propJson : mat.Properties) {
         if (!propJson.is_string()) continue;
         auto prop = BeShaderTools::ParseMaterialProperty(propJson.get<std::string>());
-        auto name = std::string(prop.Name);
         auto type = std::string(prop.Type);
-
-        if (type == "texture2d") {
-            bindings += "Texture2D " + name + " : register(t" + std::to_string(prop.Slot) + ");\n";
-        } else if (type == "textureCube") {
-            bindings += "TextureCube " + name + " : register(t" + std::to_string(prop.Slot) + ");\n";
-        } else if (type == "sampler") {
-            bindings += "SamplerState " + name + " : register(s" + std::to_string(prop.Slot) + ");\n";
-        } else {
-            auto hlslType = (type == "matrix") ? std::string("float4x4") : type;
-            structFields += "    " + hlslType + " " + name + ";\n";
-        }
+        if (type == "texture2d" || type == "textureCube" || type == "sampler") continue;
+        auto hlslType = (type == "matrix") ? std::string("float4x4") : type;
+        structFields += "    " + hlslType + " " + std::string(prop.Name) + ";\n";
     }
 
-    auto parts = std::vector<std::string>();
-
-    if (!structFields.empty())
-        parts.push_back("struct " + KebabToSnakeCase(mat.Name) + " {\n" + structFields + "};");
-
-    if (!bindings.empty()) {
-        bindings.pop_back(); // remove trailing \n
-        parts.push_back(bindings);
-    }
-
-    auto out = std::string();
-    for (size_t i = 0; i < parts.size(); i++) {
-        if (i > 0) out += "\n\n";
-        out += parts[i];
-    }
-    return out;
+    if (structFields.empty()) return "";
+    return "struct " + KebabToSnakeCase(mat.Name) + " {\n" + structFields + "};";
 }
 
 static auto GenerateBoilerplate(const Json& shaderMeta, const std::vector<MaterialBlock>& materials,
@@ -196,32 +162,71 @@ static auto GenerateBoilerplate(const Json& shaderMeta, const std::vector<Materi
         if (!s.empty()) parts.push_back(s);
     }
 
-    // Cbuffers
+    // Per-material bindings: cbuffer + samplers + textures with register spaces
     if (shaderMeta.contains("materials")) {
-        struct CbufferEntry { uint32_t Slot; std::string Code; };
-        auto entries = std::vector<CbufferEntry>();
+        struct BindingsEntry { uint32_t Slot; std::string Code; };
+        auto entries = std::vector<BindingsEntry>();
+
         for (const auto& [linkName, linkVal] : shaderMeta["materials"].items()) {
             auto schemeName = linkVal["scheme"].get<std::string>();
+            auto slot       = linkVal["slot"].get<uint32_t>();
+            auto space      = std::to_string(slot);
 
-            // Skip cbuffer if scheme has no scalar fields (only textures/samplers)
             auto* block = [&]() -> const MaterialBlock* {
                 for (const auto& mat : materials)
                     if (mat.Name == schemeName) return &mat;
                 if (auto it = registry.find(schemeName); it != registry.end()) return &it->second.Block;
                 return nullptr;
             }();
-            if (!block || !HasStructFields(*block)) continue;
+            if (!block || !block->Properties.is_array()) continue;
 
-            auto structName = KebabToSnakeCase(schemeName);
-            auto varName    = linkVal.contains("var") ? linkVal["var"].get<std::string>() : KebabToPascalCase(linkName);
-            auto slot       = linkVal["slot"].get<uint32_t>();
-            entries.push_back({ slot,
-                "cbuffer CBuffer" + std::to_string(slot) + " : register(b" + std::to_string(slot) + ") {\n"
-                "    " + structName + " _" + varName + ";\n"
-                "};"
-            });
+            struct PropEntry { std::string Name; std::string Type; };
+            auto scalars  = std::vector<PropEntry>();
+            auto samplers = std::vector<PropEntry>();
+            auto textures = std::vector<PropEntry>();
+
+            for (const auto& propJson : block->Properties) {
+                if (!propJson.is_string()) continue;
+                auto prop = BeShaderTools::ParseMaterialProperty(propJson.get<std::string>());
+                auto type = std::string(prop.Type);
+                auto name = std::string(prop.Name);
+                if (type == "sampler")
+                    samplers.push_back({ name, type });
+                else if (type == "texture2d" || type == "textureCube")
+                    textures.push_back({ name, type });
+                else
+                    scalars.push_back({ name, type });
+            }
+
+            auto code = std::string();
+
+            if (!scalars.empty()) {
+                auto structName = KebabToSnakeCase(schemeName);
+                auto varName    = linkVal.contains("var") ? linkVal["var"].get<std::string>() : KebabToPascalCase(linkName);
+                code += "cbuffer CBuffer_" + space + " : register(b0, space" + space + ") {\n"
+                     +  "    " + structName + " _" + varName + ";\n"
+                     +  "};";
+            }
+
+            for (size_t i = 0; i < samplers.size(); i++) {
+                if (!code.empty()) code += "\n";
+                code += "SamplerState " + samplers[i].Name
+                     +  " : register(s" + std::to_string(1 + i) + ", space" + space + ");";
+            }
+
+            for (size_t i = 0; i < textures.size(); i++) {
+                if (!code.empty()) code += "\n";
+                auto reg      = std::to_string(1 + samplers.size() + i);
+                auto hlslType = std::string((textures[i].Type == "textureCube") ? "TextureCube" : "Texture2D");
+                code += hlslType + " " + textures[i].Name
+                     +  " : register(t" + reg + ", space" + space + ");";
+            }
+
+            if (!code.empty())
+                entries.push_back({ slot, std::move(code) });
         }
-        std::ranges::sort(entries, {}, &CbufferEntry::Slot);
+
+        std::ranges::sort(entries, {}, &BindingsEntry::Slot);
         if (!entries.empty()) {
             auto s = std::string();
             for (size_t i = 0; i < entries.size(); i++) {

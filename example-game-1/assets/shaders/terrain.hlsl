@@ -5,13 +5,13 @@
     "DiffuseColor: float3 = [0.5, 0.5, 0.5]",
     "SpecularColor: float3 = [-0.2, -0.2, -0.1]", 
     "Shininess: float = 0.0",
-    "DiffuseTexture: texture2d(0) = white",
+    "DiffuseTexture: texture2d = white",
     "TerrainScale: float = 1.0",
     "HeightScale: float = 1.0",
     "NoiseResolution: float = 4.0",
     "Speed: float = 0.2",
 
-    "InputSampler: sampler(0) = point-clamp"    
+    "InputSampler: sampler = point-clamp"    
 ]
 @be-end
 
