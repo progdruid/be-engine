@@ -133,29 +133,35 @@ auto BeMaterial::BuildBindGroupDesc() const -> SenBindGroupDesc {
 auto BeMaterial::AssembleData() -> void {
     uint32_t offsetBytes = 0;
 
-    for (const auto& property : _scheme.Properties) {
-        constexpr uint32_t registerSizeBytes = 16;
+    // std140 layout — matches Vulkan UBOs, WebGPU/WGSL, and Slang's HLSL output.
+    static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> SizeMap = {
+        {BeMaterialPropertyDescriptor::Type::Float,  uint32_t(1 * sizeof(float))},
+        {BeMaterialPropertyDescriptor::Type::Float2, uint32_t(2 * sizeof(float))},
+        {BeMaterialPropertyDescriptor::Type::Float3, uint32_t(3 * sizeof(float))},
+        {BeMaterialPropertyDescriptor::Type::Float4, uint32_t(4 * sizeof(float))},
+        {BeMaterialPropertyDescriptor::Type::Matrix, uint32_t(16 * sizeof(float))},
+    };
+    static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> AlignMap = {
+        {BeMaterialPropertyDescriptor::Type::Float,  4},
+        {BeMaterialPropertyDescriptor::Type::Float2, 8},
+        {BeMaterialPropertyDescriptor::Type::Float3, 16},
+        {BeMaterialPropertyDescriptor::Type::Float4, 16},
+        {BeMaterialPropertyDescriptor::Type::Matrix, 16},
+    };
 
-        static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> SizeMap = {
-            {BeMaterialPropertyDescriptor::Type::Float,  uint32_t(1 * sizeof(float))},
-            {BeMaterialPropertyDescriptor::Type::Float2, uint32_t(2 * sizeof(float))},
-            {BeMaterialPropertyDescriptor::Type::Float3, uint32_t(3 * sizeof(float))},
-            {BeMaterialPropertyDescriptor::Type::Float4, uint32_t(4 * sizeof(float))},
-            {BeMaterialPropertyDescriptor::Type::Matrix, uint32_t(16 * sizeof(float))},
-        };
-        
-        const uint32_t elementSizeBytes = SizeMap.at(property.PropertyType);
-        const uint32_t positionInRegister = offsetBytes % registerSizeBytes;
-        
-        if (positionInRegister + elementSizeBytes > registerSizeBytes && positionInRegister != 0) {
-            offsetBytes = ((offsetBytes / registerSizeBytes) + 1) * registerSizeBytes;
-        }
+    for (const auto& property : _scheme.Properties) {
+        const uint32_t size  = SizeMap.at(property.PropertyType);
+        const uint32_t align = AlignMap.at(property.PropertyType);
+
+        offsetBytes = (offsetBytes + align - 1) / align * align;
 
         _propertyOffsets[property.Name] = offsetBytes / sizeof(float);
-        offsetBytes += elementSizeBytes;
+        offsetBytes += size;
     }
 
-    _bufferData.resize(offsetBytes / 4);
+    // Pad to next 16-byte boundary (std140 layout requirement)
+    const uint32_t paddedBytes = ((offsetBytes + 15) / 16) * 16;
+    _bufferData.resize(paddedBytes / 4);
     for (const auto& property : _scheme.Properties) {
         const uint32_t propertyOffset = _propertyOffsets.at(property.Name);
         const auto& defaultValue = property.DefaultValue;

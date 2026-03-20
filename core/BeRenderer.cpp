@@ -1,7 +1,5 @@
 #include "BeRenderer.h"
 
-#include <cassert>
-
 #include "BeRenderPass.h"
 #include "BeShader.h"
 #include <sen-rhi/SenBackend.h>
@@ -52,7 +50,7 @@ auto BeRenderer::ClearPasses() -> void {
     _passes.clear();
 }
 
-auto BeRenderer::InitialisePasses() -> void {
+auto BeRenderer::InitialisePasses() const -> void {
     for (const auto& pass : _passes)
         pass->Initialise();
 }

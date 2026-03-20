@@ -79,7 +79,6 @@ auto SakuraScene::Prepare() -> void {
     _sakura->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("linear-wrap"));
 
     _sakura2 = BeProp::Create("assets/stylized_sakura_tree.glb", standardShader, *GameIns->Renderer);
-    //_sakura2->Materials[0]
 
     GameIns->SubmissionBuffer->RegisterMesh(_cube->Mesh);
     GameIns->SubmissionBuffer->RegisterMesh(_anvil->Mesh);

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <memory>
 #include <umbrellas/access-modifiers.hpp>
 
 #include <sen-rhi/SenCommandBuffer.h>
@@ -18,8 +17,8 @@ class BeRenderer {
     uint32_t _width;
     uint32_t _height;
     void* _nativeWindow;
-
     SenSwapchain _swapchain;
+
     SenTexture _backbufferTexture;
     SenCommandBuffer _commandBuffer;
 
@@ -35,14 +34,12 @@ class BeRenderer {
     ~BeRenderer();
 
     auto LaunchDevice () -> void;
-
-
+    
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
-
     expose
     auto AddRenderPass(BeRenderPass* renderPass) -> void;
     auto ClearPasses() -> void;
-    auto InitialisePasses() -> void;
+    auto InitialisePasses() const -> void;
     auto Render() -> void;
 
     [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer& { return _commandBuffer; }
@@ -51,7 +48,7 @@ class BeRenderer {
     [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }
     [[nodiscard]] auto GetHeight () const -> uint32_t { return _height; }
     [[nodiscard]] auto GetViewport () const -> SenViewport {
-        return { 0, 0, (float)_width, (float)_height, 0, 1 };
+        return { 0, 0, float(_width), float(_height), 0, 1 };
     }
     [[nodiscard]] auto GetSwapchainFormat() const -> SenFormat;
 };
