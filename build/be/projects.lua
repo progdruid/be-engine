@@ -97,6 +97,9 @@ function Be.DeclareToolkit()
         "d3dcompiler",
     }
 
+    -- vulkan (needed for imgui_impl_vulkan)
+    includedirs { "$(VULKAN_SDK)/Include" }
+
     Be.CoreUse()
     Be.Default()
 end

@@ -95,11 +95,16 @@ class SenVulkanBackend {
     static auto GetSwapchainFormat    (SenSwapchain handle) -> SenFormat;
 
     expose // command buffer factory
-    static auto CreateCommandBuffer () -> SenVulkanCommandBuffer;
+    static auto CreateCommandBuffer () -> void;
+    static auto GetCommandBuffer    () -> SenVulkanCommandBuffer&;
 
     expose // native API escape hatches (for ImGui, etc.)
-    static auto GetNativeDevice  () -> void*;
-    static auto GetNativeContext () -> void*;
+    static auto GetNativeDevice          () -> void*;  // VkDevice
+    static auto GetNativeContext         () -> void*;  // VkCommandBuffer (current frame)
+    static auto GetNativeInstance        () -> void*;  // VkInstance
+    static auto GetNativePhysicalDevice  () -> void*;  // VkPhysicalDevice
+    static auto GetNativeQueue           () -> void*;  // VkQueue
+    static auto GetNativeQueueFamilyIndex() -> uint32_t;
 
     expose // debug annotation helpers
     static auto BeginDebugEvent (const std::string& label) -> void;
@@ -151,6 +156,9 @@ class SenVulkanBackend {
     static PFN_vkCmdBeginRenderingKHR _vkCmdBeginRenderingKHR;
     static PFN_vkCmdEndRenderingKHR   _vkCmdEndRenderingKHR;
     static VkCommandBuffer            _activeCommandBuffer;
+
+    hide
+    static SenVulkanCommandBuffer _commandBufferInstance;
 
     hide
     static VkInstance _instance;

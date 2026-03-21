@@ -4,6 +4,10 @@
 #include "BeShader.h"
 #include <sen-rhi/SenBackend.h>
 
+auto BeRenderer::GetCommandBuffer() -> SenCommandBuffer& {
+    return SenBackend::GetCommandBuffer();
+}
+
 BeRenderer::BeRenderer(
     uint32_t width,
     uint32_t height,
@@ -31,7 +35,7 @@ auto BeRenderer::LaunchDevice() -> void {
         .Height = _height,
     });
 
-    _commandBuffer = SenBackend::CreateCommandBuffer();
+    SenBackend::CreateCommandBuffer();
 }
 
 auto BeRenderer::GetSwapchainFormat() const -> SenFormat {
@@ -44,6 +48,7 @@ auto BeRenderer::AddRenderPass(BeRenderPass* renderPass) -> void {
 }
 
 auto BeRenderer::ClearPasses() -> void {
+    SenBackend::WaitIdle();
     for (auto pass : _passes) {
         delete pass;
     }

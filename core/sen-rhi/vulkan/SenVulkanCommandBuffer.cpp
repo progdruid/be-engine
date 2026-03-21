@@ -139,6 +139,11 @@ auto SenVulkanCommandBuffer::EndPass() -> void {
     SenVulkanBackend::_vkCmdEndRenderingKHR(_cmd);
 }
 
+auto SenVulkanCommandBuffer::ResetPerFrameState() -> void {
+    _boundPipelineLayout = VK_NULL_HANDLE;
+    _pendingBindGroupDirty = {};
+}
+
 
 // ─── pipeline + resources ─────────────────────────────────────────────────────
 

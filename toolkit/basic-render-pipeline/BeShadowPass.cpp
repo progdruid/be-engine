@@ -20,7 +20,7 @@ auto BeShadowPass::Render() -> void {
     for (size_t i = 0; i < sunLights.size(); ++i) {
         if (!sunLights[i].CastsShadows)
             continue;
-        RenderDirectionalShadows(sunLights[0], submissionBuffer);
+        RenderDirectionalShadows(sunLights[i], submissionBuffer);
     }
 
     const auto& pointLights = submissionBuffer.GetPointLightEntries();

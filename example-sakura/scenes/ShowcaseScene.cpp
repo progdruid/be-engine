@@ -72,7 +72,7 @@ auto ShowcaseScene::CreateTargetTextures() -> void {
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build();
-
+    
     BeTexture::Create("S_BaseColor")
     .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::R11G11B10_Float)
@@ -165,13 +165,13 @@ auto ShowcaseScene::CreateObjects() -> void {
     CreateEntity(_registry
         ,NameComponent { .Name = "showcased-object" }
         ,TransformComponent { }
-        ,RenderComponent { .Prop = BeAssetRegistry::GetProp("ramen").lock(), .CastShadows = false }
+        ,RenderComponent { .Prop = BeAssetRegistry::GetProp("ramen").lock(), .CastShadows = true }
     );
     
     CreateEntity(_registry
         ,NameComponent { .Name = "skycube" }
         ,TransformComponent { .Position = glm::vec3(0, 0, 0), .Rotation = glm::quat(), .Scale = glm::vec3(100) }
-        ,RenderComponent { .Prop = BeAssetRegistry::GetProp("skycube").lock(), .CastShadows = false }
+        ,RenderComponent { .Prop = BeAssetRegistry::GetProp("skycube").lock(), .CastShadows = true }
     );
     
     CreateEntity(_registry
@@ -186,7 +186,7 @@ auto ShowcaseScene::CreateObjects() -> void {
             .ShadowMapWorldSize = 60.0f,
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
-            .ShadowMap = BeTexture::Create("ShowcaseScene_SunLightShadowMap")
+            .ShadowMap = BeTexture::Create("S_MoonShadowmap")
                 .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
                 .SetFormat(SenFormat::Depth32)
                 .SetSize(4096, 4096)

@@ -46,6 +46,7 @@ VkDescriptorPool SenVulkanBackend::_descriptorPool = VK_NULL_HANDLE;
 PFN_vkCmdBeginRenderingKHR SenVulkanBackend::_vkCmdBeginRenderingKHR = nullptr;
 PFN_vkCmdEndRenderingKHR   SenVulkanBackend::_vkCmdEndRenderingKHR   = nullptr;
 VkCommandBuffer            SenVulkanBackend::_activeCommandBuffer     = VK_NULL_HANDLE;
+SenVulkanCommandBuffer     SenVulkanBackend::_commandBufferInstance   = {};
 //endregion
 
 // region ────────── backend ────────────────────────────────────────────────────────────────
@@ -394,6 +395,7 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle) -> SenTexture {
     );
 
     // Reset and begin recording the active command buffer
+    _commandBufferInstance.ResetPerFrameState();
     vkResetCommandBuffer(_activeCommandBuffer, 0);
     VkCommandBufferBeginInfo beginInfo {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -455,7 +457,7 @@ auto SenVulkanBackend::EndFrame(SenSwapchain handle) -> void {
 //endregion
 
 // ─── command buffer ────────────────────────────────────────────────────────────────
-auto SenVulkanBackend::CreateCommandBuffer() -> SenVulkanCommandBuffer {
+auto SenVulkanBackend::CreateCommandBuffer() -> void {
     be_assert(_activeCommandBuffer == VK_NULL_HANDLE, "CreateCommandBuffer called more than once");
 
     VkCommandBufferAllocateInfo allocInfo {
@@ -466,17 +468,37 @@ auto SenVulkanBackend::CreateCommandBuffer() -> SenVulkanCommandBuffer {
     };
     VkResult result = vkAllocateCommandBuffers(_device, &allocInfo, &_activeCommandBuffer);
     be_assert(result == VK_SUCCESS, "Failed to allocate command buffer!");
-    return SenVulkanCommandBuffer(_activeCommandBuffer);
+    _commandBufferInstance = SenVulkanCommandBuffer(_activeCommandBuffer);
+}
+
+auto SenVulkanBackend::GetCommandBuffer() -> SenVulkanCommandBuffer& {
+    return _commandBufferInstance;
 }
 
 
 // ─── native escape hatches ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::GetNativeDevice() -> void* {
-    return nullptr;
+    return _device;
 }
 
 auto SenVulkanBackend::GetNativeContext() -> void* {
-    return nullptr;
+    return _activeCommandBuffer;
+}
+
+auto SenVulkanBackend::GetNativeInstance() -> void* {
+    return _instance;
+}
+
+auto SenVulkanBackend::GetNativePhysicalDevice() -> void* {
+    return _physicalDevice;
+}
+
+auto SenVulkanBackend::GetNativeQueue() -> void* {
+    return _queue;
+}
+
+auto SenVulkanBackend::GetNativeQueueFamilyIndex() -> uint32_t {
+    return _queueFamilyIndex;
 }
 
 
@@ -1294,7 +1316,7 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     };
 
     // ── blend ──────────────────────────────────────────────────────────────────
-    uint32_t rtCount = std::max(uint32_t(1), uint32_t(desc.RenderTargetFormats.size()));
+    uint32_t rtCount = uint32_t(desc.RenderTargetFormats.size());
     VkPipelineColorBlendAttachmentState blendAttachment {
         .blendEnable         = desc.BlendState.Enable,
         .srcColorBlendFactor = Sen::Vulkan::ToBlendFactor(desc.BlendState.SrcBlend),

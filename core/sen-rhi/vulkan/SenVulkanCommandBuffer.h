@@ -20,6 +20,8 @@ class SenVulkanCommandBuffer {
     SenVulkanCommandBuffer() = default;
     explicit SenVulkanCommandBuffer(VkCommandBuffer cmd);
 
+    auto ResetPerFrameState() -> void;
+
     // render pass
     auto BeginPass (const SenPassDesc& desc) -> void;
     auto EndPass   () -> void;

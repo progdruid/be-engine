@@ -20,7 +20,6 @@ class BeRenderer {
     SenSwapchain _swapchain;
 
     SenTexture _backbufferTexture;
-    SenCommandBuffer _commandBuffer;
 
     std::vector<BeRenderPass*> _passes;
 
@@ -42,7 +41,7 @@ class BeRenderer {
     auto InitialisePasses() const -> void;
     auto Render() -> void;
 
-    [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer& { return _commandBuffer; }
+    [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer&;
     [[nodiscard]] auto GetBackbufferTexture() const -> SenTexture { return _backbufferTexture; }
 
     [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }

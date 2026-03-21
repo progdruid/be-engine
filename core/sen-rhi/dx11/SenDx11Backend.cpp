@@ -159,6 +159,8 @@ static auto CreateTextureCubemap(
 
 // ─── static members ───────────────────────────────────────────────────────────
 
+SenDx11CommandBuffer        SenDx11Backend::_commandBufferInstance = {};
+
 ComPtr<ID3D11Device>        SenDx11Backend::_device;
 ComPtr<ID3D11DeviceContext> SenDx11Backend::_context;
 ComPtr<IDXGIFactory2>       SenDx11Backend::_factory;
@@ -395,8 +397,12 @@ auto SenDx11Backend::EndFrame(SenSwapchain handle) -> void {
     Utils::Check << entry.Swapchain->Present(1, 0);
 }
 
-auto SenDx11Backend::CreateCommandBuffer() -> SenDx11CommandBuffer {
-    return SenDx11CommandBuffer(_context);
+auto SenDx11Backend::CreateCommandBuffer() -> void {
+    _commandBufferInstance = SenDx11CommandBuffer(_context);
+}
+
+auto SenDx11Backend::GetCommandBuffer() -> SenDx11CommandBuffer& {
+    return _commandBufferInstance;
 }
 
 auto SenDx11Backend::GetNativeDevice() -> void* {

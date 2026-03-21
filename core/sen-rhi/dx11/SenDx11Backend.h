@@ -88,7 +88,8 @@ class SenDx11Backend {
     static auto EndFrame         (SenSwapchain handle) -> void;
 
     expose // command buffer factory
-    static auto CreateCommandBuffer () -> SenDx11CommandBuffer;
+    static auto CreateCommandBuffer () -> void;
+    static auto GetCommandBuffer    () -> SenDx11CommandBuffer&;
 
     expose // native API escape hatches (for ImGui, etc.)
     static auto GetNativeDevice  () -> void*;
@@ -133,6 +134,8 @@ class SenDx11Backend {
 
 
     hide
+    static SenDx11CommandBuffer _commandBufferInstance;
+
     static ComPtr<ID3D11Device>        _device;
     static ComPtr<ID3D11DeviceContext> _context;
     static ComPtr<IDXGIFactory2>       _factory;
