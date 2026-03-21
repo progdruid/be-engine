@@ -7,6 +7,7 @@
 #include <sen-rhi/SenShaderCompiler.h>
 
 #define VMA_IMPLEMENTATION
+#include <ranges>
 #include <vma/vk_mem_alloc.h>
 
 #include <umbrellas/include-libassert.h>
@@ -176,12 +177,19 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
 
 auto SenVulkanBackend::Shutdown() -> void {
     // Destroy all swapchains first (they depend on device)
-    std::vector<uint32_t> swapchainIds;
-    for (const auto& pair : _swapchains) {
-        swapchainIds.push_back(pair.first);
-    }
-    for (uint32_t id : swapchainIds) {
+    auto swapchains = _swapchains;
+    for (const auto id : swapchains | std::views::keys) {
         DestroySwapchain(SenSwapchain { id });
+    }
+    
+    auto textures = _textures;
+    for (const auto& id : textures | std::views::keys) {
+        DestroyTexture(SenTexture { id });
+    }
+    
+    auto buffers = _buffers;
+    for (const auto& id : buffers | std::views::keys) {
+        DestroyBuffer(SenBuffer { id });
     }
 
     if (_commandPool)      { vkDestroyCommandPool(_device, _commandPool, nullptr); _commandPool = VK_NULL_HANDLE; }
@@ -528,7 +536,7 @@ auto SenVulkanBackend::DestroyTexture(SenTexture handle) -> void {
     auto it = _textures.find(handle.ID);
     if (it != _textures.end()) {
         auto& entry = it->second;
-        auto destroy = [&](VkImageView v) { if (v) { vkDestroyImageView(_device, v, nullptr); } };
+        auto destroy = [&](VkImageView v) -> void { if (v) { vkDestroyImageView(_device, v, nullptr); } };
 
         destroy(entry.SRV);
         destroy(entry.DSV);

@@ -77,7 +77,7 @@ auto Game::SetupScenes() -> void {
     
     SubmissionBuffer->BakeMeshes();
 
-    SceneManager->RequestSceneChange("showcase");
+    SceneManager->RequestSceneChange("menu");
     SceneManager->ApplyPendingSceneChange();
 }
 
