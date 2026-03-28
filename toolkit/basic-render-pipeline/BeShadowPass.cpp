@@ -1,5 +1,6 @@
 #include "BeShadowPass.h"
 
+#include <format>
 #include <umbrellas/include-glm.h>
 #include <scope_guard/scope_guard.hpp>
 #include <sen-rhi/SenBackend.h>
@@ -11,10 +12,12 @@
 #include "BeShader.h"
 #include "BeTexture.h"
 
-auto BeShadowPass::Initialise() -> void {}
+auto BeShadowPass::Initialise() -> void {
+    auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
+}
 
 auto BeShadowPass::Render() -> void {
-    const auto& submissionBuffer = *SubmissionBuffer.lock();
+    auto& submissionBuffer = *SubmissionBuffer.lock();
 
     const auto& sunLights = submissionBuffer.GetSunLightEntries();
     for (size_t i = 0; i < sunLights.size(); ++i) {
@@ -33,12 +36,12 @@ auto BeShadowPass::Render() -> void {
 
 auto BeShadowPass::RenderDirectionalShadows(
     const BeBRPSunLightEntry& sunLight,
-    const BeBRPSubmissionBuffer& submissionBuffer
+    BeBRPSubmissionBuffer& submissionBuffer
 ) -> void {
     auto& cmd = _renderer->GetCommandBuffer();
     const auto uniformMat = submissionBuffer.UniformMaterial.lock();
     const auto& entries = submissionBuffer.GetGeometryEntries();
-    auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
+    const auto& objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
 
     cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
 
@@ -61,10 +64,10 @@ auto BeShadowPass::RenderDirectionalShadows(
 
         const auto shader = entry.Prop->Shader;
 
-        if (!_objectMaterials.contains(entry.Name)) {
-            _objectMaterials[entry.Name] = BeMaterial::Create("shadow_" + entry.Name, objectScheme, true, *_renderer);
-        }
-        auto& mat = _objectMaterials[entry.Name];
+        //if (!_objectMaterials.contains(entry.Name)) {
+        //    _objectMaterials[entry.Name] = BeMaterial::Create("shadow_" + entry.Name, objectScheme, true);
+        //}
+        auto mat = submissionBuffer.AcquireNewObjectMaterial();
         mat->SetMatrix("Model", entry.ModelMatrix);
         mat->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
         mat->SetFloat3("ViewerPosition", glm::vec3(0.f));
@@ -93,7 +96,7 @@ auto BeShadowPass::RenderDirectionalShadows(
 
 auto BeShadowPass::RenderPointLightShadows(
     const BeBRPPointLightEntry& pointLight,
-    const BeBRPSubmissionBuffer& submissionBuffer
+    BeBRPSubmissionBuffer& submissionBuffer
 ) -> void {
     auto& cmd = _renderer->GetCommandBuffer();
     const auto uniformMat = submissionBuffer.UniformMaterial.lock();
@@ -110,14 +113,29 @@ auto BeShadowPass::RenderPointLightShadows(
 
     cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
 
+    auto mat4ToString = [](const glm::mat4x4& m) -> std::string {
+        return std::format(
+            "[{:.3f}, {:.3f}, {:.3f}, {:.3f}]\n"
+            "[{:.3f}, {:.3f}, {:.3f}, {:.3f}]\n"
+            "[{:.3f}, {:.3f}, {:.3f}, {:.3f}]\n"
+            "[{:.3f}, {:.3f}, {:.3f}, {:.3f}]",
+            m[0][0], m[1][0], m[2][0], m[3][0],
+            m[0][1], m[1][1], m[2][1], m[3][1],
+            m[0][2], m[1][2], m[2][2], m[3][2],
+            m[0][3], m[1][3], m[2][3], m[3][3]
+        );
+    };
+
+    std::string str;
     for (int face = 0; face < 6; face++) {
         const glm::mat4x4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
-
+        str += mat4ToString(faceViewProj) + std::string("\n\n");
+        
         cmd.BeginPass({
             .DepthAttachment = SenDepthAttachment{
-                shadowMapPtr->Handle,
-                static_cast<int8_t>(face),
-                SenLoadOp::Clear
+                .Texture = shadowMapPtr->Handle,
+                .CubemapFace = static_cast<int8_t>(face),
+                .LoadOp = SenLoadOp::Clear
             },
             .Viewport = { 0, 0, (float)pointLight.ShadowMapResolution, (float)pointLight.ShadowMapResolution, 0, 1 },
         });
@@ -129,10 +147,10 @@ auto BeShadowPass::RenderPointLightShadows(
 
             const auto shader = entry.Prop->Shader;
 
-            if (!_objectMaterials.contains(entry.Name)) {
-                _objectMaterials[entry.Name] = BeMaterial::Create("shadow_" + entry.Name, objectScheme, true, *_renderer);
-            }
-            auto& mat = _objectMaterials[entry.Name];
+            //if (!_objectMaterials.contains(entry.Name)) {
+            //    _objectMaterials[entry.Name] = BeMaterial::Create("shadow_" + entry.Name, objectScheme, true);
+            //}
+            auto mat = submissionBuffer.AcquireNewObjectMaterial();
             mat->SetMatrix("Model", entry.ModelMatrix);
             mat->SetMatrix("ProjectionView", faceViewProj);
             mat->SetFloat3("ViewerPosition", pointLight.Position);

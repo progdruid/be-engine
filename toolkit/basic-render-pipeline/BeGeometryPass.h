@@ -41,7 +41,6 @@ class BeGeometryPass final : public BeRenderPass {
     std::weak_ptr<BeTexture> OutputDepthTexture;
 
     hide
-    std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _objectMaterials;
     std::unordered_map<PipelineKey, SenPipeline, PipelineKeyHash> _shaderPipelines;
 
     expose

@@ -57,7 +57,7 @@ void ShowcaseScene::Prepare() {
     CreateObjects();
 
     auto uniformScheme = BeAssetRegistry::GetMaterialScheme("uniform-material");
-    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false, *GameIns->Renderer);
+    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 }
 
@@ -291,7 +291,7 @@ void ShowcaseScene::Tick(float deltaTime) {
     static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
     static const auto SunView = _registry.view<SunLightComponent>();
 
-    GameIns->SubmissionBuffer->ClearEntries();
+    GameIns->SubmissionBuffer->Clear();
     for (const auto [entity, name, transform, render] : GeometryView.each()) {
         auto entry = BeBRPGeometryEntry();
         entry.Name = name.Name;
@@ -303,7 +303,7 @@ void ShowcaseScene::Tick(float deltaTime) {
             transform.Scale
         );
 
-        GameIns->SubmissionBuffer->SubmitGeometry(entry);
+        GameIns->SubmissionBuffer->AddGeometry(entry);
     }
 
     for (const auto [entity, sunLight] : SunView.each()) {
@@ -322,7 +322,7 @@ void ShowcaseScene::Tick(float deltaTime) {
             sunLight.ShadowFarPlane
         );
 
-        GameIns->SubmissionBuffer->SubmitSunLight(entry);
+        GameIns->SubmissionBuffer->AddSunLight(entry);
     }
 }
 

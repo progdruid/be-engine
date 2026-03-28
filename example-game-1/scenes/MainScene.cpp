@@ -96,7 +96,7 @@ auto MainScene::Prepare() -> void {
     GameIns->SubmissionBuffer->RegisterMesh(_anvil->Mesh);
 
     auto uniformScheme = BeAssetRegistry::GetMaterialScheme("uniform-material");
-    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false, *GameIns->Renderer);
+    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
     _directionalLight = std::make_shared<BeDirectionalLight>();
@@ -255,7 +255,7 @@ auto MainScene::OnLoad() -> void {
 
     const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.hlsl", *GameIns->Renderer);
     const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
-    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, *GameIns->Renderer);
+    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false);
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     GameIns->Renderer->AddRenderPass(tonemapperPass);

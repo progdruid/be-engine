@@ -16,7 +16,7 @@ auto BeBloomPass::Initialise() -> void {
     _brightShader = BeAssetRegistry::GetShader("bloom-bright").lock();
     be_assert(_brightShader, "BeBloomPass: bloom-bright shader not found");
     auto brightScheme = BeAssetRegistry::GetMaterialScheme("bloom-bright-material");
-    _brightMaterial = BeMaterial::Create("Bright Pass Material", brightScheme, false, *_renderer);
+    _brightMaterial = BeMaterial::Create("Bright Pass Material", brightScheme, false);
     _brightMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
 
     auto brightPipelineDesc = _brightShader->GetPipelineDesc();
@@ -35,8 +35,7 @@ auto BeBloomPass::Initialise() -> void {
         auto mat = BeMaterial::Create(
             "Downsample Mip " + std::to_string(mipTarget),
             kawaseScheme,
-            false,
-            *_renderer
+            false
         );
 
         const auto sourceMip = BloomMipTextures[mipTarget - 1].lock();
@@ -58,8 +57,7 @@ auto BeBloomPass::Initialise() -> void {
         const auto mat = BeMaterial::Create(
             "Upsample Mip " + std::to_string(mipTarget),
             kawaseScheme,
-            false,
-            *_renderer
+            false
         );
 
         const auto sourceMip = BloomMipTextures[mipTarget + 1].lock();
@@ -100,7 +98,7 @@ auto BeBloomPass::Initialise() -> void {
     _addShader = BeAssetRegistry::GetShader("bloom-add").lock();
     be_assert(_addShader, "BeBloomPass: bloom-add shader not found");
     const auto& addScheme = BeAssetRegistry::GetMaterialScheme("bloom-add-material");
-    _addMaterial = BeMaterial::Create("Add Pass Material", addScheme, false, *_renderer);
+    _addMaterial = BeMaterial::Create("Add Pass Material", addScheme, false);
     _addMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
     _addMaterial->SetTexture("BloomInput", BloomMipTextures[0].lock());
     _addMaterial->SetTexture("DirtTexture", DirtTexture.lock());

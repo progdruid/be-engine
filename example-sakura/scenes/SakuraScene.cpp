@@ -88,7 +88,7 @@ auto SakuraScene::Prepare() -> void {
     GameIns->SubmissionBuffer->RegisterMesh(_moon->Mesh);
 
     auto uniformScheme = BeAssetRegistry::GetMaterialScheme("uniform-material");
-    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false, *GameIns->Renderer);
+    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
     const uint32_t screenWidth = GameIns->Window->GetWidth();
@@ -137,9 +137,9 @@ auto SakuraScene::Prepare() -> void {
     .Build();
 
     for (int mip = 0; mip < 5; ++mip) {
-        const float multiplier = glm::pow(0.5f, mip);
-        const uint32_t mipWidth = screenWidth * multiplier;
-        const uint32_t mipHeight = screenHeight * multiplier;
+        const float multiplier = float(glm::pow(0.5f, mip));
+        const auto mipWidth  = static_cast<uint32_t>(static_cast<float>(screenWidth)  * multiplier);
+        const auto mipHeight = static_cast<uint32_t>(static_cast<float>(screenHeight) * multiplier);
 
         BeTexture::Create("Bloom_Mip" + std::to_string(mip))
         .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
@@ -217,7 +217,7 @@ auto SakuraScene::OnLoad() -> void {
 
     const auto tonemapperShader = BeAssetRegistry::GetShader("tonemapper");
     const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
-    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false, *GameIns->Renderer);
+    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false);
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     GameIns->Renderer->AddRenderPass(tonemapperPass);
@@ -302,7 +302,7 @@ auto SakuraScene::OnLoad() -> void {
                 .Radius = 20.0f,
                 .Color = glm::vec3(0.99f, 0.8f, 0.6f),
                 .Power = (1.0f / 0.7f) * 1.7f,
-                .CastsShadows = false,
+                .CastsShadows = true,
                 .ShadowMapResolution = 2048,
                 .ShadowNearPlane = 0.1f,
                 .ShadowMap =
@@ -348,7 +348,6 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
         GameIns->Input->SetMouseCapture(false);
         GameIns->SceneManager->RequestSceneChange("menu");
-        return;
     }
 
 
@@ -395,7 +394,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         }
     }
 
-    GameIns->SubmissionBuffer->ClearEntries();
+    GameIns->SubmissionBuffer->Clear();
     for (const auto [entity, name, transform, render] : GeometryView.each()) {
         auto entry = BeBRPGeometryEntry();
         entry.Name = name.Name;
@@ -407,7 +406,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
             transform.Scale
         );
 
-        GameIns->SubmissionBuffer->SubmitGeometry(entry);
+        GameIns->SubmissionBuffer->AddGeometry(entry);
     }
     
     for (const auto [entity, sunLight] : SunView.each()) {
@@ -426,7 +425,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
             sunLight.ShadowFarPlane
         );
         
-        GameIns->SubmissionBuffer->SubmitSunLight(entry);
+        GameIns->SubmissionBuffer->AddSunLight(entry);
     }
     
     for (const auto [entity, name, transform, pointLight] : PointLightView.each()) {
@@ -441,7 +440,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
             .ShadowNearPlane = pointLight.ShadowNearPlane,
             .ShadowMap = pointLight.ShadowMap
         };
-        GameIns->SubmissionBuffer->SubmitPointLight(entry);
+        GameIns->SubmissionBuffer->AddPointLight(entry);
     }
 }
 

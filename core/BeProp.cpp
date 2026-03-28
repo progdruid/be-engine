@@ -49,7 +49,7 @@ auto BeProp::Create(
         if (it != assimpIndexToMaterial.end())
             continue;
 
-        auto material = BeMaterial::Create("mat" + std::to_string(assimpMaterialIndex), materialScheme, true, renderer);
+        auto material = BeMaterial::Create("mat" + std::to_string(assimpMaterialIndex), materialScheme, true);
         assimpIndexToMaterial[assimpMaterialIndex] = material;
 
         const auto meshMaterial = scene->mMaterials[assimpMaterialIndex];
@@ -160,7 +160,7 @@ auto BeProp::FromMesh(
     const auto& materialScheme = BeAssetRegistry::GetMaterialScheme(prop->Shader->GetMaterialSchemeName("geometry-main"));
 
     for (size_t i = 0; i < prop->Mesh->Slices.size(); ++i) {
-        auto material = BeMaterial::Create("mesh-mat-" + std::to_string(i), materialScheme, true, renderer);
+        auto material = BeMaterial::Create("mesh-mat-" + std::to_string(i), materialScheme, true);
         prop->Materials.push_back(material);
         prop->Slices.push_back({
             .Material = material,

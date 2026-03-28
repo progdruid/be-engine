@@ -16,8 +16,7 @@ class BeMaterial {
     static auto Create(
         std::string_view name,
         const BeMaterialScheme& scheme,
-        bool frequentlyUsed,
-        const BeRenderer& renderer
+        bool frequentlyUsed
     ) -> std::shared_ptr<BeMaterial>;
 
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,8 +47,7 @@ class BeMaterial {
     explicit BeMaterial(
         std::string name,
         const bool frequentlyUsed,
-        BeMaterialScheme scheme,
-        const BeRenderer& renderer
+        BeMaterialScheme scheme
     );
 
     hide

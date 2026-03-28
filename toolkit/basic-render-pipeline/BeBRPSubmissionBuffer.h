@@ -75,15 +75,18 @@ class BeBRPSubmissionBuffer {
     std::unordered_map<BeMesh*, std::vector<BeMeshSlice>> _meshSlices;
     std::vector<std::shared_ptr<BeMesh>> _registeredMeshes;
 
+    std::vector<std::shared_ptr<BeMaterial>> _objectMaterialPool;
+    size_t _objectMaterialCursor = 0;
+    
     expose
     explicit BeBRPSubmissionBuffer() = default;
     ~BeBRPSubmissionBuffer() = default;
 
     expose
-    auto ClearEntries () -> void;
-    auto SubmitGeometry (const BeBRPGeometryEntry& entry) -> void;
-    auto SubmitSunLight(const BeBRPSunLightEntry& entry) -> void;
-    auto SubmitPointLight(const BeBRPPointLightEntry& entry) -> void;
+    auto Clear () -> void;
+    auto AddGeometry (const BeBRPGeometryEntry& entry) -> void;
+    auto AddSunLight(const BeBRPSunLightEntry& entry) -> void;
+    auto AddPointLight(const BeBRPPointLightEntry& entry) -> void;
 
     expose
     auto GetGeometryEntries () const -> const std::vector<BeBRPGeometryEntry>&;
@@ -97,4 +100,6 @@ class BeBRPSubmissionBuffer {
 
     auto GetSharedVertexBuffer() const -> SenBuffer { return _sharedVertexBuffer; }
     auto GetSharedIndexBuffer() const -> SenBuffer { return _sharedIndexBuffer; }
+    
+    expose auto AcquireNewObjectMaterial () -> std::shared_ptr<BeMaterial>;
 };

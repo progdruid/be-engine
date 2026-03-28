@@ -37,7 +37,6 @@ class BeShadowPass final : public BeRenderPass {
     std::weak_ptr<BeBRPSubmissionBuffer> SubmissionBuffer;
 
     hide
-    std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _objectMaterials;
     std::unordered_map<PipelineKey, SenPipeline, PipelineKeyHash> _shaderPipelines;
 
     expose
@@ -49,8 +48,8 @@ class BeShadowPass final : public BeRenderPass {
     auto GetPassName() const -> const std::string override { return "Shadow Pass"; }
 
     hide
-    auto RenderDirectionalShadows(const BeBRPSunLightEntry& sunLight, const BeBRPSubmissionBuffer& submissionBuffer) -> void;
-    auto RenderPointLightShadows(const BeBRPPointLightEntry& pointLight, const BeBRPSubmissionBuffer& submissionBuffer) -> void;
+    auto RenderDirectionalShadows(const BeBRPSunLightEntry& sunLight, BeBRPSubmissionBuffer& submissionBuffer) -> void;
+    auto RenderPointLightShadows(const BeBRPPointLightEntry& pointLight, BeBRPSubmissionBuffer& submissionBuffer) -> void;
 
     auto CalculatePointLightFaceViewProjection(const BeBRPPointLightEntry& pointLight, int faceIndex) const -> glm::mat4;
 };

@@ -3,6 +3,8 @@
 #include "umbrellas/include-libassert.h"
 #include <sen-rhi/SenBackend.h>
 
+#include "BeAssetRegistry.h"
+
 
 auto BeBRPGeometryEntry::CalculateModelMatrix(glm::vec3 pos, glm::quat rot, glm::vec3 scale) -> glm::mat4 {
     const glm::mat4x4 modelMatrix =
@@ -22,21 +24,23 @@ auto BeBRPSunLightEntry::CalculateViewProj(glm::vec3 direction, float shadowCame
 }
 
 
-auto BeBRPSubmissionBuffer::ClearEntries() -> void {
+auto BeBRPSubmissionBuffer::Clear() -> void {
+    _objectMaterialCursor = 0;
+    
     _geometryEntries.clear();
     _sunLightEntries.clear();
     _pointLightEntries.clear();
 }
 
-auto BeBRPSubmissionBuffer::SubmitGeometry(const BeBRPGeometryEntry& entry) -> void {
+auto BeBRPSubmissionBuffer::AddGeometry(const BeBRPGeometryEntry& entry) -> void {
     _geometryEntries.push_back(entry);
 }
 
-auto BeBRPSubmissionBuffer::SubmitSunLight(const BeBRPSunLightEntry& entry) -> void {
+auto BeBRPSubmissionBuffer::AddSunLight(const BeBRPSunLightEntry& entry) -> void {
     _sunLightEntries.push_back(entry);
 }
 
-auto BeBRPSubmissionBuffer::SubmitPointLight(const BeBRPPointLightEntry& entry) -> void {
+auto BeBRPSubmissionBuffer::AddPointLight(const BeBRPPointLightEntry& entry) -> void {
     _pointLightEntries.push_back(entry);
 }
 
@@ -104,4 +108,11 @@ auto BeBRPSubmissionBuffer::BakeMeshes() -> void {
     });
 }
 
+auto BeBRPSubmissionBuffer::AcquireNewObjectMaterial() -> std::shared_ptr<BeMaterial> {
+    if (_objectMaterialCursor >= _objectMaterialPool.size()) {
+        const auto& scheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
+        _objectMaterialPool.push_back(BeMaterial::Create("obj_mat", scheme, true));
+    }
+    return _objectMaterialPool[_objectMaterialCursor++];
+}
 
