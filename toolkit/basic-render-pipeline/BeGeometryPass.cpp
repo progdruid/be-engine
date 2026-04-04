@@ -51,9 +51,6 @@ auto BeGeometryPass::Render() -> void
         const auto shader = entry.Prop->Shader;
         be_assert(shader);
 
-        //if (!_objectMaterials.contains(entry.Name)) {
-        //    _objectMaterials[entry.Name] = BeMaterial::Create("object_" + entry.Name, objectScheme, true);
-        //}
         auto mat = submissionBuffer->AcquireNewObjectMaterial();
         mat->SetMatrix("Model", entry.ModelMatrix);
         mat->SetMatrix("ProjectionView", uniformMat->GetMatrix("CameraProjectionView"));

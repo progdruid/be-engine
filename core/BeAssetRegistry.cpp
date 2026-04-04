@@ -94,7 +94,7 @@ auto BeAssetRegistry::IndexShaderFiles(const std::vector<std::filesystem::path>&
         if (src.find("@be-shader:") == std::string::npos) 
             continue;
         
-        auto shader = BeShader::Create(path, *_renderer.lock());
+        auto shader = BeShader::Create(path);
         _shaders[shader->Name] = shader;
     }
 }

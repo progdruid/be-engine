@@ -253,7 +253,7 @@ auto MainScene::OnLoad() -> void {
     bloomPass->DirtTexture = BeAssetRegistry::GetTexture("BloomDirtTexture");
     bloomPass->OutputTexture = BeAssetRegistry::GetTexture("BloomOutput");
 
-    const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.hlsl", *GameIns->Renderer);
+    const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.hlsl");
     const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
     const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false);
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());

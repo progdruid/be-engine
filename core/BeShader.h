@@ -26,11 +26,13 @@ ENABLE_BITMASK(BeShaderType);
 
 class BeShader {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose static auto Create(const std::filesystem::path& filePath, const BeRenderer& renderer) -> std::shared_ptr<BeShader>;
+    hide static uint32_t _shaderCount;
+    expose static auto Create(const std::filesystem::path& filePath) -> std::shared_ptr<BeShader>;
     
     
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose std::string Name;
+    expose uint32_t ShaderID;
     expose BeShaderType ShaderType = BeShaderType::None;
     expose SenTopology Topology = SenTopology::Undefined;
     expose SenShader ShaderVertex;
