@@ -1,6 +1,5 @@
 #pragma once
 #include <array>
-#include <memory>
 #include <unordered_map>
 #include <umbrellas/access-modifiers.hpp>
 
@@ -10,7 +9,7 @@ class BeShader;
 
 class BePipelineBuilder {
 
-    hide struct CachedPipelineKey {
+    expose struct CachedPipelineKey {
         uint32_t ShaderID;
         SenTopology Topology;
         SenRasterizerState RasterizerState;
@@ -30,19 +29,22 @@ class BePipelineBuilder {
     };
 
     hide static std::unordered_map<CachedPipelineKey, SenPipeline, CachedPipelineHash> _cachedPipelines;
-    expose static auto Start(std::weak_ptr<BeShader> shader) -> BePipelineBuilder;
+    expose static auto Start(const BeShader& shader) -> BePipelineBuilder;
     
-    hide SenPipelineDesc _desc;
+    hide const SenPipelineDesc* _baseDesc;
     hide CachedPipelineKey _key;
-    hide explicit BePipelineBuilder(SenPipelineDesc desc, uint32_t shaderID);
-    expose ~BePipelineBuilder() = default;
+    hide explicit BePipelineBuilder(const SenPipelineDesc& desc, uint32_t shaderID);
+    expose ~BePipelineBuilder();
     
     expose
-    auto SetTopology(SenTopology topology) -> BePipelineBuilder& ;
-    auto SetRasterizer (const SenRasterizerState& rasterizer) -> BePipelineBuilder& ;
-    auto SetBlend (SenBlendState blend) -> BePipelineBuilder& ;
-    auto SetDepthStencil (const SenDepthStencilState& depthStencil) -> BePipelineBuilder& ;
-    auto SetTargetFormats (const std::vector<SenFormat>& colorFormats, SenFormat depthFormat = SenFormat::Unknown) -> BePipelineBuilder& ;
+    auto SetTopology(SenTopology topology) -> BePipelineBuilder&;
+    auto SetCullMode(SenCullMode mode) -> BePipelineBuilder&;
+    auto SetFillMode(SenFillMode mode) -> BePipelineBuilder&;
+    auto SetRasterizer (const SenRasterizerState& rasterizer) -> BePipelineBuilder&;
+    auto SetBlend (SenBlendState blend) -> BePipelineBuilder&;
+    auto SetDepthStencil (const SenDepthStencilState& depthStencil) -> BePipelineBuilder&;
+    auto SetColorFormats (std::initializer_list<SenFormat> colorFormats) -> BePipelineBuilder&;
+    auto SetDepthFormat (SenFormat depthFormat = SenFormat::Unknown) -> BePipelineBuilder&;
     auto Build () const -> SenPipeline;
     
 };

@@ -14,59 +14,72 @@ auto BePipelineBuilder::CachedPipelineHash::operator()(const CachedPipelineKey& 
     auto hasher         = std::hash<std::string_view>();
     const auto* bytes   = reinterpret_cast<const char*>(&k);
     const auto view     = std::string_view(bytes, sizeof(k));
-    return hasher(view);
+    auto hash = hasher(view);
+    return hash;
 }
 
-auto BePipelineBuilder::Start(std::weak_ptr<BeShader> shader) -> BePipelineBuilder {
-    auto shared = shader.lock();
-    return BePipelineBuilder(shared->GetPipelineDesc(), shared->ShaderID);
+auto BePipelineBuilder::Start(const BeShader& shader) -> BePipelineBuilder {
+    const auto& desc = shader.GetPipelineDesc();
+    BePipelineBuilder builder(desc, shader.ShaderID);
+    return builder;
 }
 
-BePipelineBuilder::BePipelineBuilder(SenPipelineDesc desc, uint32_t shaderID) : _desc(std::move(desc)) {
+BePipelineBuilder::BePipelineBuilder(const SenPipelineDesc& desc, uint32_t shaderID) : _baseDesc(&desc) {
     _key.ShaderID = shaderID;
-    _key.Topology = _desc.Topology;
-    _key.RasterizerState = _desc.RasterizerState;
-    _key.BlendState = _desc.BlendState;
-    _key.DepthStencilState = _desc.DepthStencilState;
-    for (size_t i = 0; i < _desc.RenderTargetFormats.size(); ++i) {
-        _key.ColorFormats[i] = _desc.RenderTargetFormats[i];
+    _key.Topology = desc.Topology;
+    _key.RasterizerState = desc.RasterizerState;
+    _key.BlendState = desc.BlendState;
+    _key.DepthStencilState = desc.DepthStencilState;
+    for (size_t i = 0; i < desc.RenderTargetFormats.size(); ++i) {
+        _key.ColorFormats[i] = desc.RenderTargetFormats[i];
     }
-    _key.DepthFormat = _desc.DepthStencilFormat;
+    _key.DepthFormat = desc.DepthStencilFormat;
 }
+
+BePipelineBuilder::~BePipelineBuilder() = default;
 
 auto BePipelineBuilder::SetTopology(SenTopology topology) -> BePipelineBuilder& {
-    _desc.Topology = topology; 
     _key.Topology = topology;
     return *this;
 }
 
+auto BePipelineBuilder::SetCullMode(SenCullMode mode) -> BePipelineBuilder& {
+    _key.RasterizerState.CullMode = mode;
+    return *this;
+}
+
+auto BePipelineBuilder::SetFillMode(SenFillMode mode) -> BePipelineBuilder& {
+    _key.RasterizerState.FillMode = mode;
+    return *this;
+}
+
 auto BePipelineBuilder::SetRasterizer(const SenRasterizerState& rasterizer) -> BePipelineBuilder& {
-    _desc.RasterizerState = rasterizer;
     _key.RasterizerState = rasterizer;
     return *this;
 }
 
 auto BePipelineBuilder::SetBlend(SenBlendState blend) -> BePipelineBuilder& {
-    _desc.BlendState = blend; 
     _key.BlendState = blend;
     return *this;
 }
 
 auto BePipelineBuilder::SetDepthStencil(const SenDepthStencilState& depthStencil) -> BePipelineBuilder& {
-    _desc.DepthStencilState = depthStencil; 
     _key.DepthStencilState = depthStencil;
     return *this;
 }
 
-auto BePipelineBuilder::SetTargetFormats(const std::vector<SenFormat>& colorFormats, SenFormat depthFormat) -> BePipelineBuilder& {
-    _desc.RenderTargetFormats = colorFormats;
-    _desc.DepthStencilFormat = depthFormat;
-    for (size_t i = 0; i < _desc.RenderTargetFormats.size(); ++i) {
-        _key.ColorFormats[i] = _desc.RenderTargetFormats[i];
+auto BePipelineBuilder::SetColorFormats(std::initializer_list<SenFormat> colorFormats) -> BePipelineBuilder& {
+    size_t i = 0;
+    for (auto format : colorFormats) {
+        _key.ColorFormats[i++] = format;
     }
-    for (size_t i = _desc.RenderTargetFormats.size(); i < _key.ColorFormats.size(); ++i) {
+    for (size_t i = colorFormats.size(); i < _key.ColorFormats.size(); ++i) {
         _key.ColorFormats[i] = SenFormat::Unknown;
     }
+    return *this;
+}
+
+auto BePipelineBuilder::SetDepthFormat(SenFormat depthFormat) -> BePipelineBuilder& {
     _key.DepthFormat = depthFormat;
     return *this;
 }
@@ -76,6 +89,20 @@ auto BePipelineBuilder::Build() const -> SenPipeline {
     if (it != _cachedPipelines.end()) {
         return it->second;
     } else {
-        return (_cachedPipelines[_key] = SenBackend::CreatePipeline(_desc));
+        SenPipelineDesc desc = *_baseDesc;
+        desc.Topology = _key.Topology;
+        desc.RasterizerState = _key.RasterizerState;
+        desc.BlendState = _key.BlendState;
+        desc.DepthStencilState = _key.DepthStencilState;
+        desc.RenderTargetFormats.clear();
+        for (auto fmt : _key.ColorFormats) {
+            if (fmt == SenFormat::Unknown) break;
+            desc.RenderTargetFormats.push_back(fmt);
+        }
+        desc.DepthStencilFormat = _key.DepthFormat;
+
+        auto pipeline = SenBackend::CreatePipeline(desc);
+        _cachedPipelines[_key] = pipeline;
+        return pipeline;
     }
 }

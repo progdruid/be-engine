@@ -13,18 +13,17 @@ class BeBRPSubmissionBuffer;
 
 class BeBackbufferPass final : public BeRenderPass {
 
-public:
+    expose
     glm::vec3 ClearColor;
     std::weak_ptr<BeBRPSubmissionBuffer> SubmissionBuffer;
 
     std::weak_ptr <BeTexture> InputTexture;
 
-private:
-    std::shared_ptr<BeShader> _backbufferShader = nullptr;
+    hide
     std::shared_ptr<BeMaterial> _backbufferMaterial = nullptr;
     SenPipeline _pipeline;
     
-public:
+    expose
     explicit BeBackbufferPass();
     ~BeBackbufferPass() override;
 

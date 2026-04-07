@@ -28,14 +28,11 @@ class BeLightingPass final : public BeRenderPass {
     std::weak_ptr<BeTexture> OutputTexture;
     
     hide
-    std::shared_ptr<BeShader> _directionalLightShader;
     std::shared_ptr<BeMaterial> _directionalLightMaterial;
     SenPipeline _directionalLightPipeline;
-    std::shared_ptr<BeShader> _pointLightShader;
     BeMaterialScheme _pointLightScheme;
     std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _pointLightMaterials;
     SenPipeline _pointLightPipeline;
-    std::shared_ptr<BeShader> _emissiveAddShader;
     std::shared_ptr<BeMaterial> _emissiveMaterial;
     SenPipeline _emissivePipeline;
     

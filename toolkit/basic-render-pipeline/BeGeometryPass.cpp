@@ -8,9 +8,11 @@
 #include "BeAssetRegistry.h"
 #include "BeBRPSubmissionBuffer.h"
 #include "BeMaterial.h"
+#include "BePipelineBuilder.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
+#include "BeTimer.h"
 
 BeGeometryPass::BeGeometryPass() = default;
 BeGeometryPass::~BeGeometryPass() = default;
@@ -24,18 +26,22 @@ auto BeGeometryPass::Render() -> void
     const auto uniformMat = submissionBuffer->UniformMaterial.lock();
     const auto& entries = submissionBuffer->GetGeometryEntries();
 
-    auto objectScheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
-
+    auto output0 = OutputTexture0.lock();
+    auto output1 = OutputTexture1.lock();
+    auto output2 = OutputTexture2.lock();
+    auto output3 = OutputTexture3.lock();
+    auto outputDepth = OutputDepthTexture.lock();
+    
     cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
 
     cmd.BeginPass({
         .ColorAttachments = {
-            { OutputTexture0.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
-            { OutputTexture1.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
-            { OutputTexture2.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
-            { OutputTexture3.lock()->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
+            { output0->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
+            { output1->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
+            { output2->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
+            { output3->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} },
         },
-        .DepthAttachment = SenDepthAttachment{ OutputDepthTexture.lock()->Handle },
+        .DepthAttachment = SenDepthAttachment{ outputDepth->Handle },
         .Viewport = { 0, 0, float(_renderer->GetWidth()), float(_renderer->GetHeight()), 0, 1 },
     });
     SCOPE_EXIT { cmd.EndPass(); };
@@ -62,21 +68,14 @@ auto BeGeometryPass::Render() -> void
             const auto& meshSlice = meshSlices[j];
             auto& propSlice = entry.Prop->Slices[j];
 
-            PipelineKey key{ shader.get(), propSlice.TwoSided };
-            if (!_shaderPipelines.contains(key)) {
-                auto pipelineDesc = shader->GetPipelineDesc();
-                pipelineDesc.RasterizerState.CullMode = propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back;
-                pipelineDesc.RenderTargetFormats = {
-                    OutputTexture0.lock()->Format,
-                    OutputTexture1.lock()->Format,
-                    OutputTexture2.lock()->Format,
-                    OutputTexture3.lock()->Format,
-                };
-                pipelineDesc.DepthStencilFormat = OutputDepthTexture.lock()->Format;
-                _shaderPipelines[key] = SenBackend::CreatePipeline(pipelineDesc);
-            }
-            cmd.SetPipeline(_shaderPipelines[key]);
-
+            auto pipeline = 
+                BePipelineBuilder::Start(*shader)
+                .SetCullMode(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back)
+                .SetColorFormats({output0->Format, output1->Format, output2->Format, output3->Format, })
+                .SetDepthFormat(outputDepth->Format)
+                .Build();
+            cmd.SetPipeline(pipeline);
+            
             cmd.SetBindGroup(propSlice.Material->GetBindGroup(), 2);
             cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }

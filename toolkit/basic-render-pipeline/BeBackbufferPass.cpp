@@ -8,18 +8,18 @@
 #include "BeShader.h"
 #include <sen-rhi/SenBackend.h>
 
+#include "BePipelineBuilder.h"
+
 BeBackbufferPass::BeBackbufferPass() = default;
 BeBackbufferPass::~BeBackbufferPass() = default;
 
 auto BeBackbufferPass::Initialise() -> void {
-    _backbufferShader = BeAssetRegistry::GetShader("backbuffer").lock();
+    const auto backbufferShader = BeAssetRegistry::GetShader("backbuffer").lock();
     auto scheme = BeAssetRegistry::GetMaterialScheme("backbuffer-material");
     _backbufferMaterial = BeMaterial::Create("Backbuffer Material", scheme, false);
     _backbufferMaterial->SetTexture("InputTexture", InputTexture.lock());
 
-    auto pipelineDesc = _backbufferShader->GetPipelineDesc();
-    pipelineDesc.RenderTargetFormats = { _renderer->GetSwapchainFormat() };
-    _pipeline = SenBackend::CreatePipeline(pipelineDesc);
+    _pipeline = BePipelineBuilder::Start(*backbufferShader).SetColorFormats({ _renderer->GetSwapchainFormat() }).Build();
 }
 
 auto BeBackbufferPass::Render() -> void {
@@ -27,9 +27,13 @@ auto BeBackbufferPass::Render() -> void {
 
     cmd.SetBindGroup(SubmissionBuffer.lock()->UniformMaterial.lock()->GetBindGroup(), 0);
 
-    cmd.BeginPass({
+    cmd.BeginPass(SenPassDesc{
         .ColorAttachments = {
-            { _renderer->GetBackbufferTexture(), 0, -1, SenLoadOp::Clear, glm::vec4(ClearColor, 1.0f) },
+            SenColorAttachment{ 
+                .Texture = _renderer->GetBackbufferTexture(), 
+                .LoadOp  = SenLoadOp::Clear, 
+                .ClearColor = glm::vec4(ClearColor, 1.0f) 
+            },
         },
         .Viewport = _renderer->GetViewport(),
     });

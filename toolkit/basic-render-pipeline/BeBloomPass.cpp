@@ -9,23 +9,25 @@
 #include <umbrellas/include-libassert.h>
 #include <sen-rhi/SenBackend.h>
 
+#include "BePipelineBuilder.h"
+
 BeBloomPass::BeBloomPass() = default;
 BeBloomPass::~BeBloomPass() = default;
 
 auto BeBloomPass::Initialise() -> void {
-    _brightShader = BeAssetRegistry::GetShader("bloom-bright").lock();
-    be_assert(_brightShader, "BeBloomPass: bloom-bright shader not found");
+    const SenFormat mipFormat = BloomMipTextures[0].lock()->Format;
+    
+    const auto brightShader = BeAssetRegistry::GetShader("bloom-bright").lock();
+    be_assert (brightShader, "BeBloomPass: bloom-bright shader not found");
     auto brightScheme = BeAssetRegistry::GetMaterialScheme("bloom-bright-material");
     _brightMaterial = BeMaterial::Create("Bright Pass Material", brightScheme, false);
     _brightMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
 
-    auto brightPipelineDesc = _brightShader->GetPipelineDesc();
-    brightPipelineDesc.RenderTargetFormats = { BloomMipTextures[0].lock()->Format };
-    _brightPipeline = SenBackend::CreatePipeline(brightPipelineDesc);
+    _brightPipeline = BePipelineBuilder::Start(*brightShader).SetColorFormats({ mipFormat }).Build();
     be_assert(_brightPipeline.IsValid(), "BeBloomPass: failed to create bright pipeline");
 
-    _kawaseShader = BeAssetRegistry::GetShader("bloom-kawase").lock();
-    be_assert(_kawaseShader, "BeBloomPass: bloom-kawase shader not found");
+    const auto kawaseShader = BeAssetRegistry::GetShader("bloom-kawase").lock();
+    be_assert (kawaseShader, "BeBloomPass: bloom-kawase shader not found");
     auto kawaseScheme = BeAssetRegistry::GetMaterialScheme("bloom-kawase-material");
 
     // Create downsample materials for each mip level (1 to size-1)
@@ -76,36 +78,32 @@ auto BeBloomPass::Initialise() -> void {
     }
 
     // Create kawase pipelines
-    const SenFormat mipFormat = BloomMipTextures[0].lock()->Format;
-
-    auto downsamplePipelineDesc = _kawaseShader->GetPipelineDesc();
-    downsamplePipelineDesc.RenderTargetFormats = { mipFormat };
-    _downsamplePipeline = SenBackend::CreatePipeline(downsamplePipelineDesc);
+    _downsamplePipeline = BePipelineBuilder::Start(*kawaseShader).SetColorFormats({ mipFormat }).Build();
     be_assert(_downsamplePipeline.IsValid(), "BeBloomPass: failed to create downsample pipeline");
 
-    auto upsamplePipelineDesc = _kawaseShader->GetPipelineDesc();
-    upsamplePipelineDesc.BlendState.Enable = true;
-    upsamplePipelineDesc.BlendState.SrcBlend = SenBlendFactor::One;
-    upsamplePipelineDesc.BlendState.DstBlend = SenBlendFactor::One;
-    upsamplePipelineDesc.BlendState.BlendOp = SenBlendOp::Add;
-    upsamplePipelineDesc.BlendState.SrcBlendAlpha = SenBlendFactor::Zero;
-    upsamplePipelineDesc.BlendState.DstBlendAlpha = SenBlendFactor::One;
-    upsamplePipelineDesc.BlendState.BlendOpAlpha = SenBlendOp::Add;
-    upsamplePipelineDesc.RenderTargetFormats = { mipFormat };
-    _upsamplePipeline = SenBackend::CreatePipeline(upsamplePipelineDesc);
+    _upsamplePipeline = BePipelineBuilder::Start(*kawaseShader)
+                        .SetBlend({
+                            .Enable = true,
+                            .SrcBlend = SenBlendFactor::One,
+                            .DstBlend = SenBlendFactor::One,
+                            .BlendOp = SenBlendOp::Add,
+                            .SrcBlendAlpha = SenBlendFactor::Zero,
+                            .DstBlendAlpha = SenBlendFactor::One,
+                            .BlendOpAlpha = SenBlendOp::Add,
+                        })
+                        .SetColorFormats({ mipFormat })
+                        .Build();
     be_assert(_upsamplePipeline.IsValid(), "BeBloomPass: failed to create upsample pipeline");
 
-    _addShader = BeAssetRegistry::GetShader("bloom-add").lock();
-    be_assert(_addShader, "BeBloomPass: bloom-add shader not found");
+    const auto addShader = BeAssetRegistry::GetShader("bloom-add").lock();
+    be_assert (addShader, "BeBloomPass: bloom-add shader not found");
     const auto& addScheme = BeAssetRegistry::GetMaterialScheme("bloom-add-material");
     _addMaterial = BeMaterial::Create("Add Pass Material", addScheme, false);
     _addMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
     _addMaterial->SetTexture("BloomInput", BloomMipTextures[0].lock());
     _addMaterial->SetTexture("DirtTexture", DirtTexture.lock());
 
-    auto addPipelineDesc = _addShader->GetPipelineDesc();
-    addPipelineDesc.RenderTargetFormats = { OutputTexture.lock()->Format };
-    _addPipeline = SenBackend::CreatePipeline(addPipelineDesc);
+    _addPipeline = BePipelineBuilder::Start(*addShader).SetColorFormats({ mipFormat }).Build();
     be_assert(_addPipeline.IsValid(), "BeBloomPass: failed to create add pipeline");
 }
 

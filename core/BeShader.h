@@ -85,7 +85,7 @@ class BeShader {
         return {};
     } // all this bullshit will be deleted
 
-    expose auto GetPipelineDesc() const -> SenPipelineDesc {
+    expose auto GetPipelineDesc() const -> const SenPipelineDesc& {
         return _pipelineDesc;
     }
 };
