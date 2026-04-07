@@ -50,8 +50,11 @@ auto SakuraScene::Prepare() -> void {
         "assets/shaders/BeBloomAdd.hlsl", 
         "assets/shaders/BeBloomBright.hlsl", 
         "assets/shaders/BeBloomKawase.hlsl", 
-        "assets/shaders/tonemapper.hlsl", 
-        "assets/shaders/backbuffer.hlsl", 
+        "assets/shaders/tonemapper.hlsl",
+        "assets/shaders/backbuffer.hlsl",
+        "assets/shaders/smaa-edge.hlsl",
+        "assets/shaders/smaa-blend.hlsl",
+        "assets/shaders/fxaa.hlsl",
     });
     
     const auto standardShader = BeAssetRegistry::GetShader("standard");
@@ -162,6 +165,27 @@ auto SakuraScene::Prepare() -> void {
     .SetSize(screenWidth, screenHeight)
     .AddToRegistry()
     .Build();
+
+    BeTexture::Create("SMAA-Edges")
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA8_Unorm)
+    .SetSize(screenWidth, screenHeight)
+    .AddToRegistry()
+    .Build();
+
+    BeTexture::Create("SMAA-Output")
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
+    .SetSize(screenWidth, screenHeight)
+    .AddToRegistry()
+    .Build();
+
+    BeTexture::Create("FXAA-Output")
+    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::R11G11B10_Float)
+    .SetSize(screenWidth, screenHeight)
+    .AddToRegistry()
+    .Build();
 }
 
 auto SakuraScene::OnLoad() -> void {
@@ -226,10 +250,44 @@ auto SakuraScene::OnLoad() -> void {
     tonemapperPass->Shader = tonemapperShader;
     tonemapperPass->Material = tonemapperMaterial;
 
+    //const auto smaaEdgeShader = BeAssetRegistry::GetShader("smaa-edge");
+    //const auto& smaaEdgeScheme = BeAssetRegistry::GetMaterialScheme("smaa-edge-material");
+    //const auto smaaEdgeMaterial = BeMaterial::Create("SMAAEdgeMaterial", smaaEdgeScheme, false);
+    //smaaEdgeMaterial->SetTexture("ColorTexture", BeAssetRegistry::GetTexture("TonemapperOutput").lock());
+    //const auto smaaEdgePass = new BeFullscreenEffectPass();
+    //GameIns->Renderer->AddRenderPass(smaaEdgePass);
+    //smaaEdgePass->SubmissionBuffer = GameIns->SubmissionBuffer;
+    //smaaEdgePass->OutputTextures = { BeAssetRegistry::GetTexture("SMAA-Edges") };
+    //smaaEdgePass->Shader = smaaEdgeShader;
+    //smaaEdgePass->Material = smaaEdgeMaterial;
+
+    //const auto smaaBlendShader = BeAssetRegistry::GetShader("smaa-blend");
+    //const auto& smaaBlendScheme = BeAssetRegistry::GetMaterialScheme("smaa-blend-material");
+    //const auto smaaBlendMaterial = BeMaterial::Create("SMAABlendMaterial", smaaBlendScheme, false);
+    //smaaBlendMaterial->SetTexture("ColorTexture", BeAssetRegistry::GetTexture("TonemapperOutput").lock());
+    //smaaBlendMaterial->SetTexture("EdgeTexture", BeAssetRegistry::GetTexture("SMAA-Edges").lock());
+    //const auto smaaBlendPass = new BeFullscreenEffectPass();
+    //GameIns->Renderer->AddRenderPass(smaaBlendPass);
+    //smaaBlendPass->SubmissionBuffer = GameIns->SubmissionBuffer;
+    //smaaBlendPass->OutputTextures = { BeAssetRegistry::GetTexture("SMAA-Output") };
+    //smaaBlendPass->Shader = smaaBlendShader;
+    //smaaBlendPass->Material = smaaBlendMaterial;
+
+    const auto fxaaShader = BeAssetRegistry::GetShader("fxaa");
+    const auto& fxaaScheme = BeAssetRegistry::GetMaterialScheme("fxaa-material");
+    const auto fxaaMaterial = BeMaterial::Create("FXAAMaterial", fxaaScheme, false);
+    fxaaMaterial->SetTexture("ColorTexture", BeAssetRegistry::GetTexture("TonemapperOutput").lock());
+    const auto fxaaPass = new BeFullscreenEffectPass();
+    GameIns->Renderer->AddRenderPass(fxaaPass);
+    fxaaPass->SubmissionBuffer = GameIns->SubmissionBuffer;
+    fxaaPass->OutputTextures = { BeAssetRegistry::GetTexture("FXAA-Output") };
+    fxaaPass->Shader = fxaaShader;
+    fxaaPass->Material = fxaaMaterial;
+
     const auto backbufferPass = new BeBackbufferPass();
     GameIns->Renderer->AddRenderPass(backbufferPass);
     backbufferPass->SubmissionBuffer = GameIns->SubmissionBuffer;
-    backbufferPass->InputTexture = BeAssetRegistry::GetTexture("TonemapperOutput");
+    backbufferPass->InputTexture = BeAssetRegistry::GetTexture("FXAA-Output");
     backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
     
     GameIns->Renderer->InitialisePasses();
