@@ -10,7 +10,12 @@ class BeWindow;
 class BeRenderer;
 class BeSceneManager;
 
+struct ImFont;
+
 class MenuScene : public BaseScene {
+    hide
+    ImFont* _titleFont = nullptr;
+
     expose
     explicit MenuScene(Game* game);
     ~MenuScene() override = default;

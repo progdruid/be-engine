@@ -22,6 +22,9 @@ auto MenuScene::OnLoad() -> void {
     imguiPass->SetUICallback([this](){RunUI();});
 
     GameIns->Renderer->InitialisePasses();
+
+    ImGui::GetIO().Fonts->AddFontFromFileTTF("assets/i-hate-comic-sans.regular.ttf", 16.0f);
+    _titleFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("assets/somelist.ttf", 16.0f);
 }
 
 auto MenuScene::Tick(float deltaTime) -> void {
@@ -42,13 +45,14 @@ auto MenuScene::RunUI() -> void {
     ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.3f);
 
     ImGui::SetWindowFontScale(10.f);
-    
+    ImGui::PushFont(_titleFont);
     auto titleText = "project <sakura>";
     auto textWidth = ImGui::CalcTextSize(titleText).x;
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - textWidth) * 0.5f);
     ImGui::Text(titleText);
+    ImGui::PopFont();
 
-    ImGui::SetWindowFontScale(1.5);
+    ImGui::SetWindowFontScale(2.0f);
     ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.5f);
 
     // Style buttons with white interior and black outline
@@ -58,18 +62,19 @@ auto MenuScene::RunUI() -> void {
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
 
-    auto buttonWidth = 150.0f;
+    auto buttonWidth = 200.0f;
+    auto buttonHeight = 70.f;
     auto windowWidth = ImGui::GetWindowWidth();
     ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
 
-    if (ImGui::Button("Sakura", ImVec2(buttonWidth, 50))) {
+    if (ImGui::Button("Sakura", ImVec2(buttonWidth, buttonHeight))) {
         GameIns->SceneManager->RequestSceneChange("sakura");
     }
     
     ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
     ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.6f);
     
-    if (ImGui::Button("Showcase", ImVec2(buttonWidth, 50))) {
+    if (ImGui::Button("Showcase", ImVec2(buttonWidth, buttonHeight))) {
         GameIns->SceneManager->RequestSceneChange("showcase");
     }
 
@@ -79,7 +84,7 @@ auto MenuScene::RunUI() -> void {
     ImGui::SetWindowFontScale(1.0);
     ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.85f);
 
-    auto creditsText = "by Zak @progdruid";
+    auto creditsText = "by @progdruid";
     auto creditsWidth = ImGui::CalcTextSize(creditsText).x;
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - creditsWidth) * 0.5f);
     ImGui::Text(creditsText);
