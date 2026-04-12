@@ -60,7 +60,7 @@ auto SakuraScene::Prepare() -> void {
     const auto standardShader = BeAssetRegistry::GetShader("standard");
     const auto checkerboardShader = BeAssetRegistry::GetShader("checkerboard");
     
-    _cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), checkerboardShader, *GameIns->Renderer);
+    _cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), checkerboardShader);
     _cube->Materials[0]->SetTexture("DiffuseTexture",
         BeTexture::Create("Checkerboard")
         .LoadFromFile("assets/checkerboard.png")
@@ -68,10 +68,10 @@ auto SakuraScene::Prepare() -> void {
         .Build()
     );
 
-    _emissiveCube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, *GameIns->Renderer);
+    _emissiveCube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader);
     _emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.99f, 0.8f, 0.6f) * 1.7f);
     
-    _moon = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, *GameIns->Renderer);
+    _moon = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader);
     _moon->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 2.1f);
 
     _anvil = BeProp::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
@@ -90,8 +90,7 @@ auto SakuraScene::Prepare() -> void {
     GameIns->SubmissionBuffer->RegisterMesh(_emissiveCube->Mesh);
     GameIns->SubmissionBuffer->RegisterMesh(_moon->Mesh);
 
-    auto uniformScheme = BeAssetRegistry::GetMaterialScheme("uniform-material");
-    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false);
+    _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
     const uint32_t screenWidth = GameIns->Window->GetWidth();
@@ -240,8 +239,7 @@ auto SakuraScene::OnLoad() -> void {
     bloomPass->OutputTexture = BeAssetRegistry::GetTexture("BloomOutput");
 
     const auto tonemapperShader = BeAssetRegistry::GetShader("tonemapper");
-    const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
-    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false);
+    const auto tonemapperMaterial = BeMaterial::Create("tonemapper-material", false);
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     GameIns->Renderer->AddRenderPass(tonemapperPass);
@@ -274,8 +272,7 @@ auto SakuraScene::OnLoad() -> void {
     //smaaBlendPass->Material = smaaBlendMaterial;
 
     const auto fxaaShader = BeAssetRegistry::GetShader("fxaa");
-    const auto& fxaaScheme = BeAssetRegistry::GetMaterialScheme("fxaa-material");
-    const auto fxaaMaterial = BeMaterial::Create("FXAAMaterial", fxaaScheme, false);
+    const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
     fxaaMaterial->SetTexture("ColorTexture", BeAssetRegistry::GetTexture("TonemapperOutput").lock());
     const auto fxaaPass = new BeFullscreenEffectPass();
     GameIns->Renderer->AddRenderPass(fxaaPass);

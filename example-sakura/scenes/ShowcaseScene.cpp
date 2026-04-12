@@ -59,8 +59,7 @@ void ShowcaseScene::Prepare() {
     LoadModels();
     CreateObjects();
 
-    auto uniformScheme = BeAssetRegistry::GetMaterialScheme("uniform-material");
-    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false);
+    _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 }
 
@@ -163,7 +162,7 @@ auto ShowcaseScene::LoadModels() -> void {
     BeAssetRegistry::AddProp("tomatoes", tomatoes);
 
 
-    auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, *GameIns->Renderer);
+    auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader);
     skycube->Materials[0]->SetFloat3("DiffuseColor", HexColor("#FAC8CD"));
     skycube->Slices[0].TwoSided = true;
     BeAssetRegistry::AddProp("skycube", skycube);
@@ -244,15 +243,13 @@ auto ShowcaseScene::LoadPasses() -> void {
     geometryPass->OutputTexture2 = BeAssetRegistry::GetTexture("S_Specular-Shininess");
     geometryPass->OutputTexture3 = BeAssetRegistry::GetTexture("S_Emissive");
 
-    const auto fxaaShader = BeAssetRegistry::GetShader("fxaa");
-    const auto& fxaaScheme = BeAssetRegistry::GetMaterialScheme("fxaa-material");
-    const auto fxaaMaterial = BeMaterial::Create("S_FXAAMaterial", fxaaScheme, false);
+    const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
     fxaaMaterial->SetTexture("ColorTexture", BeAssetRegistry::GetTexture("S_BaseColor").lock());
     const auto fxaaPass = new BeFullscreenEffectPass();
     GameIns->Renderer->AddRenderPass(fxaaPass);
     fxaaPass->SubmissionBuffer = GameIns->SubmissionBuffer;
     fxaaPass->OutputTextures = { BeAssetRegistry::GetTexture("S_FXAA-Output") };
-    fxaaPass->Shader = fxaaShader;
+    fxaaPass->Shader = BeAssetRegistry::GetShader("fxaa");
     fxaaPass->Material = fxaaMaterial;
 
     const auto backbufferPass = new BeBackbufferPass();

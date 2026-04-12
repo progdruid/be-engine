@@ -37,7 +37,6 @@ auto BeProp::Create(
     auto prop = std::make_shared<BeProp>();
     prop->Mesh = std::make_shared<BeMesh>();
     prop->Shader = usedShaderForMaterials.lock();
-    const auto& materialScheme = BeAssetRegistry::GetMaterialScheme(prop->Shader->GetMaterialSchemeName("geometry-main"));
 
     std::unordered_map<uint32_t, std::shared_ptr<BeMaterial>> assimpIndexToMaterial;
     std::unordered_set<uint32_t> assimpIndexToTwoSided;
@@ -49,7 +48,7 @@ auto BeProp::Create(
         if (it != assimpIndexToMaterial.end())
             continue;
 
-        auto material = BeMaterial::Create("mat" + std::to_string(assimpMaterialIndex), materialScheme, true);
+        auto material = BeMaterial::Create(prop->Shader->GetMaterialSchemeName("geometry-main"), true);
         assimpIndexToMaterial[assimpMaterialIndex] = material;
 
         const auto meshMaterial = scene->mMaterials[assimpMaterialIndex];
@@ -148,19 +147,13 @@ auto BeProp::Create(
     return prop;
 }
 
-auto BeProp::FromMesh(
-    std::shared_ptr<BeMesh> mesh,
-    std::weak_ptr<BeShader> shader,
-    const BeRenderer& renderer
-) -> std::shared_ptr<BeProp> {
+auto BeProp::FromMesh(std::shared_ptr<BeMesh> mesh, std::weak_ptr<BeShader> shader) -> std::shared_ptr<BeProp> {
     auto prop = std::make_shared<BeProp>();
     prop->Mesh = std::move(mesh);
     prop->Shader = shader.lock();
 
-    const auto& materialScheme = BeAssetRegistry::GetMaterialScheme(prop->Shader->GetMaterialSchemeName("geometry-main"));
-
     for (size_t i = 0; i < prop->Mesh->Slices.size(); ++i) {
-        auto material = BeMaterial::Create("mesh-mat-" + std::to_string(i), materialScheme, true);
+        auto material = BeMaterial::Create(prop->Shader->GetMaterialSchemeName("geometry-main"), true);
         prop->Materials.push_back(material);
         prop->Slices.push_back({
             .Material = material,

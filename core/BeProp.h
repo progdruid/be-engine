@@ -31,8 +31,7 @@ struct BeProp {
 
     static auto FromMesh(
         std::shared_ptr<BeMesh> mesh,
-        std::weak_ptr<BeShader> shader,
-        const BeRenderer& renderer
+        std::weak_ptr<BeShader> shader
     ) -> std::shared_ptr<BeProp>;
 
     static auto LoadTextureFromAssimpPath(

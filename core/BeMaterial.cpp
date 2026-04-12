@@ -9,21 +9,15 @@
 #include "BeTexture.h"
 #include "sen-rhi/SenBackend.h"
 
-auto BeMaterial::Create(
-    std::string_view name, const BeMaterialScheme& scheme,
-    bool frequentlyUsed
-) -> std::shared_ptr<BeMaterial> 
-{
-    auto material = std::make_shared<BeMaterial>(std::string(name), frequentlyUsed, scheme);
+auto BeMaterial::Create(std::string_view schemeName, bool frequentlyUsed) -> std::shared_ptr<BeMaterial> {
+    auto scheme = BeAssetRegistry::GetMaterialScheme(schemeName);
+    auto material = std::make_shared<BeMaterial>(scheme, frequentlyUsed);
     material->InitialiseSlotMaps();
     material->RebuildBindGroup();
     return material;
 }
 
-BeMaterial::BeMaterial(
-    std::string name, const bool frequentlyUsed, BeMaterialScheme scheme
-)   : Name(std::move(name)), _isFrequentlyUsed(frequentlyUsed), _scheme(std::move(scheme))
-{
+BeMaterial::BeMaterial(BeMaterialScheme scheme, const bool frequentlyUsed) : _isFrequentlyUsed(frequentlyUsed), _scheme(std::move(scheme)) {
     static uint32_t materialCount = 0;
     _uniqueID = ++materialCount;
 

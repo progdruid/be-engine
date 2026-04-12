@@ -17,20 +17,17 @@ BeLightingPass::BeLightingPass() = default;
 BeLightingPass::~BeLightingPass() = default;
 
 void BeLightingPass::Initialise() {
-    const auto  directionalLightShader = BeAssetRegistry::GetShader("directional-light").lock();
-    const auto& directionalScheme = BeAssetRegistry::GetMaterialScheme("directional-light-material");
-    _directionalLightMaterial = BeMaterial::Create("DirectionalLightMaterial", directionalScheme, true);
+    const auto directionalLightShader = BeAssetRegistry::GetShader("directional-light").lock();
+    const auto pointLightShader = BeAssetRegistry::GetShader("point-light").lock();
+    const auto emissiveAddShader = BeAssetRegistry::GetShader("emissive-add").lock();
+    
+    _directionalLightMaterial = BeMaterial::Create("directional-light-material", true);
     _directionalLightMaterial->SetTexture("Depth", InputDepthTexture.lock());
     _directionalLightMaterial->SetTexture("Diffuse", InputTexture0.lock());
     _directionalLightMaterial->SetTexture("WorldNormal", InputTexture1.lock());
     _directionalLightMaterial->SetTexture("Specular_Shininess", InputTexture2.lock());
-
-    const auto pointLightShader = BeAssetRegistry::GetShader("point-light").lock();
-    _pointLightScheme = BeAssetRegistry::GetMaterialScheme("point-light-material");
-
-    const auto  emissiveAddShader = BeAssetRegistry::GetShader("emissive-add").lock();
-    const auto& emissiveScheme = BeAssetRegistry::GetMaterialScheme("emissive-add-material");
-    _emissiveMaterial = BeMaterial::Create("EmissiveMaterial", emissiveScheme, false);
+    
+    _emissiveMaterial = BeMaterial::Create("emissive-add-material", false);
     _emissiveMaterial->SetTexture("InputEmissive", InputTexture3.lock());
 
     const SenFormat outputFormat = OutputTexture.lock()->Format;
@@ -111,7 +108,7 @@ auto BeLightingPass::Render() -> void {
     const auto& pointLights = submissionBuffer.GetPointLightEntries();
     for (const auto& pointLight : pointLights) {
         if (!_pointLightMaterials.contains(pointLight.Name)) {
-            auto mat = BeMaterial::Create("PointLight_" + pointLight.Name, _pointLightScheme, true);
+            auto mat = BeMaterial::Create("point-light-material", true);
             mat->SetTexture("Depth", InputDepthTexture.lock());
             mat->SetTexture("Diffuse", InputTexture0.lock());
             mat->SetTexture("WorldNormal", InputTexture1.lock());

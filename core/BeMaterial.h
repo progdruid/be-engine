@@ -13,14 +13,9 @@ class BeTexture;
 class BeMaterial {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
-    static auto Create(
-        std::string_view name,
-        const BeMaterialScheme& scheme,
-        bool frequentlyUsed
-    ) -> std::shared_ptr<BeMaterial>;
+    static auto Create(std::string_view schemeName, bool frequentlyUsed) -> std::shared_ptr<BeMaterial>;
 
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose std::string Name;
     hide uint32_t _uniqueID;
     hide bool _isFrequentlyUsed;
     
@@ -43,12 +38,8 @@ class BeMaterial {
     BeMaterial(BeMaterial&& other) noexcept = default;
     BeMaterial& operator=(const BeMaterial& other) = default;
     BeMaterial& operator=(BeMaterial&& other) noexcept = default;
-
-    explicit BeMaterial(
-        std::string name,
-        const bool frequentlyUsed,
-        BeMaterialScheme scheme
-    );
+    
+    explicit BeMaterial(BeMaterialScheme scheme, const bool frequentlyUsed);
 
     hide
     auto InitialiseSlotMaps() -> void;

@@ -17,28 +17,20 @@ BeBloomPass::~BeBloomPass() = default;
 auto BeBloomPass::Initialise() -> void {
     const SenFormat mipFormat = BloomMipTextures[0].lock()->Format;
     
-    const auto brightShader = BeAssetRegistry::GetShader("bloom-bright").lock();
-    be_assert (brightShader, "BeBloomPass: bloom-bright shader not found");
-    auto brightScheme = BeAssetRegistry::GetMaterialScheme("bloom-bright-material");
-    _brightMaterial = BeMaterial::Create("Bright Pass Material", brightScheme, false);
+    _brightMaterial = BeMaterial::Create("bloom-bright-material", false);
     _brightMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
 
+    const auto brightShader = BeAssetRegistry::GetShader("bloom-bright").lock();
+    be_assert (brightShader, "BeBloomPass: bloom-bright shader not found");
     _brightPipeline = BePipelineBuilder::Start(*brightShader).SetColorFormats({ mipFormat }).Build();
     be_assert(_brightPipeline.IsValid(), "BeBloomPass: failed to create bright pipeline");
 
-    const auto kawaseShader = BeAssetRegistry::GetShader("bloom-kawase").lock();
-    be_assert (kawaseShader, "BeBloomPass: bloom-kawase shader not found");
-    auto kawaseScheme = BeAssetRegistry::GetMaterialScheme("bloom-kawase-material");
-
+    
     // Create downsample materials for each mip level (1 to size-1)
     // (kawase pipelines are created after these loops so we can get binding layouts)
     _downsampleMaterials.resize(BloomMipCount);
     for (uint32_t mipTarget = 1; mipTarget < BloomMipCount; ++mipTarget) {
-        auto mat = BeMaterial::Create(
-            "Downsample Mip " + std::to_string(mipTarget),
-            kawaseScheme,
-            false
-        );
+        auto mat = BeMaterial::Create("bloom-kawase-material", false);
 
         const auto sourceMip = BloomMipTextures[mipTarget - 1].lock();
 
@@ -56,11 +48,7 @@ auto BeBloomPass::Initialise() -> void {
 
     _upsampleMaterials.resize(BloomMipCount);
     for (uint32_t mipTarget = 0; mipTarget < BloomMipCount-1; ++mipTarget) {
-        const auto mat = BeMaterial::Create(
-            "Upsample Mip " + std::to_string(mipTarget),
-            kawaseScheme,
-            false
-        );
+        const auto mat = BeMaterial::Create("bloom-kawase-material", false);
 
         const auto sourceMip = BloomMipTextures[mipTarget + 1].lock();
         const auto targetMip = BloomMipTextures[mipTarget].lock();
@@ -78,31 +66,33 @@ auto BeBloomPass::Initialise() -> void {
     }
 
     // Create kawase pipelines
+    const auto kawaseShader = BeAssetRegistry::GetShader("bloom-kawase").lock();
+    be_assert (kawaseShader, "BeBloomPass: bloom-kawase shader not found");
     _downsamplePipeline = BePipelineBuilder::Start(*kawaseShader).SetColorFormats({ mipFormat }).Build();
     be_assert(_downsamplePipeline.IsValid(), "BeBloomPass: failed to create downsample pipeline");
 
     _upsamplePipeline = BePipelineBuilder::Start(*kawaseShader)
-                        .SetBlend({
-                            .Enable = true,
-                            .SrcBlend = SenBlendFactor::One,
-                            .DstBlend = SenBlendFactor::One,
-                            .BlendOp = SenBlendOp::Add,
-                            .SrcBlendAlpha = SenBlendFactor::Zero,
-                            .DstBlendAlpha = SenBlendFactor::One,
-                            .BlendOpAlpha = SenBlendOp::Add,
-                        })
-                        .SetColorFormats({ mipFormat })
-                        .Build();
+        .SetBlend({
+            .Enable = true,
+            .SrcBlend = SenBlendFactor::One,
+            .DstBlend = SenBlendFactor::One,
+            .BlendOp = SenBlendOp::Add,
+            .SrcBlendAlpha = SenBlendFactor::Zero,
+            .DstBlendAlpha = SenBlendFactor::One,
+            .BlendOpAlpha = SenBlendOp::Add,
+        })
+        .SetColorFormats({ mipFormat })
+        .Build();
     be_assert(_upsamplePipeline.IsValid(), "BeBloomPass: failed to create upsample pipeline");
 
-    const auto addShader = BeAssetRegistry::GetShader("bloom-add").lock();
-    be_assert (addShader, "BeBloomPass: bloom-add shader not found");
-    const auto& addScheme = BeAssetRegistry::GetMaterialScheme("bloom-add-material");
-    _addMaterial = BeMaterial::Create("Add Pass Material", addScheme, false);
+    
+    _addMaterial = BeMaterial::Create("bloom-add-material", false);
     _addMaterial->SetTexture("HDRInput", InputHDRTexture.lock());
     _addMaterial->SetTexture("BloomInput", BloomMipTextures[0].lock());
     _addMaterial->SetTexture("DirtTexture", DirtTexture.lock());
 
+    const auto addShader = BeAssetRegistry::GetShader("bloom-add").lock();
+    be_assert (addShader, "BeBloomPass: bloom-add shader not found");
     _addPipeline = BePipelineBuilder::Start(*addShader).SetColorFormats({ mipFormat }).Build();
     be_assert(_addPipeline.IsValid(), "BeBloomPass: failed to create add pipeline");
 }

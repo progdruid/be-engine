@@ -110,8 +110,7 @@ auto BeBRPSubmissionBuffer::BakeMeshes() -> void {
 
 auto BeBRPSubmissionBuffer::AcquireNewObjectMaterial() -> std::shared_ptr<BeMaterial> {
     if (_objectMaterialCursor >= _objectMaterialPool.size()) {
-        const auto& scheme = BeAssetRegistry::GetMaterialScheme("object-material-for-geometry-pass");
-        _objectMaterialPool.push_back(BeMaterial::Create("obj_mat", scheme, true));
+        _objectMaterialPool.push_back(BeMaterial::Create("object-material-for-geometry-pass", true));
     }
     return _objectMaterialPool[_objectMaterialCursor++];
 }

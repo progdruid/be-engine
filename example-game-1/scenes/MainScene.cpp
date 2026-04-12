@@ -74,7 +74,7 @@ auto MainScene::Prepare() -> void {
     {
         auto planeMesh = BeMeshPrimitives::Plane(63);
         const auto terrainShader = BeAssetRegistry::GetShader("terrain");
-        _plane = BeProp::FromMesh(std::move(planeMesh), terrainShader, *GameIns->Renderer);
+        _plane = BeProp::FromMesh(std::move(planeMesh), terrainShader);
         _plane->Slices[0].Material->SetFloat("TerrainScale", 200.0f);
         _plane->Slices[0].Material->SetFloat("HeightScale", 100.0f);
     }
@@ -95,8 +95,7 @@ auto MainScene::Prepare() -> void {
     GameIns->SubmissionBuffer->RegisterMesh(_disks->Mesh);
     GameIns->SubmissionBuffer->RegisterMesh(_anvil->Mesh);
 
-    auto uniformScheme = BeAssetRegistry::GetMaterialScheme("uniform-material");
-    _uniformMaterial = BeMaterial::Create("UniformMaterial", uniformScheme, false);
+    _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
     _directionalLight = std::make_shared<BeDirectionalLight>();
@@ -254,8 +253,7 @@ auto MainScene::OnLoad() -> void {
     bloomPass->OutputTexture = BeAssetRegistry::GetTexture("BloomOutput");
 
     const auto tonemapperShader = BeShader::Create("assets/shaders/tonemapper.hlsl");
-    const auto& tonemapperScheme = BeAssetRegistry::GetMaterialScheme("tonemapper-material");
-    const auto tonemapperMaterial = BeMaterial::Create("TonemapperMaterial", tonemapperScheme, false);
+    const auto tonemapperMaterial = BeMaterial::Create("tonemapper-material", false);
     tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
     const auto tonemapperPass = new BeFullscreenEffectPass();
     GameIns->Renderer->AddRenderPass(tonemapperPass);
