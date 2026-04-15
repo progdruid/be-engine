@@ -22,10 +22,6 @@ function Be.DeclareCore()
         "glfw3",
         "assimp-vc143-mt",
 
-        -- directx 11
-        "d3d11",
-        "dxgi",
-        
         -- libassert + cpptrace
         "libassert",
         "cpptrace",
@@ -41,8 +37,6 @@ function Be.DeclareCore()
     includedirs { "%{wks.location}/vendor/vulkan-sdk/include" }
     libdirs { "%{wks.location}/vendor/vulkan-sdk/lib" }
     links { "vulkan-1" }
-
-    
     
     defines {
         "LIBASSERT_STATIC_DEFINE",
@@ -87,18 +81,8 @@ function Be.DeclareToolkit()
     project "toolkit"
     kind "StaticLib"
 
-    libdirs {
-        "%{wks.location}/vendor/glfw/lib-vc2022",
-    }
-    links {
-        "glfw3",
-        "d3d11",
-        "dxgi",
-        "d3dcompiler",
-    }
-
-    -- vulkan (needed for imgui_impl_vulkan)
-    -- includedirs { "$(VULKAN_SDK)/Include" }
+    libdirs { "%{wks.location}/vendor/glfw/lib-vc2022" }
+    links { "glfw3" }
 
     Be.CoreUse()
     Be.Default()
