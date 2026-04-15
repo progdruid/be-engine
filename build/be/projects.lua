@@ -38,8 +38,8 @@ function Be.DeclareCore()
     links { "slang-compiler" }
     
     -- vulkan
-    includedirs { "$(VULKAN_SDK)/Include" }
-    libdirs { "$(VULKAN_SDK)/Lib" }
+    includedirs { "%{wks.location}/vendor/vulkan-sdk/include" }
+    libdirs { "%{wks.location}/vendor/vulkan-sdk/lib" }
     links { "vulkan-1" }
 
     
@@ -66,7 +66,7 @@ function Be.CoreUse()
     }
 
     -- vulkan
-    includedirs { "$(VULKAN_SDK)/Include" }
+    includedirs { "%{wks.location}/vendor/vulkan-sdk/include" }
 
     links { "core" }
 end
@@ -98,7 +98,7 @@ function Be.DeclareToolkit()
     }
 
     -- vulkan (needed for imgui_impl_vulkan)
-    includedirs { "$(VULKAN_SDK)/Include" }
+    -- includedirs { "$(VULKAN_SDK)/Include" }
 
     Be.CoreUse()
     Be.Default()
