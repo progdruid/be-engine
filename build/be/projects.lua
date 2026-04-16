@@ -67,7 +67,6 @@ end
 
 function Be.CorePostBuild()
     postbuildcommands {
-        "{COPY} %{wks.location}/core/shaders %{cfg.targetdir}/shaders",
         "{COPY} %{wks.location}/vendor/Assimp/bin/x64/assimp-vc143-mt.dll %{cfg.targetdir}",
         "{COPY} %{wks.location}/vendor/slang/bin/slang-compiler.dll %{cfg.targetdir}"
     }
