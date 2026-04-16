@@ -22,6 +22,7 @@ obj/
 
 !vendor/Assimp/**
 !vendor/slang/**
+!vendor/**/lib/**
 
 # Premake executable (explicitly include)
 !premake5.exe
