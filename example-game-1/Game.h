@@ -4,7 +4,6 @@
 #include <vector>
 #include <umbrellas/access-modifiers.hpp>
 
-class BeBRPSubmissionBuffer;
 class BeSceneManager;
 class BeInput;
 class BeRenderer;
@@ -17,8 +16,7 @@ class Game {
     expose std::shared_ptr<BeWindow> Window;
     expose std::shared_ptr<BeRenderer> Renderer;
     expose std::shared_ptr<BeInput> Input;
-    expose std::unique_ptr<BeSceneManager> SceneManager; 
-    expose std::shared_ptr<BeBRPSubmissionBuffer> SubmissionBuffer;
+    expose std::unique_ptr<BeSceneManager> SceneManager;
     
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose Game();

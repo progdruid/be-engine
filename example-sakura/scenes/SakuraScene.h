@@ -11,7 +11,7 @@ class OrbitCameraController;
 class FreeCameraController;
 class BeWindow;
 class BeRenderer;
-class BeBRPSubmissionBuffer;
+class BeStandardRenderMachine;
 class BeMaterial;
 
 class SakuraScene : public BaseScene {
@@ -24,6 +24,7 @@ class SakuraScene : public BaseScene {
     
     std::shared_ptr<BeProp> _cube, _anvil, _sakura, _sakura2, _emissiveCube, _moon;
     std::shared_ptr<BeMaterial> _uniformMaterial;
+    std::unique_ptr<BeStandardRenderMachine> _machine;
     
     expose
     explicit SakuraScene(Game* game);

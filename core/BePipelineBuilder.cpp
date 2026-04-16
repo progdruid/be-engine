@@ -79,6 +79,17 @@ auto BePipelineBuilder::SetColorFormats(std::initializer_list<SenFormat> colorFo
     return *this;
 }
 
+auto BePipelineBuilder::SetColorFormats(std::vector<SenFormat> colorFormats) -> BePipelineBuilder& {
+    size_t i = 0;
+    for (auto format : colorFormats) {
+        _key.ColorFormats[i++] = format;
+    }
+    for (size_t i = colorFormats.size(); i < _key.ColorFormats.size(); ++i) {
+        _key.ColorFormats[i] = SenFormat::Unknown;
+    }
+    return *this;
+}
+
 auto BePipelineBuilder::SetDepthFormat(SenFormat depthFormat) -> BePipelineBuilder& {
     _key.DepthFormat = depthFormat;
     return *this;

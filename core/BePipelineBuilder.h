@@ -44,6 +44,7 @@ class BePipelineBuilder {
     auto SetBlend (SenBlendState blend) -> BePipelineBuilder&;
     auto SetDepthStencil (const SenDepthStencilState& depthStencil) -> BePipelineBuilder&;
     auto SetColorFormats (std::initializer_list<SenFormat> colorFormats) -> BePipelineBuilder&;
+    auto SetColorFormats (std::vector<SenFormat> colorFormats) -> BePipelineBuilder&;
     auto SetDepthFormat (SenFormat depthFormat = SenFormat::Unknown) -> BePipelineBuilder&;
     auto Build () const -> SenPipeline;
     

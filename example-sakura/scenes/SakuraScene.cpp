@@ -3,6 +3,7 @@
 
 #include <glfw/glfw3.h>
 
+#include "BeRenderPass.h"
 #include "OrbitCameraController.h"
 #include "FreeCameraController.h"
 #include "BeAssetRegistry.h"
@@ -17,13 +18,8 @@
 #include "BeWindow.h"
 #include "Components.h"
 #include "Game.h"
-#include "basic-render-pipeline/BeBackbufferPass.h"
-#include "basic-render-pipeline/BeBloomPass.h"
-#include "basic-render-pipeline/BeFullscreenEffectPass.h"
-#include "basic-render-pipeline/BeGeometryPass.h"
-#include "basic-render-pipeline/BeLightingPass.h"
-#include "basic-render-pipeline/BeShadowPass.h"
 #include "scenes/BeSceneManager.h"
+#include "standard-render-machine/BeStandardRenderMachine.h"
 
 SakuraScene::SakuraScene(Game* game) : BaseScene(game) {}
 
@@ -35,34 +31,30 @@ auto SakuraScene::Prepare() -> void {
     _camera->FarPlane = 200.0f;
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
-    
-    
 
-    BeAssetRegistry::IndexShaderFiles({ 
-        "assets/shaders/uniform-material.hlsl", 
-        "assets/shaders/objectMaterial.hlsl", 
+    BeAssetRegistry::IndexShaderFiles({
+        "assets/shaders/uniform-material.hlsl",
+        "assets/shaders/objectMaterial.hlsl",
         "assets/shaders/standard.hlsl",
         "assets/shaders/checkerboard.hlsl",
-        "assets/shaders/fullscreen-vertex.hlsl", 
-        "assets/shaders/directionalLight.hlsl", 
-        "assets/shaders/pointLight.hlsl", 
+        "assets/shaders/fullscreen-vertex.hlsl",
+        "assets/shaders/directionalLight.hlsl",
+        "assets/shaders/pointLight.hlsl",
         "assets/shaders/emissive-add.hlsl",
-        "assets/shaders/BeBloomAdd.hlsl", 
-        "assets/shaders/BeBloomBright.hlsl", 
-        "assets/shaders/BeBloomKawase.hlsl", 
+        "assets/shaders/BeBloomAdd.hlsl",
+        "assets/shaders/BeBloomBright.hlsl",
+        "assets/shaders/BeBloomKawase.hlsl",
         "assets/shaders/tonemapper.hlsl",
         "assets/shaders/backbuffer.hlsl",
-        "assets/shaders/smaa-edge.hlsl",
-        "assets/shaders/smaa-blend.hlsl",
         "assets/shaders/fxaa.hlsl",
     });
-    
-    const auto standardShader = BeAssetRegistry::GetShader("standard");
+
+    const auto standardShader    = BeAssetRegistry::GetShader("standard");
     const auto checkerboardShader = BeAssetRegistry::GetShader("checkerboard");
-    
+
     _cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), checkerboardShader);
     _cube->Materials[0]->SetTexture("DiffuseTexture",
-        BeTexture::Create("Checkerboard")
+        BeTexture::Create("Sakura_Checkerboard")
         .LoadFromFile("assets/checkerboard.png")
         .AddToRegistry()
         .Build()
@@ -70,7 +62,7 @@ auto SakuraScene::Prepare() -> void {
 
     _emissiveCube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader);
     _emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.99f, 0.8f, 0.6f) * 1.7f);
-    
+
     _moon = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader);
     _moon->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 2.1f);
 
@@ -83,249 +75,73 @@ auto SakuraScene::Prepare() -> void {
 
     _sakura2 = BeProp::Create("assets/stylized_sakura_tree.glb", standardShader, *GameIns->Renderer);
 
-    GameIns->SubmissionBuffer->RegisterMesh(_cube->Mesh);
-    GameIns->SubmissionBuffer->RegisterMesh(_anvil->Mesh);
-    GameIns->SubmissionBuffer->RegisterMesh(_sakura->Mesh);
-    GameIns->SubmissionBuffer->RegisterMesh(_sakura2->Mesh);
-    GameIns->SubmissionBuffer->RegisterMesh(_emissiveCube->Mesh);
-    GameIns->SubmissionBuffer->RegisterMesh(_moon->Mesh);
-
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
-    const uint32_t screenWidth = GameIns->Window->GetWidth();
+    const uint32_t screenWidth  = GameIns->Window->GetWidth();
     const uint32_t screenHeight = GameIns->Window->GetHeight();
-    
-    BeTexture::Create("DepthStencil")
-    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
-    .SetFormat(SenFormat::Depth32)
-    .SetSize(screenWidth, screenHeight)
-    .AddToRegistry()
-    .Build();
 
-    BeTexture::Create("BaseColor")
-    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-    .SetFormat(SenFormat::R11G11B10_Float)
-    .SetSize(screenWidth, screenHeight)
-    .AddToRegistry()
-    .Build();
+    _machine = std::make_unique<BeStandardRenderMachine>(*GameIns->Renderer, screenWidth, screenHeight);
 
-    BeTexture::Create("WorldNormal")
-    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-    .SetFormat(SenFormat::RGBA16_Float)
-    .SetSize(screenWidth, screenHeight)
-    .AddToRegistry()
-    .Build();
+    _machine->RegisterMesh(_cube->Mesh);
+    _machine->RegisterMesh(_anvil->Mesh);
+    _machine->RegisterMesh(_sakura->Mesh);
+    _machine->RegisterMesh(_sakura2->Mesh);
+    _machine->RegisterMesh(_emissiveCube->Mesh);
+    _machine->RegisterMesh(_moon->Mesh);
+    _machine->BakeMeshes();
 
-    BeTexture::Create("Specular-Shininess")
-    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-    .SetFormat(SenFormat::RGBA8_Unorm)
-    .SetSize(screenWidth, screenHeight)
-    .AddToRegistry()
-    .Build();
+    _machine->DeclareGBufferTarget("Sakura_BaseColor",         SenFormat::R11G11B10_Float);
+    _machine->DeclareGBufferTarget("Sakura_WorldNormal",       SenFormat::RGBA16_Float);
+    _machine->DeclareGBufferTarget("Sakura_SpecularShininess", SenFormat::RGBA8_Unorm);
+    _machine->DeclareGBufferTarget("Sakura_Emissive",          SenFormat::R11G11B10_Float);
+    _machine->DeclareDepth        ("Sakura_Depth",             SenFormat::Depth32);
+    _machine->DeclareTexture      ("Sakura_HDR",               SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_BloomOutput",       SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_TonemapperOutput",  SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_FXAAOutput",        SenFormat::R11G11B10_Float);
 
-    BeTexture::Create("Emissive")
-    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-    .SetFormat(SenFormat::R11G11B10_Float)
-    .SetSize(screenWidth, screenHeight)
-    .AddToRegistry()
-    .Build();
-    
-    BeTexture::Create("HDR-Input")
-    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-    .SetFormat(SenFormat::R11G11B10_Float)
-    .SetSize(screenWidth, screenHeight)
-    .AddToRegistry()
-    .Build();
+    _machine->AddShadowPass();
+    _machine->AddGeometryPass();
+    _machine->AddLightingPass("Sakura_HDR");
 
-    for (int mip = 0; mip < 5; ++mip) {
-        const float multiplier = float(glm::pow(0.5f, mip));
-        const auto mipWidth  = static_cast<uint32_t>(static_cast<float>(screenWidth)  * multiplier);
-        const auto mipHeight = static_cast<uint32_t>(static_cast<float>(screenHeight) * multiplier);
-
-        BeTexture::Create("Bloom_Mip" + std::to_string(mip))
-        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-        .SetFormat(SenFormat::R11G11B10_Float)
-        .SetSize(mipWidth, mipHeight)
-        .AddToRegistry()
+    const auto dirtTexture = BeTexture::Create("Sakura_BloomDirtTexture")
+        .LoadFromFile("assets/bloom-dirt-mask.png")
         .Build();
-    }
+    _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_BloomOutput", dirtTexture);
 
-    BeTexture::Create("BloomOutput")
-    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-    .SetFormat(SenFormat::R11G11B10_Float)
-    .SetSize(screenWidth, screenHeight)
-    .AddToRegistry()
-    .Build();
+    const auto tonemapperMaterial = BeMaterial::Create("tonemapper-material", false);
+    tonemapperMaterial->SetTexture("HDRInput", _machine->GetTexture("Sakura_BloomOutput"));
+    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("tonemapper"), tonemapperMaterial, { "Sakura_TonemapperOutput" });
 
-    BeTexture::Create("TonemapperOutput")
-    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-    .SetFormat(SenFormat::R11G11B10_Float)
-    .SetSize(screenWidth, screenHeight)
-    .AddToRegistry()
-    .Build();
+    const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
+    fxaaMaterial->SetTexture("ColorTexture", _machine->GetTexture("Sakura_TonemapperOutput"));
+    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAAOutput" });
 
-    BeTexture::Create("SMAA-Edges")
-    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-    .SetFormat(SenFormat::RGBA8_Unorm)
-    .SetSize(screenWidth, screenHeight)
-    .AddToRegistry()
-    .Build();
-
-    BeTexture::Create("SMAA-Output")
-    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-    .SetFormat(SenFormat::R11G11B10_Float)
-    .SetSize(screenWidth, screenHeight)
-    .AddToRegistry()
-    .Build();
-
-    BeTexture::Create("FXAA-Output")
-    .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-    .SetFormat(SenFormat::R11G11B10_Float)
-    .SetSize(screenWidth, screenHeight)
-    .AddToRegistry()
-    .Build();
+    _machine->AddBackbufferPass("Sakura_FXAAOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
 }
 
 auto SakuraScene::OnLoad() -> void {
-
-    GameIns->SubmissionBuffer->UniformMaterial = _uniformMaterial;
-
-    // Clear all entities from previous load
     _registry.clear();
 
-    GameIns->Renderer->ClearPasses();
+    _machine->UniformMaterial = _uniformMaterial;
+    _machine->Build();
 
-    const auto shadowPass = new BeShadowPass();
-    GameIns->Renderer->AddRenderPass(shadowPass);
-    shadowPass->SubmissionBuffer = GameIns->SubmissionBuffer;
-
-    const auto geometryPass = new BeGeometryPass();
-    GameIns->Renderer->AddRenderPass(geometryPass);
-    geometryPass->SubmissionBuffer = GameIns->SubmissionBuffer;
-    geometryPass->OutputDepthTexture = BeAssetRegistry::GetTexture("DepthStencil");
-    geometryPass->OutputTexture0 = BeAssetRegistry::GetTexture("BaseColor");
-    geometryPass->OutputTexture1 = BeAssetRegistry::GetTexture("WorldNormal");
-    geometryPass->OutputTexture2 = BeAssetRegistry::GetTexture("Specular-Shininess");
-    geometryPass->OutputTexture3 = BeAssetRegistry::GetTexture("Emissive");
-
-    const auto lightingPass = new BeLightingPass();
-    GameIns->Renderer->AddRenderPass(lightingPass);
-    lightingPass->SubmissionBuffer = GameIns->SubmissionBuffer;
-    lightingPass->InputDepthTexture = BeAssetRegistry::GetTexture("DepthStencil");
-    lightingPass->InputTexture0 = BeAssetRegistry::GetTexture("BaseColor");
-    lightingPass->InputTexture1 = BeAssetRegistry::GetTexture("WorldNormal");
-    lightingPass->InputTexture2 = BeAssetRegistry::GetTexture("Specular-Shininess");
-    lightingPass->InputTexture3 = BeAssetRegistry::GetTexture("Emissive");
-    lightingPass->OutputTexture = BeAssetRegistry::GetTexture("HDR-Input");
-
-    BeTexture::Create("BloomDirtTexture")
-    .LoadFromFile("assets/bloom-dirt-mask.png")
-    .AddToRegistry()
-    .BuildNoReturn();
-    const auto bloomPass = new BeBloomPass();
-    GameIns->Renderer->AddRenderPass(bloomPass);
-    bloomPass->SubmissionBuffer = GameIns->SubmissionBuffer;
-    bloomPass->InputHDRTexture = BeAssetRegistry::GetTexture("HDR-Input");
-    bloomPass->BloomMipTextures = {
-        BeAssetRegistry::GetTexture("Bloom_Mip0"),
-        BeAssetRegistry::GetTexture("Bloom_Mip1"),
-        BeAssetRegistry::GetTexture("Bloom_Mip2"),
-        BeAssetRegistry::GetTexture("Bloom_Mip3"),
-        BeAssetRegistry::GetTexture("Bloom_Mip4"),
-    };
-    bloomPass->BloomMipCount = 5;
-    bloomPass->DirtTexture = BeAssetRegistry::GetTexture("BloomDirtTexture");
-    bloomPass->OutputTexture = BeAssetRegistry::GetTexture("BloomOutput");
-
-    const auto tonemapperShader = BeAssetRegistry::GetShader("tonemapper");
-    const auto tonemapperMaterial = BeMaterial::Create("tonemapper-material", false);
-    tonemapperMaterial->SetTexture("HDRInput", BeAssetRegistry::GetTexture("BloomOutput").lock());
-    const auto tonemapperPass = new BeFullscreenEffectPass();
-    GameIns->Renderer->AddRenderPass(tonemapperPass);
-    tonemapperPass->SubmissionBuffer = GameIns->SubmissionBuffer;
-    tonemapperPass->OutputTextures = { BeAssetRegistry::GetTexture("TonemapperOutput") };
-    tonemapperPass->Shader = tonemapperShader;
-    tonemapperPass->Material = tonemapperMaterial;
-
-    //const auto smaaEdgeShader = BeAssetRegistry::GetShader("smaa-edge");
-    //const auto& smaaEdgeScheme = BeAssetRegistry::GetMaterialScheme("smaa-edge-material");
-    //const auto smaaEdgeMaterial = BeMaterial::Create("SMAAEdgeMaterial", smaaEdgeScheme, false);
-    //smaaEdgeMaterial->SetTexture("ColorTexture", BeAssetRegistry::GetTexture("TonemapperOutput").lock());
-    //const auto smaaEdgePass = new BeFullscreenEffectPass();
-    //GameIns->Renderer->AddRenderPass(smaaEdgePass);
-    //smaaEdgePass->SubmissionBuffer = GameIns->SubmissionBuffer;
-    //smaaEdgePass->OutputTextures = { BeAssetRegistry::GetTexture("SMAA-Edges") };
-    //smaaEdgePass->Shader = smaaEdgeShader;
-    //smaaEdgePass->Material = smaaEdgeMaterial;
-
-    //const auto smaaBlendShader = BeAssetRegistry::GetShader("smaa-blend");
-    //const auto& smaaBlendScheme = BeAssetRegistry::GetMaterialScheme("smaa-blend-material");
-    //const auto smaaBlendMaterial = BeMaterial::Create("SMAABlendMaterial", smaaBlendScheme, false);
-    //smaaBlendMaterial->SetTexture("ColorTexture", BeAssetRegistry::GetTexture("TonemapperOutput").lock());
-    //smaaBlendMaterial->SetTexture("EdgeTexture", BeAssetRegistry::GetTexture("SMAA-Edges").lock());
-    //const auto smaaBlendPass = new BeFullscreenEffectPass();
-    //GameIns->Renderer->AddRenderPass(smaaBlendPass);
-    //smaaBlendPass->SubmissionBuffer = GameIns->SubmissionBuffer;
-    //smaaBlendPass->OutputTextures = { BeAssetRegistry::GetTexture("SMAA-Output") };
-    //smaaBlendPass->Shader = smaaBlendShader;
-    //smaaBlendPass->Material = smaaBlendMaterial;
-
-    const auto fxaaShader = BeAssetRegistry::GetShader("fxaa");
-    const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
-    fxaaMaterial->SetTexture("ColorTexture", BeAssetRegistry::GetTexture("TonemapperOutput").lock());
-    const auto fxaaPass = new BeFullscreenEffectPass();
-    GameIns->Renderer->AddRenderPass(fxaaPass);
-    fxaaPass->SubmissionBuffer = GameIns->SubmissionBuffer;
-    fxaaPass->OutputTextures = { BeAssetRegistry::GetTexture("FXAA-Output") };
-    fxaaPass->Shader = fxaaShader;
-    fxaaPass->Material = fxaaMaterial;
-
-    const auto backbufferPass = new BeBackbufferPass();
-    GameIns->Renderer->AddRenderPass(backbufferPass);
-    backbufferPass->SubmissionBuffer = GameIns->SubmissionBuffer;
-    backbufferPass->InputTexture = BeAssetRegistry::GetTexture("FXAA-Output");
-    backbufferPass->ClearColor = {0.f / 255.f, 23.f / 255.f, 31.f / 255.f};
-    
-    GameIns->Renderer->InitialisePasses();
-    
-    
     CreateEntity(_registry
         ,NameComponent { .Name = "Cube" }
         ,TransformComponent { .Position = glm::vec3(0, -15, 0), .Rotation = glm::quat(), .Scale = glm::vec3(30) }
         ,RenderComponent { .Prop = _cube, .CastShadows = true }
     );
-
     CreateEntity(_registry
         ,NameComponent { .Name = "Anvil1" }
         ,RenderComponent { .Prop = _anvil }
-        ,TransformComponent { 
-            .Position = {0, 0, 0}, 
-            .Rotation = glm::quat(glm::vec3(0, 0_rad, 0)), 
-            .Scale = glm::vec3(0.2f), 
-        }
+        ,TransformComponent { .Position = {0, 0, 0}, .Rotation = glm::quat(glm::vec3(0, 0_rad, 0)), .Scale = glm::vec3(0.2f) }
     );
-    
-    //CreateEntity(_registry
-    //    ,NameComponent { .Name = "Sakura" }
-    //    ,RenderComponent { .Prop = _sakura }
-    //    ,TransformComponent { 
-    //        .Position = {-7.5, 0, 0}, 
-    //        .Rotation = glm::quat(glm::vec3(0, 45.0_rad, 0)), 
-    //        .Scale = glm::vec3(0.7f), 
-    //    }
-    //);
-    
     CreateEntity(_registry
         ,NameComponent { .Name = "Sakura2" }
         ,RenderComponent { .Prop = _sakura2 }
-        ,TransformComponent { 
-            .Position = {-3.f, -5.5, 2}, 
-            .Rotation = glm::quat(glm::vec3(0, 45.0_rad, 0)), 
-            .Scale = glm::vec3(5.0f), 
-        }
+        ,TransformComponent { .Position = {-3.f, -5.5, 2}, .Rotation = glm::quat(glm::vec3(0, 45.0_rad, 0)), .Scale = glm::vec3(5.0f) }
     );
-
     CreateEntity(_registry
         ,NameComponent { .Name = "Moon" }
         ,TransformComponent { .Position = glm::vec3(100, 150, 100), .Scale = glm::vec3(6.f) }
@@ -340,7 +156,7 @@ auto SakuraScene::OnLoad() -> void {
             .ShadowMapWorldSize = 60.0f,
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
-            .ShadowMap = BeTexture::Create("SakuraScene_SunLightShadowMap")
+            .ShadowMap = BeTexture::Create("Sakura_SunLightShadowMap")
                 .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
                 .SetFormat(SenFormat::Depth32)
                 .SetSize(4096, 4096)
@@ -348,7 +164,7 @@ auto SakuraScene::OnLoad() -> void {
                 .Build()
         }
     );
-    
+
     for (uint32_t i = 0; i < 4; ++i) {
         CreateEntity(_registry
             ,NameComponent { .Name = "PointLight_" + std::to_string(i) }
@@ -361,7 +177,7 @@ auto SakuraScene::OnLoad() -> void {
                 .ShadowMapResolution = 2048,
                 .ShadowNearPlane = 0.1f,
                 .ShadowMap =
-                    BeTexture::Create("SakuraScene_PointLight" + std::to_string(i) + "_ShadowMap")
+                    BeTexture::Create("Sakura_PointLight" + std::to_string(i) + "_ShadowMap")
                     .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
                     .SetFormat(SenFormat::Depth32)
                     .SetCubemap(true)
@@ -369,35 +185,22 @@ auto SakuraScene::OnLoad() -> void {
                     .AddToRegistry()
                     .Build()
             }
-            ,RenderComponent {
-                .Prop = _emissiveCube,
-                .CastShadows = false,
-            }
+            ,RenderComponent { .Prop = _emissiveCube, .CastShadows = false }
         );
     }
-    
+
     srand(time(0));
     for (uint32_t i = 0; i < 100; ++i) {
         auto randFloat = [](float min, float max) -> float {
-            float random = float(rand()) / float(RAND_MAX);
-            return min + random * (max - min);
+            return min + float(rand()) / float(RAND_MAX) * (max - min);
         };
-        
-        auto x = randFloat(-50.f, 50.f);
-        auto y = randFloat(30.f, 60.f);
-        auto z = randFloat(-50.f, 50.f);
-        
         CreateEntity(_registry
             ,NameComponent { .Name = "Star_" + std::to_string(i) }
-            ,TransformComponent { .Position = glm::vec3(x, y, z), .Scale = glm::vec3(0.1f) }
-            ,RenderComponent {
-                .Prop = _emissiveCube,
-                .CastShadows = false,
-            }
+            ,TransformComponent { .Position = glm::vec3(randFloat(-50.f, 50.f), randFloat(30.f, 60.f), randFloat(-50.f, 50.f)), .Scale = glm::vec3(0.1f) }
+            ,RenderComponent { .Prop = _emissiveCube, .CastShadows = false }
         );
     }
 }
-
 
 auto SakuraScene::Tick(float deltaTime) -> void {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
@@ -405,17 +208,14 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         GameIns->SceneManager->RequestSceneChange("menu");
     }
 
-
-    static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
-    static const auto SunView = _registry.view<SunLightComponent>();
+    static const auto GeometryView  = _registry.view<NameComponent, TransformComponent, RenderComponent>();
+    static const auto SunView       = _registry.view<SunLightComponent>();
     static const auto PointLightView = _registry.view<NameComponent, TransformComponent, PointLightComponent>();
 
-    // Toggle between cameras with [C]
     if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
         _useOrbitCamera = !_useOrbitCamera;
     }
 
-    // Update the appropriate camera controller
     if (_useOrbitCamera) {
         GameIns->Input->SetMouseCapture(false);
         _orbitCameraController->Update(deltaTime, GameIns->Input.get());
@@ -427,64 +227,57 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
     uniformMat.SetMatrix("CameraProjectionView", projView);
     uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));
-    uniformMat.SetFloat4("NearFarPlane", {_camera->NearPlane, _camera->FarPlane, 1.0f / _camera->NearPlane, 1.0f / _camera->FarPlane});
+    uniformMat.SetFloat4("NearFarPlane", { _camera->NearPlane, _camera->FarPlane, 1.0f / _camera->NearPlane, 1.0f / _camera->FarPlane });
     uniformMat.SetFloat3("CameraPosition", _camera->Position);
 
     {
         static float angle = 0.0f;
         angle += deltaTime * glm::radians(15.0f);
-        if (angle > glm::two_pi<float>())
+        if (angle > glm::two_pi<float>()) {
             angle -= glm::two_pi<float>();
+        }
 
         auto i = size_t(0);
         for (const auto [entity, name, transform, _] : PointLightView.each()) {
             constexpr float radius = 13.0f;
-
-            const auto add = glm::two_pi<float>() * (static_cast<float>(i) / static_cast<float>(PointLightView.size_hint()));
+            const auto add = glm::two_pi<float>() * (float(i) / float(PointLightView.size_hint()));
             const auto rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
-            const auto pos = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
-            transform.Position = pos;
-            
+            transform.Position = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
             i++;
         }
     }
 
-    GameIns->SubmissionBuffer->Clear();
-    for (const auto [entity, name, transform, render] : GeometryView.each()) {
-        auto entry = BeBRPGeometryEntry();
-        entry.Name = name.Name;
-        entry.Prop = render.Prop;
-        entry.CastShadows = render.CastShadows;
-        entry.ModelMatrix = BeBRPGeometryEntry::CalculateModelMatrix(
-            transform.Position,
-            transform.Rotation,
-            transform.Scale
-        );
+    _machine->Clear();
 
-        GameIns->SubmissionBuffer->AddGeometry(entry);
+    for (const auto [entity, name, transform, render] : GeometryView.each()) {
+        _machine->AddGeometry({
+            .Name = name.Name,
+            .ModelMatrix = BeSRMGeometryEntry::CalculateModelMatrix(transform.Position, transform.Rotation, transform.Scale),
+            .Prop = render.Prop,
+            .CastShadows = render.CastShadows,
+        });
     }
-    
+
     for (const auto [entity, sunLight] : SunView.each()) {
-        auto entry = BeBRPSunLightEntry();
-        entry.Direction = sunLight.Direction;
-        entry.Color = sunLight.Color;
-        entry.Power = sunLight.Power;
-        entry.CastsShadows = sunLight.CastsShadows;
-        entry.ShadowMapResolution = sunLight.ShadowMapResolution;
-        entry.ShadowMap = sunLight.ShadowMap;
-        entry.ShadowViewProjection = BeBRPSunLightEntry::CalculateViewProj(
-            entry.Direction,
-            sunLight.ShadowCameraDistance,
-            sunLight.ShadowMapWorldSize,
-            sunLight.ShadowNearPlane,
-            sunLight.ShadowFarPlane
-        );
-        
-        GameIns->SubmissionBuffer->AddSunLight(entry);
+        _machine->AddSunLight({
+            .Direction = sunLight.Direction,
+            .Color = sunLight.Color,
+            .Power = sunLight.Power,
+            .CastsShadows = sunLight.CastsShadows,
+            .ShadowViewProjection = BeSRMSunLightEntry::CalculateViewProj(
+                sunLight.Direction,
+                sunLight.ShadowCameraDistance,
+                sunLight.ShadowMapWorldSize,
+                sunLight.ShadowNearPlane,
+                sunLight.ShadowFarPlane
+            ),
+            .ShadowMapResolution = sunLight.ShadowMapResolution,
+            .ShadowMap = sunLight.ShadowMap,
+        });
     }
-    
+
     for (const auto [entity, name, transform, pointLight] : PointLightView.each()) {
-        auto entry = BeBRPPointLightEntry{
+        _machine->AddPointLight({
             .Name = name.Name,
             .Position = transform.Position,
             .Radius = pointLight.Radius,
@@ -493,12 +286,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
             .CastsShadows = pointLight.CastsShadows,
             .ShadowMapResolution = pointLight.ShadowMapResolution,
             .ShadowNearPlane = pointLight.ShadowNearPlane,
-            .ShadowMap = pointLight.ShadowMap
-        };
-        GameIns->SubmissionBuffer->AddPointLight(entry);
+            .ShadowMap = pointLight.ShadowMap,
+        });
     }
 }
-
-
-
-

@@ -7,8 +7,6 @@
 #include "BeWindow.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
-#include "basic-render-pipeline/BeBRPSubmissionBuffer.h"
-
 #include "scenes/BeSceneManager.h"
 #include "scenes/MenuScene.h"
 #include "scenes/MainScene.h"
@@ -48,8 +46,6 @@ auto Game::SetupScenes() -> void {
     SceneManager->GetScene<MenuScene>("menu")->Prepare();
     SceneManager->GetScene<MainScene>("main")->Prepare();
 
-    SubmissionBuffer->BakeMeshes();
-
     SceneManager->RequestSceneChange("menu");
     SceneManager->ApplyPendingSceneChange();
 }
@@ -64,9 +60,6 @@ auto Game::MainLoop() -> void {
         const double now = glfwGetTime();
         const float dt = static_cast<float>(now - lastTime);
         lastTime = now;
-
-        if (const auto mat = SubmissionBuffer->UniformMaterial.lock())
-            mat->SetFloat("Time", static_cast<float>(now));
 
         const auto activeScene = SceneManager->GetActiveScene<BaseScene>();
         if (activeScene) {
