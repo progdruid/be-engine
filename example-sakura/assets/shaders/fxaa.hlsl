@@ -36,7 +36,7 @@ cbuffer CBuffer_0 : register(b0, space0) {
 };
 
 SamplerState LinearSampler : register(s1, space1);
-Texture2D    ColorTexture  : register(t2, space1);
+Texture2D ColorTexture : register(t2, space1);
 
 struct PixelOutput {
     float3 AAOutput : SV_Target0;

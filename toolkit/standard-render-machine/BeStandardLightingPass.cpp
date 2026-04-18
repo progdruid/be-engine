@@ -31,10 +31,10 @@ auto BeStandardLightingPass::Initialise() -> void {
     const SenFormat outputFormat = _output->Format;
 
     _directionalLightMaterial = BeMaterial::Create("directional-light-material", true);
-    _directionalLightMaterial->SetTexture("Depth",              _depthInput);
-    _directionalLightMaterial->SetTexture("Diffuse",            _gbufferInputs[0]);
-    _directionalLightMaterial->SetTexture("WorldNormal",        _gbufferInputs[1]);
-    _directionalLightMaterial->SetTexture("Specular_Shininess", _gbufferInputs[2]);
+    _directionalLightMaterial->SetTexture("Depth",                     _depthInput);
+    _directionalLightMaterial->SetTexture("Diffuse_RGB_or_Albedo_RGB", _gbufferInputs[0]);
+    _directionalLightMaterial->SetTexture("WorldNormal_XYZ_LMF_W",     _gbufferInputs[1]);
+    _directionalLightMaterial->SetTexture("SpecShin_RGBA_or_MRAO_RGB", _gbufferInputs[2]);
 
     _directionalLightPipeline = BePipelineBuilder::Start(*directionalLightShader)
         .SetBlend(additiveBlend).SetColorFormats({ outputFormat }).Build();
@@ -78,10 +78,10 @@ auto BeStandardLightingPass::Render() -> void {
     for (const auto& pointLight : srm.GetPointLightEntries()) {
         if (!_pointLightMaterials.contains(pointLight.Name)) {
             auto mat = BeMaterial::Create("point-light-material", true);
-            mat->SetTexture("Depth",            _depthInput);
-            mat->SetTexture("Diffuse",          _gbufferInputs[0]);
-            mat->SetTexture("WorldNormal",      _gbufferInputs[1]);
-            mat->SetTexture("Specular_Shininess", _gbufferInputs[2]);
+            mat->SetTexture("Depth",                     _depthInput);
+            mat->SetTexture("Diffuse_RGB_or_Albedo_RGB", _gbufferInputs[0]);
+            mat->SetTexture("WorldNormal_XYZ_LMF_W",     _gbufferInputs[1]);
+            mat->SetTexture("SpecShin_RGBA_or_MRAO_RGB", _gbufferInputs[2]);
             _pointLightMaterials[pointLight.Name] = std::move(mat);
         }
         auto& mat = _pointLightMaterials[pointLight.Name];

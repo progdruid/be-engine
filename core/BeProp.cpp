@@ -62,17 +62,17 @@ auto BeProp::Create(
         constexpr int diffuseTexIndex = 0;
         if (meshMaterial->GetTexture(aiTextureType_DIFFUSE, diffuseTexIndex, &texPath) == AI_SUCCESS) {
             auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), renderer);
-            material->SetTexture("DiffuseTexture", texture);
+            material->SetTexture("Diffuse_or_Albedo", texture);
         }
         constexpr int specularTexIndex = 0;
         if (meshMaterial->GetTexture(aiTextureType_SPECULAR, specularTexIndex, &texPath) == AI_SUCCESS) {
             auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), renderer);
-            material->SetTexture("SpecularTexture", texture);
+            material->SetTexture("SpecShin_RGBA_or_MRAO_RGB", texture);
         }
 
         aiColor4D color{};
         if (meshMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
-            material->SetFloat3("DiffuseColor", {color.r, color.g, color.b});
+            material->SetFloat3("BaseColor", {color.r, color.g, color.b});
         }
         if (meshMaterial->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {
             material->SetFloat3("SpecularColor", {color.r, color.g, color.b});

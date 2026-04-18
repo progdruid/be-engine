@@ -13,20 +13,12 @@
 #include "standard-render-machine/BeStandardFullscreenEffectPass.h"
 #include "standard-render-machine/BeStandardBackbufferPass.h"
 
-// =====================================================================================================================
-// BeStandardGeometryEntry
-// =====================================================================================================================
-
 auto BeSRMGeometryEntry::CalculateModelMatrix(glm::vec3 pos, glm::quat rot, glm::vec3 scale) -> glm::mat4 {
     return
         glm::translate(glm::mat4(1.0f), pos) *
         glm::mat4_cast(rot) *
         glm::scale(glm::mat4(1.0f), scale);
 }
-
-// =====================================================================================================================
-// BeStandardSunLightEntry
-// =====================================================================================================================
 
 auto BeSRMSunLightEntry::CalculateViewProj(
     glm::vec3 direction,
@@ -42,16 +34,14 @@ auto BeSRMSunLightEntry::CalculateViewProj(
     return lightOrtho * lightView;
 }
 
-// =====================================================================================================================
-// BeStandardRenderMachine — lifetime
-// =====================================================================================================================
+BeStandardRenderMachine::BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, uint32_t width, uint32_t height)
+    : _renderer(std::move(renderer)), _width(width), _height(height) {}
 
-BeStandardRenderMachine::BeStandardRenderMachine(BeRenderer& renderer, uint32_t width, uint32_t height)
-    : _renderer(&renderer), _width(width), _height(height) {}
 
 // =====================================================================================================================
 // BeStandardRenderMachine — texture registry
 // =====================================================================================================================
+
 
 auto BeStandardRenderMachine::DeclareGBufferTarget(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture> {
     auto texture = BeTexture::Create(name)
@@ -60,7 +50,13 @@ auto BeStandardRenderMachine::DeclareGBufferTarget(const std::string& name, SenF
         .SetSize(_width, _height)
         .Build();
 
-    _textureRegistry.push_back(TextureEntry{ name, texture, true, false });
+    _textureRegistry.push_back(TextureEntry{
+        .Name = name, 
+        .Texture = texture, 
+        .IsGBufferTarget = true, 
+        .IsDepth = false 
+    });
+    
     _gbufferTargets.push_back(texture);
     return texture;
 }
@@ -72,7 +68,13 @@ auto BeStandardRenderMachine::DeclareDepth(const std::string& name, SenFormat fo
         .SetSize(_width, _height)
         .Build();
 
-    _textureRegistry.push_back({ name, texture, false, true });
+    _textureRegistry.push_back(TextureEntry{
+        .Name = name, 
+        .Texture = texture, 
+        .IsGBufferTarget = false, 
+        .IsDepth = true 
+    });
+    
     _depthTarget = texture;
     return texture;
 }
@@ -87,14 +89,22 @@ auto BeStandardRenderMachine::DeclareTexture(const std::string& name, SenFormat 
         .SetSize(w, h)
         .Build();
 
-    _textureRegistry.push_back({ name, texture, false, false });
+    _textureRegistry.push_back(TextureEntry{
+        .Name = name, 
+        .Texture = texture, 
+        .IsGBufferTarget = false, 
+        .IsDepth = false 
+    });
+    
     return texture;
 }
 
-auto BeStandardRenderMachine::GetTexture(const std::string& name) const -> std::shared_ptr<BeTexture> {
-    for (const auto& entry : _textureRegistry)
-        if (entry.Name == name)
+auto BeStandardRenderMachine::GetRenderTexture(const std::string& name) const -> std::shared_ptr<BeTexture> {
+    for (const auto& entry : _textureRegistry) {
+        if (entry.Name == name) {
             return entry.Texture;
+        }
+    }
     return nullptr;
 }
 
@@ -104,8 +114,7 @@ auto BeStandardRenderMachine::GetTexture(const std::string& name) const -> std::
 
 auto BeStandardRenderMachine::AddShadowPass() -> void {
     auto pass = std::make_unique<BeStandardShadowPass>(this);
-    _passOrder.push_back(pass.get());
-    _ownedPasses.push_back(std::move(pass));
+    _passes.push_back(std::move(pass));
 }
 
 auto BeStandardRenderMachine::AddGeometryPass() -> void {
@@ -113,20 +122,18 @@ auto BeStandardRenderMachine::AddGeometryPass() -> void {
     be_assert(_depthTarget, "No depth target declared before AddGeometryPass");
 
     auto pass = std::make_unique<BeStandardGeometryPass>(this, _gbufferTargets, _depthTarget);
-    _passOrder.push_back(pass.get());
-    _ownedPasses.push_back(std::move(pass));
+    _passes.push_back(std::move(pass));
 }
 
 auto BeStandardRenderMachine::AddLightingPass(const std::string& outputName) -> void {
     be_assert(!_gbufferTargets.empty(), "No G-buffer targets declared before AddLightingPass");
     be_assert(_depthTarget, "No depth target declared before AddLightingPass");
 
-    auto output = GetTexture(outputName);
+    auto output = GetRenderTexture(outputName);
     be_assert(output, "AddLightingPass: output texture not found: " + outputName);
 
     auto pass = std::make_unique<BeStandardLightingPass>(this, _gbufferTargets, _depthTarget, output);
-    _passOrder.push_back(pass.get());
-    _ownedPasses.push_back(std::move(pass));
+    _passes.push_back(std::move(pass));
 }
 
 auto BeStandardRenderMachine::AddBloomPass(
@@ -135,8 +142,8 @@ auto BeStandardRenderMachine::AddBloomPass(
     const std::string& outputName,
     std::shared_ptr<BeTexture> dirtTexture
 ) -> void {
-    auto input  = GetTexture(inputName);
-    auto output = GetTexture(outputName);
+    auto input  = GetRenderTexture(inputName);
+    auto output = GetRenderTexture(outputName);
     be_assert(input,  "AddBloomPass: input texture not found: "  + inputName);
     be_assert(output, "AddBloomPass: output texture not found: " + outputName);
 
@@ -151,8 +158,7 @@ auto BeStandardRenderMachine::AddBloomPass(
         dirtTexture = BeAssetRegistry::GetTexture("black").lock();
 
     auto pass = std::make_unique<BeStandardBloomPass>(this, input, std::move(mipTextures), output, dirtTexture, mipCount);
-    _passOrder.push_back(pass.get());
-    _ownedPasses.push_back(std::move(pass));
+    _passes.push_back(std::move(pass));
 }
 
 auto BeStandardRenderMachine::AddFullscreenPass(
@@ -163,27 +169,25 @@ auto BeStandardRenderMachine::AddFullscreenPass(
     std::vector<std::shared_ptr<BeTexture>> outputs;
     outputs.reserve(outputNames.size());
     for (const auto& name : outputNames) {
-        auto tex = GetTexture(name);
+        auto tex = GetRenderTexture(name);
         be_assert(tex, "AddFullscreenPass: output texture not found: " + name);
         outputs.push_back(tex);
     }
 
     auto pass = std::make_unique<BeStandardFullscreenEffectPass>(this, shader, material, std::move(outputs));
-    _passOrder.push_back(pass.get());
-    _ownedPasses.push_back(std::move(pass));
+    _passes.push_back(std::move(pass));
 }
 
 auto BeStandardRenderMachine::AddBackbufferPass(const std::string& inputName, glm::vec3 clearColor) -> void {
-    auto input = GetTexture(inputName);
+    auto input = GetRenderTexture(inputName);
     be_assert(input, "AddBackbufferPass: input texture not found: " + inputName);
 
     auto pass = std::make_unique<BeStandardBackbufferPass>(this, input, clearColor);
-    _passOrder.push_back(pass.get());
-    _ownedPasses.push_back(std::move(pass));
+    _passes.push_back(std::move(pass));
 }
 
-auto BeStandardRenderMachine::AddPass(BeRenderPass* pass) -> void {
-    _passOrder.push_back(pass);
+auto BeStandardRenderMachine::AddPass(std::unique_ptr<BeRenderPass> pass) -> void {
+    _passes.push_back(std::move(pass));
 }
 
 // =====================================================================================================================
@@ -191,17 +195,18 @@ auto BeStandardRenderMachine::AddPass(BeRenderPass* pass) -> void {
 // =====================================================================================================================
 
 auto BeStandardRenderMachine::Build() -> void {
-    _renderer->ClearPasses();
-    for (auto* pass : _passOrder)
-        _renderer->AddRenderPass(pass);
-    _renderer->InitialisePasses();
+    auto renderer = _renderer.lock();
+    renderer->ClearPasses();
+    for (auto& pass : _passes)
+        renderer->AddRenderPass(pass.get());
+    renderer->InitialisePasses();
 }
 
 // =====================================================================================================================
 // BeStandardRenderMachine — frame submission
 // =====================================================================================================================
 
-auto BeStandardRenderMachine::Clear() -> void {
+auto BeStandardRenderMachine::ClearFrame() -> void {
     _objectMaterialCursor = 0;
     _geometryEntries.clear();
     _sunLightEntries.clear();
@@ -292,6 +297,17 @@ auto BeStandardRenderMachine::BakeMeshes() -> void {
 // BeStandardRenderMachine — internal
 // =====================================================================================================================
 
+/* TODO: this is wrong and needs to be fixed. 
+ * 
+ * basically geometry passes like `BeStandardGeometryPass` or `BeStandardShadowPass`
+ * all need a dedicated object material per each object they render.
+ * therefore, this pooling was added to mitigate perf impact at least a bit.
+ * 
+ * practically, this has to be solved on `sen-rhi` level.
+ * possible solutions that i see: 
+ *      ring buffer option for `SenBuffer` with bump on every write;
+ *      structured buffer option for `SenBuffer` with enough slots for every object
+ */
 auto BeStandardRenderMachine::AcquireNewObjectMaterial() -> std::shared_ptr<BeMaterial> {
     if (_objectMaterialCursor >= _objectMaterialPool.size())
         _objectMaterialPool.push_back(BeMaterial::Create("object-material-for-geometry-pass", true));

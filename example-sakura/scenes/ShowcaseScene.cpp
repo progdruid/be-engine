@@ -49,7 +49,7 @@ void ShowcaseScene::Prepare() {
     const uint32_t screenWidth  = GameIns->Window->GetWidth();
     const uint32_t screenHeight = GameIns->Window->GetHeight();
 
-    _machine = std::make_unique<BeStandardRenderMachine>(*GameIns->Renderer, screenWidth, screenHeight);
+    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
 
     for (const auto& name : { 
         "skycube", "ramen", "still-life", "fiesta-tea",
@@ -72,7 +72,7 @@ void ShowcaseScene::Prepare() {
     _machine->AddGeometryPass();
 
     const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
-    fxaaMaterial->SetTexture("ColorTexture", _machine->GetTexture("Showcase_BaseColor"));
+    fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_BaseColor"));
     _machine->AddFullscreenPass(BeAssetRegistry::GetShader("fxaa"), fxaaMaterial, { "Showcase_FXAAOutput" });
 
     _machine->AddBackbufferPass("Showcase_FXAAOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
@@ -93,7 +93,7 @@ auto ShowcaseScene::LoadModels() -> void {
     BeAssetRegistry::AddProp("tomatoes",        BeProp::Create("assets/tomatoes/scene.gltf",        standardShader, *GameIns->Renderer));
 
     auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader);
-    skycube->Materials[0]->SetFloat3("DiffuseColor", HexColor("#FAC8CD"));
+    skycube->Materials[0]->SetFloat3("BaseColor", HexColor("#FAC8CD"));
     skycube->Slices[0].TwoSided = true;
     BeAssetRegistry::AddProp("skycube", skycube);
 }
@@ -184,7 +184,7 @@ void ShowcaseScene::Tick(float deltaTime) {
     static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
     static const auto SunView      = _registry.view<SunLightComponent>();
 
-    _machine->Clear();
+    _machine->ClearFrame();
 
     for (const auto [entity, name, transform, render] : GeometryView.each()) {
         _machine->AddGeometry({
@@ -226,7 +226,7 @@ auto ShowcaseScene::ChangeShowcase(
             render.Prop = BeAssetRegistry::GetProp(modelName).lock();
         }
         if (name.Name == "skycube") {
-            render.Prop->Materials[0]->SetFloat3("DiffuseColor", HexColor(hxcolor.c_str()));
+            render.Prop->Materials[0]->SetFloat3("BaseColor", HexColor(hxcolor.c_str()));
         }
     }
 }

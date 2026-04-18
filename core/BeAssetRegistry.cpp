@@ -1,5 +1,6 @@
 #include "BeAssetRegistry.h"
 
+#include <sstream>
 #include <fstream>
 
 #include "BeShader.h"

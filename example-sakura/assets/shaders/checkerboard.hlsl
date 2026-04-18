@@ -130,7 +130,7 @@ PixelOutput PixelFunction(Interpolators input) {
     PixelOutput output;
     output.DiffuseRGB = triplanarDiffuse.rgb * _GeometryMain.DiffuseColor;
     output.WorldNormalXYZ_UnusedA.xyz = input.Normal;
-    output.WorldNormalXYZ_UnusedA.w = 1.0;
+    output.WorldNormalXYZ_UnusedA.w = 0.0;
     output.SpecularRGB_ShininessA.rgb = triplanarSpecular.xyz * _GeometryMain.SpecularColor;
     output.SpecularRGB_ShininessA.a = _GeometryMain.Shininess / 2048.0;
     output.EmissiveRGB = (0.f).rrr;

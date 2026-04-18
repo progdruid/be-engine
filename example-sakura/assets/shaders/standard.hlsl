@@ -3,14 +3,21 @@
 
 @be-material: standard-material-for-geometry-pass
 [
-    "DiffuseColor: float3 = [1.0, 1.0, 1.0]",
+    "UsePBR: float = 0.0",
+
+    "BaseColor: float3 = [1.0, 1.0, 1.0]",
     "SpecularColor: float3 = [1.0, 1.0, 1.0]",
     "Shininess: float = 0.0",
+
+    "Metallic: float = 0.0",
+    "Roughness: float = 0.5",
+    "AO: float = 1.0",
+
     "EmissiveColor: float3 = [0.0, 0.0, 0.0]",
 
-    "DiffuseTexture: texture2d = white",
-    "SpecularTexture: texture2d = black",
-    "EmissiveTexture: texture2d = white",
+    "Diffuse_or_Albedo: texture2d = white",
+    "SpecShin_RGBA_or_MRAO_RGB: texture2d = black",
+    "Emissive_RGB: texture2d = white",
 
     "InputSampler: sampler = linear-clamp",
 ]
@@ -34,10 +41,10 @@
     },
     
     "targets": {
-        "DiffuseRGB":             { "type": "float3", "slot": 0 },
-        "WorldNormalXYZ_UnusedA": { "type": "float4", "slot": 1 },
-        "SpecularRGB_ShininessA": { "type": "float4", "slot": 2 },
-        "EmissiveRGB":            { "type": "float3", "slot": 3 },
+        "Diffuse_RGB_or_Albedo_RGB": { "type": "float3", "slot": 0 },
+        "WorldNormal_XYZ_LMF_W":     { "type": "float4", "slot": 1 },
+        "SpecShin_RGBA_or_MRAO_RGB": { "type": "float4", "slot": 2 },
+        "EmissiveRGB":               { "type": "float3", "slot": 3 },
     }
 }
 @be-end
@@ -50,9 +57,13 @@
 #include "objectMaterial.hlsl"
 
 struct standard_material_for_geometry_pass {
-    float3 DiffuseColor;
+    float UsePBR;
+    float3 BaseColor;
     float3 SpecularColor;
     float Shininess;
+    float Metallic;
+    float Roughness;
+    float AO;
     float3 EmissiveColor;
 };
 
@@ -68,9 +79,9 @@ cbuffer CBuffer_2 : register(b0, space2) {
     standard_material_for_geometry_pass _GeometryMain;
 };
 SamplerState InputSampler : register(s1, space2);
-Texture2D DiffuseTexture : register(t2, space2);
-Texture2D SpecularTexture : register(t3, space2);
-Texture2D EmissiveTexture : register(t4, space2);
+Texture2D Diffuse_or_Albedo : register(t2, space2);
+Texture2D SpecShin_RGBA_or_MRAO_RGB : register(t3, space2);
+Texture2D Emissive_RGB : register(t4, space2);
 
 struct VertexInput {
     float3 Position : POSITION;
@@ -79,9 +90,9 @@ struct VertexInput {
 };
 
 struct PixelOutput {
-    float3 DiffuseRGB : SV_Target0;
-    float4 WorldNormalXYZ_UnusedA : SV_Target1;
-    float4 SpecularRGB_ShininessA : SV_Target2;
+    float3 Diffuse_RGB_or_Albedo_RGB : SV_Target0;
+    float4 WorldNormal_XYZ_LMF_W : SV_Target1;
+    float4 SpecShin_RGBA_or_MRAO_RGB : SV_Target2;
     float3 EmissiveRGB : SV_Target3;
 };
 
@@ -107,18 +118,31 @@ Interpolators VertexFunction(VertexInput input) {
 }
 
 PixelOutput PixelFunction(Interpolators input) {
-    float4 diffuseColor = DiffuseTexture.Sample(InputSampler, input.UV);
-    if (diffuseColor.a < 0.5) discard;
-    float4 specularColor = SpecularTexture.Sample(InputSampler, input.UV);
-    float3 emissiveColor = EmissiveTexture.Sample(InputSampler, input.UV).rgb;
-    
+    float4 diffuse_albedo = Diffuse_or_Albedo.Sample(InputSampler, input.UV);
+    if (diffuse_albedo.a < 0.5) discard;
+    float4 specShin_mrao = SpecShin_RGBA_or_MRAO_RGB.Sample(InputSampler, input.UV);
+    float3 emissive      = Emissive_RGB.Sample(InputSampler, input.UV).rgb;
+
     PixelOutput output;
-    output.DiffuseRGB = diffuseColor.rgb * _GeometryMain.DiffuseColor;
-    output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
-    output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = specularColor.rgb * _GeometryMain.SpecularColor;
-    output.SpecularRGB_ShininessA.a = _GeometryMain.Shininess / 2048.0;
-    output.EmissiveRGB = emissiveColor.rgb * _GeometryMain.EmissiveColor;
-    
+    output.WorldNormal_XYZ_LMF_W.xyz = normalize(input.Normal);
+    output.WorldNormal_XYZ_LMF_W.w   = _GeometryMain.UsePBR;
+    output.EmissiveRGB                = emissive * _GeometryMain.EmissiveColor;
+
+    if (_GeometryMain.UsePBR > 0.5) {
+        output.Diffuse_RGB_or_Albedo_RGB  = diffuse_albedo.rgb * _GeometryMain.BaseColor;
+        output.SpecShin_RGBA_or_MRAO_RGB  = float4(
+            specShin_mrao.r * _GeometryMain.Metallic,
+            specShin_mrao.g * _GeometryMain.Roughness,
+            specShin_mrao.b * _GeometryMain.AO,
+            0.0
+        );
+    } else {
+        output.Diffuse_RGB_or_Albedo_RGB  = diffuse_albedo.rgb * _GeometryMain.BaseColor;
+        output.SpecShin_RGBA_or_MRAO_RGB  = float4(
+            specShin_mrao.rgb * _GeometryMain.SpecularColor,
+            _GeometryMain.Shininess / 2048.0
+        );
+    }
+
     return output;
 };

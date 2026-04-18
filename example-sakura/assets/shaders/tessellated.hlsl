@@ -31,9 +31,9 @@
         "geometry-main": { "scheme": "tesselated-main-material-for-geometry-pass", "slot": 2, "var": "Tesselated" },
     },
     "targets": {
-        "DiffuseRGB":             { "type": "float3", "slot": 0 },
-        "WorldNormalXYZ_UnusedA": { "type": "float4", "slot": 1 },
-        "SpecularRGB_ShininessA": { "type": "float4", "slot": 2 },
+        "Diffuse_RGB_or_Albedo_RGB": { "type": "float3", "slot": 0 },
+        "WorldNormal_XYZ_LMF_W":     { "type": "float4", "slot": 1 },
+        "SpecShin_RGBA_or_MRAO_RGB": { "type": "float4", "slot": 2 },
     },
 }
 @be-end
@@ -75,9 +75,9 @@ struct VertexInput {
 };
 
 struct PixelOutput {
-    float3 DiffuseRGB : SV_Target0;
-    float4 WorldNormalXYZ_UnusedA : SV_Target1;
-    float4 SpecularRGB_ShininessA : SV_Target2;
+    float3 Diffuse_RGB_or_Albedo_RGB : SV_Target0;
+    float4 WorldNormal_XYZ_LMF_W : SV_Target1;
+    float4 SpecShin_RGBA_or_MRAO_RGB : SV_Target2;
 };
 
 // endregion
@@ -234,11 +234,11 @@ PixelOutput PixelFunction(Interpolators input) {
     float4 diffuseColor = DiffuseTexture.Sample(InputSampler, input.UV);
 
     PixelOutput output;
-    output.DiffuseRGB = diffuseColor.rgb * _Tesselated.DiffuseColor;
-    output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
-    output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = _Tesselated.SpecularColor;
-    output.SpecularRGB_ShininessA.a = _Tesselated.Shininess / 2048.0;
+    output.Diffuse_RGB_or_Albedo_RGB = diffuseColor.rgb * _Tesselated.DiffuseColor;
+    output.WorldNormal_XYZ_LMF_W.xyz = normalize(input.Normal);
+    output.WorldNormal_XYZ_LMF_W.w = 0.0;
+    output.SpecShin_RGBA_or_MRAO_RGB.rgb = _Tesselated.SpecularColor;
+    output.SpecShin_RGBA_or_MRAO_RGB.a = _Tesselated.Shininess / 2048.0;
 
     return output;
 }

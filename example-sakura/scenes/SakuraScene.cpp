@@ -81,7 +81,7 @@ auto SakuraScene::Prepare() -> void {
     const uint32_t screenWidth  = GameIns->Window->GetWidth();
     const uint32_t screenHeight = GameIns->Window->GetHeight();
 
-    _machine = std::make_unique<BeStandardRenderMachine>(*GameIns->Renderer, screenWidth, screenHeight);
+    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
 
     _machine->RegisterMesh(_cube->Mesh);
     _machine->RegisterMesh(_anvil->Mesh);
@@ -91,15 +91,15 @@ auto SakuraScene::Prepare() -> void {
     _machine->RegisterMesh(_moon->Mesh);
     _machine->BakeMeshes();
 
-    _machine->DeclareGBufferTarget("Sakura_BaseColor",         SenFormat::R11G11B10_Float);
-    _machine->DeclareGBufferTarget("Sakura_WorldNormal",       SenFormat::RGBA16_Float);
-    _machine->DeclareGBufferTarget("Sakura_SpecularShininess", SenFormat::RGBA8_Unorm);
-    _machine->DeclareGBufferTarget("Sakura_Emissive",          SenFormat::R11G11B10_Float);
-    _machine->DeclareDepth        ("Sakura_Depth",             SenFormat::Depth32);
-    _machine->DeclareTexture      ("Sakura_HDR",               SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Sakura_BloomOutput",       SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Sakura_TonemapperOutput",  SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Sakura_FXAAOutput",        SenFormat::R11G11B10_Float);
+    _machine->DeclareGBufferTarget("Sakura_Diffuse_RGB_or_Albedo_RGB", SenFormat::R11G11B10_Float);
+    _machine->DeclareGBufferTarget("Sakura_WorldNormal_XYZ_LMF_W",     SenFormat::RGBA16_Float);
+    _machine->DeclareGBufferTarget("Sakura_SpecShin_RGBA_or_MRAO_RGB", SenFormat::RGBA8_Unorm);
+    _machine->DeclareGBufferTarget("Sakura_Emissive_RGB",              SenFormat::R11G11B10_Float);
+    _machine->DeclareDepth        ("Sakura_Depth",                     SenFormat::Depth32);
+    _machine->DeclareTexture      ("Sakura_HDR",                       SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_Bloom",                     SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_Tonemapper",                SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_FXAA",                      SenFormat::R11G11B10_Float);
 
     _machine->AddShadowPass();
     _machine->AddGeometryPass();
@@ -108,17 +108,17 @@ auto SakuraScene::Prepare() -> void {
     const auto dirtTexture = BeTexture::Create("Sakura_BloomDirtTexture")
         .LoadFromFile("assets/bloom-dirt-mask.png")
         .Build();
-    _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_BloomOutput", dirtTexture);
+    _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_Bloom", dirtTexture);
 
     const auto tonemapperMaterial = BeMaterial::Create("tonemapper-material", false);
-    tonemapperMaterial->SetTexture("HDRInput", _machine->GetTexture("Sakura_BloomOutput"));
-    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("tonemapper"), tonemapperMaterial, { "Sakura_TonemapperOutput" });
+    tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture("Sakura_Bloom"));
+    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("tonemapper"), tonemapperMaterial, { "Sakura_Tonemapper" });
 
     const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
-    fxaaMaterial->SetTexture("ColorTexture", _machine->GetTexture("Sakura_TonemapperOutput"));
-    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAAOutput" });
+    fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Sakura_Tonemapper"));
+    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });
 
-    _machine->AddBackbufferPass("Sakura_FXAAOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
+    _machine->AddBackbufferPass("Sakura_FXAA", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
 }
 
 auto SakuraScene::OnLoad() -> void {
@@ -247,7 +247,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         }
     }
 
-    _machine->Clear();
+    _machine->ClearFrame();
 
     for (const auto [entity, name, transform, render] : GeometryView.each()) {
         _machine->AddGeometry({

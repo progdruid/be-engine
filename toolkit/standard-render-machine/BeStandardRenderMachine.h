@@ -73,7 +73,7 @@ class BeStandardRenderMachine {
     };
 
     hide
-    BeRenderer* _renderer;
+    std::weak_ptr<BeRenderer> _renderer;
     uint32_t _width;
     uint32_t _height;
 
@@ -81,8 +81,7 @@ class BeStandardRenderMachine {
     std::vector<std::shared_ptr<BeTexture>> _gbufferTargets;
     std::shared_ptr<BeTexture> _depthTarget;
 
-    std::vector<std::unique_ptr<BeRenderPass>> _ownedPasses;
-    std::vector<BeRenderPass*> _passOrder;
+    std::vector<std::unique_ptr<BeRenderPass>> _passes;
 
     std::vector<BeSRMGeometryEntry> _geometryEntries;
     std::vector<BeSRMSunLightEntry> _sunLightEntries;
@@ -101,7 +100,7 @@ class BeStandardRenderMachine {
 
     // lifetime --------------------------------------------------------------------------------------------------------
     expose
-    explicit BeStandardRenderMachine(BeRenderer& renderer, uint32_t width, uint32_t height);
+    explicit BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, uint32_t width, uint32_t height);
     ~BeStandardRenderMachine() = default;
 
     // texture registry ------------------------------------------------------------------------------------------------
@@ -109,7 +108,7 @@ class BeStandardRenderMachine {
     auto DeclareGBufferTarget(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture>;
     auto DeclareDepth(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture>;
     auto DeclareTexture(const std::string& name, SenFormat format, float sizeMultiplier = 1.0f) -> std::shared_ptr<BeTexture>;
-    auto GetTexture(const std::string& name) const -> std::shared_ptr<BeTexture>;
+    auto GetRenderTexture(const std::string& name) const -> std::shared_ptr<BeTexture>;
 
     // pass builders ---------------------------------------------------------------------------------------------------
     expose
@@ -119,14 +118,14 @@ class BeStandardRenderMachine {
     auto AddBloomPass(uint32_t mipCount, const std::string& inputName, const std::string& outputName, std::shared_ptr<BeTexture> dirtTexture = nullptr) -> void;
     auto AddFullscreenPass(std::weak_ptr<BeShader> shader, std::shared_ptr<BeMaterial> material, const std::vector<std::string>& outputNames) -> void;
     auto AddBackbufferPass(const std::string& inputName, glm::vec3 clearColor = {}) -> void;
-    auto AddPass(BeRenderPass* pass) -> void;
+    auto AddPass(std::unique_ptr<BeRenderPass> pass) -> void;
 
     expose
     auto Build() -> void;
 
     // frame submission ------------------------------------------------------------------------------------------------
     expose
-    auto Clear() -> void;
+    auto ClearFrame() -> void;
     auto AddGeometry(const BeSRMGeometryEntry& entry) -> void;
     auto AddSunLight(const BeSRMSunLightEntry& entry) -> void;
     auto AddPointLight(const BeSRMPointLightEntry& entry) -> void;

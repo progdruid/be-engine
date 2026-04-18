@@ -70,7 +70,7 @@ auto MainScene::Prepare() -> void {
     }
     _witchItems = BeProp::Create("assets/witch_items.glb",    standardShader,    *GameIns->Renderer);
     _cube       = BeProp::Create("assets/cube.glb",           tessellatedShader, *GameIns->Renderer);
-    _cube->Materials[0]->SetFloat3("DiffuseColor", glm::vec3(0.28f, 0.39f, 1.0f));
+    _cube->Materials[0]->SetFloat3("BaseColor", glm::vec3(0.28f, 0.39f, 1.0f));
     _macintosh  = BeProp::Create("assets/model.fbx",          standardShader,    *GameIns->Renderer);
     _pagoda     = BeProp::Create("assets/pagoda.glb",         standardShader,    *GameIns->Renderer);
     _disks      = BeProp::Create("assets/floppy-disks.glb",   standardShader,    *GameIns->Renderer);
@@ -113,7 +113,7 @@ auto MainScene::Prepare() -> void {
     _machine->AddBloomPass(5, "HDR", "BloomOutput", dirtTexture);
 
     const auto tonemapperMaterial = BeMaterial::Create("main-tonemapper-material", false);
-    tonemapperMaterial->SetTexture("HDRInput", _machine->GetTexture("BloomOutput"));
+    tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture("BloomOutput"));
     _machine->AddFullscreenPass(BeAssetRegistry::GetShader("tonemapper"), tonemapperMaterial, { "TonemapperOutput" });
 
     _machine->AddBackbufferPass("TonemapperOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
@@ -294,7 +294,7 @@ auto MainScene::Tick(float deltaTime) -> void {
         }
     }
 
-    _machine->Clear();
+    _machine->ClearFrame();
 
     for (const auto [entity, name, transform, render] : GeometryView.each()) {
         _machine->AddGeometry({
