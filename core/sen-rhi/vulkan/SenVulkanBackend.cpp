@@ -154,16 +154,15 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     result = vmaCreateAllocator(&allocatorInfo, &_allocator);
     be_assert(result == VK_SUCCESS, "Failed to create VMA allocator!");
 
-    // Descriptor pool for bind groups (max 256 sets, with plenty of descriptors)
     std::array<VkDescriptorPoolSize, 3> poolSizes {
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 256 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER, 256 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 256 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4096 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER, 4096 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4096 },
     };
     VkDescriptorPoolCreateInfo descPoolInfo {
         .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-        .maxSets       = 256,
+        .maxSets       = 4096,
         .poolSizeCount = uint32_t(poolSizes.size()),
         .pPoolSizes    = poolSizes.data(),
     };

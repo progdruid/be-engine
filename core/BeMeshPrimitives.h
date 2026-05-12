@@ -160,14 +160,13 @@ namespace BeMeshPrimitives {
                 uint32_t current = ring * (segments + 1) + seg;
                 uint32_t next = current + (segments + 1);
 
-                // CW winding
                 mesh->Indices.push_back(current);
-                mesh->Indices.push_back(current + 1);
                 mesh->Indices.push_back(next);
+                mesh->Indices.push_back(current + 1);
 
                 mesh->Indices.push_back(current + 1);
-                mesh->Indices.push_back(next + 1);
                 mesh->Indices.push_back(next);
+                mesh->Indices.push_back(next + 1);
             }
         }
 

@@ -67,13 +67,17 @@ auto SakuraScene::Prepare() -> void {
     _moon->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 2.1f);
 
     _anvil = BeProp::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
-    _anvil->Materials[0]->SetFloat3("SpecularColor", glm::vec3(1.0f));
     _anvil->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
 
     _sakura = BeProp::Create("assets/sakura/scene.gltf", standardShader, *GameIns->Renderer);
     _sakura->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("linear-wrap"));
 
     _sakura2 = BeProp::Create("assets/stylized_sakura_tree.glb", standardShader, *GameIns->Renderer);
+
+    _testSphere = BeProp::FromMesh(BeMeshPrimitives::Sphere(), standardShader);
+    _testSphere->Materials[0]->SetFloat3("BaseColor", glm::vec3(0.8f, 0.3f, 0.1f));
+    _testSphere->Materials[0]->SetFloat("Metallic", 0.0f);
+    _testSphere->Materials[0]->SetFloat("Roughness", 0.5f);
 
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
@@ -89,11 +93,12 @@ auto SakuraScene::Prepare() -> void {
     _machine->RegisterMesh(_sakura2->Mesh);
     _machine->RegisterMesh(_emissiveCube->Mesh);
     _machine->RegisterMesh(_moon->Mesh);
+    _machine->RegisterMesh(_testSphere->Mesh);
     _machine->BakeMeshes();
 
-    _machine->DeclareGBufferTarget("Sakura_Diffuse_RGB_or_Albedo_RGB", SenFormat::R11G11B10_Float);
-    _machine->DeclareGBufferTarget("Sakura_WorldNormal_XYZ_LMF_W",     SenFormat::RGBA16_Float);
-    _machine->DeclareGBufferTarget("Sakura_SpecShin_RGBA_or_MRAO_RGB", SenFormat::RGBA8_Unorm);
+    _machine->DeclareGBufferTarget("Sakura_Albedo_RGB", SenFormat::R11G11B10_Float);
+    _machine->DeclareGBufferTarget("Sakura_WorldNormal_XYZ", SenFormat::RGBA16_Float);
+    _machine->DeclareGBufferTarget("Sakura_ORM_RGB",            SenFormat::RGBA8_Unorm);
     _machine->DeclareGBufferTarget("Sakura_Emissive_RGB",              SenFormat::R11G11B10_Float);
     _machine->DeclareDepth        ("Sakura_Depth",                     SenFormat::Depth32);
     _machine->DeclareTexture      ("Sakura_HDR",                       SenFormat::R11G11B10_Float);
@@ -112,6 +117,7 @@ auto SakuraScene::Prepare() -> void {
 
     const auto tonemapperMaterial = BeMaterial::Create("tonemapper-material", false);
     tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture("Sakura_Bloom"));
+    //tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture("Sakura_HDR"));
     _machine->AddFullscreenPass(BeAssetRegistry::GetShader("tonemapper"), tonemapperMaterial, { "Sakura_Tonemapper" });
 
     const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
@@ -136,6 +142,32 @@ auto SakuraScene::OnLoad() -> void {
         ,NameComponent { .Name = "Anvil1" }
         ,RenderComponent { .Prop = _anvil }
         ,TransformComponent { .Position = {0, 0, 0}, .Rotation = glm::quat(glm::vec3(0, 0_rad, 0)), .Scale = glm::vec3(0.2f) }
+    );
+    CreateEntity(_registry
+        ,NameComponent { .Name = "PBR_TestSphere" }
+        ,RenderComponent { .Prop = _testSphere, .CastShadows = true }
+        ,TransformComponent { .Position = glm::vec3(8, 1, 0), .Scale = glm::vec3(1.5f) }
+    );
+    CreateEntity(_registry
+        ,NameComponent { .Name = "PBR_TestLight" }
+        ,StaticTag {}
+        ,TransformComponent { .Position = glm::vec3(8, 4, 2), .Scale = glm::vec3(0.2f) }
+        ,RenderComponent { .Prop = _emissiveCube, .CastShadows = false }
+        ,PointLightComponent {
+            .Radius = 12.0f,
+            .Color = glm::vec3(1.0f, 0.95f, 0.85f),
+            .Power = 3.0f,
+            .CastsShadows = false,
+            .ShadowMapResolution = 512,
+            .ShadowNearPlane = 0.1f,
+            .ShadowMap = BeTexture::Create("Sakura_PBRTestLight_ShadowMap")
+                .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+                .SetFormat(SenFormat::Depth32)
+                .SetCubemap(true)
+                .SetSize(512, 512)
+                .AddToRegistry()
+                .Build()
+        }
     );
     CreateEntity(_registry
         ,NameComponent { .Name = "Sakura2" }
@@ -165,7 +197,7 @@ auto SakuraScene::OnLoad() -> void {
         }
     );
 
-    for (uint32_t i = 0; i < 4; ++i) {
+    for (uint32_t i = 0; i < 0; ++i) {
         CreateEntity(_registry
             ,NameComponent { .Name = "PointLight_" + std::to_string(i) }
             ,TransformComponent { .Scale = glm::vec3(0.5f) }
@@ -208,9 +240,10 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         GameIns->SceneManager->RequestSceneChange("menu");
     }
 
-    static const auto GeometryView  = _registry.view<NameComponent, TransformComponent, RenderComponent>();
-    static const auto SunView       = _registry.view<SunLightComponent>();
+    static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
+    static const auto SunView = _registry.view<SunLightComponent>();
     static const auto PointLightView = _registry.view<NameComponent, TransformComponent, PointLightComponent>();
+    static const auto OrbitingLightView = _registry.view<NameComponent, TransformComponent, PointLightComponent>(entt::exclude<StaticTag>);
 
     if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
         _useOrbitCamera = !_useOrbitCamera;
@@ -238,9 +271,9 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         }
 
         auto i = size_t(0);
-        for (const auto [entity, name, transform, _] : PointLightView.each()) {
+        for (const auto [entity, name, transform, _] : OrbitingLightView.each()) {
             constexpr float radius = 13.0f;
-            const auto add = glm::two_pi<float>() * (float(i) / float(PointLightView.size_hint()));
+            const auto add = glm::two_pi<float>() * (float(i) / float(OrbitingLightView.size_hint()));
             const auto rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
             transform.Position = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
             i++;

@@ -39,44 +39,48 @@ float SmithGGXHelper (float nx, float k) {
     return nx / (nx * (1.0 - k) + k);
 }
 
+// orm: R=occlusion, G=roughness, B=metallic (matches GLTF metallicRoughness channel layout)
 float3 StandardPBR (
     float3 normal,
     float3 viewDir,
     float3 lightDir,
     float3 light,
     float3 albedo,
-    float3 mrao
+    float3 orm
 ) {
-    float3 
-    n = normalize(normal),              
-    v = normalize(viewDir),             
+    float metallic  = orm.z;
+    float roughness = max(orm.y, 0.01);
+
+    float3
+    n = normalize(normal),
+    v = normalize(viewDir),
     l = normalize(lightDir),
-    h = normalize(lightDir + viewDir); // half vector
-    
+    h = normalize(l + v);
+
     float
     nl = saturate(dot(n, l)),
     nv = max(dot(n, v), 0.0001),
     nh = saturate(dot(n, h)),
     vh = saturate(dot(v, h));
-    
+
     // Fresnel
     float one_minus_vh = 1.0 - vh;
-    float3 f0 = lerp((0.04).xxx, albedo, mrao.xxx);
+    float3 f0 = lerp((0.04).xxx, albedo, metallic.xxx);
     float3 f = f0 + (1.0 - f0) * (one_minus_vh * one_minus_vh * one_minus_vh * one_minus_vh * one_minus_vh);
-    
+
     // GGX Normal Distribution Function
-    float 
-    a2 = mrao.y * mrao.y * mrao.y * mrao.y,
+    float
+    a2 = roughness * roughness * roughness * roughness,
     temp = nh * nh * (a2 - 1.0) + 1.0,
     d = a2 / (PI * temp * temp);
-    
+
     // Smith GGX
     float
-    k = (mrao.y + 1.0) * (mrao.y + 1.0) * 0.125,
+    k = (roughness + 1.0) * (roughness + 1.0) * 0.125,
     g = SmithGGXHelper(nv, k) * SmithGGXHelper(nl, k);
-    
+
     float3
-    diffuse = ((1.0).xxx - f) * (1.0 - mrao.x) * (albedo / PI),
+    diffuse = ((1.0).xxx - f) * (1.0 - metallic) * (albedo / PI),
     specular = (f*d*g) / max(4.0 * nv * nl, 0.001),
     color = (diffuse + specular) * light * nl;
     return color;
