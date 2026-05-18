@@ -1,7 +1,7 @@
 
 #include "MainScene.h"
 
-#include <glfw/glfw3.h>
+#include <umbrellas/include-glfw.h>
 
 #include "BeAssetRegistry.h"
 #include "BeCamera.h"
@@ -16,6 +16,7 @@
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
 MainScene::MainScene(Game* game) : BaseScene(game) {}
+MainScene::~MainScene() = default;
 
 auto MainScene::Prepare() -> void {
     _camera = std::make_unique<BeCamera>();
@@ -83,7 +84,7 @@ auto MainScene::Prepare() -> void {
     const uint32_t screenWidth  = GameIns->Window->GetWidth();
     const uint32_t screenHeight = GameIns->Window->GetHeight();
 
-    _machine = std::make_unique<BeStandardRenderMachine>(*GameIns->Renderer, screenWidth, screenHeight);
+    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
 
     _machine->RegisterMesh(_plane->Mesh);
     _machine->RegisterMesh(_witchItems->Mesh);

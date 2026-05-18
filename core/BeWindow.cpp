@@ -1,11 +1,6 @@
 #include "BeWindow.h"
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
+#include <umbrellas/include-glfw.h>
 
 #include <cstdio>
 #include <cassert>
@@ -18,7 +13,7 @@ namespace {
 }
 
 BeWindow::BeWindow(int width, int height, const std::string& title, BeWindowMode mode)
-    : _window(nullptr), _hwnd(nullptr), _width(width), _height(height), _title(title), _mode(mode) {
+    : _window(nullptr), _width(width), _height(height), _title(title), _mode(mode) {
 
     SetupErrorCallback();
 
@@ -65,8 +60,6 @@ BeWindow::BeWindow(int width, int height, const std::string& title, BeWindowMode
         glfwSetWindowPos(_window, 0, 0);
     }
 
-    _hwnd = glfwGetWin32Window(_window);
-    assert(_hwnd != nullptr);
 }
 
 BeWindow::~BeWindow() {
@@ -77,10 +70,9 @@ BeWindow::~BeWindow() {
 }
 
 BeWindow::BeWindow(BeWindow&& other) noexcept
-    : _window(other._window), _hwnd(other._hwnd), _width(other._width),
+    : _window(other._window), _width(other._width),
       _height(other._height), _title(std::move(other._title)), _mode(other._mode) {
     other._window = nullptr;
-    other._hwnd = nullptr;
 }
 
 BeWindow& BeWindow::operator=(BeWindow&& other) noexcept {
@@ -94,10 +86,8 @@ BeWindow& BeWindow::operator=(BeWindow&& other) noexcept {
         }
 
         _window = other._window;
-        _hwnd = other._hwnd;
         _width = other._width;
         other._window = nullptr;
-        other._hwnd = nullptr;
     }
     return *this;
 }
@@ -112,10 +102,6 @@ auto BeWindow::RequestClose() -> void {
 
 auto BeWindow::ShouldClose() const -> bool {
     return glfwWindowShouldClose(_window);
-}
-
-auto BeWindow::GetHwnd() const -> HWND {
-    return _hwnd;
 }
 
 auto BeWindow::GetGlfwWindow() const -> GLFWwindow* {

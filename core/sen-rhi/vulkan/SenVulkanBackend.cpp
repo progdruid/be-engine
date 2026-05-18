@@ -1,8 +1,10 @@
 #include "SenVulkanBackend.h"
-#include <print>
-#include <windows.h>
 #include <vulkan/vulkan_core.h>
-#include <vulkan/vulkan_win32.h>
+// TODO: surface creation currently delegates to GLFW, which ties sen-rhi to a windowing library.
+// The correct fix is a small platform-dispatch service inside sen that, given (platform, display server, API choice),
+// returns the appropriate surface + required instance extensions — with no windowing lib
+// knowledge at the sen level. Until that service exists, GLFW is used here as a stopgap.
+#include <umbrellas/include-glfw.h>  // vulkan_core.h already included above; GLFW will still expose glfwCreateWindowSurface via VK_VERSION_1_0
 #include <sen-rhi/vulkan/SenVulkanConvert.h>
 #include <sen-rhi/SenShaderCompiler.h>
 
@@ -65,16 +67,14 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
         .apiVersion         = VK_API_VERSION_1_3,
     };
 
-    const char* instanceExtensions[] = {
-        VK_KHR_SURFACE_EXTENSION_NAME,
-        VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-    };
+    uint32_t glfwExtCount = 0;
+    const char** glfwExts = glfwGetRequiredInstanceExtensions(&glfwExtCount); // TODO: see above
 
     VkInstanceCreateInfo createInfo {
         .sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pApplicationInfo        = &appInfo,
-        .enabledExtensionCount   = 2,
-        .ppEnabledExtensionNames = instanceExtensions,
+        .enabledExtensionCount   = glfwExtCount,
+        .ppEnabledExtensionNames = glfwExts,
     };
 
     VkResult result = vkCreateInstance(&createInfo, nullptr, &_instance);
@@ -204,14 +204,8 @@ auto SenVulkanBackend::Shutdown() -> void {
 auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapchain {
     SenVulkanSwapchainEntry entry {};
 
-    // 1. Create surface
-    VkWin32SurfaceCreateInfoKHR surfaceInfo {
-        .sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-        .hinstance = GetModuleHandle(nullptr),
-        .hwnd      = (HWND)desc.NativeWindowHandle,
-    };
-
-    VkResult result = vkCreateWin32SurfaceKHR(_instance, &surfaceInfo, nullptr, &entry.Surface);
+    // 1. Create surface — TODO: see above
+    VkResult result = glfwCreateWindowSurface(_instance, static_cast<GLFWwindow*>(desc.NativeWindowHandle), nullptr, &entry.Surface);
     be_assert(result == VK_SUCCESS, "Failed to create surface!");
 
     // 2. Query surface capabilities

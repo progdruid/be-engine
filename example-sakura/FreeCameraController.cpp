@@ -1,6 +1,6 @@
 #include "FreeCameraController.h"
 
-#include <glfw/glfw3.h>
+#include <umbrellas/include-glfw.h>
 
 #include "BeCamera.h"
 #include "BeInput.h"

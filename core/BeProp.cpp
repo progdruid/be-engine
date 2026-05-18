@@ -26,8 +26,7 @@ auto BeProp::Create(
         aiProcess_ImproveCacheLocality |
         aiProcess_CalcTangentSpace |
         aiProcess_ValidateDataStructure |
-        aiProcess_OptimizeMeshes |
-        aiProcess_OptimizeGraph);
+        aiProcess_OptimizeMeshes);
 
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(modelPath.string().c_str(), flags);

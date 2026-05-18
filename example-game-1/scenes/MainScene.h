@@ -74,7 +74,7 @@ class MainScene : public BaseScene {
 
     expose
     explicit MainScene(Game* game);
-    ~MainScene() override = default;
+    ~MainScene() override;
 
     auto Prepare() -> void override;
     auto OnLoad() -> void override;

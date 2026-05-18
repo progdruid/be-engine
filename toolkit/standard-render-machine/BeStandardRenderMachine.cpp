@@ -37,6 +37,8 @@ auto BeSRMSunLightEntry::CalculateViewProj(
 BeStandardRenderMachine::BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, uint32_t width, uint32_t height)
     : _renderer(std::move(renderer)), _width(width), _height(height) {}
 
+BeStandardRenderMachine::~BeStandardRenderMachine() = default;
+
 
 // =====================================================================================================================
 // BeStandardRenderMachine — texture registry

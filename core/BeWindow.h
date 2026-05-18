@@ -5,10 +5,6 @@
 
 // ReSharper disable once CppInconsistentNaming
 struct GLFWwindow;
-// ReSharper disable once CppInconsistentNaming
-struct HWND__;
-// ReSharper disable once CppInconsistentNaming
-using HWND = HWND__*;
 
 enum class BeWindowMode {
     Windowed,
@@ -20,7 +16,6 @@ class BeWindow {
     //fields////////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide
     GLFWwindow* _window;
-    HWND _hwnd;
     int _width;
     int _height;
     std::string _title;
@@ -51,7 +46,6 @@ class BeWindow {
     auto RequestClose() -> void;
 
     [[nodiscard]] auto ShouldClose() const -> bool;
-    [[nodiscard]] auto GetHwnd() const -> HWND;
     [[nodiscard]] auto GetGlfwWindow() const -> GLFWwindow*;
     [[nodiscard]] auto GetWidth() const -> int { return _width; }
     [[nodiscard]] auto GetHeight() const -> int { return _height; }

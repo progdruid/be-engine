@@ -36,8 +36,8 @@ function(be_copy_runtime_deps target)
             BUILD_RPATH  "$ORIGIN"
             INSTALL_RPATH "$ORIGIN")
         add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND bash -c "cp -P '${CMAKE_SOURCE_DIR}/vendor/slang/linux-x64/lib/'*.so* '$<TARGET_FILE_DIR:${target}>'"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_SOURCE_DIR}/vendor/slang/linux-x64/lib/libslang-compiler.so"
                 "${CMAKE_SOURCE_DIR}/vendor/vulkan-sdk/lib/linux-x64/libvulkan.so.1"
                 "$<TARGET_FILE_DIR:${target}>")
     endif()

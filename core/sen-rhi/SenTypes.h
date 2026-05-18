@@ -340,7 +340,7 @@ struct SenSwapchain {
 };
 
 struct SenSwapchainDesc {
-    void*          NativeWindowHandle = nullptr;  // HWND on Windows
+    void*          NativeWindowHandle = nullptr;  // GLFWwindow* (TODO: see SenVulkanBackend.cpp)
     uint32_t       Width       = 0;
     uint32_t       Height      = 0;
     uint32_t       BufferCount = 2;

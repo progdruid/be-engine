@@ -1,7 +1,7 @@
 
 #include "Game.h"
 
-#include <glfw/glfw3.h>
+#include <umbrellas/include-glfw.h>
 
 #include "BeAssetRegistry.h"
 #include "BeWindow.h"
@@ -26,7 +26,7 @@ auto Game::Run() -> int {
     Window = std::make_shared<BeWindow>(0, 0, "be: example sakura", BeWindowMode::BorderlessFullscreen);
     Width = Window->GetWidth();
     Height = Window->GetHeight();
-    Renderer = std::make_shared<BeRenderer>(Width, Height, static_cast<void*>(Window->GetHwnd()));
+    Renderer = std::make_shared<BeRenderer>(Width, Height, static_cast<void*>(Window->GetGlfwWindow()));
     Renderer->LaunchDevice();
 
     Input = std::make_unique<BeInput>(Window->GetGlfwWindow());

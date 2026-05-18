@@ -1,7 +1,7 @@
 #include "MenuScene.h"
 
 #include <iostream>
-#include <glfw/glfw3.h>
+#include <umbrellas/include-glfw.h>
 #include <scenes/BeSceneManager.h>
 
 #include "BeInput.h"

@@ -3,6 +3,7 @@ file(GLOB_RECURSE HLSL_FILES CONFIGURE_DEPENDS assets/shaders/*.hlsl assets/shad
 set_source_files_properties(${HLSL_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
 
 add_executable(example-game-1 ${SOURCES} ${HLSL_FILES})
+target_include_directories(example-game-1 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(example-game-1 PRIVATE core toolkit)
 
 be_apply_defaults(example-game-1)

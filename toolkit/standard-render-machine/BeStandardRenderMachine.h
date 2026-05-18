@@ -101,7 +101,7 @@ class BeStandardRenderMachine {
     // lifetime --------------------------------------------------------------------------------------------------------
     expose
     explicit BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, uint32_t width, uint32_t height);
-    ~BeStandardRenderMachine() = default;
+    ~BeStandardRenderMachine();
 
     // texture registry ------------------------------------------------------------------------------------------------
     expose

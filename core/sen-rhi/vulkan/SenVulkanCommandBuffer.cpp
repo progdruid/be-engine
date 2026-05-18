@@ -1,7 +1,6 @@
 #include "SenVulkanCommandBuffer.h"
 #include "SenVulkanBackend.h"
 
-#include <print>
 #include <umbrellas/include-libassert.h>
 #include <umbrellas/include-glm.h>
 

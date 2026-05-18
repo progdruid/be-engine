@@ -1,6 +1,6 @@
 #include "BeTimer.h"
 
-#include <print>
+#include <cstdio>
 #include "umbrellas/include-libassert.h"
 
 void BeTimer::Start(const char* label) {
@@ -19,5 +19,5 @@ void BeTimer::End() {
 }
 
 void BeTimer::PrintLast() const {
-    std::println("[{}] {} us ({:.3f} ms)", _label, _lastTime, _lastTime / 1000.0);
+    std::printf("[%s] %lld us (%.3f ms)\n", _label.c_str(), (long long)_lastTime, _lastTime / 1000.0);
 }

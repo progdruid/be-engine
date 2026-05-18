@@ -10,7 +10,7 @@ struct Vertex {
     float r, g, b, a;
 };
 
-void main() {
+int main() {
     // todo for me (claude dont delete this comment)
     // static -> dynamic
     // semantic / location
@@ -24,7 +24,7 @@ void main() {
     SenShaderCompiler::AssetShadersPath = "assets/shaders/";
 
     auto swapchain = SenBackend::CreateSwapchain({
-        .NativeWindowHandle = window->GetHwnd(),
+        .NativeWindowHandle = window->GetGlfwWindow(),
         .Width  = uint32_t(window->GetWidth()),
         .Height = uint32_t(window->GetHeight()),
     });
@@ -67,7 +67,8 @@ void main() {
         .RenderTargetFormats = { swapchainFormat },
     });
 
-    auto cmd = SenBackend::CreateCommandBuffer();
+    SenBackend::CreateCommandBuffer();
+    auto& cmd = SenBackend::GetCommandBuffer();
 
     std::println("Ready. Running loop...");
 

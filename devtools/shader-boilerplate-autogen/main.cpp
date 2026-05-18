@@ -363,12 +363,12 @@ static auto TryProcessFile(const std::filesystem::path& path, const SchemeRegist
 
 // -------------------------------------------------------------------------
 
-void main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
     if (argc < 3 || (std::string(argv[1]) != "--once" && std::string(argv[1]) != "--watch")) {
         std::println(stderr, "Usage:");
         std::println(stderr, "  shader-boilerplate-autogen --once  <shader.hlsl>");
         std::println(stderr, "  shader-boilerplate-autogen --watch <shader.hlsl> [<shader2.hlsl> ...]");
-        return;
+        return 1;
     }
 
     auto mode = std::string(argv[1]);
@@ -379,7 +379,7 @@ void main(int argc, char* argv[]) {
         for (auto& e : std::filesystem::recursive_directory_iterator(shaderPath.parent_path()))
             if (e.path().extension() == ".hlsl") files.push_back(e.path());
         TryProcessFile(shaderPath, BuildRegistry(files));
-        return;
+        return 0;
     }
 
     // --watch: collect all paths, poll last_write_time for each

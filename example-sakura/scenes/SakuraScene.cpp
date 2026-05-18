@@ -1,7 +1,7 @@
 
 #include "SakuraScene.h"
 
-#include <glfw/glfw3.h>
+#include <umbrellas/include-glfw.h>
 
 #include "BeRenderPass.h"
 #include "OrbitCameraController.h"
@@ -22,6 +22,7 @@
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
 SakuraScene::SakuraScene(Game* game) : BaseScene(game) {}
+SakuraScene::~SakuraScene() = default;
 
 auto SakuraScene::Prepare() -> void {
     _camera = std::make_unique<BeCamera>();

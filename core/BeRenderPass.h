@@ -1,10 +1,7 @@
 ﻿#pragma once
-#include <wrl/client.h>
 #include <string>
 
 #include "umbrellas/access-modifiers.hpp"
-
-using Microsoft::WRL::ComPtr;
 
 class BeRenderer;
 
