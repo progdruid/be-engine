@@ -67,7 +67,7 @@ auto SakuraScene::Prepare() -> void {
     _moon = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader);
     _moon->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 2.1f);
 
-    _anvil = BeProp::Create("assets/anvil/anvil.fbx", standardShader, *GameIns->Renderer);
+    _anvil = BeProp::Create("assets/anvil/scene.gltf", standardShader, *GameIns->Renderer);
     _anvil->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
 
     _sakura = BeProp::Create("assets/sakura/scene.gltf", standardShader, *GameIns->Renderer);
