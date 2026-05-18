@@ -83,8 +83,8 @@ auto SakuraScene::Prepare() -> void {
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
-    const uint32_t screenWidth  = GameIns->Window->GetWidth();
-    const uint32_t screenHeight = GameIns->Window->GetHeight();
+    const uint32_t screenWidth  = GameIns->Window->GetFramebufferWidth();
+    const uint32_t screenHeight = GameIns->Window->GetFramebufferHeight();
 
     _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
 

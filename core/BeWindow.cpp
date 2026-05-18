@@ -13,7 +13,9 @@ namespace {
 }
 
 BeWindow::BeWindow(int width, int height, const std::string& title, BeWindowMode mode)
-    : _window(nullptr), _width(width), _height(height), _title(title), _mode(mode) {
+    : _window(nullptr), _width(width), _height(height),
+      _framebufferWidth(width), _framebufferHeight(height),
+      _title(title), _mode(mode) {
 
     SetupErrorCallback();
 
@@ -55,11 +57,24 @@ BeWindow::BeWindow(int width, int height, const std::string& title, BeWindowMode
         throw std::runtime_error("Failed to create GLFW window");
     }
 
-    // Position borderless fullscreen window at (0, 0)
+    // Position borderless fullscreen window at (0, 0) — not supported on Wayland, ignore
     if (mode == BeWindowMode::BorderlessFullscreen) {
+        glfwSetErrorCallback(nullptr);
         glfwSetWindowPos(_window, 0, 0);
+        glfwSetErrorCallback(errorCallback);
     }
 
+    glfwGetFramebufferSize(_window, &_framebufferWidth, &_framebufferHeight);
+
+    {
+        int winW = 0, winH = 0;
+        float scaleX = 0.f, scaleY = 0.f;
+        glfwGetWindowSize(_window, &winW, &winH);
+        glfwGetWindowContentScale(_window, &scaleX, &scaleY);
+        std::fprintf(stderr,
+            "[BeWindow] logicalSize=%dx%d  framebuffer=%dx%d  contentScale=%.2fx%.2f\n",
+            winW, winH, _framebufferWidth, _framebufferHeight, scaleX, scaleY);
+    }
 }
 
 BeWindow::~BeWindow() {
@@ -70,14 +85,17 @@ BeWindow::~BeWindow() {
 }
 
 BeWindow::BeWindow(BeWindow&& other) noexcept
-    : _window(other._window), _width(other._width),
-      _height(other._height), _title(std::move(other._title)), _mode(other._mode) {
+    : _window(other._window), _width(other._width), _height(other._height),
+      _framebufferWidth(other._framebufferWidth), _framebufferHeight(other._framebufferHeight),
+      _title(std::move(other._title)), _mode(other._mode) {
     other._window = nullptr;
 }
 
 BeWindow& BeWindow::operator=(BeWindow&& other) noexcept {
     if (this != &other) {
         _height = other._height;
+        _framebufferWidth = other._framebufferWidth;
+        _framebufferHeight = other._framebufferHeight;
         _title = std::move(other._title);
         _mode = other._mode;
 

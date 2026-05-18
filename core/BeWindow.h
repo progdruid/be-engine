@@ -18,6 +18,8 @@ class BeWindow {
     GLFWwindow* _window;
     int _width;
     int _height;
+    int _framebufferWidth;
+    int _framebufferHeight;
     std::string _title;
     BeWindowMode _mode;
 
@@ -49,6 +51,8 @@ class BeWindow {
     [[nodiscard]] auto GetGlfwWindow() const -> GLFWwindow*;
     [[nodiscard]] auto GetWidth() const -> int { return _width; }
     [[nodiscard]] auto GetHeight() const -> int { return _height; }
+    [[nodiscard]] auto GetFramebufferWidth() const -> int { return _framebufferWidth; }
+    [[nodiscard]] auto GetFramebufferHeight() const -> int { return _framebufferHeight; }
     [[nodiscard]] auto GetTitle() const -> const std::string& { return _title; }
     [[nodiscard]] auto GetWindowMode() const -> BeWindowMode { return _mode; }
 

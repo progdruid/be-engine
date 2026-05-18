@@ -46,8 +46,8 @@ void ShowcaseScene::Prepare() {
     LoadModels();
     CreateObjects();
 
-    const uint32_t screenWidth  = GameIns->Window->GetWidth();
-    const uint32_t screenHeight = GameIns->Window->GetHeight();
+    const uint32_t screenWidth  = GameIns->Window->GetFramebufferWidth();
+    const uint32_t screenHeight = GameIns->Window->GetFramebufferHeight();
 
     _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
 
