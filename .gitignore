@@ -9,6 +9,7 @@
 bin/
 bin-int/
 obj/
+out/
 *.exe
 *.dll
 *.lib
@@ -23,6 +24,8 @@ obj/
 !vendor/Assimp/**
 !vendor/slang/**
 !vendor/**/lib/**
+!vendor/**/*.so
+!vendor/**/*.so.*
 
 # Premake executable (explicitly include)
 !premake5.exe

@@ -1,0 +1,41 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/out/${presetName}"
+        },
+        {
+            "name": "linux-debug",
+            "displayName": "Linux Debug",
+            "inherits": "base",
+            "generator": "Ninja",
+            "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" },
+            "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux Release",
+            "inherits": "base",
+            "generator": "Ninja",
+            "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" },
+            "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+        },
+        {
+            "name": "windows",
+            "displayName": "Windows",
+            "inherits": "base",
+            "generator": "Visual Studio 17 2022",
+            "architecture": "x64",
+            "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+        }
+    ],
+    "buildPresets": [
+        { "name": "linux-debug",     "displayName": "Linux Debug",     "configurePreset": "linux-debug" },
+        { "name": "linux-release",   "displayName": "Linux Release",   "configurePreset": "linux-release" },
+        { "name": "windows-debug",   "displayName": "Windows Debug",   "configurePreset": "windows", "configuration": "Debug" },
+        { "name": "windows-release", "displayName": "Windows Release", "configurePreset": "windows", "configuration": "Release" }
+    ]
+}
