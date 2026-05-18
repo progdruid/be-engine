@@ -10,9 +10,9 @@
     "TexelSize: float = 0",
     
     "Depth: texture2d = black",
-    "Diffuse_RGB_or_Albedo_RGB: texture2d = black",
-    "WorldNormal_XYZ_LMF_W: texture2d = black",
-    "SpecShin_RGBA_or_MRAO_RGB: texture2d = black",
+    "Albedo_RGB: texture2d = black",
+    "WorldNormal_XYZ: texture2d = black",
+    "ORM_RGB: texture2d = black",
     "ShadowMap: texture2d = black",
 
     "InputSampler: sampler = point-clamp",
@@ -64,9 +64,9 @@ cbuffer CBuffer_1 : register(b0, space1) {
 };
 SamplerState InputSampler : register(s1, space1);
 Texture2D Depth : register(t2, space1);
-Texture2D Diffuse_RGB_or_Albedo_RGB : register(t3, space1);
-Texture2D WorldNormal_XYZ_LMF_W : register(t4, space1);
-Texture2D SpecShin_RGBA_or_MRAO_RGB : register(t5, space1);
+Texture2D Albedo_RGB : register(t3, space1);
+Texture2D WorldNormal_XYZ : register(t4, space1);
+Texture2D ORM_RGB : register(t5, space1);
 Texture2D ShadowMap : register(t6, space1);
 
 struct PixelOutput {
@@ -93,12 +93,10 @@ float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float t
 }
 
 PixelOutput PixelFunction(FullscreenVSOutput input) {
-    float depth = Depth.Sample(InputSampler, input.UV).r;
-    float3 diffuse_or_albedo = Diffuse_RGB_or_Albedo_RGB.Sample(InputSampler, input.UV).rgb;
-    float4 worldNormal_lightModelFlag = WorldNormal_XYZ_LMF_W.Sample(InputSampler, input.UV).xyzw;
-    float3 worldNormal = worldNormal_lightModelFlag.xyz;
-    float  lightModelFlag = worldNormal_lightModelFlag.w;
-    float4 specShin_mrao = SpecShin_RGBA_or_MRAO_RGB.Sample(InputSampler, input.UV).rgba;
+    float depth        = Depth.Sample(InputSampler, input.UV).r;
+    float3 albedo      = Albedo_RGB.Sample(InputSampler, input.UV).rgb;
+    float3 worldNormal = WorldNormal_XYZ.Sample(InputSampler, input.UV).xyz;
+    float3 orm         = ORM_RGB.Sample(InputSampler, input.UV).rgb;
 
     float3 worldPos = ReconstructWorldPosition(input.UV, depth, _Frame.CameraInverseProjectionView);
 
@@ -108,31 +106,16 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     shadowUV.y = 1.0 - shadowUV.y;
     float currentShadowDepth = lightSpacePos.z;
     float shadowAbsenceFactor = PCFShadow(ShadowMap, InputSampler, shadowUV, _DirectionalLight.TexelSize, currentShadowDepth);
-    
+
     float3 viewVec = _Frame.CameraPosition - worldPos;
-    float3 lit;
-    if (lightModelFlag < 0.5) {
-        lit = StandardLambertBlinnPhong(
-            worldNormal.xyz,
-            viewVec,
-            -_DirectionalLight.Direction,
-            //_AmbientColor,
-            _DirectionalLight.Color,
-            _DirectionalLight.Power,
-            diffuse_or_albedo.rgb,
-            specShin_mrao.rgb,
-            specShin_mrao.a
-        );
-    } else {
-        lit = StandardPBR(
-            worldNormal.xyz,
-            viewVec,
-            -_DirectionalLight.Direction,
-            _DirectionalLight.Color * _DirectionalLight.Power,
-            diffuse_or_albedo.rgb,
-            specShin_mrao.rgb
-        );
-    }
+    float3 lit = StandardPBR(
+        worldNormal,
+        viewVec,
+        -_DirectionalLight.Direction,
+        _DirectionalLight.Color * _DirectionalLight.Power,
+        albedo,
+        orm
+    );
 
     PixelOutput output;
     output.LightHDR = lit * shadowAbsenceFactor;

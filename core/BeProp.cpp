@@ -58,27 +58,19 @@ auto BeProp::Create(
         }
 
         aiString texPath;
-        constexpr int diffuseTexIndex = 0;
-        if (meshMaterial->GetTexture(aiTextureType_DIFFUSE, diffuseTexIndex, &texPath) == AI_SUCCESS) {
+        if (meshMaterial->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) == AI_SUCCESS ||
+            meshMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
             auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), renderer);
             material->SetTexture("Diffuse_or_Albedo", texture);
         }
-        constexpr int specularTexIndex = 0;
-        if (meshMaterial->GetTexture(aiTextureType_SPECULAR, specularTexIndex, &texPath) == AI_SUCCESS) {
+        if (meshMaterial->GetTexture(aiTextureType_METALNESS, 0, &texPath) == AI_SUCCESS) {
             auto texture = LoadTextureFromAssimpPath(texPath, scene, modelPath.parent_path(), renderer);
-            material->SetTexture("SpecShin_RGBA_or_MRAO_RGB", texture);
+            material->SetTexture("ORM_RGB", texture);
         }
 
         aiColor4D color{};
         if (meshMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
             material->SetFloat3("BaseColor", {color.r, color.g, color.b});
-        }
-        if (meshMaterial->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {
-            material->SetFloat3("SpecularColor", {color.r, color.g, color.b});
-        }
-        float shininess = 0.f;
-        if (meshMaterial->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
-            material->SetFloat("Shininess", shininess);
         }
     }
 

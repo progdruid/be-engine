@@ -31,7 +31,7 @@ auto BeRenderer::LaunchDevice() -> void {
 
     _swapchain = SenBackend::CreateSwapchain({
         .NativeWindowHandle = _nativeWindow,
-        .Width  = _width,
+        .Width = _width,
         .Height = _height,
     });
 

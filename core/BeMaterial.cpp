@@ -1,6 +1,5 @@
 #include "BeMaterial.h"
 
-#include <cassert>
 #include <sstream>
 #include <iomanip>
 
@@ -179,42 +178,42 @@ auto BeMaterial::Print() const -> std::string {
 
 
 auto BeMaterial::SetFloat(const std::string& propertyName, float value) -> void {
-    assert(_propertyOffsets.contains(propertyName));
+    be_assert(_propertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     const uint32_t offset = _propertyOffsets.at(propertyName);
     memcpy(_bufferData.data() + offset, &value, sizeof(float));
     _cbufferDirty = true;
 }
 
 auto BeMaterial::SetFloat2(const std::string& propertyName, glm::vec2 value) -> void {
-    assert(_propertyOffsets.contains(propertyName));
+    be_assert(_propertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     const uint32_t offset = _propertyOffsets.at(propertyName);
     memcpy(_bufferData.data() + offset, &value, sizeof(glm::vec2));
     _cbufferDirty = true;
 }
     
 auto BeMaterial::SetFloat3(const std::string& propertyName, glm::vec3 value) -> void {
-    assert(_propertyOffsets.contains(propertyName));
+    be_assert(_propertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     const uint32_t offset = _propertyOffsets.at(propertyName);
     memcpy(_bufferData.data() + offset, &value, sizeof(glm::vec3));
     _cbufferDirty = true;
 }
 
 auto BeMaterial::SetFloat4(const std::string& propertyName, glm::vec4 value) -> void {
-    assert(_propertyOffsets.contains(propertyName));
+    be_assert(_propertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     const uint32_t offset = _propertyOffsets.at(propertyName);
     memcpy(_bufferData.data() + offset, &value, sizeof(glm::vec4));
     _cbufferDirty = true;
 }
 
 auto BeMaterial::SetMatrix(const std::string& propertyName, glm::mat4x4 value) -> void {
-    assert(_propertyOffsets.contains(propertyName));
+    be_assert(_propertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     const uint32_t offset = _propertyOffsets.at(propertyName);
     memcpy(_bufferData.data() + offset, glm::value_ptr(value), sizeof(glm::mat4x4));
     _cbufferDirty = true;
 }
 
 auto BeMaterial::GetFloat(const std::string& propertyName) const -> float {
-    assert(_propertyOffsets.contains(propertyName));
+    be_assert(_propertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     const uint32_t offset = _propertyOffsets.at(propertyName);
     float value;
     memcpy(&value, _bufferData.data() + offset, sizeof(float));
@@ -222,7 +221,7 @@ auto BeMaterial::GetFloat(const std::string& propertyName) const -> float {
 }
 
 auto BeMaterial::GetFloat2(const std::string& propertyName) const -> glm::vec2 {
-    assert(_propertyOffsets.contains(propertyName));
+    be_assert(_propertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     const uint32_t offset = _propertyOffsets.at(propertyName);
     glm::vec2 value;
     memcpy(&value, _bufferData.data() + offset, sizeof(glm::vec2));
@@ -230,7 +229,7 @@ auto BeMaterial::GetFloat2(const std::string& propertyName) const -> glm::vec2 {
 }
 
 auto BeMaterial::GetFloat3(const std::string& propertyName) const -> glm::vec3 {
-    assert(_propertyOffsets.contains(propertyName));
+    be_assert(_propertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     const uint32_t offset = _propertyOffsets.at(propertyName);
     glm::vec3 value;
     memcpy(&value, _bufferData.data() + offset, sizeof(glm::vec3));
@@ -238,7 +237,7 @@ auto BeMaterial::GetFloat3(const std::string& propertyName) const -> glm::vec3 {
 }
 
 auto BeMaterial::GetFloat4(const std::string& propertyName) const -> glm::vec4 {
-    assert(_propertyOffsets.contains(propertyName));
+    be_assert(_propertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     const uint32_t offset = _propertyOffsets.at(propertyName);
     glm::vec4 value;
     memcpy(&value, _bufferData.data() + offset, sizeof(glm::vec4));
@@ -246,7 +245,7 @@ auto BeMaterial::GetFloat4(const std::string& propertyName) const -> glm::vec4 {
 }
 
 auto BeMaterial::GetMatrix(const std::string& propertyName) const -> glm::mat4x4 {
-    assert(_propertyOffsets.contains(propertyName));
+    be_assert(_propertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     const uint32_t offset = _propertyOffsets.at(propertyName);
     glm::mat4x4 value;
     memcpy(glm::value_ptr(value), _bufferData.data() + offset, sizeof(glm::mat4x4));
@@ -256,25 +255,25 @@ auto BeMaterial::GetMatrix(const std::string& propertyName) const -> glm::mat4x4
 
 
 auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void {
-    assert(_textures.contains(propertyName));
+    be_assert(_textures.contains(propertyName), "unknown texture property: " + propertyName);
     _textures.at(propertyName).first = texture;
     _bindGroupDirty = true;
 }
 
 auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture> {
-    assert(_textures.contains(propertyName));
+    be_assert(_textures.contains(propertyName), "unknown texture property: " + propertyName);
     return _textures.at(propertyName).first;
 }
 
 
 
 auto BeMaterial::SetSampler(const std::string& propertyName, SenSampler sampler) -> void {
-    assert(_samplers.contains(propertyName));
+    be_assert(_samplers.contains(propertyName), "unknown sampler property: " + propertyName);
     _samplers.at(propertyName).first = sampler;
     _bindGroupDirty = true;
 }
 
 auto BeMaterial::GetSampler(const std::string& propertyName) const -> SenSampler {
-    assert(_samplers.contains(propertyName));
+    be_assert(_samplers.contains(propertyName), "unknown sampler property: " + propertyName);
     return _samplers.at(propertyName).first;
 }

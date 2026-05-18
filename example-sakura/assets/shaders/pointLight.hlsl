@@ -11,9 +11,9 @@
     "ShadowNearPlane: float = 0",
     
     "Depth: texture2d = black",
-    "Diffuse_RGB_or_Albedo_RGB: texture2d = black",
-    "WorldNormal_XYZ_LMF_W: texture2d = black",
-    "SpecShin_RGBA_or_MRAO_RGB: texture2d = black",
+    "Albedo_RGB: texture2d = black",
+    "WorldNormal_XYZ: texture2d = black",
+    "ORM_RGB: texture2d = black",
     "PointLightShadowMap: textureCube = black",
 
     "InputSampler: sampler = point-clamp"
@@ -63,9 +63,9 @@ cbuffer CBuffer_1 : register(b0, space1) {
 };
 SamplerState InputSampler : register(s1, space1);
 Texture2D Depth : register(t2, space1);
-Texture2D Diffuse_RGB_or_Albedo_RGB : register(t3, space1);
-Texture2D WorldNormal_XYZ_LMF_W : register(t4, space1);
-Texture2D SpecShin_RGBA_or_MRAO_RGB : register(t5, space1);
+Texture2D Albedo_RGB : register(t3, space1);
+Texture2D WorldNormal_XYZ : register(t4, space1);
+Texture2D ORM_RGB : register(t5, space1);
 TextureCube PointLightShadowMap : register(t6, space1);
 
 struct PixelOutput {
@@ -104,10 +104,10 @@ float SamplePointLightShadow(float3 worldPos) {
 
 
 PixelOutput PixelFunction(FullscreenVSOutput input) {
-    float depth = Depth.Sample(InputSampler, input.UV).r;
-    float3 diffuse_albedo               = Diffuse_RGB_or_Albedo_RGB.Sample(InputSampler, input.UV).rgb;
-    float4 worldNormal_lightModelFlag   = WorldNormal_XYZ_LMF_W.Sample(InputSampler, input.UV).xyzw;
-    float4 specShin_mrao                = SpecShin_RGBA_or_MRAO_RGB.Sample(InputSampler, input.UV).rgba;
+    float depth        = Depth.Sample(InputSampler, input.UV).r;
+    float3 albedo      = Albedo_RGB.Sample(InputSampler, input.UV).rgb;
+    float3 worldNormal = WorldNormal_XYZ.Sample(InputSampler, input.UV).xyz;
+    float3 orm         = ORM_RGB.Sample(InputSampler, input.UV).rgb;
 
     float3 worldPos = ReconstructWorldPosition(input.UV, depth, _Frame.CameraInverseProjectionView);
     float3 lightDir = _PointLight.Position - worldPos;
@@ -120,34 +120,19 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     if (_PointLight.HasShadowMap > 0.5) {
         shadowAbsenceFactor = SamplePointLightShadow(worldPos);
     }
-    
+
     float attenuation = saturate(1.0 - (distanceToLight / _PointLight.Radius));
     attenuation *= attenuation;
-    
+
     float3 viewVec = _Frame.CameraPosition - worldPos;
-    float3 lit; 
-    if (worldNormal_lightModelFlag.w < 0.5) {
-        lit = StandardLambertBlinnPhong(
-            worldNormal_lightModelFlag.xyz,
-            viewVec,
-            lightDir,
-            //_AmbientColor,
-            _PointLight.Color,
-            _PointLight.Power * attenuation,
-            diffuse_albedo.rgb,
-            specShin_mrao.rgb,
-            specShin_mrao.a
-        );
-    } else {
-        lit = StandardPBR(
-            worldNormal_lightModelFlag.xyz,
-            viewVec,
-            lightDir,
-            _PointLight.Color * _PointLight.Power,
-            diffuse_albedo.rgb,
-            specShin_mrao.rgb
-        );
-    }
+    float3 lit = StandardPBR(
+        worldNormal,
+        viewVec,
+        lightDir,
+        _PointLight.Color * _PointLight.Power * attenuation,
+        albedo,
+        orm
+    );
 
     PixelOutput output;
     output.LightHDR = lit * shadowAbsenceFactor;

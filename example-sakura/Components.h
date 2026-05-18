@@ -24,6 +24,8 @@ struct NameComponent {
     std::string Name;
 };
 
+struct StaticTag {};
+
 struct SunLightComponent {
     // light
     glm::vec3 Direction;
@@ -54,6 +56,11 @@ struct PointLightComponent {
 template<typename... Components>
 auto CreateEntity(entt::registry& registry, Components&&... components) -> entt::entity {
     auto entity = registry.create();
-    (registry.emplace<std::decay_t<Components>>(entity, std::forward<Components>(components)), ...);
+    ([&]<typename T>(T&& comp) {
+        if constexpr (std::is_empty_v<std::decay_t<T>>)
+            registry.emplace<std::decay_t<T>>(entity);
+        else
+            registry.emplace<std::decay_t<T>>(entity, std::forward<T>(comp));
+    }(std::forward<Components>(components)), ...);
     return entity;
 }
