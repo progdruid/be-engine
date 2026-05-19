@@ -6,74 +6,65 @@
 #include <cassert>
 #include <stdexcept>
 
+#include "umbrellas/include-libassert.h"
+
 namespace {
     auto errorCallback(int code, const char* desc) -> void {
         (void)std::fprintf(stderr, "GLFW error %d: %s\n", code, desc);
     }
 }
 
-BeWindow::BeWindow(int width, int height, const std::string& title, BeWindowMode mode)
-    : _window(nullptr), _width(width), _height(height),
-      _framebufferWidth(width), _framebufferHeight(height),
-      _title(title), _mode(mode) {
-
+BeWindow::BeWindow(int desiredWidth, int desiredHeight, const std::string& title, BeWindowMode mode) : 
+    _window(nullptr), 
+    _width(0), 
+    _height(0), 
+    _framebufferWidth(0), 
+    _framebufferHeight(0), 
+    _title(title), 
+    _mode(mode) 
+{
     SetupErrorCallback();
 
     if (!glfwInit()) {
         throw std::runtime_error("Failed to initialize GLFW");
     }
-
-    // No client API, using DX11 not OpenGL, yknow
+    
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-    GLFWmonitor* monitor = nullptr;
-    GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
-
+    
     if (mode == BeWindowMode::Fullscreen) {
-        // Exclusive fullscreen
-        monitor = primaryMonitor;
-        if (primaryMonitor) {
-            const GLFWvidmode* videoMode = glfwGetVideoMode(primaryMonitor);
-            if (videoMode) {
-                _width = (width > 0) ? width : videoMode->width;
-                _height = (height > 0) ? height : videoMode->height;
-            }
-        }
-    } else if (mode == BeWindowMode::BorderlessFullscreen) {
-        // Borderless windowed fullscreen
+        GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
+        be_assert(primaryMonitor, "Primary monitor invalid");
+        const GLFWvidmode* videoMode = glfwGetVideoMode(primaryMonitor);
+        be_assert(videoMode, "Video mode invalid");
+        
+        _window = glfwCreateWindow(videoMode->width, videoMode->height, title.c_str(), primaryMonitor, nullptr);
+        be_assert(_window, "Failed to create GLFW window for Fullscreen mode");
+        glfwGetWindowSize(_window, &_width, &_height);
+        glfwGetFramebufferSize(_window, &_framebufferWidth, &_framebufferHeight);
+    } 
+    else if (mode == BeWindowMode::BorderlessFullscreen) {
+        GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
+        be_assert(primaryMonitor, "Primary monitor invalid");
+        const GLFWvidmode* videoMode = glfwGetVideoMode(primaryMonitor);
+        be_assert(videoMode, "Video mode invalid");
+        
         glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-        if (primaryMonitor) {
-            const GLFWvidmode* videoMode = glfwGetVideoMode(primaryMonitor);
-            if (videoMode) {
-                _width = videoMode->width;
-                _height = videoMode->height;
-            }
-        }
-    }
-
-    _window = glfwCreateWindow(_width, _height, title.c_str(), monitor, nullptr);
-    if (!_window) {
-        glfwTerminate();
-        throw std::runtime_error("Failed to create GLFW window");
-    }
-
-    // Position borderless fullscreen window at (0, 0) — not supported on Wayland, ignore
-    if (mode == BeWindowMode::BorderlessFullscreen) {
-        glfwSetErrorCallback(nullptr);
+        glfwWindowHint(GLFW_RED_BITS,     videoMode->redBits);
+        glfwWindowHint(GLFW_GREEN_BITS,   videoMode->greenBits);
+        glfwWindowHint(GLFW_BLUE_BITS,    videoMode->blueBits);
+        glfwWindowHint(GLFW_REFRESH_RATE, videoMode->refreshRate);
+        
+        _window = glfwCreateWindow(videoMode->width, videoMode->height, title.c_str(), primaryMonitor, nullptr);
+        be_assert(_window, "Failed to create GLFW window for Borderless Fullscreen mode");
+        glfwGetWindowSize(_window, &_width, &_height);
+        glfwGetFramebufferSize(_window, &_framebufferWidth, &_framebufferHeight);
         glfwSetWindowPos(_window, 0, 0);
-        glfwSetErrorCallback(errorCallback);
     }
-
-    glfwGetFramebufferSize(_window, &_framebufferWidth, &_framebufferHeight);
-
-    {
-        int winW = 0, winH = 0;
-        float scaleX = 0.f, scaleY = 0.f;
-        glfwGetWindowSize(_window, &winW, &winH);
-        glfwGetWindowContentScale(_window, &scaleX, &scaleY);
-        std::fprintf(stderr,
-            "[BeWindow] logicalSize=%dx%d  framebuffer=%dx%d  contentScale=%.2fx%.2f\n",
-            winW, winH, _framebufferWidth, _framebufferHeight, scaleX, scaleY);
+    else if (mode == BeWindowMode::Windowed) {
+        _window = glfwCreateWindow(desiredWidth, desiredHeight, title.c_str(), nullptr, nullptr);
+        be_assert(_window, "Failed to create GLFW window for Windowed mode");
+        glfwGetWindowSize(_window, &_width, &_height);
+        glfwGetFramebufferSize(_window, &_framebufferWidth, &_framebufferHeight);
     }
 }
 
@@ -85,9 +76,14 @@ BeWindow::~BeWindow() {
 }
 
 BeWindow::BeWindow(BeWindow&& other) noexcept
-    : _window(other._window), _width(other._width), _height(other._height),
-      _framebufferWidth(other._framebufferWidth), _framebufferHeight(other._framebufferHeight),
-      _title(std::move(other._title)), _mode(other._mode) {
+    : _window(other._window)
+    , _width(other._width)
+    , _height(other._height)
+    , _framebufferWidth(other._framebufferWidth)
+    , _framebufferHeight(other._framebufferHeight)
+    , _title(std::move(other._title))
+    , _mode(other._mode) 
+{
     other._window = nullptr;
 }
 
@@ -128,4 +124,50 @@ auto BeWindow::GetGlfwWindow() const -> GLFWwindow* {
 
 auto BeWindow::SetupErrorCallback() -> void {
     glfwSetErrorCallback(errorCallback);
+}
+
+auto BeWindow::DebugPollMonitors() const -> void {
+    int count;
+    GLFWmonitor** monitors = glfwGetMonitors(&count);
+    GLFWmonitor* primary = glfwGetPrimaryMonitor();
+
+    for (int i = 0; i < count; i++) {
+        GLFWmonitor* monitor = monitors[i];
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        const char* name = glfwGetMonitorName(monitor);
+
+        int x, y;
+        glfwGetMonitorPos(monitor, &x, &y);
+
+        float xscale, yscale;
+        glfwGetMonitorContentScale(monitor, &xscale, &yscale);
+
+        bool isPrimary = (monitor == primary);
+
+        printf("[%d]%s %s — %dx%d @ %dHz, pos=(%d,%d), scale=(%.1f,%.1f)\n",
+            i,
+            isPrimary ? " [PRIMARY]" : "",
+            name,
+            mode->width, mode->height, mode->refreshRate,
+            x, y,
+            xscale, yscale
+        );
+    }
+}
+
+auto BeWindow::DebugPollSizes() const -> void {
+    glfwPollEvents();
+    float scaleX = 1.f, scaleY = 1.f;
+    int windowWidth = 0, windowHeight = 0;
+    int framebufferWidth = 0, framebufferHeight = 0;
+    int computedFramebufferWidth = 0, computedFramebufferHeight = 0;
+    glfwGetWindowSize(_window, &windowWidth, &windowHeight);
+    glfwGetWindowContentScale(_window, &scaleX, &scaleY);
+    glfwGetFramebufferSize(_window, &framebufferWidth, &framebufferHeight);
+    computedFramebufferWidth  = static_cast<int>(static_cast<float>(windowWidth)  * scaleX);
+    computedFramebufferHeight = static_cast<int>(static_cast<float>(windowHeight) * scaleY);
+    std::fprintf(stderr,
+        "[BeWindow] logicalSize=%dx%d  framebuffer=%dx%d  computedFramebuffer=%dx%d  contentScale=%.2fx%.2f\n",
+        _width, _height, _framebufferWidth, _framebufferHeight, computedFramebufferWidth, computedFramebufferHeight, scaleX, scaleY
+    );
 }

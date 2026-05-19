@@ -263,12 +263,12 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
         .clipped          = VK_TRUE,
     };
 
-    std::fprintf(stderr,
-        "[Swapchain] requested=%ux%u  currentExtent=%ux%u  min=%ux%u  max=%ux%u\n",
-        desc.Width, desc.Height,
-        capabilities.currentExtent.width, capabilities.currentExtent.height,
-        capabilities.minImageExtent.width, capabilities.minImageExtent.height,
-        capabilities.maxImageExtent.width, capabilities.maxImageExtent.height);
+    // std::fprintf(stderr,
+    //     "[Swapchain] requested=%ux%u  currentExtent=%ux%u  min=%ux%u  max=%ux%u\n",
+    //     desc.Width, desc.Height,
+    //     capabilities.currentExtent.width, capabilities.currentExtent.height,
+    //     capabilities.minImageExtent.width, capabilities.minImageExtent.height,
+    //     capabilities.maxImageExtent.width, capabilities.maxImageExtent.height);
 
     result = vkCreateSwapchainKHR(_device, &swapchainInfo, nullptr, &entry.Swapchain);
     be_assert(result == VK_SUCCESS, "Failed to create swapchain!");

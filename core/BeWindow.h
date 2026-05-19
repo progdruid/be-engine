@@ -26,8 +26,8 @@ class BeWindow {
     //lifetime//////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
     explicit BeWindow(
-        int width,
-        int height,
+        int desiredWidth,
+        int desiredHeight,
         const std::string& title = "Window",
         BeWindowMode mode = BeWindowMode::Windowed
     );
@@ -57,4 +57,6 @@ class BeWindow {
     [[nodiscard]] auto GetWindowMode() const -> BeWindowMode { return _mode; }
 
     hide auto SetupErrorCallback() -> void;
+    hide auto DebugPollMonitors() const -> void;
+    hide auto DebugPollSizes() const -> void;
 };

@@ -56,15 +56,15 @@ auto BeImGuiPass::Render() -> void {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    static int dbgFrame = 0;
-    if (dbgFrame++ == 1) {
-        const auto& io = ImGui::GetIO();
-        std::fprintf(stderr,
-            "[ImGui] DisplaySize=%.0fx%.0f  FramebufferScale=%.2fx%.2f  rendererW=%u  rendererH=%u\n",
-            io.DisplaySize.x, io.DisplaySize.y,
-            io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y,
-            _renderer->GetWidth(), _renderer->GetHeight());
-    }
+    // static int dbgFrame = 0;
+    // if (dbgFrame++ == 1) {
+    //     const auto& io = ImGui::GetIO();
+    //     std::fprintf(stderr,
+    //         "[ImGui] DisplaySize=%.0fx%.0f  FramebufferScale=%.2fx%.2f  rendererW=%u  rendererH=%u\n",
+    //         io.DisplaySize.x, io.DisplaySize.y,
+    //         io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y,
+    //         _renderer->GetWidth(), _renderer->GetHeight());
+    // }
 
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiCond_FirstUseEver);
