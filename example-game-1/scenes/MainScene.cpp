@@ -62,37 +62,31 @@ auto MainScene::Prepare() -> void {
     const auto standardShader   = BeAssetRegistry::GetShader("standard");
     const auto tessellatedShader = BeAssetRegistry::GetShader("tessellated");
 
-    {
-        auto planeMesh = BeMeshPrimitives::Plane(63);
-        const auto terrainShader = BeAssetRegistry::GetShader("terrain");
-        _plane = BeProp::FromMesh(std::move(planeMesh), terrainShader);
-        _plane->Slices[0].Material->SetFloat("TerrainScale", 200.0f);
-        _plane->Slices[0].Material->SetFloat("HeightScale", 100.0f);
-    }
-    _witchItems = BeProp::Create("assets/witch_items.glb",    standardShader,    *GameIns->Renderer);
-    _cube       = BeProp::Create("assets/cube.glb",           tessellatedShader, *GameIns->Renderer);
-    _cube->Materials[0]->SetFloat3("BaseColor", glm::vec3(0.28f, 0.39f, 1.0f));
-    _macintosh  = BeProp::Create("assets/model.fbx",          standardShader,    *GameIns->Renderer);
-    _pagoda     = BeProp::Create("assets/pagoda.glb",         standardShader,    *GameIns->Renderer);
-    _disks      = BeProp::Create("assets/floppy-disks.glb",   standardShader,    *GameIns->Renderer);
-    _anvil      = BeProp::Create("assets/anvil/anvil.fbx",    standardShader,    *GameIns->Renderer);
-    _anvil->Slices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
-
-    _uniformMaterial = BeMaterial::Create("uniform-material", false);
-    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
-
     const uint32_t screenWidth  = GameIns->Window->GetFramebufferWidth();
     const uint32_t screenHeight = GameIns->Window->GetFramebufferHeight();
 
     _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
 
+    {
+        auto planeMesh = BeMeshPrimitives::Plane(63);
+        const auto terrainShader = BeAssetRegistry::GetShader("terrain");
+        _plane = BeProp::FromMesh(std::move(planeMesh), terrainShader, "geometry-main");
+        _plane->Slices[0].Material->SetFloat("TerrainScale", 200.0f);
+        _plane->Slices[0].Material->SetFloat("HeightScale", 100.0f);
+    }
+    _witchItems = _machine->LoadProp("assets/witch_items.glb",    standardShader);
+    _cube       = _machine->LoadProp("assets/cube.glb",           tessellatedShader);
+    _cube->Materials[0]->SetFloat3("BaseColor", glm::vec3(0.28f, 0.39f, 1.0f));
+    _macintosh  = _machine->LoadProp("assets/model.fbx",          standardShader);
+    _pagoda     = _machine->LoadProp("assets/pagoda.glb",         standardShader);
+    _disks      = _machine->LoadProp("assets/floppy-disks.glb",   standardShader);
+    _anvil      = _machine->LoadProp("assets/anvil/anvil.fbx",    standardShader);
+    _anvil->Slices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
+
+    _uniformMaterial = BeMaterial::Create("uniform-material", false);
+    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
+
     _machine->RegisterMesh(_plane->Mesh);
-    _machine->RegisterMesh(_witchItems->Mesh);
-    _machine->RegisterMesh(_cube->Mesh);
-    _machine->RegisterMesh(_macintosh->Mesh);
-    _machine->RegisterMesh(_pagoda->Mesh);
-    _machine->RegisterMesh(_disks->Mesh);
-    _machine->RegisterMesh(_anvil->Mesh);
     _machine->BakeMeshes();
 
     _machine->DeclareGBufferTarget("BaseColor",         SenFormat::R11G11B10_Float);

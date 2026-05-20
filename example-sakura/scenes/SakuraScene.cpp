@@ -53,7 +53,12 @@ auto SakuraScene::Prepare() -> void {
     const auto standardShader    = BeAssetRegistry::GetShader("standard");
     const auto checkerboardShader = BeAssetRegistry::GetShader("checkerboard");
 
-    _cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), checkerboardShader);
+    const uint32_t screenWidth  = GameIns->Window->GetFramebufferWidth();
+    const uint32_t screenHeight = GameIns->Window->GetFramebufferHeight();
+
+    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
+
+    _cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), checkerboardShader, "geometry-main");
     _cube->Materials[0]->SetTexture("DiffuseTexture",
         BeTexture::Create("Sakura_Checkerboard")
         .LoadFromFile("assets/checkerboard.png")
@@ -61,21 +66,21 @@ auto SakuraScene::Prepare() -> void {
         .Build()
     );
 
-    _emissiveCube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader);
+    _emissiveCube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
     _emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.99f, 0.8f, 0.6f) * 1.7f);
 
-    _moon = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader);
+    _moon = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
     _moon->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 2.1f);
 
-    _anvil = BeProp::Create("assets/anvil/scene.gltf", standardShader, *GameIns->Renderer);
+    _anvil = _machine->LoadProp("assets/anvil/scene.gltf", standardShader);
     _anvil->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
 
-    _sakura = BeProp::Create("assets/sakura/scene.gltf", standardShader, *GameIns->Renderer);
+    _sakura = _machine->LoadProp("assets/sakura/scene.gltf", standardShader);
     _sakura->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("linear-wrap"));
 
-    _sakura2 = BeProp::Create("assets/stylized_sakura_tree.glb", standardShader, *GameIns->Renderer);
+    _sakura2 = _machine->LoadProp("assets/stylized_sakura_tree.glb", standardShader);
 
-    _testSphere = BeProp::FromMesh(BeMeshPrimitives::Sphere(), standardShader);
+    _testSphere = BeProp::FromMesh(BeMeshPrimitives::Sphere(), standardShader, "geometry-main");
     _testSphere->Materials[0]->SetFloat3("BaseColor", glm::vec3(0.8f, 0.3f, 0.1f));
     _testSphere->Materials[0]->SetFloat("Metallic", 0.0f);
     _testSphere->Materials[0]->SetFloat("Roughness", 0.5f);
@@ -83,15 +88,7 @@ auto SakuraScene::Prepare() -> void {
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
-    const uint32_t screenWidth  = GameIns->Window->GetFramebufferWidth();
-    const uint32_t screenHeight = GameIns->Window->GetFramebufferHeight();
-
-    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
-
     _machine->RegisterMesh(_cube->Mesh);
-    _machine->RegisterMesh(_anvil->Mesh);
-    _machine->RegisterMesh(_sakura->Mesh);
-    _machine->RegisterMesh(_sakura2->Mesh);
     _machine->RegisterMesh(_emissiveCube->Mesh);
     _machine->RegisterMesh(_moon->Mesh);
     _machine->RegisterMesh(_testSphere->Mesh);

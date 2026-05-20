@@ -5,7 +5,11 @@
 
 #include "BeAssetRegistry.h"
 #include "BeRenderer.h"
+#include "BeShader.h"
 #include "BeTexture.h"
+#include "BeMaterial.h"
+#include "assimp-import/BeAssimpImporter.h"
+#include <assimp/material.h>
 #include "standard-render-machine/BeStandardShadowPass.h"
 #include "standard-render-machine/BeStandardGeometryPass.h"
 #include "standard-render-machine/BeStandardLightingPass.h"
@@ -238,6 +242,42 @@ auto BeStandardRenderMachine::GetSunLightEntries() const -> const std::vector<Be
 auto BeStandardRenderMachine::GetPointLightEntries() const -> const std::vector<BeSRMPointLightEntry>& {
     return _pointLightEntries;
 }
+
+// =====================================================================================================================
+// BeStandardRenderMachine — asset loading
+// =====================================================================================================================
+
+auto BeStandardRenderMachine::LoadProp(
+    const std::filesystem::path& modelPath,
+    std::weak_ptr<BeShader> shader
+) -> std::shared_ptr<BeProp> {
+    
+    auto materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
+        const auto schemeName = shader.lock()->GetMaterialSchemeName("geometry-main");
+        auto material = BeMaterial::Create(schemeName, true);
+
+        aiString texPath;
+        if (mat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) == AI_SUCCESS ||
+            mat->GetTexture(aiTextureType_DIFFUSE,    0, &texPath) == AI_SUCCESS) {
+            material->SetTexture("Diffuse_or_Albedo", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
+            }
+        if (mat->GetTexture(aiTextureType_METALNESS, 0, &texPath) == AI_SUCCESS) {
+            material->SetTexture("ORM_RGB", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
+        }
+
+        aiColor4D color{};
+        if (mat->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS)
+            material->SetFloat3("BaseColor", {color.r, color.g, color.b});
+
+        return material;
+    };
+    
+    static BeAssimpImporter importer;
+    auto prop = importer.LoadProp(modelPath, shader, materialExtractFunction);
+    RegisterMesh(prop->Mesh);
+    return prop;
+}
+
 
 // =====================================================================================================================
 // BeStandardRenderMachine — mesh baking

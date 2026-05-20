@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -134,7 +135,10 @@ class BeStandardRenderMachine {
     auto GetGeometryEntries() const -> const std::vector<BeSRMGeometryEntry>&;
     auto GetSunLightEntries() const -> const std::vector<BeSRMSunLightEntry>&;
     auto GetPointLightEntries() const -> const std::vector<BeSRMPointLightEntry>&;
-
+    
+    // asset loading ---------------------------------------------------------------------------------------------------
+    expose auto LoadProp(const std::filesystem::path& modelPath, std::weak_ptr<BeShader> shader) -> std::shared_ptr<BeProp>;
+    
     // mesh baking -----------------------------------------------------------------------------------------------------
     expose
     auto RegisterMesh(const std::shared_ptr<BeMesh>& mesh) -> void;

@@ -14,7 +14,6 @@ target_link_libraries(core
         Vulkan::Vulkan
         libassert::assert
     PRIVATE
-        assimp::assimp
         slang)
 
 be_apply_defaults(core)

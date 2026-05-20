@@ -43,23 +43,14 @@ void ShowcaseScene::Prepare() {
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
-    LoadModels();
-    CreateObjects();
-
     const uint32_t screenWidth  = GameIns->Window->GetFramebufferWidth();
     const uint32_t screenHeight = GameIns->Window->GetFramebufferHeight();
 
     _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
 
-    for (const auto& name : { 
-        "skycube", "ramen", "still-life", "fiesta-tea",
-        "honeydew_melons", "hunger_games", "pickles",
-        "watermelons", "apfel", "eggplant", "tomatoes" 
-    }) {
-        if (const auto prop = BeAssetRegistry::GetProp(name).lock()) {
-            _machine->RegisterMesh(prop->Mesh);
-        }
-    }
+    LoadModels(*_machine);
+    CreateObjects();
+
     _machine->BakeMeshes();
 
     _machine->DeclareGBufferTarget("Showcase_BaseColor",         SenFormat::R11G11B10_Float);
@@ -78,24 +69,25 @@ void ShowcaseScene::Prepare() {
     _machine->AddBackbufferPass("Showcase_FXAAOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
 }
 
-auto ShowcaseScene::LoadModels() -> void {
+auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
     auto standardShader = BeAssetRegistry::GetShader("standard");
 
-    BeAssetRegistry::AddProp("ramen",           BeProp::Create("assets/ramen/scene.gltf",           standardShader, *GameIns->Renderer));
-    BeAssetRegistry::AddProp("still-life",      BeProp::Create("assets/still-life/scene.gltf",      standardShader, *GameIns->Renderer));
-    BeAssetRegistry::AddProp("fiesta-tea",      BeProp::Create("assets/fiesta_tea/scene.gltf",      standardShader, *GameIns->Renderer));
-    BeAssetRegistry::AddProp("honeydew_melons", BeProp::Create("assets/honeydew_melons/scene.gltf", standardShader, *GameIns->Renderer));
-    BeAssetRegistry::AddProp("hunger_games",    BeProp::Create("assets/hunger_games/scene.gltf",    standardShader, *GameIns->Renderer));
-    BeAssetRegistry::AddProp("pickles",         BeProp::Create("assets/pickles/scene.gltf",         standardShader, *GameIns->Renderer));
-    BeAssetRegistry::AddProp("watermelons",     BeProp::Create("assets/watermelons/scene.gltf",     standardShader, *GameIns->Renderer));
-    BeAssetRegistry::AddProp("apfel",           BeProp::Create("assets/apfel/scene.gltf",           standardShader, *GameIns->Renderer));
-    BeAssetRegistry::AddProp("eggplant",        BeProp::Create("assets/eggplant/scene.gltf",        standardShader, *GameIns->Renderer));
-    BeAssetRegistry::AddProp("tomatoes",        BeProp::Create("assets/tomatoes/scene.gltf",        standardShader, *GameIns->Renderer));
+    BeAssetRegistry::AddProp("ramen",           machine.LoadProp("assets/ramen/scene.gltf",           standardShader));
+    BeAssetRegistry::AddProp("still-life",      machine.LoadProp("assets/still-life/scene.gltf",      standardShader));
+    BeAssetRegistry::AddProp("fiesta-tea",      machine.LoadProp("assets/fiesta_tea/scene.gltf",      standardShader));
+    BeAssetRegistry::AddProp("honeydew_melons", machine.LoadProp("assets/honeydew_melons/scene.gltf", standardShader));
+    BeAssetRegistry::AddProp("hunger_games",    machine.LoadProp("assets/hunger_games/scene.gltf",    standardShader));
+    BeAssetRegistry::AddProp("pickles",         machine.LoadProp("assets/pickles/scene.gltf",         standardShader));
+    BeAssetRegistry::AddProp("watermelons",     machine.LoadProp("assets/watermelons/scene.gltf",     standardShader));
+    BeAssetRegistry::AddProp("apfel",           machine.LoadProp("assets/apfel/scene.gltf",           standardShader));
+    BeAssetRegistry::AddProp("eggplant",        machine.LoadProp("assets/eggplant/scene.gltf",        standardShader));
+    BeAssetRegistry::AddProp("tomatoes",        machine.LoadProp("assets/tomatoes/scene.gltf",        standardShader));
 
-    auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader);
+    auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
     skycube->Materials[0]->SetFloat3("BaseColor", HexColor("#FAC8CD"));
     skycube->Slices[0].TwoSided = true;
     BeAssetRegistry::AddProp("skycube", skycube);
+    machine.RegisterMesh(skycube->Mesh);
 }
 
 auto ShowcaseScene::CreateObjects() -> void {

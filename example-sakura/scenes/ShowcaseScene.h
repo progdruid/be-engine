@@ -32,7 +32,7 @@ class ShowcaseScene : public BaseScene {
 
     auto Prepare() -> void override;
     auto CreateTargetTextures() -> void;
-    auto LoadModels () -> void;
+    auto LoadModels (BeStandardRenderMachine& machine) -> void;
     auto CreateObjects() -> void;
 
     auto OnLoad() -> void override;
