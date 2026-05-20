@@ -16,6 +16,7 @@ class BeStandardBackbufferPass final : public BeRenderPass {
     hide
     BeStandardRenderMachine* _srm;
     std::shared_ptr<BeTexture> _input;
+    std::shared_ptr<BeTexture> _activeInput;
     glm::vec3 _clearColor;
     std::shared_ptr<BeMaterial> _material;
     SenPipeline _pipeline;

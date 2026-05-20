@@ -247,6 +247,12 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         _useOrbitCamera = !_useOrbitCamera;
     }
 
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_HOME)) _machine->SetDebugChannel(-1);  // normal output
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_F1))   _machine->SetDebugChannel(0);   // albedo
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_F2))   _machine->SetDebugChannel(1);   // world normal
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_F3))   _machine->SetDebugChannel(2);   // ORM
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_F4))   _machine->SetDebugChannel(3);   // emissive
+
     if (_useOrbitCamera) {
         GameIns->Input->SetMouseCapture(false);
         _orbitCameraController->Update(deltaTime, GameIns->Input.get());

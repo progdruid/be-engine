@@ -200,6 +200,16 @@ auto BeStandardRenderMachine::AddPass(std::unique_ptr<BeRenderPass> pass) -> voi
 // BeStandardRenderMachine — build
 // =====================================================================================================================
 
+auto BeStandardRenderMachine::SetDebugChannel(int channel) -> void {
+    _debugChannel = channel;
+}
+
+auto BeStandardRenderMachine::GetDebugChannelTexture() const -> std::shared_ptr<BeTexture> {
+    if (_debugChannel < 0 || _debugChannel >= static_cast<int>(_gbufferTargets.size()))
+        return nullptr;
+    return _gbufferTargets[_debugChannel];
+}
+
 auto BeStandardRenderMachine::Build() -> void {
     auto renderer = _renderer.lock();
     renderer->ClearPasses();

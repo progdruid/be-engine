@@ -20,11 +20,19 @@ auto BeStandardBackbufferPass::Initialise() -> void {
     const auto shader = BeAssetRegistry::GetShader("backbuffer").lock();
     _material = BeMaterial::Create("backbuffer-material", false);
     _material->SetTexture("InputTexture", _input);
+    _activeInput = _input;
     _pipeline = BePipelineBuilder::Start(*shader).SetColorFormats({ _renderer->GetSwapchainFormat() }).Build();
 }
 
 auto BeStandardBackbufferPass::Render() -> void {
     auto& cmd = _renderer->GetCommandBuffer();
+
+    const auto debugTex = _srm->GetDebugChannelTexture();
+    const auto& desired = debugTex ? debugTex : _input;
+    if (desired != _activeInput) {
+        _material->SetTexture("InputTexture", desired);
+        _activeInput = desired;
+    }
 
     cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
 

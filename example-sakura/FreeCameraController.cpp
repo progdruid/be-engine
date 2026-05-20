@@ -30,7 +30,7 @@ auto FreeCameraController::Update(float deltaTime, BeInput* input) -> void {
     }
 
     bool captureMouse = false;
-    if (input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
+    if (input->GetMouseButton(GLFW_MOUSE_BUTTON_LEFT)) {
         captureMouse = true;
         const glm::vec2 mouseDelta = input->GetMouseDelta();
         _camera->Yaw   -= mouseDelta.x * MouseSensitivity;

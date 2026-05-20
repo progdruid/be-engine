@@ -78,6 +78,8 @@ class BeStandardRenderMachine {
     uint32_t _width;
     uint32_t _height;
 
+    int _debugChannel = -1;
+
     std::vector<TextureEntry> _textureRegistry;
     std::vector<std::shared_ptr<BeTexture>> _gbufferTargets;
     std::shared_ptr<BeTexture> _depthTarget;
@@ -123,6 +125,12 @@ class BeStandardRenderMachine {
 
     expose
     auto Build() -> void;
+
+    // debug channel (−1 = normal, 0..N = G-buffer targets in declaration order) ----------------------------------------
+    expose
+    auto SetDebugChannel(int channel) -> void;
+    auto GetDebugChannelTexture() const -> std::shared_ptr<BeTexture>;
+    auto GetGBufferTargetCount() const -> size_t { return _gbufferTargets.size(); }
 
     // frame submission ------------------------------------------------------------------------------------------------
     expose
