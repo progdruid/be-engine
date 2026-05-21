@@ -46,7 +46,7 @@ class BeAssetRegistry {
     static auto IndexShaderFiles (const std::vector<std::filesystem::path>& filePaths) -> void;
     
     static auto GetShader(std::string_view name) -> std::weak_ptr<BeShader> {
-        be_assert(_shaders.contains(std::string(name))); 
+        be_assert(_shaders.contains(std::string(name)), name); 
         return _shaders.at(std::string(name));
     }
     static auto HasShader(std::string_view name) -> bool { return _shaders.contains(std::string(name)); }

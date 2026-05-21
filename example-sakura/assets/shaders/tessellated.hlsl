@@ -236,7 +236,7 @@ PixelOutput PixelFunction(Interpolators input) {
     PixelOutput output;
     output.Diffuse_RGB_or_Albedo_RGB = diffuseColor.rgb * _Tesselated.DiffuseColor;
     output.WorldNormal_XYZ_LMF_W.xyz = normalize(input.Normal);
-    output.WorldNormal_XYZ_LMF_W.w = 0.0;
+    output.WorldNormal_XYZ_LMF_W.w = 1.0;  // Phong pipeline flag
     output.SpecShin_RGBA_or_MRAO_RGB.rgb = _Tesselated.SpecularColor;
     output.SpecShin_RGBA_or_MRAO_RGB.a = _Tesselated.Shininess / 2048.0;
 

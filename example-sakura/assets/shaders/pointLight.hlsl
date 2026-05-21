@@ -104,10 +104,10 @@ float SamplePointLightShadow(float3 worldPos) {
 
 
 PixelOutput PixelFunction(FullscreenVSOutput input) {
-    float depth        = Depth.Sample(InputSampler, input.UV).r;
-    float3 albedo      = Albedo_RGB.Sample(InputSampler, input.UV).rgb;
-    float3 worldNormal = WorldNormal_XYZ.Sample(InputSampler, input.UV).xyz;
-    float3 orm         = ORM_RGB.Sample(InputSampler, input.UV).rgb;
+    float depth          = Depth.Sample(InputSampler, input.UV).r;
+    float3 albedo        = Albedo_RGB.Sample(InputSampler, input.UV).rgb;
+    float4 normalAndFlag = WorldNormal_XYZ.Sample(InputSampler, input.UV);
+    float4 surface       = ORM_RGB.Sample(InputSampler, input.UV);
 
     float3 worldPos = ReconstructWorldPosition(input.UV, depth, _Frame.CameraInverseProjectionView);
     float3 lightDir = _PointLight.Position - worldPos;
@@ -125,14 +125,20 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     attenuation *= attenuation;
 
     float3 viewVec = _Frame.CameraPosition - worldPos;
-    float3 lit = StandardPBR(
-        worldNormal,
-        viewVec,
-        lightDir,
-        _PointLight.Color * _PointLight.Power * attenuation,
-        albedo,
-        orm
-    );
+    float3 lit;
+    if (normalAndFlag.w > 0.5) {
+        lit = StandardLambertBlinnPhong(
+            normalAndFlag.xyz, viewVec, lightDir,
+            _PointLight.Color, _PointLight.Power * attenuation,
+            albedo, surface.rgb, surface.a
+        );
+    } else {
+        lit = StandardPBR(
+            normalAndFlag.xyz, viewVec, lightDir,
+            _PointLight.Color * _PointLight.Power * attenuation,
+            albedo, surface.rgb
+        );
+    }
 
     PixelOutput output;
     output.LightHDR = lit * shadowAbsenceFactor;

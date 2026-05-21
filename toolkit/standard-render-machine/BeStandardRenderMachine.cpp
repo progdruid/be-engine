@@ -259,29 +259,67 @@ auto BeStandardRenderMachine::GetPointLightEntries() const -> const std::vector<
 
 auto BeStandardRenderMachine::LoadProp(
     const std::filesystem::path& modelPath,
-    std::weak_ptr<BeShader> shader
+    std::weak_ptr<BeShader> shader,
+    BeSRMLightingModel model
 ) -> std::shared_ptr<BeProp> {
-    
-    auto materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
-        const auto schemeName = shader.lock()->GetMaterialSchemeName("geometry-main");
-        auto material = BeMaterial::Create(schemeName, true);
 
-        aiString texPath;
-        if (mat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) == AI_SUCCESS ||
-            mat->GetTexture(aiTextureType_DIFFUSE,    0, &texPath) == AI_SUCCESS) {
-            material->SetTexture("Diffuse_or_Albedo", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
+    std::function<std::shared_ptr<BeMaterial>(aiMaterial const*, aiScene const*, const std::filesystem::path&)> materialExtractFunction;
+
+    if (model == BeSRMLightingModel::PBR) {
+        materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
+            const auto schemeName = shader.lock()->GetMaterialSchemeName("geometry-main");
+            auto material = BeMaterial::Create(schemeName, true);
+
+            aiString texPath;
+            if (mat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) == AI_SUCCESS ||
+                mat->GetTexture(aiTextureType_DIFFUSE,    0, &texPath) == AI_SUCCESS) {
+                material->SetTexture("Diffuse_or_Albedo", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
             }
-        if (mat->GetTexture(aiTextureType_METALNESS, 0, &texPath) == AI_SUCCESS) {
-            material->SetTexture("ORM_RGB", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
-        }
+            if (mat->GetTexture(aiTextureType_METALNESS, 0, &texPath) == AI_SUCCESS) {
+                material->SetTexture("ORM_RGB", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
+            }
+            if (mat->GetTexture(aiTextureType_EMISSIVE, 0, &texPath) == AI_SUCCESS) {
+                material->SetTexture("Emissive_RGB", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
+            }
 
-        aiColor4D color{};
-        if (mat->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS)
-            material->SetFloat3("BaseColor", {color.r, color.g, color.b});
+            aiColor4D color{};
+            if (mat->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS)
+                material->SetFloat3("BaseColor", {color.r, color.g, color.b});
 
-        return material;
-    };
-    
+            return material;
+        };
+    } else {
+        materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
+            const auto schemeName = shader.lock()->GetMaterialSchemeName("geometry-main");
+            auto material = BeMaterial::Create(schemeName, true);
+
+            aiString texPath;
+            if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
+                material->SetTexture("DiffuseTexture", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
+            }
+            if (mat->GetTexture(aiTextureType_SPECULAR, 0, &texPath) == AI_SUCCESS) {
+                material->SetTexture("SpecularTexture", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
+            }
+            if (mat->GetTexture(aiTextureType_EMISSIVE, 0, &texPath) == AI_SUCCESS) {
+                material->SetTexture("EmissiveTexture", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
+            }
+
+            aiColor4D color{};
+            if (mat->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS)
+                material->SetFloat3("DiffuseColor", {color.r, color.g, color.b});
+
+            aiColor4D specColor{};
+            if (mat->Get(AI_MATKEY_COLOR_SPECULAR, specColor) == AI_SUCCESS)
+                material->SetFloat3("SpecularColor", {specColor.r, specColor.g, specColor.b});
+
+            float shininess = 0.0f;
+            if (mat->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
+                material->SetFloat("Shininess", shininess / 2048.0f);
+
+            return material;
+        };
+    }
+
     static BeAssimpImporter importer;
     auto prop = importer.LoadProp(modelPath, shader, materialExtractFunction);
     RegisterMesh(prop->Mesh);

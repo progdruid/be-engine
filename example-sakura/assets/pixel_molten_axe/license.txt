@@ -1,0 +1,11 @@
+Model Information:
+* title:	Pixel Molten Axe
+* source:	https://sketchfab.com/3d-models/pixel-molten-axe-f962979ea86d4853a0ef5f86eb1ba452
+* author:	soupffle (https://sketchfab.com/soupffle)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Pixel Molten Axe" (https://sketchfab.com/3d-models/pixel-molten-axe-f962979ea86d4853a0ef5f86eb1ba452) by soupffle (https://sketchfab.com/soupffle) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

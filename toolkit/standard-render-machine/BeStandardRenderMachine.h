@@ -18,6 +18,10 @@ class BeShader;
 class BeRenderPass;
 
 // =====================================================================================================================
+
+enum class BeSRMLightingModel { PBR, Phong };
+
+// =====================================================================================================================
 // Frame submission entries
 // =====================================================================================================================
 
@@ -145,7 +149,11 @@ class BeStandardRenderMachine {
     auto GetPointLightEntries() const -> const std::vector<BeSRMPointLightEntry>&;
     
     // asset loading ---------------------------------------------------------------------------------------------------
-    expose auto LoadProp(const std::filesystem::path& modelPath, std::weak_ptr<BeShader> shader) -> std::shared_ptr<BeProp>;
+    expose auto LoadProp(
+        const std::filesystem::path& modelPath, 
+        std::weak_ptr<BeShader> shader, 
+        BeSRMLightingModel model = BeSRMLightingModel::PBR
+    ) -> std::shared_ptr<BeProp>;
     
     // mesh baking -----------------------------------------------------------------------------------------------------
     expose

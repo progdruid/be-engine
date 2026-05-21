@@ -36,7 +36,8 @@ auto SakuraScene::Prepare() -> void {
     BeAssetRegistry::IndexShaderFiles({
         "assets/shaders/uniform-material.hlsl",
         "assets/shaders/objectMaterial.hlsl",
-        "assets/shaders/standard.hlsl",
+        "assets/shaders/standard-pbr.hlsl",
+        "assets/shaders/standard-phong.hlsl",
         "assets/shaders/checkerboard.hlsl",
         "assets/shaders/fullscreen-vertex.hlsl",
         "assets/shaders/directionalLight.hlsl",
@@ -50,7 +51,8 @@ auto SakuraScene::Prepare() -> void {
         "assets/shaders/fxaa.hlsl",
     });
 
-    const auto standardShader    = BeAssetRegistry::GetShader("standard");
+    const auto standardShader    = BeAssetRegistry::GetShader("standard-pbr");
+    const auto phongShader       = BeAssetRegistry::GetShader("standard-phong");
     const auto checkerboardShader = BeAssetRegistry::GetShader("checkerboard");
 
     const uint32_t screenWidth  = GameIns->Window->GetFramebufferWidth();
@@ -85,6 +87,17 @@ auto SakuraScene::Prepare() -> void {
     _testSphere->Materials[0]->SetFloat("Metallic", 0.0f);
     _testSphere->Materials[0]->SetFloat("Roughness", 0.5f);
 
+    _axe = _machine->LoadProp(
+        "assets/pixel_molten_axe/scene.gltf", 
+        phongShader, 
+        BeSRMLightingModel::Phong
+    );
+    
+    for (auto& material : _axe->Materials) {
+        material->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
+        material->SetFloat3("EmissiveColor", glm::vec3(1.5f));
+    }
+    
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
@@ -145,6 +158,22 @@ auto SakuraScene::OnLoad() -> void {
         ,NameComponent { .Name = "PBR_TestSphere" }
         ,RenderComponent { .Prop = _testSphere, .CastShadows = true }
         ,TransformComponent { .Position = glm::vec3(8, 1, 0), .Scale = glm::vec3(1.5f) }
+    );
+    CreateEntity(_registry
+        ,NameComponent { .Name = "Phong_Axe" }
+        ,RenderComponent { .Prop = _axe, .CastShadows = true }
+        ,TransformComponent { .Position = glm::vec3(-1.5f, 1.4f, 1.3f), .Rotation = glm::quat(glm::vec3(200_rad, 170_rad, 0)), .Scale = glm::vec3(0.007f) }
+    );
+    CreateEntity(_registry
+        ,NameComponent { .Name = "Phong_AxeLight" }
+        ,StaticTag {}
+        ,TransformComponent { .Position = glm::vec3(-0.5f, 1.7f, 1.3f) }
+        ,PointLightComponent {
+            .Radius = 5.0f,
+            .Color = glm::vec3(1.0f, 0.75f, 0.2f),
+            .Power = 2.0f,
+            .CastsShadows = false,
+        }
     );
     CreateEntity(_registry
         ,NameComponent { .Name = "PBR_TestLight" }

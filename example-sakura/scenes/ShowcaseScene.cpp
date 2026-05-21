@@ -34,7 +34,8 @@ void ShowcaseScene::Prepare() {
     BeAssetRegistry::IndexShaderFiles({
         "assets/shaders/uniform-material.hlsl",
         "assets/shaders/objectMaterial.hlsl",
-        "assets/shaders/standard.hlsl",
+        "assets/shaders/standard-pbr.hlsl",
+        "assets/shaders/standard-phong.hlsl",
         "assets/shaders/fullscreen-vertex.hlsl",
         "assets/shaders/backbuffer.hlsl",
         "assets/shaders/fxaa.hlsl",
@@ -70,7 +71,7 @@ void ShowcaseScene::Prepare() {
 }
 
 auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
-    auto standardShader = BeAssetRegistry::GetShader("standard");
+    auto standardShader = BeAssetRegistry::GetShader("standard-pbr");
 
     BeAssetRegistry::AddProp("ramen",           machine.LoadProp("assets/ramen/scene.gltf",           standardShader));
     BeAssetRegistry::AddProp("still-life",      machine.LoadProp("assets/still-life/scene.gltf",      standardShader));
