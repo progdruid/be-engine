@@ -25,6 +25,9 @@ BeWindow::BeWindow(int desiredWidth, int desiredHeight, const std::string& title
 {
     SetupErrorCallback();
 
+#ifdef __linux__
+    glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
     if (!glfwInit()) {
         throw std::runtime_error("Failed to initialize GLFW");
     }
