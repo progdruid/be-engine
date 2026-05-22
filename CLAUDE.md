@@ -4,108 +4,113 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-Generate Visual Studio solution:
+**Linux (active platform)** — uses CMake with Ninja:
 ```bash
+# Configure
+cmake --preset linux-debug    # or linux-release
+# Build
+cmake --build out/linux-debug
+```
+
+**Windows** — uses CMake with Visual Studio 2022 or premake5:
+```bash
+# CMake
+cmake --preset windows
+cmake --build out/windows --config Debug
+
+# Premake (legacy)
 ./premake5 vs2022
-```
-
-Clean generated files and binaries:
-```bash
-./premake5 clean
-```
-
-Build vendor libraries (first-time or after vendor changes):
-```bash
-./premake5 cook-vendors
-```
-
-Build from command line (after generating solution):
-```bash
 msbuild be.sln /p:Configuration=Debug
-msbuild be.sln /p:Configuration=Release
 ```
 
-No tests or linting. Builds with MSVC (Visual Studio 2022), x64 Windows, C++23 (`/Zc:__cplusplus /Zc:preprocessor`).
+No tests or linting. C++23 (`/Zc:__cplusplus /Zc:preprocessor` on MSVC). Build outputs land in `out/<preset>/`.
 
 ## Project Structure
 
 ```
 be-engine/
 ├── core/               # Static lib — rendering engine core
-│   ├── Be*.h/cpp       # Engine classes (renderer, pipeline, shader, texture, mesh, etc.)
-│   ├── sen-rhi/        # RHI abstraction layer (Vulkan active, DX11 legacy)
-│   ├── shaders/        # Engine built-in shaders (copied to target on build)
+│   ├── Be*.h/cpp       # Engine classes
+│   ├── sen-rhi/        # RHI abstraction (Vulkan active, DX11 legacy/disabled)
 │   └── umbrellas/      # Config headers (glm, libassert, json, access-modifiers)
 ├── toolkit/            # Static lib — higher-level abstractions; links against core
-│   ├── basic-render-pipeline/  # Deferred rendering pipeline passes (BRP)
-│   ├── scenes/         # Scene base and manager
-│   ├── imgui/          # ImGui source + backends (DX11, Vulkan, GLFW)
+│   ├── standard-render-machine/  # Deferred rendering pipeline (SRM)
+│   ├── assimp-import/  # BeAssimpImporter — Assimp-based model loading
+│   ├── scenes/         # BeScene base + BeSceneManager
+│   ├── imgui/          # ImGui source + BeImGuiPass + backends
 │   └── entt/           # ECS header-only library
-├── example-game-1/     # ConsoleApp — simple game example
-├── example-sakura/     # ConsoleApp — advanced showcase (multi-scene, ECS, AA)
-├── example-vulkan/     # ConsoleApp — minimal raw Vulkan/RHI example
+├── example-game-1/     # Simple game example
+├── example-sakura/     # Advanced showcase (multi-scene, ECS, SRM)
+├── example-vulkan/     # Minimal raw Vulkan/RHI example
 ├── devtools/
-│   └── shader-boilerplate-autogen/  # CLI tool — generates @be-auto-boilerplate in shaders
-├── build/              # Premake build scripts
-│   ├── be.lua          # Top-level workspace/project declarations
-│   ├── be/projects.lua # Per-project definitions
-│   ├── be/default.lua  # Shared C++23 compiler flags
-│   └── vendor.lua      # Vendor library build setup
-├── vendor/             # Third-party libraries
-├── premake5.lua        # Root build entry point (requires build/be, build/vendor)
-├── premake5-vendor.lua # Vendor-only build entry point
-├── premake5.exe        # Premake binary (checked in)
-├── be.sln              # Main solution (core + toolkit + examples + devtools)
-└── vendor.sln          # Vendor-only solution
+│   └── shader-boilerplate-autogen/  # CLI — generates @be-auto-boilerplate in shaders
+└── vendor/             # Third-party libraries
 ```
 
 ## Architecture Overview
 
-**be-engine** is a C++23 graphics engineer's workbench for Windows, primarily targeting Vulkan. The rendering architecture is pass-based: the user assembles a list of `BeRenderPass` subclasses, and the renderer executes them in order each frame.
+**be-engine** is a C++23 graphics engineer's workbench targeting Vulkan. The rendering architecture is pass-based: the user assembles `BeRenderPass` subclasses and the renderer executes them in order each frame.
 
 ### Core Engine (`core/`)
 
-- **`BeRenderer`** — manages the GPU backend (Vulkan swapchain, device, queues) and an ordered list of `BeRenderPass*`. `Render()` executes all passes, each auto-wrapped in a debug annotation. Binds `UniformData` (camera matrices, time, ambient) to cbuffer `b0` before every pass.
-- **`BeRenderPass`** — abstract base with virtual `Initialise()` and `Render()`. Subclasses access the backend via a protected `_renderer` pointer.
+- **`BeRenderer`** — manages Vulkan swapchain/device/queues and an ordered list of `BeRenderPass*`. `Render()` executes all passes wrapped in debug annotations. Binds `UniformData` (camera matrices, time, ambient) to cbuffer `b0` before every pass.
+- **`BeRenderPass`** — abstract base with virtual `Initialise()` and `Render()`. Subclasses access the backend via protected `_renderer`.
 - **`BePipelineBuilder`** — fluent builder for GPU pipeline state. `BePipelineBuilder::Start(shader).SetTopology(...).SetBlend(...).Build()`. Caches by (shader, topology, rasterizer, blend, depthStencil, formats).
-- **`BeShader`** — loaded from `.hlsl` files via `BeShader::Create(path)`. Parses embedded `@be-shader:` JSON metadata. Compiled at runtime via Slang to SPIR-V (Vulkan). Supports vertex, pixel, hull, and domain stages.
+- **`BeShader`** — loaded from `.hlsl` via `BeShader::Create(path)`. Parses embedded `@be-shader:` JSON. Compiled at runtime by Slang to SPIR-V. Supports vertex, pixel, hull, domain stages.
 - **`BeShaderTools`** — parses `@be-material:` and `@be-shader:` JSON blocks from `.hlsl` comments.
-- **`BeTexture`** — builder pattern: `BeTexture::Create(name).SetSize(w,h).SetFormat(...).Build()`. Supports 2D, cubemap, mipmaps, render targets, depth targets. Formats: RGBA8, BGRA8, RGBA16_Float, R11G11B10_Float, Depth32, RGB32/RGBA32/RG32_Float.
-- **`BeMaterial` / `BeMaterialScheme`** — typed material properties (float, float2–4, matrix, textures, samplers). Scheme defines types/defaults from shader JSON. `BeMaterial::Create(schemeName)` instantiates from a scheme.
-- **`BeMesh`** — geometry: `std::vector<BeFullVertex>` + indices + `std::vector<BeMeshSlice>` (multi-material regions).
+- **`BeTexture`** — builder: `BeTexture::Create(name).SetSize(w,h).SetFormat(...).Build()`. Formats: RGBA8, BGRA8, RGBA16_Float, R11G11B10_Float, Depth32, RGB32/RGBA32/RG32_Float.
+- **`BeMaterial` / `BeMaterialScheme`** — typed material properties (float, float2–4, matrix, textures, samplers). `BeMaterial::Create(schemeName)` instantiates from a scheme.
+- **`BeMesh`** — `std::vector<BeFullVertex>` + indices + `std::vector<BeMeshSlice>` (multi-material regions).
 - **`BeMeshPrimitives`** — namespace with `Plane()`, `Cube()`, `Sphere()` returning `shared_ptr<BeMesh>`.
-- **`BeProp`** — renderable object: mesh + shader + per-slice materials + two-sided flags. `BeProp::Create(modelPath, shader, renderer)` (Assimp) or `BeProp::FromMesh(mesh, shader)` (procedural).
-- **`BeAssetRegistry`** — static asset manager for textures, shaders, material schemes, samplers, props. Call `InjectRenderer()` first, then `IndexShaderFiles(dir)`. Returns `weak_ptr`.
+- **`BeProp`** — renderable object: mesh + shader + per-slice materials + two-sided flags. Use `BeProp::FromMesh(mesh, shader)` for procedural geometry; use `BeAssimpImporter` or `SRM.LoadProp()` for file-loaded models.
+- **`BeAssetRegistry`** — static asset manager. Call `InjectRenderer()` first, then `IndexShaderFiles(dir)`. Returns `weak_ptr`.
 - **`BeWindow`** — GLFW window wrapper. Modes: Windowed, Fullscreen, BorderlessFullscreen.
-- **`BeInput`** — keyboard (`GetKey/Down/Up`), mouse (position, buttons, scroll, capture), gamepad (buttons, sticks, triggers).
-- **`BeCamera`** — position, yaw/pitch in degrees, FOV, near/far. `Update()` recalculates view/projection matrices and direction vectors.
+- **`BeInput`** — keyboard (`GetKey/Down/Up`), mouse (position, buttons, scroll, capture), gamepad.
+- **`BeCamera`** — position, yaw/pitch in degrees, FOV, near/far. `Update()` recalculates matrices and direction vectors.
 - **`BeTimer`** — frame timing (delta time, elapsed time).
-- **`BeBuffers.h`** — GPU buffer type definitions.
 
 ### RHI Abstraction Layer (`core/sen-rhi/`)
 
-Thin abstraction over the GPU backend. Active backend: **Vulkan**. DX11 backend code exists but is disabled.
-
-- **`SenTypes.h`** — GPU type definitions: formats, usage flags, topology, sampler modes, blend/depth states, buffer access.
 - **`SenBackend.h`** — selects active backend: `using SenBackend = SenVulkanBackend`.
-- **`SenCommandBuffer.h`** — selects active command buffer type.
-- **`SenShaderCompiler.h/cpp`** — Slang-based shader compiler; compiles HLSL to SPIR-V.
-- **`vulkan/`** — Vulkan backend (`SenVulkanBackend`): device, swapchain, textures, buffers, samplers, pipelines, bind groups, descriptor sets. Uses VMA for memory.
-- **`dx11/`** — DX11 backend (legacy, not used).
+- **`SenTypes.h`** — GPU type definitions: formats, usage flags, topology, sampler modes, blend/depth states, buffer access.
+- **`SenShaderCompiler.h/cpp`** — Slang-based HLSL→SPIR-V compiler.
+- **`vulkan/`** — Vulkan backend: device, swapchain, textures, buffers, samplers, pipelines, bind groups, descriptor sets. Uses VMA for memory.
 
-### Toolkit: Basic Render Pipeline (`toolkit/basic-render-pipeline/`)
+### Toolkit: Standard Render Machine (`toolkit/standard-render-machine/`)
 
-Default deferred rendering pipeline. **BRP is an example, not the engine.** Users are encouraged to write their own pipelines.
+`BeStandardRenderMachine` (SRM) is a fluent builder that owns the texture registry, pass list, and per-frame geometry/light submission buffer. It is the standard deferred pipeline — **an example, not the engine**.
 
-Passes in typical order:
-- **`BeShadowPass`** — shadow maps for directional lights (2D) and point lights (cubemap, 6 faces).
-- **`BeGeometryPass`** — populates G-buffer (4 color targets + depth).
-- **`BeLightingPass`** — deferred lighting with shadows and emissive.
-- **`BeBloomPass`** — Kawase bloom (bright extraction → downsample chain → upsample blend).
-- **`BeFullscreenEffectPass`** — generic fullscreen post-process (FXAA, SMAA, custom effects).
-- **`BeBackbufferPass`** — final composite + tonemapping to swapchain.
-- **`BeImGuiPass`** — renders ImGui. Accepts a `SetUICallback()` lambda.
-- **`BeBRPSubmissionBuffer`** — per-frame geometry/light accumulator. `RegisterMesh()` + `BakeMeshes()` uploads all meshes to shared GPU vertex/index buffers.
+Typical setup:
+```cpp
+SRM = make_shared<BeStandardRenderMachine>(renderer, width, height);
+auto gbuffer0 = SRM->DeclareGBufferTarget("gbuffer0", SenFormat::R11G11B10_Float);
+// ... declare other targets and depth ...
+SRM->AddShadowPass();
+SRM->AddGeometryPass();
+SRM->AddLightingPass("hdr");
+SRM->AddBloomPass(5, "hdr", "hdr-bloomed");
+SRM->AddBackbufferPass("hdr-bloomed");
+SRM->Build();  // registers all passes with BeRenderer
+```
+
+Per-frame submission:
+```cpp
+SRM->ClearFrame();
+SRM->AddGeometry({ .Name = "cube", .ModelMatrix = ..., .Prop = prop, .CastShadows = true });
+SRM->AddSunLight({ .Direction = ..., ... });
+SRM->AddPointLight({ ... });
+// BeRenderer::Render() executes all passes
+```
+
+Passes (all in `toolkit/standard-render-machine/`):
+- **`BeStandardShadowPass`** — shadow maps for directional lights (2D) and point lights (cubemap).
+- **`BeStandardGeometryPass`** — populates G-buffer (4 color targets + depth).
+- **`BeStandardLightingPass`** — deferred lighting with shadows and emissive.
+- **`BeStandardBloomPass`** — Kawase bloom (bright extraction → downsample → upsample blend).
+- **`BeStandardFullscreenEffectPass`** — generic fullscreen post-process (FXAA, SMAA, custom).
+- **`BeStandardBackbufferPass`** — final composite + tonemapping to swapchain.
+
+`BeImGuiPass` lives in `toolkit/imgui/`.
 
 #### G-Buffer Layout
 
@@ -123,14 +128,22 @@ Passes in typical order:
 - `b1` — object material buffer (model matrix) — bound by geometry pass
 - `b2+` — surface material buffers (per-shader properties)
 
+### Assimp Loading (`toolkit/assimp-import/`)
+
+`BeAssimpImporter::LoadProp(modelPath, shader, materialExtractFunction)` loads a model file and builds a `BeProp`. The `materialExtractFunction` callback receives the raw `aiMaterial*` and must return a `shared_ptr<BeMaterial>`. `BeAssimpImporter::LoadTextureFromAssimpPath()` is a static helper for use inside that callback.
+
+`BeStandardRenderMachine::LoadProp(modelPath, shader, lightingModel)` wraps this with a standard PBR or Phong material extraction.
+
 ### Scene System (`toolkit/scenes/`)
 
-- **`BeScene`** — abstract base with `OnLoad()` / `OnUnload()`.
-- **`BeSceneManager`** — named scene registry. `RequestSceneChange()` / `ApplyPendingSceneChange()` for deferred transitions. Typed accessors: `GetActiveScene<T>()`, `GetScene<T>()`.
+- **`BeScene`** — base with `OnLoad()` / `OnUnload()`.
+- **`BeSceneManager`** — named registry. `RequestSceneChange()` / `ApplyPendingSceneChange()` for deferred transitions. Typed accessors: `GetActiveScene<T>()`, `GetScene<T>()`.
+
+Project-level scenes typically subclass a local `BaseScene` that extends `BeScene` with `Prepare()` and `Tick(float deltaTime)` (see `example-sakura/scenes/BaseScene.h`).
 
 ### Shader Format (.hlsl)
 
-Custom format: HLSL with JSON metadata in block comments. Compiled at runtime by Slang.
+HLSL with JSON metadata in block comments, compiled at runtime by Slang.
 
 ```hlsl
 /*
@@ -158,30 +171,29 @@ Custom format: HLSL with JSON metadata in block comments. Compiled at runtime by
 */
 ```
 
-Tessellation uses `"topology": "patch-list-3"` and adds `"hull"` / `"domain"` keys inside the shader JSON.
+Tessellation: `"topology": "patch-list-3"` + `"hull"` / `"domain"` keys.
 
-`@be-auto-boilerplate` regions in `.hlsl` files are **generated by the CLI tool**, not hand-written. They are codegen artifacts — never edit them manually.
+`@be-auto-boilerplate` regions are **generated by the devtools CLI** — never edit them manually.
 
-#### Rasterizer Presets
-`back-solid`, `back-wireframe`, `front-solid`, `none-solid`, etc.
+#### Presets
 
-#### Blend Presets
-`disable`, `alpha` (src-alpha/inv-src-alpha), `additive` (one/one), `multiply` (dst-color/zero).
-
-#### Depth-Stencil Presets
-`less`, `lequal`, `equal`, `greater`, `always`, `disable`.
+| Category | Values |
+|----------|--------|
+| Rasterizer | `back-solid`, `back-wireframe`, `front-solid`, `none-solid` |
+| Blend | `disable`, `alpha`, `additive`, `multiply` |
+| Depth-Stencil | `less`, `lequal`, `equal`, `greater`, `always`, `disable` |
 
 ### Sampler String Format
 
-`BeAssetRegistry::GetSampler()` parses `"filter-address[-cmp]"`. Filter: `point` or `linear`. Address: `wrap`, `clamp`, `mirror`. Optional `-cmp` for shadow map comparison. Examples: `"linear-clamp"`, `"linear-clamp-cmp"`, `"point-wrap"`.
+`BeAssetRegistry::GetSampler()` parses `"filter-address[-cmp]"`. Filter: `point`/`linear`. Address: `wrap`/`clamp`/`mirror`. Optional `-cmp` for shadow comparison. Examples: `"linear-clamp"`, `"linear-clamp-cmp"`, `"point-wrap"`.
 
 ### Vertex Layout
 
-`BeFullVertex`: Position (vec3), Normal (vec3), Color (vec4, default white), UV0 (vec2), UV1 (vec2), UV2 (vec2). Shader JSON vertex semantic names: `"position"`, `"normal"`, `"color3"`, `"color4"`, `"uv0"`, `"uv1"`, `"uv2"`.
+`BeFullVertex`: Position (vec3), Normal (vec3), Color (vec4, default white), UV0–UV2 (vec2 each). Shader JSON semantic names: `"position"`, `"normal"`, `"color3"`, `"color4"`, `"uv0"`, `"uv1"`, `"uv2"`.
 
 ### Access Modifiers Convention
 
-Custom macros in `core/umbrellas/access-modifiers.hpp` — used as section markers **without** a colon:
+`core/umbrellas/access-modifiers.hpp` — used as section markers **without** a colon:
 - `expose` = `public:`
 - `protect` = `protected:`
 - `hide` = `private:`
@@ -199,9 +211,7 @@ Left-handed. All geometry (Assimp-loaded and procedural) **negates X** on positi
 
 ### Error Handling
 
-- `be_assert(condition, ...)` — debug assertions via libassert (preferred).
-- `Utils::Check << hrResult1 << hrResult2` — streaming HRESULT checker, throws on failure.
-- `ThrowIfFailed(hr)` — single HRESULT check.
+`be_assert(condition, ...)` — debug assertions via libassert (preferred).
 
 ### ECS
 
@@ -209,13 +219,11 @@ entt (header-only, `toolkit/entt/entt.hpp`). Components defined per-project. Exa
 
 ### Devtools: Shader Boilerplate Autogen
 
-`devtools/shader-boilerplate-autogen.exe` scans `.hlsl` files, reads `@be-material:` JSON, and generates matching cbuffer/texture/sampler declarations into `@be-auto-boilerplate` regions.
-
 ```bash
 # Single file
-devtools/shader-boilerplate-autogen.exe --once path/to/shader.hlsl
+devtools/shader-boilerplate-autogen --once path/to/shader.hlsl
 # Watch mode (live polling)
-devtools/shader-boilerplate-autogen.exe --watch assets/shaders/
+devtools/shader-boilerplate-autogen --watch assets/shaders/
 ```
 
 ### Vendor Libraries
