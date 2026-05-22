@@ -1,15 +1,30 @@
 
-# This is *be* engine.
+# this is *be* engine.
 
-### Making
-To make solution run `./premake5 vs2022` (yes, premake5.exe is included)
+yo, this is my c++23 graphics engine i built for myself on vulkan. batteries included: deferred pipeline, shadow maps, bloom, ecs, imgui, assimp loading.
 
-### Structure
-* `Engine` - static lib to link against
-* `MiscConfiguration` - *no-build* project with miscellaneous files, like this one.
-* `example-game-1` - no.1 executable project, example game, links against `Engine`
-* `example-sakura` - no.2 executable project, example game, links against `Engine`
+### building
 
-To modify the project structure please modify `premake5.lua`
+**linux**
+```bash
+cmake --preset linux-debug
+cmake --build out/linux-debug
+```
 
-### Enjoy!
+**windows**
+```bash
+cmake --preset windows
+cmake --build out/windows --config Debug
+```
+
+requires: cmake 3.25+, ninja (linux), vs2022 (windows), vulkan sdk.
+
+### structure
+* `core/` - rendering engine core, static lib
+* `toolkit/` - higher-level abstractions (srm, ecs, imgui, assimp), static lib
+* `example-game-1/` - simple example (outdated, may not work)
+* `example-sakura/` - a bit more advanced showcase: multi-scene, ecs, full deferred pipeline
+* `example-vulkan/` - minimal raw vulkan/rhi example
+* `devtools/` - shader boilerplate autogen cli
+
+### enjoy!
