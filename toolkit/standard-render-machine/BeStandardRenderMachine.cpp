@@ -281,6 +281,9 @@ auto BeStandardRenderMachine::LoadProp(
             if (mat->GetTexture(aiTextureType_EMISSIVE, 0, &texPath) == AI_SUCCESS) {
                 material->SetTexture("Emissive_RGB", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
             }
+            if (mat->GetTexture(aiTextureType_NORMALS, 0, &texPath) == AI_SUCCESS) {
+                material->SetTexture("NormalMap", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
+            }
 
             aiColor4D color{};
             if (mat->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS)
@@ -302,6 +305,9 @@ auto BeStandardRenderMachine::LoadProp(
             }
             if (mat->GetTexture(aiTextureType_EMISSIVE, 0, &texPath) == AI_SUCCESS) {
                 material->SetTexture("EmissiveTexture", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
+            }
+            if (mat->GetTexture(aiTextureType_NORMALS, 0, &texPath) == AI_SUCCESS) {
+                material->SetTexture("NormalMap", BeAssimpImporter::LoadTextureFromAssimpPath(texPath, scene, parentPath));
             }
 
             aiColor4D color{};

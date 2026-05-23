@@ -23,7 +23,7 @@ auto Game::Run() -> int {
     Height = 1080;
 
     //Window = std::make_shared<BeWindow>(Width, Height, "be: example game 1");
-    Window = std::make_shared<BeWindow>(0, 0, "be: example sakura", BeWindowMode::BorderlessFullscreen);
+    Window = std::make_shared<BeWindow>(0, 0, "be: example sakura", BeWindowMode::Fullscreen);
     Width = Window->GetFramebufferWidth();
     Height = Window->GetFramebufferHeight();
     Renderer = std::make_shared<BeRenderer>(Width, Height, static_cast<void*>(Window->GetGlfwWindow()));
@@ -52,6 +52,13 @@ auto Game::Run() -> int {
     .SetUsage(SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::RGBA8_Unorm)
     .FillWithColor(glm::vec4(0.f, 1.f, 0.f, 1.f))
+    .AddToRegistry()
+    .BuildNoReturn();
+    BeTexture::Create("flat-normal")
+    .SetSize(1, 1)
+    .SetUsage(SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA8_Unorm)
+    .FillWithColor(glm::vec4(0.5f, 0.5f, 1.0f, 1.0f))
     .AddToRegistry()
     .BuildNoReturn();
 

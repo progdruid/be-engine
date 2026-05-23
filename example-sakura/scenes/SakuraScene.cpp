@@ -87,15 +87,16 @@ auto SakuraScene::Prepare() -> void {
     _testSphere->Materials[0]->SetFloat("Metallic", 0.0f);
     _testSphere->Materials[0]->SetFloat("Roughness", 0.5f);
 
-    _axe = _machine->LoadProp(
-        "assets/pixel_molten_axe/scene.gltf", 
-        phongShader, 
-        BeSRMLightingModel::Phong
-    );
-    
-    for (auto& material : _axe->Materials) {
+    _axe = _machine->LoadProp("assets/pixel_molten_axe/scene.gltf",phongShader,BeSRMLightingModel::Phong);
+    for (const auto& material : _axe->Materials) {
         material->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
         material->SetFloat3("EmissiveColor", glm::vec3(1.5f));
+    }
+
+    _katana = _machine->LoadProp("assets/cyberpunk_katana/scene.gltf", standardShader);
+    for (const auto& material : _katana->Materials) {
+        material->SetFloat3("EmissiveColor", glm::vec3(2.5f));
+        material->SetFloat("Metallic", 0.01f);
     }
     
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
@@ -107,15 +108,15 @@ auto SakuraScene::Prepare() -> void {
     _machine->RegisterMesh(_testSphere->Mesh);
     _machine->BakeMeshes();
 
-    _machine->DeclareGBufferTarget("Sakura_Albedo_RGB", SenFormat::R11G11B10_Float);
-    _machine->DeclareGBufferTarget("Sakura_WorldNormal_XYZ", SenFormat::RGBA16_Float);
+    _machine->DeclareGBufferTarget("Sakura_Albedo_RGB",         SenFormat::R11G11B10_Float);
+    _machine->DeclareGBufferTarget("Sakura_WorldNormal_XYZ",    SenFormat::RGBA16_Float);
     _machine->DeclareGBufferTarget("Sakura_ORM_RGB",            SenFormat::RGBA8_Unorm);
-    _machine->DeclareGBufferTarget("Sakura_Emissive_RGB",              SenFormat::R11G11B10_Float);
-    _machine->DeclareDepth        ("Sakura_Depth",                     SenFormat::Depth32);
-    _machine->DeclareTexture      ("Sakura_HDR",                       SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Sakura_Bloom",                     SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Sakura_Tonemapper",                SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Sakura_FXAA",                      SenFormat::R11G11B10_Float);
+    _machine->DeclareGBufferTarget("Sakura_Emissive_RGB",       SenFormat::R11G11B10_Float);
+    _machine->DeclareDepth        ("Sakura_Depth",              SenFormat::Depth32);
+    _machine->DeclareTexture      ("Sakura_HDR",                SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_Bloom",              SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_Tonemapper",         SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_FXAA",               SenFormat::R11G11B10_Float);
 
     _machine->AddShadowPass();
     _machine->AddGeometryPass();
@@ -158,6 +159,11 @@ auto SakuraScene::OnLoad() -> void {
         ,NameComponent { .Name = "PBR_TestSphere" }
         ,RenderComponent { .Prop = _testSphere, .CastShadows = true }
         ,TransformComponent { .Position = glm::vec3(8, 1, 0), .Scale = glm::vec3(1.5f) }
+        );
+    CreateEntity(_registry
+        ,NameComponent { .Name = "Katana" }
+        ,RenderComponent { .Prop = _katana, .CastShadows = true }
+        ,TransformComponent { .Position = glm::vec3(5, 1.f, 3), .Rotation = glm::quat(glm::vec3(90_rad, 0, 0)), .Scale = glm::vec3(2.0f) }
     );
     CreateEntity(_registry
         ,NameComponent { .Name = "Phong_Axe" }

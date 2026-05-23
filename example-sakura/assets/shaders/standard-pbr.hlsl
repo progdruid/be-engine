@@ -14,6 +14,7 @@
     "Diffuse_or_Albedo: texture2d = white",
     "ORM_RGB: texture2d = default-orm",
     "Emissive_RGB: texture2d = white",
+    "NormalMap: texture2d = flat-normal",
 
     "InputSampler: sampler = linear-clamp",
 ]
@@ -27,7 +28,7 @@
     "depthStencil": "less",
 
     "vertex": "VertexFunction",
-    "vertexLayout": ["position", "normal", "uv0"],
+    "vertexLayout": ["position", "normal", "uv0", "tangent"],
     "pixel": "PixelFunction",
 
     "materials": {
@@ -75,11 +76,13 @@ SamplerState InputSampler : register(s1, space2);
 Texture2D Diffuse_or_Albedo : register(t2, space2);
 Texture2D ORM_RGB : register(t3, space2);
 Texture2D Emissive_RGB : register(t4, space2);
+Texture2D NormalMap : register(t5, space2);
 
 struct VertexInput {
     float3 Position : POSITION;
     float3 Normal : NORMAL;
     float2 UV : TEXCOORD0;
+    float4 Tangent : TANGENT;
 };
 
 struct PixelOutput {
@@ -95,17 +98,20 @@ struct PixelOutput {
 
 struct Interpolators {
     float4 Position : SV_POSITION;
-    float3 Normal : NORMAL;
-    float2 UV    : TEXCOORD0;
+    float3 Normal   : NORMAL;
+    float4 Tangent  : TANGENT;   // xyz=tangent, w=handedness
+    float2 UV       : TEXCOORD0;
 };
 
 Interpolators VertexFunction(VertexInput input) {
     float4 worldPosition = mul(float4(input.Position, 1.0), _GeometryObject.Model);
-    
+    float3x3 normalMatrix = (float3x3)_GeometryObject.Model;
+
     Interpolators output;
-    output.Position = mul(worldPosition, _GeometryObject.ProjectionView);
-    output.Normal = normalize(mul(input.Normal, (float3x3)_GeometryObject.Model));
-    output.UV = input.UV;
+    output.Position       = mul(worldPosition, _GeometryObject.ProjectionView);
+    output.Normal         = normalize(mul(input.Normal, normalMatrix));
+    output.Tangent        = float4(normalize(mul(input.Tangent.xyz, normalMatrix)), input.Tangent.w);
+    output.UV             = input.UV;
 
     return output;
 }
@@ -116,9 +122,16 @@ PixelOutput PixelFunction(Interpolators input) {
     float4 orm      = ORM_RGB.Sample(InputSampler, input.UV);
     float3 emissive = Emissive_RGB.Sample(InputSampler, input.UV).rgb;
 
+    float3 N = normalize(input.Normal);
+    float3 T = normalize(input.Tangent.xyz);
+    float3 B = cross(N, T) * input.Tangent.w;
+    float3x3 TBN = float3x3(T, B, N);
+    float3 normalSample = NormalMap.Sample(InputSampler, input.UV).rgb * 2.0 - 1.0;
+    float3 worldNormal  = normalize(mul(normalSample, TBN));
+
     PixelOutput output;
     output.Albedo_RGB           = diffuse_albedo.rgb * _GeometryMain.BaseColor;
-    output.WorldNormal_XYZ.xyz  = normalize(input.Normal);
+    output.WorldNormal_XYZ.xyz  = worldNormal;
     output.WorldNormal_XYZ.w    = 0.0;
     output.ORM_RGB              = float4(
         orm.r * _GeometryMain.AO,

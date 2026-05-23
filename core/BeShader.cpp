@@ -232,8 +232,7 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<
                 {"color3",   SenFormat::RGB32_Float},
                 {"color4",   SenFormat::RGBA32_Float},
                 {"uv0",      SenFormat::RG32_Float},
-                {"uv1",      SenFormat::RG32_Float},
-                {"uv2",      SenFormat::RG32_Float},
+                {"tangent",  SenFormat::RGBA32_Float},
             };
             static const std::unordered_map<std::string, uint32_t> ElementOffsets = {
                 {"position", 0},
@@ -241,8 +240,7 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<
                 {"color3",  24},
                 {"color4",  24},
                 {"uv0",     40},
-                {"uv1",     48},
-                {"uv2",     56},
+                {"tangent", 48},
             };
 
             std::vector<SenVertexLayoutElement> layoutElements;

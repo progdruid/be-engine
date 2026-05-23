@@ -8,8 +8,7 @@ struct BeFullVertex {
     glm::vec3 Normal;                   // 12
     glm::vec4 Color     {1, 1, 1, 1};   // 24
     glm::vec2 UV0       {0, 0};         // 40
-    glm::vec2 UV1       {0, 0};         // 48
-    glm::vec2 UV2       {0, 0};         // 56
+    glm::vec4 Tangent   {1, 0, 0, 1};   // 48  xyz=tangent, w=handedness
 };
 
 struct BeMeshSlice {

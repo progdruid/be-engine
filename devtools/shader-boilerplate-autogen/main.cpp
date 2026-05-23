@@ -109,8 +109,7 @@ static auto VertexFieldForLayout(const std::string& layout) -> std::string {
     if (layout == "color3")   return "float3 Color : COLOR;";
     if (layout == "color4")   return "float4 Color : COLOR;";
     if (layout == "uv0")      return "float2 UV : TEXCOORD0;";
-    if (layout == "uv1")      return "float2 UV1 : TEXCOORD1;";
-    if (layout == "uv2")      return "float2 UV2 : TEXCOORD2;";
+    if (layout == "tangent")  return "float4 Tangent : TANGENT;";
     return "// unknown layout: " + layout;
 }
 

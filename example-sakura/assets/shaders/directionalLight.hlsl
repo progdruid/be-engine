@@ -39,11 +39,11 @@
 
 */
 
-#include <BeFunctions.hlsli>
 #include "fullscreen-vertex.hlsl"
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "BeFunctions.hlsli"
 #include "uniform-material.hlsl"
 
 struct directional_light_material {

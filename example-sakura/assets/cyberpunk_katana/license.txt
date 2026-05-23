@@ -1,0 +1,11 @@
+Model Information:
+* title:	Cyberpunk Katana
+* source:	https://sketchfab.com/3d-models/cyberpunk-katana-aa5505c8bd9c41c692159fa79e0e1693
+* author:	Mikołaj Michalak (https://sketchfab.com/M_Michalak)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Cyberpunk Katana" (https://sketchfab.com/3d-models/cyberpunk-katana-aa5505c8bd9c41c692159fa79e0e1693) by Mikołaj Michalak (https://sketchfab.com/M_Michalak) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
