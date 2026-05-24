@@ -14,7 +14,9 @@ OrbitCameraController::OrbitCameraController(
     : _camera(camera)
     , _lookTarget(lookTarget)
     , _orbitPitch(glm::radians(initialPitch))
+    , _targetPitch(glm::radians(initialPitch))
     , _orbitRadius(initialRadius)
+    , _targetRadius(initialRadius)
 {}
 
 auto OrbitCameraController::Update(float deltaTime, BeInput* input) -> void {
@@ -23,13 +25,15 @@ auto OrbitCameraController::Update(float deltaTime, BeInput* input) -> void {
     if (input->GetKeyDown(GLFW_KEY_SPACE)) SpeedMultiplier = 0;
     if (input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
         constexpr float pitchSensitivity = 0.005f;
-        _orbitPitch += input->GetMouseDelta().y * pitchSensitivity;
-        _orbitPitch = glm::clamp(_orbitPitch, glm::radians(-89.0f), glm::radians(89.0f));
+        _targetPitch += input->GetMouseDelta().y * pitchSensitivity;
+        _targetPitch = glm::clamp(_targetPitch, glm::radians(-89.0f), glm::radians(89.0f));
     }
+    _orbitPitch = glm::mix(_orbitPitch, _targetPitch, 1.0f - glm::exp(-RadiusSmoothSpeed * deltaTime));
 
     _orbitAngle += OrbitSpeed * SpeedMultiplier * deltaTime;
 
-    _orbitRadius = glm::max(_orbitRadius + ScrollSpeed * -input->GetScrollDelta().y, MinRadius);
+    _targetRadius = glm::max(_targetRadius + ScrollSpeed * -input->GetScrollDelta().y, MinRadius);
+    _orbitRadius = glm::mix(_orbitRadius, _targetRadius, 1.0f - glm::exp(-RadiusSmoothSpeed * deltaTime));
 
     _camera->Position = _lookTarget + glm::vec3(
         glm::cos(_orbitAngle) * glm::cos(_orbitPitch) * _orbitRadius,

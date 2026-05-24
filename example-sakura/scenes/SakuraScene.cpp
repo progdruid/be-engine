@@ -93,11 +93,11 @@ auto SakuraScene::Prepare() -> void {
         material->SetFloat3("EmissiveColor", glm::vec3(1.5f));
     }
 
-    _katana = _machine->LoadProp("assets/cyberpunk_katana/scene.gltf", standardShader);
-    for (const auto& material : _katana->Materials) {
-        material->SetFloat3("EmissiveColor", glm::vec3(2.5f));
-        material->SetFloat("Metallic", 0.01f);
-    }
+    // _katana = _machine->LoadProp("assets/cyberpunk_katana/scene.gltf", standardShader);
+    // for (const auto& material : _katana->Materials) {
+    //     material->SetFloat3("EmissiveColor", glm::vec3(2.5f));
+    //     material->SetFloat("Metallic", 0.01f);
+    // }
     
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
@@ -159,27 +159,6 @@ auto SakuraScene::OnLoad() -> void {
         ,NameComponent { .Name = "PBR_TestSphere" }
         ,RenderComponent { .Prop = _testSphere, .CastShadows = true }
         ,TransformComponent { .Position = glm::vec3(8, 1, 0), .Scale = glm::vec3(1.5f) }
-        );
-    CreateEntity(_registry
-        ,NameComponent { .Name = "Katana" }
-        ,RenderComponent { .Prop = _katana, .CastShadows = true }
-        ,TransformComponent { .Position = glm::vec3(5, 1.f, 3), .Rotation = glm::quat(glm::vec3(90_rad, 0, 0)), .Scale = glm::vec3(2.0f) }
-    );
-    CreateEntity(_registry
-        ,NameComponent { .Name = "Phong_Axe" }
-        ,RenderComponent { .Prop = _axe, .CastShadows = true }
-        ,TransformComponent { .Position = glm::vec3(-1.5f, 1.4f, 1.3f), .Rotation = glm::quat(glm::vec3(200_rad, 170_rad, 0)), .Scale = glm::vec3(0.007f) }
-    );
-    CreateEntity(_registry
-        ,NameComponent { .Name = "Phong_AxeLight" }
-        ,StaticTag {}
-        ,TransformComponent { .Position = glm::vec3(-0.5f, 1.7f, 1.3f) }
-        ,PointLightComponent {
-            .Radius = 5.0f,
-            .Color = glm::vec3(1.0f, 0.75f, 0.2f),
-            .Power = 2.0f,
-            .CastsShadows = false,
-        }
     );
     CreateEntity(_registry
         ,NameComponent { .Name = "PBR_TestLight" }
@@ -200,6 +179,27 @@ auto SakuraScene::OnLoad() -> void {
                 .SetSize(512, 512)
                 .AddToRegistry()
                 .Build()
+        }
+    );
+    // CreateEntity(_registry
+    //     ,NameComponent { .Name = "Katana" }
+    //     ,RenderComponent { .Prop = _katana, .CastShadows = true }
+    //     ,TransformComponent { .Position = glm::vec3(5, 1.f, 3), .Rotation = glm::quat(glm::vec3(90_rad, 0, 0)), .Scale = glm::vec3(2.0f) }
+    // );
+    CreateEntity(_registry
+        ,NameComponent { .Name = "Phong_Axe" }
+        ,RenderComponent { .Prop = _axe, .CastShadows = true }
+        ,TransformComponent { .Position = glm::vec3(-1.5f, 1.4f, 1.3f), .Rotation = glm::quat(glm::vec3(200_rad, 170_rad, 0)), .Scale = glm::vec3(0.007f) }
+    );
+    CreateEntity(_registry
+        ,NameComponent { .Name = "Phong_AxeLight" }
+        ,StaticTag {}
+        ,TransformComponent { .Position = glm::vec3(-0.5f, 1.7f, 1.3f) }
+        ,PointLightComponent {
+            .Radius = 5.0f,
+            .Color = glm::vec3(1.0f, 0.75f, 0.2f),
+            .Power = 2.0f,
+            .CastsShadows = false,
         }
     );
     CreateEntity(_registry
@@ -238,7 +238,7 @@ auto SakuraScene::OnLoad() -> void {
                 .Radius = 20.0f,
                 .Color = glm::vec3(0.99f, 0.8f, 0.6f),
                 .Power = (1.0f / 0.7f) * 1.7f,
-                .CastsShadows = true,
+                .CastsShadows = false,
                 .ShadowMapResolution = 2048,
                 .ShadowNearPlane = 0.1f,
                 .ShadowMap =

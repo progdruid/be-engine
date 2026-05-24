@@ -13,6 +13,7 @@ class OrbitCameraController {
     float SpeedStep = 0.1f;
     float ScrollSpeed = 1.0f;
     float MinRadius   = 0.5f;
+    float RadiusSmoothSpeed = 10.0f;
 
     explicit OrbitCameraController(
         BeCamera* camera,
@@ -28,5 +29,7 @@ class OrbitCameraController {
     glm::vec3 _lookTarget;
     float _orbitAngle  = 0.0f;
     float _orbitPitch;
+    float _targetPitch;
     float _orbitRadius;
+    float _targetRadius;
 };
