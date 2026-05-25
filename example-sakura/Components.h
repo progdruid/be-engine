@@ -53,6 +53,9 @@ struct PointLightComponent {
     std::weak_ptr<BeTexture> ShadowMap;
 };
 
+class LuaSceneLoader;
+void RegisterComponentParsers(LuaSceneLoader& loader);
+
 template<typename... Components>
 auto CreateEntity(entt::registry& registry, Components&&... components) -> entt::entity {
     auto entity = registry.create();

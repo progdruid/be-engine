@@ -48,6 +48,28 @@ else()
         IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/slang/linux-x64/lib/libslang-compiler.so")
 endif()
 
+# ── Lua 5.4 ───────────────────────────────────────────────────────────────────
+FetchContent_Declare(lua
+    URL https://www.lua.org/ftp/lua-5.4.7.tar.gz
+    URL_HASH SHA256=9fbf5e28ef86c69858f6d3d34eccc32e911c1a28b4120ff3e84aaa70cfbf1e30)
+FetchContent_MakeAvailable(lua)
+
+# Compile Lua from source
+file(GLOB LUA_SOURCES "${lua_SOURCE_DIR}/src/*.c")
+list(FILTER LUA_SOURCES EXCLUDE REGEX "(lua|luac)\\.c$")
+add_library(lua STATIC ${LUA_SOURCES})
+target_include_directories(lua PUBLIC "${lua_SOURCE_DIR}/src")
+set_target_properties(lua PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# ── LuaBridge3 (header-only) ──────────────────────────────────────────────────
+FetchContent_Declare(luabridge3
+    GIT_REPOSITORY https://github.com/kunitoki/LuaBridge3.git
+    GIT_TAG 3.0-rc4)
+FetchContent_MakeAvailable(luabridge3)
+add_library(luabridge3 INTERFACE)
+target_include_directories(luabridge3 INTERFACE "${luabridge3_SOURCE_DIR}/Source")
+target_link_libraries(luabridge3 INTERFACE lua)
+
 # ── Vulkan (prebuilt) ─────────────────────────────────────────────────────────
 # Windows: vendor/vulkan-sdk/lib/vulkan-1.lib  (existing layout, DLL lives in System32)
 # Linux:   place libvulkan.so.1 in vendor/vulkan-sdk/lib/linux-x64/

@@ -16,6 +16,15 @@
             "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
         },
         {
+            "name": "linux-debug-hotreload",
+            "displayName": "Linux Debug (Hot Reload)",
+            "inherits": "linux-debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "BE_SYMLINK_ASSETS": "ON"
+            }
+        },
+        {
             "name": "linux-release",
             "displayName": "Linux Release",
             "inherits": "base",
@@ -33,7 +42,8 @@
         }
     ],
     "buildPresets": [
-        { "name": "linux-debug",     "displayName": "Linux Debug",     "configurePreset": "linux-debug" },
+        { "name": "linux-debug",          "displayName": "Linux Debug",          "configurePreset": "linux-debug" },
+        { "name": "linux-debug-hotreload", "displayName": "Linux Debug (Hot Reload)", "configurePreset": "linux-debug-hotreload" },
         { "name": "linux-release",   "displayName": "Linux Release",   "configurePreset": "linux-release" },
         { "name": "windows-debug",   "displayName": "Windows Debug",   "configurePreset": "windows", "configuration": "Debug" },
         { "name": "windows-release", "displayName": "Windows Release", "configurePreset": "windows", "configuration": "Release" }

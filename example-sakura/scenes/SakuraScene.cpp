@@ -1,18 +1,19 @@
 
 #include "SakuraScene.h"
 
+#include <slang.h>
 #include <umbrellas/include-glfw.h>
 
 #include "BeRenderPass.h"
 #include "OrbitCameraController.h"
 #include "FreeCameraController.h"
 #include "BeAssetRegistry.h"
+#include "LuaSceneLoader.h"
 #include "BeCamera.h"
 #include "BeInput.h"
 #include "BeMaterial.h"
 #include "BeMeshPrimitives.h"
 #include "BeProp.h"
-#include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "BeWindow.h"
@@ -98,7 +99,16 @@ auto SakuraScene::Prepare() -> void {
     //     material->SetFloat3("EmissiveColor", glm::vec3(2.5f));
     //     material->SetFloat("Metallic", 0.01f);
     // }
-    
+
+    BeAssetRegistry::AddProp("cube", _cube);
+    BeAssetRegistry::AddProp("emissiveCube", _emissiveCube);
+    BeAssetRegistry::AddProp("moon", _moon);
+    BeAssetRegistry::AddProp("anvil", _anvil);
+    BeAssetRegistry::AddProp("sakura", _sakura);
+    BeAssetRegistry::AddProp("sakura2", _sakura2);
+    BeAssetRegistry::AddProp("testSphere", _testSphere);
+    BeAssetRegistry::AddProp("axe", _axe);
+
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
@@ -137,140 +147,33 @@ auto SakuraScene::Prepare() -> void {
     _machine->AddFullscreenPass(BeAssetRegistry::GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });
 
     _machine->AddBackbufferPass("Sakura_FXAA", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
+
+    _sceneLoader = std::make_unique<LuaSceneLoader>();
+    RegisterComponentParsers(*_sceneLoader);
 }
 
 auto SakuraScene::OnLoad() -> void {
-    _registry.clear();
-
     _machine->UniformMaterial = _uniformMaterial;
     _machine->Build();
 
-    CreateEntity(_registry
-        ,NameComponent { .Name = "Cube" }
-        ,TransformComponent { .Position = glm::vec3(0, -15, 0), .Rotation = glm::quat(), .Scale = glm::vec3(30) }
-        ,RenderComponent { .Prop = _cube, .CastShadows = true }
-    );
-    CreateEntity(_registry
-        ,NameComponent { .Name = "Anvil1" }
-        ,RenderComponent { .Prop = _anvil }
-        ,TransformComponent { .Position = {0, 0, 0}, .Rotation = glm::quat(glm::vec3(0, 0_rad, 0)), .Scale = glm::vec3(0.2f) }
-    );
-    CreateEntity(_registry
-        ,NameComponent { .Name = "PBR_TestSphere" }
-        ,RenderComponent { .Prop = _testSphere, .CastShadows = true }
-        ,TransformComponent { .Position = glm::vec3(8, 1, 0), .Scale = glm::vec3(1.5f) }
-    );
-    CreateEntity(_registry
-        ,NameComponent { .Name = "PBR_TestLight" }
-        ,StaticTag {}
-        ,TransformComponent { .Position = glm::vec3(8, 4, 2), .Scale = glm::vec3(0.2f) }
-        ,RenderComponent { .Prop = _emissiveCube, .CastShadows = false }
-        ,PointLightComponent {
-            .Radius = 12.0f,
-            .Color = glm::vec3(1.0f, 0.95f, 0.85f),
-            .Power = 3.0f,
-            .CastsShadows = false,
-            .ShadowMapResolution = 512,
-            .ShadowNearPlane = 0.1f,
-            .ShadowMap = BeTexture::Create("Sakura_PBRTestLight_ShadowMap")
-                .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
-                .SetFormat(SenFormat::Depth32)
-                .SetCubemap(true)
-                .SetSize(512, 512)
-                .AddToRegistry()
-                .Build()
-        }
-    );
-    // CreateEntity(_registry
-    //     ,NameComponent { .Name = "Katana" }
-    //     ,RenderComponent { .Prop = _katana, .CastShadows = true }
-    //     ,TransformComponent { .Position = glm::vec3(5, 1.f, 3), .Rotation = glm::quat(glm::vec3(90_rad, 0, 0)), .Scale = glm::vec3(2.0f) }
-    // );
-    CreateEntity(_registry
-        ,NameComponent { .Name = "Phong_Axe" }
-        ,RenderComponent { .Prop = _axe, .CastShadows = true }
-        ,TransformComponent { .Position = glm::vec3(-1.5f, 1.4f, 1.3f), .Rotation = glm::quat(glm::vec3(200_rad, 170_rad, 0)), .Scale = glm::vec3(0.007f) }
-    );
-    CreateEntity(_registry
-        ,NameComponent { .Name = "Phong_AxeLight" }
-        ,StaticTag {}
-        ,TransformComponent { .Position = glm::vec3(-0.5f, 1.7f, 1.3f) }
-        ,PointLightComponent {
-            .Radius = 5.0f,
-            .Color = glm::vec3(1.0f, 0.75f, 0.2f),
-            .Power = 2.0f,
-            .CastsShadows = false,
-        }
-    );
-    CreateEntity(_registry
-        ,NameComponent { .Name = "Sakura2" }
-        ,RenderComponent { .Prop = _sakura2 }
-        ,TransformComponent { .Position = {-3.f, -5.5, 2}, .Rotation = glm::quat(glm::vec3(0, 45.0_rad, 0)), .Scale = glm::vec3(5.0f) }
-    );
-    CreateEntity(_registry
-        ,NameComponent { .Name = "Moon" }
-        ,TransformComponent { .Position = glm::vec3(100, 150, 100), .Scale = glm::vec3(6.f) }
-        ,RenderComponent { .Prop = _moon, .CastShadows = false }
-        ,SunLightComponent {
-            .Direction = { -1, -1, -1 },
-            .Color = glm::vec3(0.7f, 0.7f, 0.99),
-            .Power = (1.0f / 0.7f) * 0.7f,
-            .CastsShadows = true,
-            .ShadowMapResolution = 4096,
-            .ShadowCameraDistance = 100.0f,
-            .ShadowMapWorldSize = 60.0f,
-            .ShadowNearPlane = 0.1f,
-            .ShadowFarPlane = 400.0f,
-            .ShadowMap = BeTexture::Create("Sakura_SunLightShadowMap")
-                .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
-                .SetFormat(SenFormat::Depth32)
-                .SetSize(4096, 4096)
-                .AddToRegistry()
-                .Build()
-        }
-    );
+    constexpr auto scenePath = "assets/sakura_scene.lua";
+    _sceneLoader->Load(scenePath, _registry);
+    _sceneLastWriteTime = std::filesystem::last_write_time(scenePath);
 
-    for (uint32_t i = 0; i < 0; ++i) {
-        CreateEntity(_registry
-            ,NameComponent { .Name = "PointLight_" + std::to_string(i) }
-            ,TransformComponent { .Scale = glm::vec3(0.5f) }
-            ,PointLightComponent {
-                .Radius = 20.0f,
-                .Color = glm::vec3(0.99f, 0.8f, 0.6f),
-                .Power = (1.0f / 0.7f) * 1.7f,
-                .CastsShadows = false,
-                .ShadowMapResolution = 2048,
-                .ShadowNearPlane = 0.1f,
-                .ShadowMap =
-                    BeTexture::Create("Sakura_PointLight" + std::to_string(i) + "_ShadowMap")
-                    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
-                    .SetFormat(SenFormat::Depth32)
-                    .SetCubemap(true)
-                    .SetSize(2048, 2048)
-                    .AddToRegistry()
-                    .Build()
-            }
-            ,RenderComponent { .Prop = _emissiveCube, .CastShadows = false }
-        );
-    }
-
-    srand(time(0));
-    for (uint32_t i = 0; i < 100; ++i) {
-        auto randFloat = [](float min, float max) -> float {
-            return min + float(rand()) / float(RAND_MAX) * (max - min);
-        };
-        CreateEntity(_registry
-            ,NameComponent { .Name = "Star_" + std::to_string(i) }
-            ,TransformComponent { .Position = glm::vec3(randFloat(-50.f, 50.f), randFloat(30.f, 60.f), randFloat(-50.f, 50.f)), .Scale = glm::vec3(0.1f) }
-            ,RenderComponent { .Prop = _emissiveCube, .CastShadows = false }
-        );
-    }
 }
 
 auto SakuraScene::Tick(float deltaTime) -> void {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
         GameIns->Input->SetMouseCapture(false);
         GameIns->SceneManager->RequestSceneChange("menu");
+    }
+
+    constexpr auto scenePath = "assets/sakura_scene.lua";
+    auto writeTime = std::filesystem::last_write_time(scenePath);
+    if (writeTime > _sceneLastWriteTime) {
+        _registry.clear();
+        _sceneLoader->Load(scenePath, _registry);
+        _sceneLastWriteTime = writeTime;
     }
 
     static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();

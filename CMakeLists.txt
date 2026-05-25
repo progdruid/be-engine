@@ -25,6 +25,15 @@ function(be_copy_assets target)
             "$<TARGET_FILE_DIR:${target}>/assets")
 endfunction()
 
+function(be_symlink_assets target)
+    set(_src "${CMAKE_CURRENT_SOURCE_DIR}/assets")
+    set(_dst "$<TARGET_FILE_DIR:${target}>/assets")
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E remove_directory "${_dst}"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink "${_src}" "${_dst}"
+    )
+endfunction()
+
 function(be_copy_runtime_deps target)
     if(WIN32)
         add_custom_command(TARGET ${target} POST_BUILD

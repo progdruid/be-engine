@@ -5,6 +5,9 @@
 .guidelines
 *.DotSettings.user
 
+# Devtools binaries
+devtools/shader-boilerplate-autogen/shader-boilerplate-autogen
+
 # Build outputs
 bin/
 bin-int/
@@ -27,5 +30,4 @@ out/
 !vendor/**/*.so
 !vendor/**/*.so.*
 
-# Premake executable (explicitly include)
-!premake5.exe
+

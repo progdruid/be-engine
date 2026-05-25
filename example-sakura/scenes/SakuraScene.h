@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include <umbrellas/access-modifiers.hpp>
 
 #include "BaseScene.h"
@@ -13,6 +14,7 @@ class BeWindow;
 class BeRenderer;
 class BeStandardRenderMachine;
 class BeMaterial;
+class LuaSceneLoader;
 
 class SakuraScene : public BaseScene {
     hide
@@ -21,10 +23,12 @@ class SakuraScene : public BaseScene {
     std::unique_ptr<OrbitCameraController> _orbitCameraController;
     std::unique_ptr<FreeCameraController> _freeCameraController;
     bool _useOrbitCamera = false;
-    
+
     std::shared_ptr<BeProp> _cube, _anvil, _sakura, _sakura2, _emissiveCube, _moon, _testSphere, _axe, _katana;
     std::shared_ptr<BeMaterial> _uniformMaterial;
     std::unique_ptr<BeStandardRenderMachine> _machine;
+    std::unique_ptr<LuaSceneLoader> _sceneLoader;
+    std::filesystem::file_time_type _sceneLastWriteTime{};
     
     expose
     explicit SakuraScene(Game* game);
