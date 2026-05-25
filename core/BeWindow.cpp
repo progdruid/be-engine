@@ -33,7 +33,8 @@ BeWindow::BeWindow(int desiredWidth, int desiredHeight, const std::string& title
     }
     
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    
+    glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
+
     if (mode == BeWindowMode::Fullscreen) {
         GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
         be_assert(primaryMonitor, "Primary monitor invalid");
