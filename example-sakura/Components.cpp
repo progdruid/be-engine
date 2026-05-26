@@ -55,7 +55,6 @@ void RegisterComponentParsers(LuaSceneLoader& loader) {
                 .SetFormat(SenFormat::Depth32)
                 .SetCubemap(true)
                 .SetSize(comp.ShadowMapResolution, comp.ShadowMapResolution)
-                .AddToRegistry()
                 .Build();
         }
         reg.emplace<PointLightComponent>(e, comp);
@@ -78,7 +77,6 @@ void RegisterComponentParsers(LuaSceneLoader& loader) {
                 .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
                 .SetFormat(SenFormat::Depth32)
                 .SetSize(comp.ShadowMapResolution, comp.ShadowMapResolution)
-                .AddToRegistry()
                 .Build();
         }
         reg.emplace<SunLightComponent>(e, comp);

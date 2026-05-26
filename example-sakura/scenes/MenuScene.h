@@ -9,16 +9,18 @@ class BeInput;
 class BeWindow;
 class BeRenderer;
 class BeSceneManager;
+class BeImGuiPass;
 
 struct ImFont;
 
 class MenuScene : public BaseScene {
     hide
+    std::unique_ptr<BeImGuiPass> _imguiPass;
     ImFont* _titleFont = nullptr;
 
     expose
     explicit MenuScene(Game* game);
-    ~MenuScene() override = default;
+    ~MenuScene() override;
 
     auto Prepare() -> void override {}
     auto OnLoad() -> void override;

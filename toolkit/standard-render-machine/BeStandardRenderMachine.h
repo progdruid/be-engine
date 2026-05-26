@@ -128,7 +128,8 @@ class BeStandardRenderMachine {
     auto AddPass(std::unique_ptr<BeRenderPass> pass) -> void;
 
     expose
-    auto Build() -> void;
+    auto ClearPasses() -> void;
+    auto BuildPasses() -> void;
 
     // debug channel (−1 = normal, 0..N = G-buffer targets in declaration order) ----------------------------------------
     expose

@@ -49,15 +49,7 @@ auto BeRenderer::AddRenderPass(BeRenderPass* renderPass) -> void {
 
 auto BeRenderer::ClearPasses() -> void {
     SenBackend::WaitIdle();
-    for (auto pass : _passes) {
-        delete pass;
-    }
     _passes.clear();
-}
-
-auto BeRenderer::InitialisePasses() const -> void {
-    for (const auto& pass : _passes)
-        pass->Initialise();
 }
 
 auto BeRenderer::Render() -> void {

@@ -8,11 +8,15 @@ class BeInput;
 class BeWindow;
 class BeRenderer;
 class BeSceneManager;
+class BeImGuiPass;
 
 class MenuScene : public BaseScene {
+    hide
+    std::unique_ptr<BeImGuiPass> _imguiPass;
+
     expose
     explicit MenuScene(Game* game);
-    ~MenuScene() override = default;
+    ~MenuScene() override;
 
     auto Prepare() -> void override {}
     auto OnLoad() -> void override;

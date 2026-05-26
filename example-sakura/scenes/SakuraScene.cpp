@@ -128,14 +128,23 @@ auto SakuraScene::Prepare() -> void {
     _machine->DeclareTexture      ("Sakura_Tonemapper",         SenFormat::R11G11B10_Float);
     _machine->DeclareTexture      ("Sakura_FXAA",               SenFormat::R11G11B10_Float);
 
+    const auto dirtTexture = BeTexture::Create("Sakura_BloomDirtTexture")
+        .LoadFromFile("assets/bloom-dirt-mask.png")
+        .AddToRegistry()
+        .Build();
+
+    _sceneLoader = std::make_unique<LuaSceneLoader>();
+    RegisterComponentParsers(*_sceneLoader);
+}
+
+auto SakuraScene::OnLoad() -> void {
+    _machine->UniformMaterial = _uniformMaterial;
+    
+    _machine->ClearPasses();
     _machine->AddShadowPass();
     _machine->AddGeometryPass();
     _machine->AddLightingPass("Sakura_HDR");
-
-    const auto dirtTexture = BeTexture::Create("Sakura_BloomDirtTexture")
-        .LoadFromFile("assets/bloom-dirt-mask.png")
-        .Build();
-    _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_Bloom", dirtTexture);
+    _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_Bloom", BeAssetRegistry::GetTexture("Sakura_BloomDirtTexture").lock());
 
     const auto tonemapperMaterial = BeMaterial::Create("tonemapper-material", false);
     tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture("Sakura_Bloom"));
@@ -147,16 +156,10 @@ auto SakuraScene::Prepare() -> void {
     _machine->AddFullscreenPass(BeAssetRegistry::GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });
 
     _machine->AddBackbufferPass("Sakura_FXAA", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
-
-    _sceneLoader = std::make_unique<LuaSceneLoader>();
-    RegisterComponentParsers(*_sceneLoader);
-}
-
-auto SakuraScene::OnLoad() -> void {
-    _machine->UniformMaterial = _uniformMaterial;
-    _machine->Build();
+    _machine->BuildPasses();
 
     constexpr auto scenePath = "assets/sakura_scene.lua";
+    _registry.clear();
     _sceneLoader->Load(scenePath, _registry);
     _sceneLastWriteTime = std::filesystem::last_write_time(scenePath);
 

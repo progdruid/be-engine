@@ -39,7 +39,7 @@ struct SunLightComponent {
     float ShadowMapWorldSize;
     float ShadowNearPlane;
     float ShadowFarPlane;
-    std::weak_ptr<BeTexture> ShadowMap;
+    std::shared_ptr<BeTexture> ShadowMap;
 };
 
 struct PointLightComponent {
@@ -50,7 +50,7 @@ struct PointLightComponent {
     bool CastsShadows = false;
     uint32_t ShadowMapResolution = 1024;
     float ShadowNearPlane = 0.1f; // far plane is radius
-    std::weak_ptr<BeTexture> ShadowMap;
+    std::shared_ptr<BeTexture> ShadowMap;
 };
 
 class LuaSceneLoader;

@@ -60,14 +60,6 @@ void ShowcaseScene::Prepare() {
     _machine->DeclareGBufferTarget("Showcase_Emissive",          SenFormat::R11G11B10_Float);
     _machine->DeclareDepth        ("Showcase_Depth",             SenFormat::Depth32);
     _machine->DeclareTexture      ("Showcase_FXAAOutput",        SenFormat::R11G11B10_Float);
-
-    _machine->AddGeometryPass();
-
-    const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
-    fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_BaseColor"));
-    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("fxaa"), fxaaMaterial, { "Showcase_FXAAOutput" });
-
-    _machine->AddBackbufferPass("Showcase_FXAAOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
 }
 
 auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
@@ -118,7 +110,6 @@ auto ShowcaseScene::CreateObjects() -> void {
                 .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
                 .SetFormat(SenFormat::Depth32)
                 .SetSize(4096, 4096)
-                .AddToRegistry()
                 .Build()
         }
     );
@@ -126,7 +117,14 @@ auto ShowcaseScene::CreateObjects() -> void {
 
 void ShowcaseScene::OnLoad() {
     _machine->UniformMaterial = _uniformMaterial;
-    _machine->Build();
+    
+    _machine->ClearPasses();
+    _machine->AddGeometryPass();
+    const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
+    fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_BaseColor"));
+    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("fxaa"), fxaaMaterial, { "Showcase_FXAAOutput" });
+    _machine->AddBackbufferPass("Showcase_FXAAOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
+    _machine->BuildPasses();
 }
 
 void ShowcaseScene::Tick(float deltaTime) {

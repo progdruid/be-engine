@@ -38,7 +38,6 @@ class BeRenderer {
     expose
     auto AddRenderPass(BeRenderPass* renderPass) -> void;
     auto ClearPasses() -> void;
-    auto InitialisePasses() const -> void;
     auto Render() -> void;
 
     [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer&;

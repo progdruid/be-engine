@@ -12,16 +12,16 @@
 #include "imgui/imgui.h"
 
 MenuScene::MenuScene(Game* game) : BaseScene(game) {}
+MenuScene::~MenuScene() = default;
 
 auto MenuScene::OnLoad() -> void {
 
     GameIns->Renderer->ClearPasses();
 
-    auto imguiPass = new BeImGuiPass(GameIns->Window);
-    GameIns->Renderer->AddRenderPass(imguiPass);
-    imguiPass->SetUICallback([this](){RunUI();});
-
-    GameIns->Renderer->InitialisePasses();
+    _imguiPass = std::make_unique<BeImGuiPass>(GameIns->Window);
+    GameIns->Renderer->AddRenderPass(_imguiPass.get());
+    _imguiPass->SetUICallback([this](){RunUI();});
+    _imguiPass->Initialise();
 
     ImGui::GetIO().Fonts->AddFontFromFileTTF("assets/i-hate-comic-sans.regular.ttf", 16.0f);
     _titleFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("assets/somelist.ttf", 16.0f);
