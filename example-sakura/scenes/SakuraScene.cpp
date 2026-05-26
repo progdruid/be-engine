@@ -213,9 +213,10 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         }
 
         auto i = size_t(0);
+        const auto orbitNumber = float(std::ranges::distance(OrbitingLightView));
         for (const auto [entity, name, transform, _] : OrbitingLightView.each()) {
             constexpr float radius = 13.0f;
-            const auto add = glm::two_pi<float>() * (float(i) / float(OrbitingLightView.size_hint()));
+            const auto add = glm::two_pi<float>() * (float(i) / orbitNumber);
             const auto rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
             transform.Position = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
             i++;

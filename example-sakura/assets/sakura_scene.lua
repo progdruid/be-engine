@@ -45,7 +45,7 @@ function makeScene()
         sunLight = {
             direction = {-1, -1, -1},
             color = {0.7, 0.7, 0.99},
-            power = 1.0,
+            power = 2.0,
             castsShadows = true,
             shadowMapResolution = 4096,
             shadowCameraDistance = 100.0,
@@ -57,11 +57,16 @@ function makeScene()
 
     for i = 0, 99 do
         scene["Star_" .. i] = {
-            transform = {
-                position = { randFloat(-50, 50), randFloat(30, 60), randFloat(-50, 50) },
-                scale = { 0.2, 0.2, 0.2 }
-            },
+            transform = { position = { randFloat(-50, 50), randFloat(30, 60), randFloat(-50, 50) }, scale = { 0.2, 0.2, 0.2 } },
             render = { prop = "emissiveCube", castShadows = false }
+        }
+    end
+
+    for i = 0, 3 do
+        scene["PointLight_" .. i] = {
+            transform = { scale = { 1.0, 1.0, 1.0 } },
+            render = { prop = "emissiveCube", castShadows = false },
+            pointLight = { radius = 15.0, color = {1.0, 0.95, 0.85}, power = 3.0, castsShadows = false },
         }
     end
 
