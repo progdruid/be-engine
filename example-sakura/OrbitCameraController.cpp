@@ -17,18 +17,25 @@ OrbitCameraController::OrbitCameraController(
     , _targetPitch(glm::radians(initialPitch))
     , _orbitRadius(initialRadius)
     , _targetRadius(initialRadius)
+    , _targetHeight(lookTarget.y)
 {}
 
 auto OrbitCameraController::Update(float deltaTime, BeInput* input) -> void {
     if (input->GetKeyDown(GLFW_KEY_RIGHT)) SpeedMultiplier += SpeedStep;
     if (input->GetKeyDown(GLFW_KEY_LEFT))  SpeedMultiplier -= SpeedStep;
     if (input->GetKeyDown(GLFW_KEY_SPACE)) SpeedMultiplier = 0;
-    if (input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
+    if (input->GetMouseButton(GLFW_MOUSE_BUTTON_LEFT)) {
         constexpr float pitchSensitivity = 0.005f;
         _targetPitch += input->GetMouseDelta().y * pitchSensitivity;
         _targetPitch = glm::clamp(_targetPitch, glm::radians(-89.0f), glm::radians(89.0f));
     }
     _orbitPitch = glm::mix(_orbitPitch, _targetPitch, 1.0f - glm::exp(-RadiusSmoothSpeed * deltaTime));
+
+    if (input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
+        constexpr float heightSensitivity = 0.01f;
+        _targetHeight -= input->GetMouseDelta().y * heightSensitivity * HeightSpeed;
+    }
+    _lookTarget.y = glm::mix(_lookTarget.y, _targetHeight, 1.0f - glm::exp(-RadiusSmoothSpeed * deltaTime));
 
     _orbitAngle += OrbitSpeed * SpeedMultiplier * deltaTime;
 

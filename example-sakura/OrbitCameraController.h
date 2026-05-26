@@ -14,6 +14,7 @@ class OrbitCameraController {
     float ScrollSpeed = 1.0f;
     float MinRadius   = 0.5f;
     float RadiusSmoothSpeed = 10.0f;
+    float HeightSpeed = 5.0f;
 
     explicit OrbitCameraController(
         BeCamera* camera,
@@ -32,4 +33,5 @@ class OrbitCameraController {
     float _targetPitch;
     float _orbitRadius;
     float _targetRadius;
+    float _targetHeight;
 };
