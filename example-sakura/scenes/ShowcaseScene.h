@@ -1,12 +1,12 @@
 #pragma once
 
+#include <string>
 #include <umbrellas/access-modifiers.hpp>
 #include <umbrellas/include-glm.h>
 
 #include "BaseScene.h"
+#include "Components.h"
 #include "entt/entt.hpp"
-
-struct TransformComponent;
 class BeInput;
 class BeCamera;
 class OrbitCameraController;
@@ -25,6 +25,22 @@ class ShowcaseScene : public BaseScene {
     std::unique_ptr<OrbitCameraController> _orbitCameraController;
     std::unique_ptr<FreeCameraController> _freeCameraController;
     bool _useOrbitCamera = true;
+    bool _animatedTransitions = true;
+    entt::entity _showcasedEntity = entt::null;
+    TransformComponent _showcasedTransform = {};
+
+    enum class PopState { Idle, Bracing, Expanding };
+    PopState _popState = PopState::Idle;
+    float _expandTime = 0.f;
+    int _heldKey = -1;
+    bool _swapDone = false;
+    std::string _pendingModel;
+    std::string _pendingColor;
+    TransformComponent _pendingTransform = {};
+    float _braceTime = 0.f;
+    static constexpr float _braceScale = 0.85f;
+    static constexpr float _braceDuration = 0.15f;
+    static constexpr float _expandDuration = 0.15f;
 
     expose
     explicit ShowcaseScene(Game* game);

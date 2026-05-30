@@ -19,6 +19,20 @@
 #include "BeAssetRegistry.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
+// brace(0.85) -ease-in-> peak(1.2) at t=0.5 -ease-out-> settle(1.0) at t=1.0
+// scale crosses 1.0 on the way up at ~t=0.33, which is when the swap fires
+static auto ExpandCurve(float t) -> float {
+    constexpr float peak = 1.1f;
+    t = glm::clamp(t, 0.f, 1.f);
+    if (t < 0.5f) {
+        float s = t / 0.5f;
+        return glm::mix(0.85f, peak, s * s * s);
+    } else {
+        float s = (t - 0.5f) / 0.5f;
+        return glm::mix(peak, 1.0f, 1.f - (1.f - s) * (1.f - s) * (1.f - s));
+    }
+}
+
 ShowcaseScene::ShowcaseScene(Game* game) : BaseScene(game) {}
 ShowcaseScene::~ShowcaseScene() = default;
 
@@ -84,7 +98,7 @@ auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
 }
 
 auto ShowcaseScene::CreateObjects() -> void {
-    CreateEntity(_registry
+    _showcasedEntity = CreateEntity(_registry
         ,NameComponent { .Name = "showcased-object" }
         ,TransformComponent { }
         ,RenderComponent { .Prop = BeAssetRegistry::GetProp("ramen").lock(), .CastShadows = true }
@@ -132,30 +146,69 @@ void ShowcaseScene::Tick(float deltaTime) {
         GameIns->SceneManager->RequestSceneChange("menu");
     }
 
+    auto startBrace = [&](int key, const char* model, const char* color, TransformComponent t) {
+        if (!_animatedTransitions) {
+            ChangeShowcase(model, color, t);
+            return;
+        }
+        _pendingModel = model;
+        _pendingColor = color;
+        _pendingTransform = t;
+        _heldKey = key;
+        _popState = PopState::Bracing;
+        _braceTime = 0.f;
+    };
+
     if (GameIns->Input->GetKeyDown(GLFW_KEY_1)) {
-        ChangeShowcase("ramen",          "#FAC8CD", TransformComponent());
+        startBrace(GLFW_KEY_1, "ramen",          "#FAC8CD", TransformComponent());
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_2)) {
-        ChangeShowcase("still-life",     "#D0D0C4", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(4.f) });
+        startBrace(GLFW_KEY_2, "still-life",     "#D0D0C4", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(4.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_3)) {
-        ChangeShowcase("fiesta-tea",     "#61636D", TransformComponent { .Position = { 0, -1, 0 }, .Scale = glm::vec3(2.f) });
+        startBrace(GLFW_KEY_3, "fiesta-tea",     "#61636D", TransformComponent { .Position = { 0, -1, 0 }, .Scale = glm::vec3(2.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_4)) {
-        ChangeShowcase("honeydew_melons","#855C36", TransformComponent { .Position = { 0.f, 1.f, 0.f } });
+        startBrace(GLFW_KEY_4, "honeydew_melons","#855C36", TransformComponent { .Position = { 0.f, 1.f, 0.f } });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_5)) {
-        ChangeShowcase("hunger_games",   "#39708E", TransformComponent { .Position = { 0.f, 3.f, 0.f }, .Scale = glm::vec3(2.f) });
+        startBrace(GLFW_KEY_5, "hunger_games",   "#39708E", TransformComponent { .Position = { 0.f, 3.f, 0.f }, .Scale = glm::vec3(2.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_6)) {
-        ChangeShowcase("pickles",        "#FEC693", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(24.f) });
+        startBrace(GLFW_KEY_6, "pickles",        "#FEC693", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(24.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_7)) {
-        ChangeShowcase("watermelons",    "#A3A17B", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(90.f) });
+        startBrace(GLFW_KEY_7, "watermelons",    "#A3A17B", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(90.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_8)) {
-        ChangeShowcase("apfel",          "#73615E", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(2.f) });
+        startBrace(GLFW_KEY_8, "apfel",          "#73615E", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(2.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_9)) {
-        ChangeShowcase("eggplant",       "#E1D5F2", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(0.2f) });
+        startBrace(GLFW_KEY_9, "eggplant",       "#E1D5F2", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(0.2f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_0)) {
-        ChangeShowcase("tomatoes",       "#E4FDE1", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(2.f) });
+        startBrace(GLFW_KEY_0, "tomatoes",       "#E4FDE1", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(2.f) });
+    }
+
+    if (_heldKey != -1 && GameIns->Input->GetKeyUp(_heldKey)) {
+        if (_popState == PopState::Bracing) {
+            _popState = PopState::Expanding;
+            _expandTime = 0.f;
+            _swapDone = false;
+        }
+        _heldKey = -1;
+    }
+
+    if (_popState == PopState::Bracing) {
+        _braceTime = glm::min(_braceTime + deltaTime, _braceDuration);
+    }
+
+    if (_popState == PopState::Expanding) {
+        _expandTime += deltaTime;
+        if (_expandTime >= _expandDuration) {
+            _popState = PopState::Idle;
+        }
     }
 
     if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
         _useOrbitCamera = !_useOrbitCamera;
+    }
+
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_T)) {
+        _animatedTransitions = !_animatedTransitions;
+        _popState = PopState::Idle;
+        _heldKey = -1;
     }
 
     if (_useOrbitCamera) {
@@ -174,6 +227,26 @@ void ShowcaseScene::Tick(float deltaTime) {
 
     static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
     static const auto SunView      = _registry.view<SunLightComponent>();
+
+    {
+        float scaleMult = 1.f;
+        if (_animatedTransitions) {
+            if (_popState == PopState::Bracing) {
+                float t = _braceTime / _braceDuration;
+                float eased = 1.f - (1.f - t) * (1.f - t);
+                scaleMult = glm::mix(1.0f, _braceScale, eased);
+            } else if (_popState == PopState::Expanding) {
+                scaleMult = ExpandCurve(_expandTime / _expandDuration);
+                if (!_swapDone && scaleMult >= 1.f) {
+                    ChangeShowcase(_pendingModel, _pendingColor, _pendingTransform);
+                    _swapDone = true;
+                }
+            }
+        }
+        auto& transform = _registry.get<TransformComponent>(_showcasedEntity);
+        transform = _showcasedTransform;
+        transform.Scale *= scaleMult;
+    }
 
     _machine->ClearFrame();
 
@@ -210,12 +283,11 @@ auto ShowcaseScene::ChangeShowcase(
     const std::string& hxcolor,
     const TransformComponent& adjustedTransform
 ) -> void {
-    auto view = _registry.view<NameComponent, TransformComponent, RenderComponent>();
-    for (auto [entity, name, transform, render] : view.each()) {
-        if (name.Name == "showcased-object") {
-            transform = adjustedTransform;
-            render.Prop = BeAssetRegistry::GetProp(modelName).lock();
-        }
+    _showcasedTransform = adjustedTransform;
+    _registry.get<RenderComponent>(_showcasedEntity).Prop = BeAssetRegistry::GetProp(modelName).lock();
+
+    auto view = _registry.view<NameComponent, RenderComponent>();
+    for (auto [entity, name, render] : view.each()) {
         if (name.Name == "skycube") {
             render.Prop->Materials[0]->SetFloat3("BaseColor", HexColor(hxcolor.c_str()));
         }
