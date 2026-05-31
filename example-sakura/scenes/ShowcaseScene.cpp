@@ -53,6 +53,7 @@ void ShowcaseScene::Prepare() {
         "assets/shaders/fullscreen-vertex.hlsl",
         "assets/shaders/backbuffer.hlsl",
         "assets/shaders/fxaa.hlsl",
+        "assets/shaders/pixelation.hlsl",
     });
 
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
@@ -74,6 +75,7 @@ void ShowcaseScene::Prepare() {
     _machine->DeclareGBufferTarget("Showcase_Emissive",          SenFormat::R11G11B10_Float);
     _machine->DeclareDepth        ("Showcase_Depth",             SenFormat::Depth32);
     _machine->DeclareTexture      ("Showcase_FXAAOutput",        SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Showcase_PixelOutput",       SenFormat::R11G11B10_Float);
 }
 
 auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
@@ -131,13 +133,27 @@ auto ShowcaseScene::CreateObjects() -> void {
 
 void ShowcaseScene::OnLoad() {
     _machine->UniformMaterial = _uniformMaterial;
-    
+    LoadPasses();
+}
+
+void ShowcaseScene::LoadPasses() {
     _machine->ClearPasses();
     _machine->AddGeometryPass();
+
     const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
     fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_BaseColor"));
     _machine->AddFullscreenPass(BeAssetRegistry::GetShader("fxaa"), fxaaMaterial, { "Showcase_FXAAOutput" });
-    _machine->AddBackbufferPass("Showcase_FXAAOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
+
+    const char* backbufferInput = "Showcase_FXAAOutput";
+    if (_pixelationEnabled) {
+        const auto pixelMaterial = BeMaterial::Create("pixelation-material", false);
+        pixelMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_FXAAOutput"));
+        pixelMaterial->SetTexture("DepthTexture", _machine->GetRenderTexture("Showcase_Depth"));
+        _machine->AddFullscreenPass(BeAssetRegistry::GetShader("pixelation"), pixelMaterial, { "Showcase_PixelOutput" });
+        backbufferInput = "Showcase_PixelOutput";
+    }
+
+    _machine->AddBackbufferPass(backbufferInput, { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
     _machine->BuildPasses();
 }
 
@@ -209,6 +225,11 @@ void ShowcaseScene::Tick(float deltaTime) {
         _animatedTransitions = !_animatedTransitions;
         _popState = PopState::Idle;
         _heldKey = -1;
+    }
+
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_P)) {
+        _pixelationEnabled = !_pixelationEnabled;
+        LoadPasses();
     }
 
     if (_useOrbitCamera) {

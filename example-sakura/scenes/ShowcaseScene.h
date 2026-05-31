@@ -26,6 +26,7 @@ class ShowcaseScene : public BaseScene {
     std::unique_ptr<FreeCameraController> _freeCameraController;
     bool _useOrbitCamera = true;
     bool _animatedTransitions = true;
+    bool _pixelationEnabled = true;
     entt::entity _showcasedEntity = entt::null;
     TransformComponent _showcasedTransform = {};
 
