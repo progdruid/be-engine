@@ -49,7 +49,7 @@ float3 StandardPBR (
     float3 orm
 ) {
     float metallic  = orm.z;
-    float roughness = max(orm.y, 0.01);
+    float roughness = max(orm.y, 0.08);
 
     float3
     n = normalize(normal),

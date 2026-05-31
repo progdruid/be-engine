@@ -50,7 +50,7 @@ auto Game::Run() -> int {
     .SetSize(1, 1)
     .SetUsage(SenTextureUsage::ShaderResource)
     .SetFormat(SenFormat::RGBA8_Unorm)
-    .FillWithColor(glm::vec4(0.f, 1.f, 0.f, 1.f))
+    .FillWithColor(glm::vec4(0.f, 1.f, 1.f, 1.f))
     .AddToRegistry()
     .BuildNoReturn();
     BeTexture::Create("flat-normal")

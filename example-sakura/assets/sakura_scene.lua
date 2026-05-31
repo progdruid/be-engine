@@ -38,6 +38,14 @@ function makeScene()
         transform = { position = {-3.0, -5.5, 2}, rotation = {0, 45, 0}, scale = {5.0, 5.0, 5.0} },
         render = { prop = "sakura2", castShadows = true }
     }
+    scene.Katana = {
+        transform = { position = {10, 2.5, 0}, rotation = {30, -20, -100}, scale = {1.4, 1.4, 1.4} },
+        render = { prop = "katana", castShadows = true }
+    }
+    scene.RustySphere = {
+        transform = { position = {10, 2.5, -3}, scale = {0.01, 0.01, 0.01} },
+        render = { prop = "rusty-sphere", castShadows = true }
+    }
     scene.Moon = {
         transform = { position = {100, 150, 100}, scale = {6.0, 6.0, 6.0} },
         render = { prop = "moon", castShadows = false },

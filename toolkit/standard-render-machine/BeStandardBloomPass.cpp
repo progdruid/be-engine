@@ -32,29 +32,31 @@ auto BeStandardBloomPass::Initialise() -> void {
 
     _downsampleMaterials.resize(_mipCount);
     for (uint32_t mipTarget = 1; mipTarget < _mipCount; ++mipTarget) {
-        auto mat = BeMaterial::Create("bloom-kawase-material", false);
+        auto mat = BeMaterial::Create("bloom-downsample-material", false);
         const auto sourceMip = _mipTextures[mipTarget - 1];
         mat->SetFloat2("TexelSize", glm::vec2(1.0f / sourceMip->Width, 1.0f / sourceMip->Height));
-        mat->SetFloat("PassRadius", 0.5f * (1 << (mipTarget - 1)));
+        mat->SetFloat("UseKaris", mipTarget == 1 ? 1.0f : 0.0f);
         mat->SetTexture("BloomMipInput", sourceMip);
         _downsampleMaterials[mipTarget] = mat;
     }
 
     _upsampleMaterials.resize(_mipCount);
     for (uint32_t mipTarget = 0; mipTarget < _mipCount - 1; ++mipTarget) {
-        auto mat = BeMaterial::Create("bloom-kawase-material", false);
+        auto mat = BeMaterial::Create("bloom-upsample-material", false);
         const auto sourceMip = _mipTextures[mipTarget + 1];
-        const auto targetMip = _mipTextures[mipTarget];
-        mat->SetFloat2("TexelSize", glm::vec2(1.0f / targetMip->Width, 1.0f / targetMip->Height));
-        mat->SetFloat("PassRadius", 0.5f * (1 << mipTarget));
+        mat->SetFloat2("TexelSize", glm::vec2(1.0f / sourceMip->Width, 1.0f / sourceMip->Height));
+        mat->SetFloat("Radius", 1.0f);
         mat->SetTexture("BloomMipInput", sourceMip);
         _upsampleMaterials[mipTarget] = mat;
     }
 
-    const auto kawaseShader = BeAssetRegistry::GetShader("bloom-kawase").lock();
-    be_assert(kawaseShader, "BeStandardBloomPass: bloom-kawase shader not found");
-    _downsamplePipeline = BePipelineBuilder::Start(*kawaseShader).SetColorFormats({ mipFormat }).Build();
-    _upsamplePipeline = BePipelineBuilder::Start(*kawaseShader)
+    const auto downsampleShader = BeAssetRegistry::GetShader("bloom-downsample").lock();
+    be_assert(downsampleShader, "BeStandardBloomPass: bloom-downsample shader not found");
+    _downsamplePipeline = BePipelineBuilder::Start(*downsampleShader).SetColorFormats({ mipFormat }).Build();
+
+    const auto upsampleShader = BeAssetRegistry::GetShader("bloom-upsample").lock();
+    be_assert(upsampleShader, "BeStandardBloomPass: bloom-upsample shader not found");
+    _upsamplePipeline = BePipelineBuilder::Start(*upsampleShader)
         .SetBlend({
             .Enable = true,
             .SrcBlend = SenBlendFactor::One, .DstBlend = SenBlendFactor::One, .BlendOp = SenBlendOp::Add,

@@ -2,9 +2,10 @@
 
 @be-material: bloom-bright-material
 [
-    "Threshold: float = 0.9",
-    "Intensity: float = 10.0",
-    "Knee: float = 1.25",
+    "Threshold: float = 1.3",
+    "Intensity: float = 1.8",
+    "Knee: float = 1.0",
+    "Clamp: float = 16.0",
 
     "HDRInput: texture2d = black",
     "InputSampler: sampler = linear-clamp",
@@ -40,6 +41,7 @@ struct bloom_bright_material {
     float Threshold;
     float Intensity;
     float Knee;
+    float Clamp;
 };
 
 cbuffer CBuffer_0 : register(b0, space0) {
@@ -64,11 +66,20 @@ struct PixelOutput {
 PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 hdrColor = HDRInput.Sample(InputSampler, input.UV).rgb; // linear sampler
 
-    float luminance = dot(hdrColor, float3(0.2126, 0.7152, 0.0722));
-    float brightPart = saturate((luminance - _Main.Threshold) * rcp(max(luminance, 0.0001)));
-    float kneeFactor = smoothstep(_Main.Threshold, _Main.Threshold + _Main.Knee, luminance);
-    float3 brightColor = hdrColor * brightPart * kneeFactor * _Main.Intensity;
-    
+    // Unity soft-knee curve: quadratic ramp across [threshold-knee, threshold+knee],
+    // hard linear cutoff above. Knee is the half-width of the soft region.
+    float brightness = dot(hdrColor, float3(0.2126, 0.7152, 0.0722));
+    float knee = max(_Main.Knee, 0.0001);
+    float soft = clamp(brightness - _Main.Threshold + knee, 0.0, 2.0 * knee);
+    soft = soft * soft / (4.0 * knee);
+    float contribution = max(soft, brightness - _Main.Threshold) / max(brightness, 0.0001);
+    float3 brightColor = hdrColor * contribution * _Main.Intensity;
+
+    // Clamp the bloom input so a near-mirror specular spike can't smear into a
+    // giant glow disc. Scale by the brightest channel to preserve hue.
+    float maxComp = max(brightColor.r, max(brightColor.g, brightColor.b));
+    brightColor *= 1.0 / max(1.0, maxComp / _Main.Clamp);
+
     PixelOutput output;
     output.BloomMip = brightColor;
     return output;

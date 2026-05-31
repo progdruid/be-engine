@@ -44,9 +44,10 @@ auto SakuraScene::Prepare() -> void {
         "assets/shaders/directionalLight.hlsl",
         "assets/shaders/pointLight.hlsl",
         "assets/shaders/emissive-add.hlsl",
-        "assets/shaders/BeBloomAdd.hlsl",
-        "assets/shaders/BeBloomBright.hlsl",
-        "assets/shaders/BeBloomKawase.hlsl",
+        "assets/shaders/bloom-add.hlsl",
+        "assets/shaders/bloom-bright.hlsl",
+        "assets/shaders/bloom-downsample.hlsl",
+        "assets/shaders/bloom-upsample.hlsl",
         "assets/shaders/tonemapper.hlsl",
         "assets/shaders/backbuffer.hlsl",
         "assets/shaders/fxaa.hlsl",
@@ -85,7 +86,7 @@ auto SakuraScene::Prepare() -> void {
 
     _testSphere = BeProp::FromMesh(BeMeshPrimitives::Sphere(), standardShader, "geometry-main");
     _testSphere->Materials[0]->SetFloat3("BaseColor", glm::vec3(0.8f, 0.3f, 0.1f));
-    _testSphere->Materials[0]->SetFloat("Metallic", 0.0f);
+    _testSphere->Materials[0]->SetFloat("Metallic", 0.8f);
     _testSphere->Materials[0]->SetFloat("Roughness", 0.5f);
 
     _axe = _machine->LoadProp("assets/pixel_molten_axe/scene.gltf",phongShader,BeSRMLightingModel::Phong);
@@ -94,12 +95,17 @@ auto SakuraScene::Prepare() -> void {
         material->SetFloat3("EmissiveColor", glm::vec3(1.5f));
     }
 
-    // _katana = _machine->LoadProp("assets/cyberpunk_katana/scene.gltf", standardShader);
-    // for (const auto& material : _katana->Materials) {
-    //     material->SetFloat3("EmissiveColor", glm::vec3(2.5f));
-    //     material->SetFloat("Metallic", 0.01f);
+    _katana = _machine->LoadProp("assets/cyberpunk_katana/scene.gltf", standardShader);
+    for (const auto& material : _katana->Materials) {
+        material->SetFloat3("EmissiveColor", glm::vec3(2.5f));
+        material->SetFloat("Metallic", 0.01f);
+    }
+    
+    _rustySphere = _machine->LoadProp("assets/rusty-sphere/scene.gltf", standardShader);
+    // for (const auto& material : _rustySphere->Materials) {
+    //     material->SetFloat("Metallic", 0.9f);
     // }
-
+    
     BeAssetRegistry::AddProp("cube", _cube);
     BeAssetRegistry::AddProp("emissiveCube", _emissiveCube);
     BeAssetRegistry::AddProp("moon", _moon);
@@ -108,6 +114,8 @@ auto SakuraScene::Prepare() -> void {
     BeAssetRegistry::AddProp("sakura2", _sakura2);
     BeAssetRegistry::AddProp("testSphere", _testSphere);
     BeAssetRegistry::AddProp("axe", _axe);
+    BeAssetRegistry::AddProp("katana", _katana);
+    BeAssetRegistry::AddProp("rusty-sphere", _rustySphere);
 
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
