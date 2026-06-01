@@ -15,16 +15,16 @@ function makeScene()
         transform = { position = {0, 0, 0}, scale = {0.2, 0.2, 0.2} },
         render = { prop = "anvil", castShadows = true }
     }
-    scene.PBR_TestSphere = {
-        transform = { position = {8, 1, 0}, scale = {1.5, 1.5, 1.5} },
-        render = { prop = "testSphere", castShadows = true }
-    }
-    scene.PBR_TestLight = {
-        transform = { position = {8, 4, 2}, scale = {0.2, 0.2, 0.2} },
-        render = { prop = "emissiveCube", castShadows = false },
-        pointLight = { radius = 12.0, color = {1.0, 0.95, 0.85}, power = 3.0, castsShadows = false },
-        static = true
-    }
+--     scene.PBR_TestSphere = {
+--         transform = { position = {8, 1, 0}, scale = {1.5, 1.5, 1.5} },
+--         render = { prop = "testSphere", castShadows = true }
+--     }
+--     scene.PBR_TestLight = {
+--         transform = { position = {8, 4, 2}, scale = {0.2, 0.2, 0.2} },
+--         render = { prop = "emissiveCube", castShadows = false },
+--         pointLight = { radius = 12.0, color = {1.0, 0.95, 0.85}, power = 3.0, castsShadows = false },
+--         static = true
+--     }
     scene.Phong_Axe = {
         transform = { position = {-1.5, 1.4, 1.3}, rotation = {200, 170, 0}, scale = {0.007, 0.007, 0.007} },
         render = { prop = "axe", castShadows = true }
@@ -34,18 +34,32 @@ function makeScene()
         pointLight = { radius = 5.0, color = {1.0, 0.75, 0.2}, power = 2.0, castsShadows = false },
         static = true
     }
-    scene.Sakura2 = {
-        transform = { position = {-3.0, -5.5, 2}, rotation = {0, 45, 0}, scale = {5.0, 5.0, 5.0} },
-        render = { prop = "sakura2", castShadows = true }
-    }
     scene.Katana = {
-        transform = { position = {10, 2.5, 0}, rotation = {30, -20, -100}, scale = {1.4, 1.4, 1.4} },
+        transform = { position = { 1, 2.7, -1.04}, rotation = {180, 20, -120}, scale = {1.4, 1.4, 1.4} },
         render = { prop = "katana", castShadows = true }
     }
-    scene.RustySphere = {
-        transform = { position = {10, 2.5, -3}, scale = {0.01, 0.01, 0.01} },
-        render = { prop = "rusty-sphere", castShadows = true }
+    scene.KatanaLight = {
+        transform = { position = { 0, 0.7, -1.8} },
+        pointLight = { 
+            radius = 5.0, 
+            color = {255.0 / 255.0, 35.0 / 255.0, 50.0 / 255.0}, 
+            power = 1.5, 
+            castsShadows = false
+        },
+        static = true
     }
+--     scene.Sakura2 = {
+--         transform = { position = {-3.0, -5.5, 2}, rotation = {0, 45, 0}, scale = {5.0, 5.0, 5.0} },
+--         render = { prop = "sakura2", castShadows = true }
+--     }
+--     scene.Katana = {
+--         transform = { position = {10, 2.5, 0}, rotation = {30, -20, -100}, scale = {1.4, 1.4, 1.4} },
+--         render = { prop = "katana", castShadows = true }
+--     }
+--     scene.RustySphere = {
+--         transform = { position = {10, 2.5, -3}, scale = {0.01, 0.01, 0.01} },
+--         render = { prop = "rusty-sphere", castShadows = true }
+--     }
     scene.Moon = {
         transform = { position = {100, 150, 100}, scale = {6.0, 6.0, 6.0} },
         render = { prop = "moon", castShadows = false },
