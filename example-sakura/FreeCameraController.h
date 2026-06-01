@@ -14,10 +14,19 @@ class FreeCameraController {
     float MinFov = 20.0f;
     float MaxFov = 90.0f;
 
+    // Exponential smoothing sharpness (higher = snappier, lower = floatier).
+    float PositionSmoothing = 12.0f;
+    float RotationSmoothing = 18.0f;
+
     explicit FreeCameraController(BeCamera* camera);
 
     auto Update(float deltaTime, BeInput* input) -> void;
 
     hide
     BeCamera* _camera;
+
+    glm::vec3 _targetPosition{0.0f};
+    float _targetYaw = 0.0f;
+    float _targetPitch = 0.0f;
+    bool _initialised = false;
 };
