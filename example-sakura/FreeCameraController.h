@@ -13,6 +13,9 @@ class FreeCameraController {
     float GamepadCameraSensitivity = 100.0f;
     float MinFov = 20.0f;
     float MaxFov = 90.0f;
+    float ZoomSpeed = 30.0f;
+    float MinMoveSpeed = 0.5f;
+    float MaxMoveSpeed = 200.0f;
 
     // Exponential smoothing sharpness (higher = snappier, lower = floatier).
     float PositionSmoothing = 12.0f;

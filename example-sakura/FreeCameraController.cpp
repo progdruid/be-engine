@@ -58,10 +58,13 @@ auto FreeCameraController::Update(float deltaTime, BeInput* input) -> void {
         _targetPitch = glm::clamp(_targetPitch, -89.0f, 89.0f);
     }
 
+    if (input->GetKey(GLFW_KEY_EQUAL))  { _camera->Fov -= ZoomSpeed * deltaTime; _camera->Fov = glm::clamp(_camera->Fov, MinFov, MaxFov); }
+    if (input->GetKey(GLFW_KEY_MINUS))  { _camera->Fov += ZoomSpeed * deltaTime; _camera->Fov = glm::clamp(_camera->Fov, MinFov, MaxFov); }
+
     const glm::vec2 scrollDelta = input->GetScrollDelta();
     if (scrollDelta.y != 0.0f) {
-        _camera->Fov -= scrollDelta.y;
-        _camera->Fov = glm::clamp(_camera->Fov, MinFov, MaxFov);
+        MoveSpeed *= std::pow(1.2f, scrollDelta.y);
+        MoveSpeed = glm::clamp(MoveSpeed, MinMoveSpeed, MaxMoveSpeed);
     }
 
     // Framerate-independent exponential smoothing toward the targets.
