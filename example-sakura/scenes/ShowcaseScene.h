@@ -27,6 +27,7 @@ class ShowcaseScene : public BaseScene {
     bool _useOrbitCamera = true;
     bool _animatedTransitions = true;
     bool _pixelationEnabled = true;
+    bool _pixelEdgesEnabled = true;
     entt::entity _showcasedEntity = entt::null;
     TransformComponent _showcasedTransform = {};
 

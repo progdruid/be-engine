@@ -6,6 +6,7 @@
     "DepthTexture: texture2d = black",
     "PointSampler: sampler = point-clamp",
     "PixelSize: float = 8.0",
+    "EdgeEnabled: float = 1.0",
     "EdgeThreshold: float = 1.0",
     "EdgeFarCutoff: float = 40.0",
 ]
@@ -37,6 +38,7 @@
 
 struct pixelation_material {
     float PixelSize;
+    float EdgeEnabled;
     float EdgeThreshold;
     float EdgeFarCutoff;
 };
@@ -86,7 +88,7 @@ PixelOutput PS(FullscreenVSOutput input) {
 
     float dMin = min(min(dTL, dTR), min(dBL, dBR));
     float dMax = max(max(dTL, dTR), max(dBL, dBR));
-    float edge = step(_Main.EdgeThreshold, dMax - dMin) * step(dMin, _Main.EdgeFarCutoff);
+    float edge = step(_Main.EdgeThreshold, dMax - dMin) * step(dMin, _Main.EdgeFarCutoff) * step(0.5, _Main.EdgeEnabled);
 
     PixelOutput output;
     output.PixelOutput = lerp(color, float3(0, 0, 0), edge);

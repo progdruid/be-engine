@@ -149,6 +149,7 @@ void ShowcaseScene::LoadPasses() {
         const auto pixelMaterial = BeMaterial::Create("pixelation-material", false);
         pixelMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_FXAAOutput"));
         pixelMaterial->SetTexture("DepthTexture", _machine->GetRenderTexture("Showcase_Depth"));
+        pixelMaterial->SetFloat("EdgeEnabled", _pixelEdgesEnabled ? 1.0f : 0.0f);
         _machine->AddFullscreenPass(BeAssetRegistry::GetShader("pixelation"), pixelMaterial, { "Showcase_PixelOutput" });
         backbufferInput = "Showcase_PixelOutput";
     }
@@ -229,6 +230,11 @@ void ShowcaseScene::Tick(float deltaTime) {
 
     if (GameIns->Input->GetKeyDown(GLFW_KEY_P)) {
         _pixelationEnabled = !_pixelationEnabled;
+        LoadPasses();
+    }
+
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_O) && _pixelationEnabled) {
+        _pixelEdgesEnabled = !_pixelEdgesEnabled;
         LoadPasses();
     }
 
