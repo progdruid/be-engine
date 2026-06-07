@@ -51,6 +51,7 @@ auto SakuraScene::Prepare() -> void {
         "assets/shaders/tonemapper.hlsl",
         "assets/shaders/backbuffer.hlsl",
         "assets/shaders/fxaa.hlsl",
+        "assets/shaders/dof.hlsl",
     });
 
     const auto standardShader    = BeAssetRegistry::GetShader("standard-pbr");
@@ -133,6 +134,7 @@ auto SakuraScene::Prepare() -> void {
     _machine->DeclareDepth        ("Sakura_Depth",              SenFormat::Depth32);
     _machine->DeclareTexture      ("Sakura_HDR",                SenFormat::R11G11B10_Float);
     _machine->DeclareTexture      ("Sakura_Bloom",              SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_DoF",                SenFormat::R11G11B10_Float);
     _machine->DeclareTexture      ("Sakura_Tonemapper",         SenFormat::R11G11B10_Float);
     _machine->DeclareTexture      ("Sakura_FXAA",               SenFormat::R11G11B10_Float);
 
@@ -146,17 +148,36 @@ auto SakuraScene::Prepare() -> void {
 }
 
 auto SakuraScene::OnLoad() -> void {
+    RebuildPasses();
+
+    constexpr auto scenePath = "assets/sakura_scene.lua";
+    _registry.clear();
+    _sceneLoader->Load(scenePath, _registry);
+    _sceneLastWriteTime = std::filesystem::last_write_time(scenePath);
+}
+
+auto SakuraScene::RebuildPasses() -> void {
     _machine->UniformMaterial = _uniformMaterial;
-    
     _machine->ClearPasses();
     _machine->AddShadowPass();
     _machine->AddGeometryPass();
     _machine->AddLightingPass("Sakura_HDR");
     _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_Bloom", BeAssetRegistry::GetTexture("Sakura_BloomDirtTexture").lock());
 
+    std::string tonemapperInput = "Sakura_Bloom";
+
+    if (_dofEnabled) {
+        if (!_dofMaterial) {
+            _dofMaterial = BeMaterial::Create("dof-material", false);
+        }
+        _dofMaterial->SetTexture("ColorInput", _machine->GetRenderTexture("Sakura_Bloom"));
+        _dofMaterial->SetTexture("DepthInput", _machine->GetRenderTexture("Sakura_Depth"));
+        _machine->AddFullscreenPass(BeAssetRegistry::GetShader("dof"), _dofMaterial, { "Sakura_DoF" });
+        tonemapperInput = "Sakura_DoF";
+    }
+
     const auto tonemapperMaterial = BeMaterial::Create("tonemapper-material", false);
-    tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture("Sakura_Bloom"));
-    //tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture("Sakura_HDR"));
+    tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture(tonemapperInput));
     _machine->AddFullscreenPass(BeAssetRegistry::GetShader("tonemapper"), tonemapperMaterial, { "Sakura_Tonemapper" });
 
     const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
@@ -165,12 +186,6 @@ auto SakuraScene::OnLoad() -> void {
 
     _machine->AddBackbufferPass("Sakura_FXAA", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
     _machine->BuildPasses();
-
-    constexpr auto scenePath = "assets/sakura_scene.lua";
-    _registry.clear();
-    _sceneLoader->Load(scenePath, _registry);
-    _sceneLastWriteTime = std::filesystem::last_write_time(scenePath);
-
 }
 
 auto SakuraScene::Tick(float deltaTime) -> void {
@@ -201,6 +216,22 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_F2))   _machine->SetDebugChannel(1);   // world normal
     if (GameIns->Input->GetKeyDown(GLFW_KEY_F3))   _machine->SetDebugChannel(2);   // ORM
     if (GameIns->Input->GetKeyDown(GLFW_KEY_F4))   _machine->SetDebugChannel(3);   // emissive
+
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_F5)) {
+        _dofEnabled = !_dofEnabled;
+        RebuildPasses();
+    }
+
+    if (_dofEnabled) {
+        float dofFocalDistance = _dofMaterial->GetFloat("FocalDistance");
+        
+        if (GameIns->Input->GetKey(GLFW_KEY_LEFT_BRACKET))
+            dofFocalDistance = std::max(0.5f, dofFocalDistance - 5.0f * deltaTime);
+        if (GameIns->Input->GetKey(GLFW_KEY_RIGHT_BRACKET))
+            dofFocalDistance += 5.0f * deltaTime;
+
+        _dofMaterial->SetFloat("FocalDistance",  dofFocalDistance);
+    }
 
     if (_useOrbitCamera) {
         GameIns->Input->SetMouseCapture(false);
