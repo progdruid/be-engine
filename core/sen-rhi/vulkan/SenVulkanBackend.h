@@ -80,11 +80,34 @@ struct SenVulkanSwapchainEntry {
 // ─── backend ──────────────────────────────────────────────────────────────────
 
 class SenVulkanBackend {
+    hide
+    static VkInstance _instance;
+    static VkPhysicalDevice _physicalDevice;
+    static VkDevice _device;
+    static VkQueue _queue;
+    static uint32_t _queueFamilyIndex;
+    static VkCommandPool _commandPool;
+    static VkDescriptorPool _descriptorPool;
+    static VmaAllocator _allocator;
+
+    expose // active command buffer (used by SenVulkanCommandBuffer)
+    static VkCommandBuffer            _activeCommandBuffer;
+
+    hide
+    static SenVulkanCommandBuffer _commandBufferInstance;
+    
+    static std::unordered_map<uint32_t, SenVulkanSwapchainEntry> _swapchains;   static uint32_t _nextSwapchainId;
+    static std::unordered_map<uint32_t, SenVulkanTextureEntry> _textures;       static uint32_t _nextTextureId;
+    static std::unordered_map<uint32_t, SenVulkanBufferEntry> _buffers;         static uint32_t _nextBufferId;
+    static std::unordered_map<uint32_t, SenVulkanSamplerEntry> _samplers;       static uint32_t _nextSamplerId;
+    static std::unordered_map<uint32_t, SenVulkanBindGroupEntry> _bindGroups;   static uint32_t _nextBindGroupId;
+    static std::unordered_map<uint32_t, SenVulkanShaderEntry> _shaders;         static uint32_t _nextShaderId;
+    static std::unordered_map<uint32_t, SenVulkanPipelineEntry> _pipelines;     static uint32_t _nextPipelineId;
+    
     expose
     static auto Init      (const SenDeviceDesc& desc) -> void;
     static auto Shutdown  () -> void;
     static auto WaitIdle  () -> void;
-
     
     expose // swapchain lifecycle
     static auto CreateSwapchain       (const SenSwapchainDesc& desc) -> SenSwapchain;
@@ -150,46 +173,4 @@ class SenVulkanBackend {
 
     expose // debug print helpers
     static auto PrintBindGroup (SenBindGroup handle) -> std::string;
-
-
-    expose // dynamic rendering extension proc addresses (used by SenVulkanCommandBuffer)
-    static PFN_vkCmdBeginRenderingKHR _vkCmdBeginRenderingKHR;
-    static PFN_vkCmdEndRenderingKHR   _vkCmdEndRenderingKHR;
-    static VkCommandBuffer            _activeCommandBuffer;
-
-    hide
-    static SenVulkanCommandBuffer _commandBufferInstance;
-
-    hide
-    static VkInstance _instance;
-    static VkPhysicalDevice _physicalDevice;
-    static VkDevice _device;
-    static VkQueue _queue;
-    static uint32_t _queueFamilyIndex;
-    static VkCommandPool _commandPool;
-    static VmaAllocator _allocator;
-
-    static std::unordered_map<uint32_t, SenVulkanSwapchainEntry> _swapchains;
-    static uint32_t _nextSwapchainId;
-    
-    static std::unordered_map<uint32_t, SenVulkanTextureEntry> _textures;
-    static uint32_t _nextTextureId;
-
-    static std::unordered_map<uint32_t, SenVulkanBufferEntry> _buffers;
-    static uint32_t _nextBufferId;
-
-    static std::unordered_map<uint32_t, SenVulkanSamplerEntry> _samplers;
-    static uint32_t _nextSamplerId;
-
-    static std::unordered_map<uint32_t, SenVulkanBindGroupEntry> _bindGroups;
-    static uint32_t _nextBindGroupId;
-
-    static VkDescriptorPool _descriptorPool;
-
-    static std::unordered_map<uint32_t, SenVulkanShaderEntry> _shaders;
-    static uint32_t _nextShaderId;
-
-    static std::unordered_map<uint32_t, SenVulkanPipelineEntry> _pipelines;
-    static uint32_t _nextPipelineId;
-
 };

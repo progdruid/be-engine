@@ -21,36 +21,20 @@ VkPhysicalDevice SenVulkanBackend::_physicalDevice;
 VkDevice SenVulkanBackend::_device;
 VkQueue SenVulkanBackend::_queue;
 uint32_t SenVulkanBackend::_queueFamilyIndex;
+VkDescriptorPool SenVulkanBackend::_descriptorPool = VK_NULL_HANDLE;
 VkCommandPool SenVulkanBackend::_commandPool;
 VmaAllocator SenVulkanBackend::_allocator;
 
-std::unordered_map<uint32_t, SenVulkanTextureEntry> SenVulkanBackend::_textures;
-uint32_t SenVulkanBackend::_nextTextureId = 1;
-
-std::unordered_map<uint32_t, SenVulkanBufferEntry> SenVulkanBackend::_buffers;
-uint32_t SenVulkanBackend::_nextBufferId = 1;
-
-std::unordered_map<uint32_t, SenVulkanSamplerEntry> SenVulkanBackend::_samplers;
-uint32_t SenVulkanBackend::_nextSamplerId = 1;
-
-std::unordered_map<uint32_t, SenVulkanShaderEntry> SenVulkanBackend::_shaders;
-uint32_t SenVulkanBackend::_nextShaderId = 1;
-
-std::unordered_map<uint32_t, SenVulkanPipelineEntry> SenVulkanBackend::_pipelines;
-uint32_t SenVulkanBackend::_nextPipelineId = 1;
-
-std::unordered_map<uint32_t, SenVulkanSwapchainEntry> SenVulkanBackend::_swapchains;
-uint32_t SenVulkanBackend::_nextSwapchainId = 1;
-
-std::unordered_map<uint32_t, SenVulkanBindGroupEntry> SenVulkanBackend::_bindGroups;
-uint32_t SenVulkanBackend::_nextBindGroupId = 1;
-
-VkDescriptorPool SenVulkanBackend::_descriptorPool = VK_NULL_HANDLE;
-
-PFN_vkCmdBeginRenderingKHR SenVulkanBackend::_vkCmdBeginRenderingKHR = nullptr;
-PFN_vkCmdEndRenderingKHR   SenVulkanBackend::_vkCmdEndRenderingKHR   = nullptr;
 VkCommandBuffer            SenVulkanBackend::_activeCommandBuffer     = VK_NULL_HANDLE;
 SenVulkanCommandBuffer     SenVulkanBackend::_commandBufferInstance   = {};
+
+std::unordered_map<uint32_t, SenVulkanTextureEntry> SenVulkanBackend::_textures;     uint32_t SenVulkanBackend::_nextTextureId = 1;
+std::unordered_map<uint32_t, SenVulkanBufferEntry> SenVulkanBackend::_buffers;       uint32_t SenVulkanBackend::_nextBufferId = 1;
+std::unordered_map<uint32_t, SenVulkanSamplerEntry> SenVulkanBackend::_samplers;     uint32_t SenVulkanBackend::_nextSamplerId = 1;
+std::unordered_map<uint32_t, SenVulkanShaderEntry> SenVulkanBackend::_shaders;       uint32_t SenVulkanBackend::_nextShaderId = 1;
+std::unordered_map<uint32_t, SenVulkanPipelineEntry> SenVulkanBackend::_pipelines;   uint32_t SenVulkanBackend::_nextPipelineId = 1;
+std::unordered_map<uint32_t, SenVulkanSwapchainEntry> SenVulkanBackend::_swapchains; uint32_t SenVulkanBackend::_nextSwapchainId = 1;
+std::unordered_map<uint32_t, SenVulkanBindGroupEntry> SenVulkanBackend::_bindGroups; uint32_t SenVulkanBackend::_nextBindGroupId = 1;
 //endregion
 
 // region ────────── backend ────────────────────────────────────────────────────────────────
@@ -94,7 +78,6 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount, nullptr);
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount, queueFamilies.data());
-
     for (uint32_t i = 0; i < queueFamilyCount; i++) {
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             _queueFamilyIndex = i;
@@ -112,23 +95,28 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
 
     // logical device
     const char* deviceExtensions[] = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,  // swapchain is never core; dynamic rendering + sync2 are core in 1.3
     };
 
-    VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeatures {
-        .sType            = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+    // 1.0 features
+    VkPhysicalDeviceFeatures enabled10Features {
+        .depthClamp        = VK_TRUE,  // required by rasterizer depthClampEnable
+        .samplerAnisotropy = VK_TRUE,  // required by anisotropic samplers
+    };
+    // 1.3 core features
+    VkPhysicalDeviceVulkan13Features enabled13Features {
+        .sType            = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .synchronization2 = VK_TRUE,
         .dynamicRendering = VK_TRUE,
     };
-    VkPhysicalDeviceFeatures deviceFeatures {};
     VkDeviceCreateInfo deviceCreateInfo {
         .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext                   = &dynamicRenderingFeatures,
+        .pNext                   = &enabled13Features,
         .queueCreateInfoCount    = 1,
         .pQueueCreateInfos       = &queueCreateInfo,
         .enabledExtensionCount   = uint32_t(std::size(deviceExtensions)),
         .ppEnabledExtensionNames = deviceExtensions,
-        .pEnabledFeatures        = &deviceFeatures,
+        .pEnabledFeatures        = &enabled10Features,
     };
 
     result = vkCreateDevice(_physicalDevice, &deviceCreateInfo, nullptr, &_device);
@@ -169,10 +157,6 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     };
     result = vkCreateDescriptorPool(_device, &descPoolInfo, nullptr, &_descriptorPool);
     be_assert(result == VK_SUCCESS, "Failed to create descriptor pool!");
-
-    _vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(_device, "vkCmdBeginRenderingKHR");
-    _vkCmdEndRenderingKHR   = (PFN_vkCmdEndRenderingKHR)  vkGetDeviceProcAddr(_device, "vkCmdEndRenderingKHR");
-    be_assert(_vkCmdBeginRenderingKHR && _vkCmdEndRenderingKHR, "Failed to load dynamic rendering functions!");
 }
 
 auto SenVulkanBackend::Shutdown() -> void {
@@ -194,9 +178,9 @@ auto SenVulkanBackend::Shutdown() -> void {
 
     if (_commandPool)      { vkDestroyCommandPool(_device, _commandPool, nullptr); _commandPool = VK_NULL_HANDLE; }
     if (_descriptorPool)   { vkDestroyDescriptorPool(_device, _descriptorPool, nullptr); _descriptorPool = VK_NULL_HANDLE; }
-    if (_allocator)        { vmaDestroyAllocator(_allocator);                      _allocator = VK_NULL_HANDLE; }
-    if (_device)           { vkDestroyDevice(_device, nullptr);                    _device = VK_NULL_HANDLE; }
-    if (_instance)         { vkDestroyInstance(_instance, nullptr);                _instance = VK_NULL_HANDLE; }
+    if (_allocator)        { vmaDestroyAllocator(_allocator); _allocator = VK_NULL_HANDLE; }
+    if (_device)           { vkDestroyDevice(_device, nullptr); _device = VK_NULL_HANDLE; }
+    if (_instance)         { vkDestroyInstance(_instance, nullptr); _instance = VK_NULL_HANDLE; }
 }
 //endregion
 
@@ -223,7 +207,7 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     for (const auto& format : surfaceFormats) {
         if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) { continue; }
         if (format.format == VK_FORMAT_B8G8R8A8_UNORM || format.format == VK_FORMAT_R8G8B8A8_UNORM) {
-            chosenFormat = format;
+            chosenFormat = format; 
             break;
         }
     }
@@ -716,68 +700,50 @@ auto SenVulkanBackend::UploadToDeviceImage(VkImage image, VkImageAspectFlags asp
 }
 
 auto SenVulkanBackend::TransitionImageLayout(VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels, uint32_t layerCount) -> void {
-    VkAccessFlags        srcAccess = 0;
-    VkAccessFlags        dstAccess = 0;
-    VkPipelineStageFlags srcStage  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    VkPipelineStageFlags dstStage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    auto scopeFor = [](VkImageLayout layout, VkPipelineStageFlags2& stage, VkAccessFlags2& access) -> void {
+        switch (layout) {
+            case VK_IMAGE_LAYOUT_UNDEFINED:
+                stage  = VK_PIPELINE_STAGE_2_NONE;
+                access = VK_ACCESS_2_NONE;
+                break;
+            case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+                stage  = VK_PIPELINE_STAGE_2_COPY_BIT;
+                access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+                stage  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+                access = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+                stage  = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+                access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+                stage  = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+                access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+                // Present is synchronised by the swapchain semaphore, not by this barrier.
+                stage  = VK_PIPELINE_STAGE_2_NONE;
+                access = VK_ACCESS_2_NONE;
+                break;
+            default:
+                be_assert(false, "TransitionImageLayout: unsupported layout");
+                stage  = VK_PIPELINE_STAGE_2_NONE;
+                access = VK_ACCESS_2_NONE;
+        }
+    };
 
-    switch (oldLayout) {
-        case VK_IMAGE_LAYOUT_UNDEFINED:
-            srcAccess = 0;
-            srcStage  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            srcAccess = VK_ACCESS_TRANSFER_WRITE_BIT;
-            srcStage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            srcAccess = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            srcStage  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            srcAccess = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            srcStage  = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-            srcAccess = VK_ACCESS_SHADER_READ_BIT;
-            srcStage  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-            srcAccess = 0;
-            srcStage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-            break;
-        default:
-            be_assert(false, "TransitionImageLayout: unsupported old layout");
-    }
+    VkPipelineStageFlags2 srcStage, dstStage;
+    VkAccessFlags2        srcAccess, dstAccess;
+    scopeFor(oldLayout, srcStage, srcAccess);
+    scopeFor(newLayout, dstStage, dstAccess);
 
-    switch (newLayout) {
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            dstAccess = VK_ACCESS_TRANSFER_WRITE_BIT;
-            dstStage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            dstAccess = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            dstStage  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            dstAccess = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            dstStage  = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-            dstAccess = VK_ACCESS_SHADER_READ_BIT;
-            dstStage  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-            dstAccess = 0;
-            dstStage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-            break;
-        default:
-            be_assert(false, "TransitionImageLayout: unsupported new layout");
-    }
-
-    VkImageMemoryBarrier barrier {
-        .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    VkImageMemoryBarrier2 barrier {
+        .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcStageMask        = srcStage,
         .srcAccessMask       = srcAccess,
+        .dstStageMask        = dstStage,
         .dstAccessMask       = dstAccess,
         .oldLayout           = oldLayout,
         .newLayout           = newLayout,
@@ -786,7 +752,13 @@ auto SenVulkanBackend::TransitionImageLayout(VkCommandBuffer cmd, VkImage image,
         .image               = image,
         .subresourceRange    = { aspect, 0, mipLevels, 0, layerCount },
     };
-    vkCmdPipelineBarrier(cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+    VkDependencyInfo dependency {
+        .sType                   = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers    = &barrier,
+    };
+    vkCmdPipelineBarrier2(cmd, &dependency);
 }
 
 auto SenVulkanBackend::CreateImageView(VkImage image, VkFormat format, VkImageViewType viewType, VkImageAspectFlags aspect, uint32_t baseMip, uint32_t mipLevels, uint32_t baseLayer, uint32_t layerCount) -> VkImageView {

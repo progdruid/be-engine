@@ -113,7 +113,7 @@ auto SenVulkanCommandBuffer::BeginPass(const SenPassDesc& desc) -> void {
         .pDepthAttachment     = hasDepth ? &depthAttachmentInfo : nullptr,
     };
 
-    SenVulkanBackend::_vkCmdBeginRenderingKHR(_cmd, &renderingInfo);
+    vkCmdBeginRendering(_cmd, &renderingInfo);
 
     // Flip viewport Y so NDC Y+ = up (matches DX11/GLM convention).
     // Vulkan default has Y+ = down in NDC; negative height reverses this.
@@ -135,7 +135,7 @@ auto SenVulkanCommandBuffer::BeginPass(const SenPassDesc& desc) -> void {
 }
 
 auto SenVulkanCommandBuffer::EndPass() -> void {
-    SenVulkanBackend::_vkCmdEndRenderingKHR(_cmd);
+    vkCmdEndRendering(_cmd);
 }
 
 auto SenVulkanCommandBuffer::ResetPerFrameState() -> void {
