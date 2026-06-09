@@ -1,0 +1,110 @@
+● I've read the whole backend (both files). It's clean and readable — the SoA handle-map
+  pattern is consistent and the comments are good. But there are real latent bugs and several
+  places where you're using Vulkan 1.0-era idioms while requesting a 1.3 instance. Here's a
+  prioritized breakdown.
+
+  Sanitize — correctness/safety (do these first)
+
+  1. You request features you never enabled — these are active validation errors.
+  - Init builds VkPhysicalDeviceFeatures deviceFeatures{} (all VK_FALSE, line 108) and passes
+  it to device creation.
+  - But CreateSampler sets anisotropyEnable = VK_TRUE with maxAnisotropy = 16 (line 957–958)
+  → requires the samplerAnisotropy feature.
+  - And rasterizer.depthClampEnable = !DepthClipEnable (line 1287) → requires the depthClamp
+  feature.
+
+  Both will fire validation errors / are UB on strict drivers. Enable them explicitly,
+  ideally after querying vkGetPhysicalDeviceFeatures so you don't enable something
+  unsupported.
+
+  2. No validation layer or debug messenger. This is the single biggest "sanitize" lever.
+  Init (line 60) never enables VK_LAYER_KHRONOS_validation and never registers
+  VK_EXT_debug_utils. Without it, items #1 and the sync issues below are invisible. Add a
+  debug-build-only path that enables the layer + a messenger callback that routes into
+  be_assert/your log. While you're there, BeginDebugEvent/EndDebugEvent (lines 500–504) are
+  empty stubs — wire them to vkCmdBeginDebugUtilsLabelEXT so your RenderDoc/Nsight captures
+  get the pass annotations BeRenderer is already trying to emit.
+
+  3. Acquire/Present return values are dropped. vkAcquireNextImageKHR (line 385) and
+  vkQueuePresentKHR (line 449) ignore their VkResult. VK_ERROR_OUT_OF_DATE_KHR /
+  VK_SUBOPTIMAL_KHR on resize or minimize will currently produce garbage or validation spam
+  instead of triggering a rebuild. Capture the result and signal a swapchain-recreate.
+
+  4. be_assert is a debug-only assert, so every VkResult check vanishes in release. Per your
+  own CLAUDE.md it wraps DEBUG_ASSERT. That means in linux-release none of the ~40
+  be_assert(result == VK_SUCCESS, …) checks run — creation failures become silent null
+  handles. Add a VK_CHECK() that always evaluates (logs + aborts) and use it for object
+  creation, distinct from debug-only invariants.
+
+  5. Semaphore reuse / single frame in flight. One ImageAvailableSemaphore + one
+  RenderFinishedSemaphore + one InFlightFence per swapchain (h:67–69), and a single global
+  _activeCommandBuffer. Two issues:
+  - The vkWaitForFences at the top of BeginFrame (line 381) fully serializes CPU↔GPU — you
+  never overlap frame N's CPU recording with N-1's GPU work.
+  - The acquire semaphore should be per-swapchain-image, not per-swapchain; reusing a binary
+  semaphore before its wait retires is the canonical validation warning. Move to
+  frames-in-flight (typically 2): per-frame command buffer + render-finished semaphore +
+  fence, and a per-image acquire semaphore.
+
+  6. Mips are viewed but never generated. CreateTexture2D makes desc.Mips worth of RTV views
+  (line 581) and the SRV spans all mips (line 575), but UploadToDeviceImage only copies into
+  mip 0 (imageSubresource = {aspect, 0, layer, 1}, line 680). If anyone creates a textured
+  asset with Mips > 1 + initial data, mips 1+ are uninitialized garbage. Either
+  vkCmdBlitImage a mip chain or assert Mips == 1 when Data != nullptr.
+
+  Modernize — you're on a 1.3 instance, use it
+
+  7. Dynamic rendering is core in 1.3 — drop the KHR scaffolding. You request
+  VK_API_VERSION_1_3 (line 54) yet pull dynamic rendering in as an extension (line 101), a
+  …FeaturesKHR struct (line 104), and hand-load vkCmdBeginRenderingKHR/EndRenderingKHR via
+  vkGetDeviceProcAddr (line 158). Replace with VkPhysicalDeviceVulkan13Features{
+  .dynamicRendering = VK_TRUE } and call core vkCmdBeginRendering. That deletes the
+  proc-address members (h:94–95) and the load/assert.
+
+  8. Adopt synchronization2 (vkCmdPipelineBarrier2). Also core in 1.3. Your
+  TransitionImageLayout (line 703) is a hand-rolled oldLayout/newLayout switch with coarse
+  TOP_OF_PIPE/BOTTOM_OF_PIPE stages. VkImageMemoryBarrier2 lets you express precise
+  srcStage/dstStage per transition and is far easier to get right. A small static lookup
+  table (layout) → {stage, access} replaces both switch blocks.
+
+  9. Cache descriptor-set layouts; don't rebuild-and-destroy them.
+  CreateDescriptorSetLayoutFromDesc is called and the result immediately destroyed in both
+  CreateBindGroup (line 988/1078) and CreatePipeline (line 1203/1216). The pipeline's layout
+  and the bind group's layout are generated independently from the same slot structure — they
+  must stay compatible, and regenerating them in two places is exactly how that drifts.
+  Cache by a hash of (TextureSlots, SamplerSlots, BufferSlots, Stages) and hand out shared,
+  long-lived VkDescriptorSetLayouts. Cheaper and guarantees compatibility.
+
+  10. Add a VkPipelineCache. CreatePipeline passes VK_NULL_HANDLE (line 1374). A single
+  device-wide pipeline cache serialized to disk meaningfully cuts pipeline build time — easy
+  win since BePipelineBuilder already dedupes at a higher level.
+
+  Lower priority / judgment calls
+
+  - Handle recycling has no generation counter. _nextTextureId++ etc. never reuse IDs
+  (monotonic), so today you're safe from ABA, but a stale handle to a destroyed resource
+
+  Lower priority / judgment calls
+
+  - Handle recycling has no generation counter. _nextTextureId++ etc. never reuse IDs
+  (monotonic), so today you're safe from ABA, but a stale handle to a destroyed resource
+  isn't detected — LookupX .at() throws only if the slot is empty, and slots are never reused
+  so a destroyed-then-looked-up handle throws (good) but a logic bug double-creating won't
+  alias. If you ever pool/recycle IDs, pack index | generation. Flagging, not urgent.
+  - CreateTexture2D / CreateTextureCubemap are ~90% duplicated (lines 544 / 588). Could
+  collapse to one function parameterized by arrayLayers + viewType + the cube flag.
+  - Whole-image layout tracking. CurrentLayout is one field per image (h:27); transitions
+  always cover all mips/all layers. Fine for now, but per-subresource tracking matters once
+  you do per-mip ping-pong (your bloom pass already renders per-mip).
+  - Dynamic-buffer coherency assumption. WriteBuffer's memcpy (line 872) trusts VMA AUTO host
+  memory is coherent. True on desktop, but a vmaFlushAllocation (no-op if coherent) makes it
+  correct everywhere.
+  - The whole backend is static. An instance-based SenDevice would be more RAII/testable and
+  allow multi-device, but it touches every call site — only worth it if you actually want a
+  second device or unit tests.
+
+  ---
+  If you want, I'd start with #1 + #2 + #4 (feature enabling, validation layers, real
+  VK_CHECK) — it's a contained change to Init plus one helper, and it'll immediately surface
+  whatever else is hiding. Want me to implement that batch? I can also take #7 (1.3 core
+  dynamic rendering) in the same pass since it touches the same Init block.

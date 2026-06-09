@@ -6,11 +6,12 @@
 // knowledge at the sen level. Until that service exists, GLFW is used here as a stopgap.
 #include <umbrellas/include-glfw.h>  // vulkan_core.h already included above; GLFW will still expose glfwCreateWindowSurface via VK_VERSION_1_0
 #include <sen-rhi/vulkan/SenVulkanConvert.h>
+#include <sen-rhi/vulkan/SenVulkanValidation.h>
 #include <sen-rhi/SenShaderCompiler.h>
 
 #define VMA_IMPLEMENTATION
 #include <ranges>
-#include <cstdio>
+#include <cstring>
 #include <vma/vk_mem_alloc.h>
 
 #include <umbrellas/include-libassert.h>
@@ -54,18 +55,25 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
 
     uint32_t glfwExtCount = 0;
     const char** glfwExts = glfwGetRequiredInstanceExtensions(&glfwExtCount); // TODO: see above
+    std::vector<const char*> instanceExtensions(glfwExts, glfwExts + glfwExtCount);
+    std::vector<const char*> instanceLayers;
+    const void* instancePNext = Sen::Vulkan::Validation::ConfigureInstance(instanceLayers, instanceExtensions);
 
     VkInstanceCreateInfo createInfo {
         .sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pNext                   = instancePNext,
         .pApplicationInfo        = &appInfo,
-        .enabledExtensionCount   = glfwExtCount,
-        .ppEnabledExtensionNames = glfwExts,
+        .enabledLayerCount       = uint32_t(instanceLayers.size()),
+        .ppEnabledLayerNames     = instanceLayers.data(),
+        .enabledExtensionCount   = uint32_t(instanceExtensions.size()),
+        .ppEnabledExtensionNames = instanceExtensions.data(),
     };
 
     VkResult result = vkCreateInstance(&createInfo, nullptr, &_instance);
     be_assert(result == VK_SUCCESS, "Vulkan Failed to create instance!");
-    
-    
+    Sen::Vulkan::Validation::CreateMessenger(_instance);
+
+
     // physical devices
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
@@ -103,9 +111,15 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
         .depthClamp        = VK_TRUE,  // required by rasterizer depthClampEnable
         .samplerAnisotropy = VK_TRUE,  // required by anisotropic samplers
     };
+    // 1.1 core features
+    VkPhysicalDeviceVulkan11Features enabled11Features {
+        .sType                = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .shaderDrawParameters = VK_TRUE,  // Slang-emitted SPIR-V declares the DrawParameters capability
+    };
     // 1.3 core features
     VkPhysicalDeviceVulkan13Features enabled13Features {
         .sType            = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .pNext            = &enabled11Features,
         .synchronization2 = VK_TRUE,
         .dynamicRendering = VK_TRUE,
     };
@@ -180,6 +194,7 @@ auto SenVulkanBackend::Shutdown() -> void {
     if (_descriptorPool)   { vkDestroyDescriptorPool(_device, _descriptorPool, nullptr); _descriptorPool = VK_NULL_HANDLE; }
     if (_allocator)        { vmaDestroyAllocator(_allocator); _allocator = VK_NULL_HANDLE; }
     if (_device)           { vkDestroyDevice(_device, nullptr); _device = VK_NULL_HANDLE; }
+    Sen::Vulkan::Validation::DestroyMessenger(_instance);
     if (_instance)         { vkDestroyInstance(_instance, nullptr); _instance = VK_NULL_HANDLE; }
 }
 //endregion
@@ -231,13 +246,27 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     }
 
     // 3. Create swapchain
+    uint32_t minImageCount = desc.BufferCount;
+    if (minImageCount < capabilities.minImageCount) { minImageCount = capabilities.minImageCount; }
+    if (capabilities.maxImageCount != 0 && minImageCount > capabilities.maxImageCount) { minImageCount = capabilities.maxImageCount; }
+
+    // currentExtent == 0xFFFFFFFF means the surface lets us pick (clamp to bounds); otherwise it is mandatory.
+    VkExtent2D imageExtent = capabilities.currentExtent;
+    if (imageExtent.width == UINT32_MAX) {
+        imageExtent = { desc.Width, desc.Height };
+        if (imageExtent.width  < capabilities.minImageExtent.width)  { imageExtent.width  = capabilities.minImageExtent.width; }
+        if (imageExtent.width  > capabilities.maxImageExtent.width)  { imageExtent.width  = capabilities.maxImageExtent.width; }
+        if (imageExtent.height < capabilities.minImageExtent.height) { imageExtent.height = capabilities.minImageExtent.height; }
+        if (imageExtent.height > capabilities.maxImageExtent.height) { imageExtent.height = capabilities.maxImageExtent.height; }
+    }
+
     VkSwapchainCreateInfoKHR swapchainInfo {
         .sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface          = entry.Surface,
-        .minImageCount    = desc.BufferCount,
+        .minImageCount    = minImageCount,
         .imageFormat      = chosenFormat.format,
         .imageColorSpace  = chosenFormat.colorSpace,
-        .imageExtent      = {desc.Width, desc.Height},
+        .imageExtent      = imageExtent,
         .imageArrayLayers = 1,
         .imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
@@ -291,8 +320,8 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     }
 
     entry.NativeWindowHandle = desc.NativeWindowHandle;
-    entry.Width       = desc.Width;
-    entry.Height      = desc.Height;
+    entry.Width       = imageExtent.width;
+    entry.Height      = imageExtent.height;
     entry.BufferCount = desc.BufferCount;
     entry.Format      = Sen::Vulkan::FromVkFormat(chosenFormat.format);
     entry.PresentMode = desc.PresentMode;
