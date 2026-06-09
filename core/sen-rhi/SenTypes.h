@@ -8,6 +8,20 @@
 #include <umbrellas/include-glm.h>
 
 
+
+// ─── platform ─────────────────────────────────────────────────────
+enum class SenPlatform { Windows, Linux, Unknown };
+
+constexpr SenPlatform SenCurrentPlatform =
+#if defined(_WIN32) // 
+    SenPlatform::Windows;
+#elif defined(__linux__) //  
+    SenPlatform::Linux;
+#else //
+    SenPlatform::Unknown;
+#endif //
+
+
 enum class SenFormat : uint8_t {
     Unknown,
     RGBA8_Unorm,

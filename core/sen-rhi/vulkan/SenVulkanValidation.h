@@ -1,20 +1,31 @@
 #pragma once
+#include <string>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-// Khronos validation layer wiring. Every entry point is a no-op in release builds.
-namespace Sen::Vulkan::Validation {
+#include "umbrellas/access-modifiers.hpp"
 
-// Before vkCreateInstance: if the validation layer is discoverable, enable it + the debug-utils
-// extension (appending to the given vectors) and point the loader at the vendored layer copied next
-// to the executable. Returns a messenger create-info to chain into VkInstanceCreateInfo.pNext, or
-// nullptr when validation is off. The returned pointer stays valid until the next call.
-auto ConfigureInstance(std::vector<const char*>& layers, std::vector<const char*>& extensions) -> const void*;
+// Khronos validation layer wiring. No-op in release builds.
+class SenVulkanValidation {
+    hide
+    static VkDebugUtilsMessengerEXT _messenger;
+    static VkDebugUtilsMessengerCreateInfoEXT _createInfo;
+    static bool _enabled;
+    static bool _requested;
+    
+    expose
+    static auto SetEnabled(bool enabled) -> void;
+    static auto ConfigureForInstance(std::vector<const char*>& layers, std::vector<const char*>& extensions) -> const void*;
+    static auto CreateMessenger(VkInstance instance) -> void;
+    static auto DestroyMessenger(VkInstance instance) -> void;
 
-// After vkCreateInstance: create the persistent debug messenger (if validation was enabled).
-auto CreateMessenger(VkInstance instance) -> void;
-
-// During shutdown: destroy the messenger (safe to call unconditionally).
-auto DestroyMessenger(VkInstance instance) -> void;
-
-}
+    hide
+    static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
+        VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+        VkDebugUtilsMessageTypeFlagsEXT type,
+        const VkDebugUtilsMessengerCallbackDataEXT* data,
+        void* userData);
+    static auto MakeMessengerInfo() -> VkDebugUtilsMessengerCreateInfoEXT;
+    static auto LayerAvailable() -> bool;
+    static auto ExecutableDir() -> std::string;
+};
