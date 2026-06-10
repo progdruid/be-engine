@@ -6,6 +6,7 @@
 #include <sen-rhi/SenBackend.h>
 
 #include "BeAssetRegistry.h"
+#include "BePass.h"
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
@@ -33,11 +34,11 @@ auto BeStandardShadowPass::RenderDirectionalShadows(const BeSRMSunLightEntry& su
 
     cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
 
-    cmd.BeginPass({
-        .DepthAttachment = SenDepthAttachment{ sunLight.ShadowMap.lock()->Handle },
-        .Viewport = { 0, 0, (float)sunLight.ShadowMapResolution, (float)sunLight.ShadowMapResolution, 0, 1 },
-    });
-    SCOPE_EXIT { cmd.EndPass(); };
+    BePass pass;
+    pass.SetDepthTarget(sunLight.ShadowMap.lock());
+    pass.SetViewport({ 0, 0, (float)sunLight.ShadowMapResolution, (float)sunLight.ShadowMapResolution, 0, 1 });
+    pass.Begin();
+    SCOPE_EXIT { pass.End(); };
 
     cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer(), sizeof(BeFullVertex));
     cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
@@ -85,18 +86,11 @@ auto BeStandardShadowPass::RenderPointLightShadows(const BeSRMPointLightEntry& p
     for (int face = 0; face < 6; ++face) {
         const glm::mat4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
-        cmd.BeginPass({
-            .DepthAttachment = SenDepthAttachment{
-                .Texture = shadowMap->Handle,
-                .CubemapFace = static_cast<int8_t>(face),
-                .LoadOp = SenLoadOp::Clear,
-            },
-            .Viewport = SenViewport{
-                .Width  = (float)pointLight.ShadowMapResolution,
-                .Height = (float)pointLight.ShadowMapResolution,
-            },
-        });
-        SCOPE_EXIT { cmd.EndPass(); };
+        BePass pass;
+        pass.SetDepthTarget(shadowMap, SenLoadOp::Clear, 1.0f, static_cast<int8_t>(face));
+        pass.SetViewport({ 0, 0, (float)pointLight.ShadowMapResolution, (float)pointLight.ShadowMapResolution, 0, 1 });
+        pass.Begin();
+        SCOPE_EXIT { pass.End(); };
 
         for (const auto& entry : entries) {
             if (!entry.CastShadows)

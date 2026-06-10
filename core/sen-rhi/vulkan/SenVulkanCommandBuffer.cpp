@@ -13,29 +13,8 @@ SenVulkanCommandBuffer::SenVulkanCommandBuffer(VkCommandBuffer cmd)
 // ─── render pass ──────────────────────────────────────────────────────────────
 
 auto SenVulkanCommandBuffer::BeginPass(const SenPassDesc& desc) -> void {
-    // Auto-transition attachments to their expected layouts
-    for (const auto& attachment : desc.ColorAttachments) {
-        auto& texEntry = SenVulkanBackend::LookupTexture(attachment.Texture);
-        if (texEntry.CurrentLayout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-            SenVulkanBackend::TransitionRawImageLayout(
-                _cmd, texEntry.Image, VK_IMAGE_ASPECT_COLOR_BIT,
-                texEntry.CurrentLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                VK_REMAINING_MIP_LEVELS, VK_REMAINING_ARRAY_LAYERS
-            );
-            texEntry.CurrentLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        }
-    }
-    if (desc.DepthAttachment.has_value()) {
-        auto& texEntry = SenVulkanBackend::LookupTexture(desc.DepthAttachment->Texture);
-        if (texEntry.CurrentLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-            SenVulkanBackend::TransitionRawImageLayout(
-                _cmd, texEntry.Image, VK_IMAGE_ASPECT_DEPTH_BIT,
-                texEntry.CurrentLayout, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                VK_REMAINING_MIP_LEVELS, VK_REMAINING_ARRAY_LAYERS
-            );
-            texEntry.CurrentLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        }
-    }
+    // Attachments are expected to already be in the correct layout — callers transition
+    // them (e.g. via BePass / TransitionTextures). BeginPass only opens the render pass.
 
     // Color attachments
     std::vector<VkRenderingAttachmentInfoKHR> colorAttachments;

@@ -9,6 +9,7 @@
 #include <sen-rhi/SenBackend.h>
 #include <sen-rhi/vulkan/SenVulkanConvert.h>
 
+#include "BePass.h"
 #include "BeRenderer.h"
 #include "BeWindow.h"
 
@@ -77,19 +78,18 @@ auto BeImGuiPass::Render() -> void {
     ImGui::Render();
 
     auto& cmd = _renderer->GetCommandBuffer();
-    cmd.BeginPass({
-        .ColorAttachments = {
-            { _renderer->GetBackbufferTexture(), 0, -1, SenLoadOp::Load },
-        },
-        .Viewport = _renderer->GetViewport(),
-    });
+
+    BePass pass;
+    pass.AddColorTarget(_renderer->GetBackbufferTexture(), SenLoadOp::Load);
+    pass.SetViewport(_renderer->GetViewport());
+    pass.Begin();
 
     ImGui_ImplVulkan_RenderDrawData(
         ImGui::GetDrawData(),
         static_cast<VkCommandBuffer>(SenBackend::GetNativeContext())
     );
 
-    cmd.EndPass();
+    pass.End();
 }
 
 auto BeImGuiPass::SetUICallback(const std::function<void()>& callback) -> void {

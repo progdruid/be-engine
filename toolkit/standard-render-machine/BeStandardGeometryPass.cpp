@@ -3,6 +3,7 @@
 #include <scope_guard/scope_guard.hpp>
 #include <sen-rhi/SenBackend.h>
 
+#include "BePass.h"
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
@@ -21,23 +22,20 @@ auto BeStandardGeometryPass::Render() -> void {
     const auto uniformMat = _srm->UniformMaterial.lock();
     const auto& entries = _srm->GetGeometryEntries();
 
-    std::vector<SenColorAttachment> colorAttachments;
-    colorAttachments.reserve(_colorTargets.size());
     std::vector<SenFormat> colorFormats;
     colorFormats.reserve(_colorTargets.size());
     for (const auto& tex : _colorTargets) {
-        colorAttachments.push_back({ tex->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} });
         colorFormats.push_back(tex->Format);
     }
 
     cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
 
-    cmd.BeginPass({
-        .ColorAttachments = colorAttachments,
-        .DepthAttachment  = SenDepthAttachment{ _depthTarget->Handle },
-        .Viewport = { 0, 0, float(_renderer->GetWidth()), float(_renderer->GetHeight()), 0, 1 },
-    });
-    SCOPE_EXIT { cmd.EndPass(); };
+    BePass pass;
+    pass.AddColorTargets(_colorTargets);
+    pass.SetDepthTarget(_depthTarget);
+    pass.SetViewport({ 0, 0, float(_renderer->GetWidth()), float(_renderer->GetHeight()), 0, 1 });
+    pass.Begin();
+    SCOPE_EXIT { pass.End(); };
 
     cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer(), sizeof(BeFullVertex));
     cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());

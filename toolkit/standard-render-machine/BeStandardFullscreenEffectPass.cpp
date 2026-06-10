@@ -2,8 +2,8 @@
 
 #include <umbrellas/include-libassert.h>
 #include <sen-rhi/SenBackend.h>
-#include <sen-rhi/SenTransitionBatch.h>
 
+#include "BePass.h"
 #include "BeMaterial.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
@@ -31,30 +31,20 @@ auto BeStandardFullscreenEffectPass::Initialise() -> void {
 auto BeStandardFullscreenEffectPass::Render() -> void {
     auto& cmd = _renderer->GetCommandBuffer();
 
-    std::vector<SenColorAttachment> colorAttachments;
-    colorAttachments.reserve(_outputs.size());
-    for (const auto& tex : _outputs) {
-        colorAttachments.push_back({ tex->Handle, 0, -1, SenLoadOp::Load });
-    }
-    
+    BePass pass;
     if (_material) {
-        SenTransitionBatch reads;
-        for (const auto& [texture, slot] : _material->GetTextures()) {
-            reads.Add(texture->Handle, SenResourceState::ShaderRead);
-        }
-        reads.TransitionAll(cmd);
+        pass.AddReadMaterial(*_material);
     }
-
-    cmd.BeginPass({
-        .ColorAttachments = colorAttachments,
-        .Viewport = _renderer->GetViewport(),
-    });
+    pass.AddColorTargets(_outputs, SenLoadOp::Load);
+    pass.SetViewport(_renderer->GetViewport());
+    pass.Begin();
 
     cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
     cmd.SetPipeline(_pipeline);
-    if (_material)
+    if (_material) {
         cmd.SetBindGroup(_material->GetBindGroup(), 1);
+    }
     cmd.Draw(4, 0);
 
-    cmd.EndPass();
+    pass.End();
 }

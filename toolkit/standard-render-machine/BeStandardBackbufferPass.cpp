@@ -1,9 +1,9 @@
 #include "BeStandardBackbufferPass.h"
 
 #include <sen-rhi/SenBackend.h>
-#include <sen-rhi/SenTransitionBatch.h>
 
 #include "BeAssetRegistry.h"
+#include "BePass.h"
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
@@ -37,22 +37,13 @@ auto BeStandardBackbufferPass::Render() -> void {
 
     cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
 
-    SenTransitionBatch reads;
-    for (const auto& [texture, slot] : _material->GetTextures()) {
-        reads.Add(texture->Handle, SenResourceState::ShaderRead);
-    }
-    reads.TransitionAll(cmd);
-
-    cmd.BeginPass({
-        .ColorAttachments = { {
-            .Texture    = _renderer->GetBackbufferTexture(),
-            .LoadOp     = SenLoadOp::Clear,
-            .ClearColor = glm::vec4(_clearColor, 1.0f),
-        } },
-        .Viewport = _renderer->GetViewport(),
-    });
+    BePass pass;
+    pass.AddReadMaterial(*_material);
+    pass.AddColorTarget(_renderer->GetBackbufferTexture(), SenLoadOp::Clear, glm::vec4(_clearColor, 1.0f));
+    pass.SetViewport(_renderer->GetViewport());
+    pass.Begin();
     cmd.SetPipeline(_pipeline);
     cmd.SetBindGroup(_material->GetBindGroup(), 1);
     cmd.Draw(4, 0);
-    cmd.EndPass();
+    pass.End();
 }

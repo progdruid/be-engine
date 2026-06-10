@@ -2,9 +2,9 @@
 
 #include <scope_guard/scope_guard.hpp>
 #include <sen-rhi/SenBackend.h>
-#include <sen-rhi/SenTransitionBatch.h>
 
 #include "BeAssetRegistry.h"
+#include "BePass.h"
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
@@ -57,23 +57,24 @@ auto BeStandardLightingPass::Render() -> void {
     const auto& sunLight    = srm.GetSunLightEntries()[0];
     const auto& pointLights = srm.GetPointLightEntries();
 
-    // Transition every sampled input to shader-read before the pass opens.
-    SenTransitionBatch reads;
-    for (const auto& gbuffer : _gbufferInputs) { reads.Add(gbuffer->Handle, SenResourceState::ShaderRead); }
-    reads.Add(_depthInput->Handle, SenResourceState::ShaderRead);
-    if (const auto shadowMap = sunLight.ShadowMap.lock()) { reads.Add(shadowMap->Handle, SenResourceState::ShaderRead); }
-    for (const auto& pointLight : pointLights) {
-        if (const auto shadowMap = pointLight.ShadowMap.lock()) { reads.Add(shadowMap->Handle, SenResourceState::ShaderRead); }
+    BePass pass;
+    pass.AddReadTextures(_gbufferInputs);
+    pass.AddReadTexture(_depthInput);
+    if (const auto shadowMap = sunLight.ShadowMap.lock()) {
+        pass.AddReadTexture(shadowMap);
     }
-    reads.TransitionAll(cmd);
+    for (const auto& pointLight : pointLights) {
+        if (const auto shadowMap = pointLight.ShadowMap.lock()) {
+            pass.AddReadTexture(shadowMap);
+        }
+    }
+    pass.AddColorTarget(_output, SenLoadOp::Clear);
+    pass.SetViewport(_renderer->GetViewport());
 
     cmd.SetBindGroup(srm.UniformMaterial.lock()->GetBindGroup(), 0);
 
-    cmd.BeginPass({
-        .ColorAttachments = { { _output->Handle, 0, -1, SenLoadOp::Clear, {0, 0, 0, 0} } },
-        .Viewport = _renderer->GetViewport(),
-    });
-    SCOPE_EXIT { cmd.EndPass(); };
+    pass.Begin();
+    SCOPE_EXIT { pass.End(); };
 
     // Directional light
     _directionalLightMaterial->SetFloat("HasShadowMap",  sunLight.CastsShadows ? 1.0f : 0.0f);

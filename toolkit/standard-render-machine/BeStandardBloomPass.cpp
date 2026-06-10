@@ -2,9 +2,9 @@
 
 #include <umbrellas/include-libassert.h>
 #include <sen-rhi/SenBackend.h>
-#include <sen-rhi/SenTransitionBatch.h>
 
 #include "BeAssetRegistry.h"
+#include "BePass.h"
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
@@ -86,20 +86,15 @@ auto BeStandardBloomPass::RenderBrightPass() -> void {
     auto& cmd = _renderer->GetCommandBuffer();
     const auto& mip0 = _mipTextures[0];
 
-    SenTransitionBatch reads;
-    for (const auto& [texture, slot] : _brightMaterial->GetTextures()) {
-        reads.Add(texture->Handle, SenResourceState::ShaderRead);
-    }
-    reads.TransitionAll(cmd);
-
-    cmd.BeginPass({
-        .ColorAttachments = { { mip0->Handle, 0, -1, SenLoadOp::Load } },
-        .Viewport = { 0, 0, (float)mip0->Width, (float)mip0->Height, 0, 1 },
-    });
+    BePass pass;
+    pass.AddReadMaterial(*_brightMaterial);
+    pass.AddColorTarget(mip0, SenLoadOp::Load);
+    pass.SetViewport({ 0, 0, (float)mip0->Width, (float)mip0->Height, 0, 1 });
+    pass.Begin();
     cmd.SetPipeline(_brightPipeline);
     cmd.SetBindGroup(_brightMaterial->GetBindGroup(), 1);
     cmd.Draw(4, 0);
-    cmd.EndPass();
+    pass.End();
 }
 
 auto BeStandardBloomPass::RenderDownsamplePasses() -> void {
@@ -108,19 +103,14 @@ auto BeStandardBloomPass::RenderDownsamplePasses() -> void {
     for (uint32_t mipTarget = 1; mipTarget < _mipCount; ++mipTarget) {
         const auto& target = _mipTextures[mipTarget];
 
-        SenTransitionBatch reads;
-        for (const auto& [texture, slot] : _downsampleMaterials[mipTarget]->GetTextures()) {
-            reads.Add(texture->Handle, SenResourceState::ShaderRead);
-        }
-        reads.TransitionAll(cmd);
-
-        cmd.BeginPass({
-            .ColorAttachments = { { target->Handle, 0, -1, SenLoadOp::Load } },
-            .Viewport = { 0, 0, (float)target->Width, (float)target->Height, 0, 1 },
-        });
+        BePass pass;
+        pass.AddReadMaterial(*_downsampleMaterials[mipTarget]);
+        pass.AddColorTarget(target, SenLoadOp::Load);
+        pass.SetViewport({ 0, 0, (float)target->Width, (float)target->Height, 0, 1 });
+        pass.Begin();
         cmd.SetBindGroup(_downsampleMaterials[mipTarget]->GetBindGroup(), 1);
         cmd.Draw(4, 0);
-        cmd.EndPass();
+        pass.End();
     }
 }
 
@@ -130,37 +120,27 @@ auto BeStandardBloomPass::RenderUpsamplePasses() -> void {
     for (int32_t mipTarget = _mipCount - 2; mipTarget >= 0; --mipTarget) {
         const auto& target = _mipTextures[mipTarget];
 
-        SenTransitionBatch reads;
-        for (const auto& [texture, slot] : _upsampleMaterials[mipTarget]->GetTextures()) {
-            reads.Add(texture->Handle, SenResourceState::ShaderRead);
-        }
-        reads.TransitionAll(cmd);
-
-        cmd.BeginPass({
-            .ColorAttachments = { { target->Handle, 0, -1, SenLoadOp::Load } },
-            .Viewport = { 0, 0, (float)target->Width, (float)target->Height, 0, 1 },
-        });
+        BePass pass;
+        pass.AddReadMaterial(*_upsampleMaterials[mipTarget]);
+        pass.AddColorTarget(target, SenLoadOp::Load);
+        pass.SetViewport({ 0, 0, (float)target->Width, (float)target->Height, 0, 1 });
+        pass.Begin();
         cmd.SetBindGroup(_upsampleMaterials[mipTarget]->GetBindGroup(), 1);
         cmd.Draw(4, 0);
-        cmd.EndPass();
+        pass.End();
     }
 }
 
 auto BeStandardBloomPass::RenderAddPass() -> void {
     auto& cmd = _renderer->GetCommandBuffer();
 
-    SenTransitionBatch reads;
-    for (const auto& [texture, slot] : _addMaterial->GetTextures()) {
-        reads.Add(texture->Handle, SenResourceState::ShaderRead);
-    }
-    reads.TransitionAll(cmd);
-
-    cmd.BeginPass({
-        .ColorAttachments = { { _output->Handle, 0, -1, SenLoadOp::Load } },
-        .Viewport = _renderer->GetViewport(),
-    });
+    BePass pass;
+    pass.AddReadMaterial(*_addMaterial);
+    pass.AddColorTarget(_output, SenLoadOp::Load);
+    pass.SetViewport(_renderer->GetViewport());
+    pass.Begin();
     cmd.SetPipeline(_addPipeline);
     cmd.SetBindGroup(_addMaterial->GetBindGroup(), 1);
     cmd.Draw(4, 0);
-    cmd.EndPass();
+    pass.End();
 }

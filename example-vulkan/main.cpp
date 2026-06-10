@@ -2,6 +2,7 @@
 
 #include "BeWindow.h"
 #include "BeInput.h"
+#include "BePass.h"
 #include "sen-rhi/SenBackend.h"
 #include "sen-rhi/SenShaderCompiler.h"
 
@@ -77,25 +78,16 @@ int main() {
 
         auto backbuffer = SenBackend::BeginFrame(swapchain);
 
-        cmd.BeginPass({
-            .ColorAttachments = {{
-                .Texture    = backbuffer,
-                .LoadOp     = SenLoadOp::Clear,
-                .ClearColor = { 0.1f, 0.1f, 0.1f, 1.0f },
-            }},
-            .Viewport = {
-                .Width    = float(window->GetWidth()),
-                .Height   = float(window->GetHeight()),
-                .MinDepth = 0.0f,
-                .MaxDepth = 1.0f,
-            },
-        });
+        BePass pass;
+        pass.AddColorTarget(backbuffer, SenLoadOp::Clear, { 0.1f, 0.1f, 0.1f, 1.0f });
+        pass.SetViewport({ 0, 0, float(window->GetWidth()), float(window->GetHeight()), 0, 1 });
+        pass.Begin();
 
         cmd.SetPipeline(pipeline);
         cmd.SetVertexBuffer(vertexBuffer, sizeof(Vertex));
         cmd.Draw(3, 0);
 
-        cmd.EndPass();
+        pass.End();
 
         SenBackend::EndFrame(swapchain);
     }
