@@ -43,6 +43,15 @@ enum class SenTextureUsage : uint32_t {
 };
 ENABLE_BITMASK(SenTextureUsage);
 
+enum class SenResourceState : uint8_t {
+    Undefined,
+    ShaderRead,
+    ColorAttachment,
+    DepthAttachment,
+    TransferDst,
+    Present,
+};
+
 struct SenTexture {
     uint32_t ID = 0;
     auto IsValid() const -> bool { return ID != 0; }

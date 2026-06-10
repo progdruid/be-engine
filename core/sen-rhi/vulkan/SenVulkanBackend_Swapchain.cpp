@@ -225,7 +225,7 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle) -> SenTexture {
 
     // Transition swapchain image UNDEFINED/PRESENT_SRC → COLOR_ATTACHMENT_OPTIMAL
     auto& texEntry = _textures.at(entry.Textures[entry.CurrentImageIndex].ID);
-    TransitionImageLayout(
+    TransitionRawImageLayout(
         _activeCommandBuffer, texEntry.Image, VK_IMAGE_ASPECT_COLOR_BIT,
         texEntry.CurrentLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         1, 1
@@ -240,7 +240,7 @@ auto SenVulkanBackend::EndFrame(SenSwapchain handle) -> void {
 
     // Transition swapchain image COLOR_ATTACHMENT_OPTIMAL → PRESENT_SRC_KHR
     auto& texEntry = _textures.at(entry.Textures[entry.CurrentImageIndex].ID);
-    TransitionImageLayout(
+    TransitionRawImageLayout(
         _activeCommandBuffer, texEntry.Image, VK_IMAGE_ASPECT_COLOR_BIT,
         texEntry.CurrentLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         1, 1

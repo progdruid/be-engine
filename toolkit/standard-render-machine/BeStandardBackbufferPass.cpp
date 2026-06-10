@@ -1,6 +1,7 @@
 #include "BeStandardBackbufferPass.h"
 
 #include <sen-rhi/SenBackend.h>
+#include <sen-rhi/SenTransitionBatch.h>
 
 #include "BeAssetRegistry.h"
 #include "BeMaterial.h"
@@ -35,6 +36,12 @@ auto BeStandardBackbufferPass::Render() -> void {
     }
 
     cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
+
+    SenTransitionBatch reads;
+    for (const auto& [texture, slot] : _material->GetTextures()) {
+        reads.Add(texture->Handle, SenResourceState::ShaderRead);
+    }
+    reads.TransitionAll(cmd);
 
     cmd.BeginPass({
         .ColorAttachments = { {

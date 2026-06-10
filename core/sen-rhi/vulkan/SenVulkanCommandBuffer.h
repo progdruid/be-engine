@@ -1,5 +1,7 @@
 #pragma once
 #include <array>
+#include <utility>
+#include <vector>
 #include <vulkan/vulkan_core.h>
 #include <umbrellas/access-modifiers.hpp>
 #include <sen-rhi/SenTypes.h>
@@ -25,6 +27,9 @@ class SenVulkanCommandBuffer {
     // render pass
     auto BeginPass (const SenPassDesc& desc) -> void;
     auto EndPass   () -> void;
+
+    // batched layout transition (must be called outside a pass)
+    auto TransitionTextures (const std::vector<std::pair<SenTexture, SenResourceState>>& transitions) -> void;
 
     // pipeline + resources
     auto SetPipeline     (SenPipeline pipeline) -> void;

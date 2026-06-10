@@ -2,6 +2,7 @@
 
 #include <umbrellas/include-libassert.h>
 #include <sen-rhi/SenBackend.h>
+#include <sen-rhi/SenTransitionBatch.h>
 
 #include "BeMaterial.h"
 #include "BeRenderer.h"
@@ -32,8 +33,17 @@ auto BeStandardFullscreenEffectPass::Render() -> void {
 
     std::vector<SenColorAttachment> colorAttachments;
     colorAttachments.reserve(_outputs.size());
-    for (const auto& tex : _outputs)
+    for (const auto& tex : _outputs) {
         colorAttachments.push_back({ tex->Handle, 0, -1, SenLoadOp::Load });
+    }
+    
+    if (_material) {
+        SenTransitionBatch reads;
+        for (const auto& [texture, slot] : _material->GetTextures()) {
+            reads.Add(texture->Handle, SenResourceState::ShaderRead);
+        }
+        reads.TransitionAll(cmd);
+    }
 
     cmd.BeginPass({
         .ColorAttachments = colorAttachments,

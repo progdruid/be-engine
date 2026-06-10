@@ -170,4 +170,52 @@ namespace Sen::Vulkan {
         return flags;
     }
 
+    inline auto ToImageLayout(SenResourceState state) -> VkImageLayout {
+        switch (state) {
+            case SenResourceState::Undefined:       return VK_IMAGE_LAYOUT_UNDEFINED;
+            case SenResourceState::ShaderRead:      return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            case SenResourceState::ColorAttachment: return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            case SenResourceState::DepthAttachment: return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            case SenResourceState::TransferDst:     return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            case SenResourceState::Present:         return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        }
+        be_assert(false, "Unknown SenResourceState");
+        return VK_IMAGE_LAYOUT_UNDEFINED;
+    }
+
+    // Synchronisation scope (stage + access) for a layout, used to fill sync2 image barriers.
+    inline auto ScopeForLayout(VkImageLayout layout, VkPipelineStageFlags2& stage, VkAccessFlags2& access) -> void {
+        switch (layout) {
+            case VK_IMAGE_LAYOUT_UNDEFINED:
+                stage  = VK_PIPELINE_STAGE_2_NONE;
+                access = VK_ACCESS_2_NONE;
+                break;
+            case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+                stage  = VK_PIPELINE_STAGE_2_COPY_BIT;
+                access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+                stage  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+                access = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+                stage  = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+                access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+                stage  = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+                access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+                // Present is synchronised by the swapchain semaphore, not by this barrier.
+                stage  = VK_PIPELINE_STAGE_2_NONE;
+                access = VK_ACCESS_2_NONE;
+                break;
+            default:
+                be_assert(false, "ScopeForLayout: unsupported layout");
+                stage  = VK_PIPELINE_STAGE_2_NONE;
+                access = VK_ACCESS_2_NONE;
+        }
+    }
+
 } // namespace Sen::Vulkan

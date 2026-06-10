@@ -163,7 +163,7 @@ auto SenVulkanBackend::UploadToDeviceImage(VkImage image, VkImageAspectFlags asp
     };
     vkBeginCommandBuffer(cmd, &beginInfo);
 
-    TransitionImageLayout(cmd, image, aspect, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels, layerCount);
+    TransitionRawImageLayout(cmd, image, aspect, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels, layerCount);
 
     // One copy region per layer (face), data expected to be laid out sequentially face0, face1, ...
     std::vector<VkBufferImageCopy> regions(layerCount);
@@ -180,7 +180,7 @@ auto SenVulkanBackend::UploadToDeviceImage(VkImage image, VkImageAspectFlags asp
     }
     vkCmdCopyBufferToImage(cmd, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layerCount, regions.data());
 
-    TransitionImageLayout(cmd, image, aspect, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels, layerCount);
+    TransitionRawImageLayout(cmd, image, aspect, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels, layerCount);
 
     vkEndCommandBuffer(cmd);
 
@@ -196,7 +196,7 @@ auto SenVulkanBackend::UploadToDeviceImage(VkImage image, VkImageAspectFlags asp
     vmaDestroyBuffer(_allocator, stagingBuffer, stagingAlloc);
 }
 
-auto SenVulkanBackend::TransitionImageLayout(VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels, uint32_t layerCount) -> void {
+auto SenVulkanBackend::TransitionRawImageLayout(VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels, uint32_t layerCount) -> void {
     auto scopeFor = [](VkImageLayout layout, VkPipelineStageFlags2& stage, VkAccessFlags2& access) -> void {
         switch (layout) {
             case VK_IMAGE_LAYOUT_UNDEFINED:
@@ -225,7 +225,7 @@ auto SenVulkanBackend::TransitionImageLayout(VkCommandBuffer cmd, VkImage image,
                 access = VK_ACCESS_2_NONE;
                 break;
             default:
-                be_assert(false, "TransitionImageLayout: unsupported layout");
+                be_assert(false, "TransitionRawImageLayout: unsupported layout");
                 stage  = VK_PIPELINE_STAGE_2_NONE;
                 access = VK_ACCESS_2_NONE;
         }

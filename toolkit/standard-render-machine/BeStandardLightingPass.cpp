@@ -2,6 +2,7 @@
 
 #include <scope_guard/scope_guard.hpp>
 #include <sen-rhi/SenBackend.h>
+#include <sen-rhi/SenTransitionBatch.h>
 
 #include "BeAssetRegistry.h"
 #include "BeMaterial.h"
@@ -53,6 +54,19 @@ auto BeStandardLightingPass::Render() -> void {
     const auto& srm = *_srm;
     auto& cmd = _renderer->GetCommandBuffer();
 
+    const auto& sunLight    = srm.GetSunLightEntries()[0];
+    const auto& pointLights = srm.GetPointLightEntries();
+
+    // Transition every sampled input to shader-read before the pass opens.
+    SenTransitionBatch reads;
+    for (const auto& gbuffer : _gbufferInputs) { reads.Add(gbuffer->Handle, SenResourceState::ShaderRead); }
+    reads.Add(_depthInput->Handle, SenResourceState::ShaderRead);
+    if (const auto shadowMap = sunLight.ShadowMap.lock()) { reads.Add(shadowMap->Handle, SenResourceState::ShaderRead); }
+    for (const auto& pointLight : pointLights) {
+        if (const auto shadowMap = pointLight.ShadowMap.lock()) { reads.Add(shadowMap->Handle, SenResourceState::ShaderRead); }
+    }
+    reads.TransitionAll(cmd);
+
     cmd.SetBindGroup(srm.UniformMaterial.lock()->GetBindGroup(), 0);
 
     cmd.BeginPass({
@@ -62,7 +76,6 @@ auto BeStandardLightingPass::Render() -> void {
     SCOPE_EXIT { cmd.EndPass(); };
 
     // Directional light
-    const auto& sunLight = srm.GetSunLightEntries()[0];
     _directionalLightMaterial->SetFloat("HasShadowMap",  sunLight.CastsShadows ? 1.0f : 0.0f);
     _directionalLightMaterial->SetFloat3("Direction",    sunLight.Direction);
     _directionalLightMaterial->SetFloat3("Color",        sunLight.Color);
@@ -75,7 +88,7 @@ auto BeStandardLightingPass::Render() -> void {
     cmd.Draw(4, 0);
 
     // Point lights
-    for (const auto& pointLight : srm.GetPointLightEntries()) {
+    for (const auto& pointLight : pointLights) {
         if (!_pointLightMaterials.contains(pointLight.Name)) {
             auto mat = BeMaterial::Create("point-light-material", true);
             mat->SetTexture("Depth", _depthInput);

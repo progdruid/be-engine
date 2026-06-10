@@ -15,7 +15,7 @@
 VkDebugUtilsMessengerEXT SenVulkanValidation::_messenger = VK_NULL_HANDLE;
 VkDebugUtilsMessengerCreateInfoEXT SenVulkanValidation::_createInfo = {};
 bool SenVulkanValidation::_enabled = false;
-bool SenVulkanValidation::_requested = false;
+bool SenVulkanValidation::_requested = true;
 
 VKAPI_ATTR VkBool32 VKAPI_CALL SenVulkanValidation::DebugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT severity,

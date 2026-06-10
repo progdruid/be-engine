@@ -2,6 +2,7 @@
 
 #include <umbrellas/include-libassert.h>
 #include <sen-rhi/SenBackend.h>
+#include <sen-rhi/SenTransitionBatch.h>
 
 #include "BeAssetRegistry.h"
 #include "BeMaterial.h"
@@ -84,6 +85,13 @@ auto BeStandardBloomPass::Render() -> void {
 auto BeStandardBloomPass::RenderBrightPass() -> void {
     auto& cmd = _renderer->GetCommandBuffer();
     const auto& mip0 = _mipTextures[0];
+
+    SenTransitionBatch reads;
+    for (const auto& [texture, slot] : _brightMaterial->GetTextures()) {
+        reads.Add(texture->Handle, SenResourceState::ShaderRead);
+    }
+    reads.TransitionAll(cmd);
+
     cmd.BeginPass({
         .ColorAttachments = { { mip0->Handle, 0, -1, SenLoadOp::Load } },
         .Viewport = { 0, 0, (float)mip0->Width, (float)mip0->Height, 0, 1 },
@@ -99,6 +107,13 @@ auto BeStandardBloomPass::RenderDownsamplePasses() -> void {
     cmd.SetPipeline(_downsamplePipeline);
     for (uint32_t mipTarget = 1; mipTarget < _mipCount; ++mipTarget) {
         const auto& target = _mipTextures[mipTarget];
+
+        SenTransitionBatch reads;
+        for (const auto& [texture, slot] : _downsampleMaterials[mipTarget]->GetTextures()) {
+            reads.Add(texture->Handle, SenResourceState::ShaderRead);
+        }
+        reads.TransitionAll(cmd);
+
         cmd.BeginPass({
             .ColorAttachments = { { target->Handle, 0, -1, SenLoadOp::Load } },
             .Viewport = { 0, 0, (float)target->Width, (float)target->Height, 0, 1 },
@@ -114,6 +129,13 @@ auto BeStandardBloomPass::RenderUpsamplePasses() -> void {
     cmd.SetPipeline(_upsamplePipeline);
     for (int32_t mipTarget = _mipCount - 2; mipTarget >= 0; --mipTarget) {
         const auto& target = _mipTextures[mipTarget];
+
+        SenTransitionBatch reads;
+        for (const auto& [texture, slot] : _upsampleMaterials[mipTarget]->GetTextures()) {
+            reads.Add(texture->Handle, SenResourceState::ShaderRead);
+        }
+        reads.TransitionAll(cmd);
+
         cmd.BeginPass({
             .ColorAttachments = { { target->Handle, 0, -1, SenLoadOp::Load } },
             .Viewport = { 0, 0, (float)target->Width, (float)target->Height, 0, 1 },
@@ -126,6 +148,13 @@ auto BeStandardBloomPass::RenderUpsamplePasses() -> void {
 
 auto BeStandardBloomPass::RenderAddPass() -> void {
     auto& cmd = _renderer->GetCommandBuffer();
+
+    SenTransitionBatch reads;
+    for (const auto& [texture, slot] : _addMaterial->GetTextures()) {
+        reads.Add(texture->Handle, SenResourceState::ShaderRead);
+    }
+    reads.TransitionAll(cmd);
+
     cmd.BeginPass({
         .ColorAttachments = { { _output->Handle, 0, -1, SenLoadOp::Load } },
         .Viewport = _renderer->GetViewport(),

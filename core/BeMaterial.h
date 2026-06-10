@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <ranges>
 #include <string>
 #include <umbrellas/access-modifiers.hpp>
 #include <umbrellas/include-glm.h>
@@ -69,6 +70,7 @@ class BeMaterial {
     
     auto SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void;
     auto GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture>;
+    auto GetTextures() const { return _textures | std::views::values; }
 
     auto SetSampler(const std::string& propertyName, SenSampler sampler) -> void;
     auto GetSampler(const std::string& propertyName) const -> SenSampler;

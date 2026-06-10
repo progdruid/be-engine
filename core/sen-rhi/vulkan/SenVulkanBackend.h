@@ -138,7 +138,7 @@ class SenVulkanBackend {
     static auto DestroyTexture (SenTexture handle) -> void;
     static auto LookupTexture  (SenTexture handle) -> SenVulkanTextureEntry&;
     hide static auto CreateImageView      (VkImage image, VkFormat format, VkImageViewType viewType, VkImageAspectFlags aspect, uint32_t baseMip, uint32_t mipLevels, uint32_t baseLayer, uint32_t layerCount) -> VkImageView;
-    expose static auto TransitionImageLayout(VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels, uint32_t layerCount) -> void;
+    expose static auto TransitionRawImageLayout(VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels, uint32_t layerCount) -> void;
     hide static auto UploadToDeviceImage  (VkImage image, VkImageAspectFlags aspect, const void* data, uint32_t dataSize, uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t layerCount) -> void;
     hide static auto CreateTexture2D      (const SenTextureDesc& desc, SenVulkanTextureEntry& entry) -> void;
     hide static auto CreateTextureCubemap (const SenTextureDesc& desc, SenVulkanTextureEntry& entry) -> void;
