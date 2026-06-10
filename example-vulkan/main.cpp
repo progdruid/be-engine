@@ -84,7 +84,7 @@ int main() {
         pass.Begin();
 
         cmd.SetPipeline(pipeline);
-        cmd.SetVertexBuffer(vertexBuffer, sizeof(Vertex));
+        cmd.SetVertexBuffer(vertexBuffer);
         cmd.Draw(3, 0);
 
         pass.End();

@@ -33,7 +33,7 @@ auto SenVulkanBackend::DestroyTexture(SenTexture handle) -> void {
     }
 }
 
-auto SenVulkanBackend::LookupTexture(SenTexture handle) -> SenVulkanTextureEntry& {
+auto SenVulkanBackend:: LookupTexture(SenTexture handle) -> SenVulkanTextureEntry& {
     return _textures.at(handle.ID);
 }
 

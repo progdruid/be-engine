@@ -40,9 +40,8 @@ auto BeStandardShadowPass::RenderDirectionalShadows(const BeSRMSunLightEntry& su
     pass.Begin();
     SCOPE_EXIT { pass.End(); };
 
-    cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer(), sizeof(BeFullVertex));
+    cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
     cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
-    SCOPE_EXIT { cmd.ClearVertexBuffer(); cmd.ClearIndexBuffer(); };
 
     for (const auto& entry : entries) {
         if (!entry.CastShadows)
@@ -77,9 +76,8 @@ auto BeStandardShadowPass::RenderPointLightShadows(const BeSRMPointLightEntry& p
     const auto& entries = _srm->GetGeometryEntries();
     auto shadowMap = pointLight.ShadowMap.lock();
 
-    cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer(), sizeof(BeFullVertex));
+    cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
     cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
-    SCOPE_EXIT { cmd.ClearVertexBuffer(); cmd.ClearIndexBuffer(); };
 
     cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
 

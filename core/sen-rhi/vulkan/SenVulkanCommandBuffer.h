@@ -34,10 +34,8 @@ class SenVulkanCommandBuffer {
     // pipeline + resources
     auto SetPipeline     (SenPipeline pipeline) -> void;
     auto SetBindGroup    (SenBindGroup group, uint8_t index) -> void;
-    auto SetVertexBuffer (SenBuffer buffer, uint32_t stride) -> void;
+    auto SetVertexBuffer (SenBuffer buffer) -> void;
     auto SetIndexBuffer  (SenBuffer buffer) -> void;
-    auto ClearVertexBuffer () -> void;
-    auto ClearIndexBuffer  () -> void;
 
     // draw
     auto Draw        (uint32_t vertexCount,  uint32_t firstVertex) -> void;

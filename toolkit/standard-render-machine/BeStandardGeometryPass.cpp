@@ -37,9 +37,8 @@ auto BeStandardGeometryPass::Render() -> void {
     pass.Begin();
     SCOPE_EXIT { pass.End(); };
 
-    cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer(), sizeof(BeFullVertex));
+    cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
     cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
-    SCOPE_EXIT { cmd.ClearVertexBuffer(); cmd.ClearIndexBuffer(); };
 
     for (const auto& entry : entries) {
         be_assert(entry.Prop->Shader);

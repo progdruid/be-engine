@@ -132,7 +132,7 @@ auto SenVulkanCommandBuffer::TransitionTextures(const std::vector<std::pair<SenT
             ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
 
         VkPipelineStageFlags2 srcStage, dstStage;
-        VkAccessFlags2        srcAccess, dstAccess;
+        VkAccessFlags2 srcAccess, dstAccess;
         Sen::Vulkan::ScopeForLayout(oldLayout, srcStage, srcAccess);
         Sen::Vulkan::ScopeForLayout(newLayout, dstStage, dstAccess);
 
@@ -154,7 +154,7 @@ auto SenVulkanCommandBuffer::TransitionTextures(const std::vector<std::pair<SenT
 
     if (barriers.empty()) { return; }
 
-    VkDependencyInfo dependency {
+    const VkDependencyInfo dependency {
         .sType                   = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
         .imageMemoryBarrierCount = uint32_t(barriers.size()),
         .pImageMemoryBarriers    = barriers.data(),
@@ -216,7 +216,7 @@ auto SenVulkanCommandBuffer::FlushPendingBindGroups() -> void {
     }
 }
 
-auto SenVulkanCommandBuffer::SetVertexBuffer(SenBuffer buffer, uint32_t stride) -> void {
+auto SenVulkanCommandBuffer::SetVertexBuffer(SenBuffer buffer) -> void {
     auto& entry = SenVulkanBackend::LookupBuffer(buffer);
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(_cmd, 0, 1, &entry.Buffer, &offset);
@@ -225,14 +225,6 @@ auto SenVulkanCommandBuffer::SetVertexBuffer(SenBuffer buffer, uint32_t stride) 
 auto SenVulkanCommandBuffer::SetIndexBuffer(SenBuffer buffer) -> void {
     auto& entry = SenVulkanBackend::LookupBuffer(buffer);
     vkCmdBindIndexBuffer(_cmd, entry.Buffer, 0, VK_INDEX_TYPE_UINT32);
-}
-
-auto SenVulkanCommandBuffer::ClearVertexBuffer() -> void {
-    // no-op in Vulkan
-}
-
-auto SenVulkanCommandBuffer::ClearIndexBuffer() -> void {
-    // no-op in Vulkan
 }
 
 
