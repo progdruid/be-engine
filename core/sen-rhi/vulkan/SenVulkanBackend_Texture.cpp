@@ -108,7 +108,10 @@ auto SenVulkanBackend::CreateTextureCubemap(const SenTextureDesc& desc, SenVulka
 
     if (desc.Data) {
         const uint32_t faceSize = desc.Width * desc.Height * Sen::Vulkan::BytesPerPixel(desc.Format);
-        UploadToDeviceImage(entry.Image, aspect, desc.Data, faceSize * 6, desc.Width, desc.Height, desc.Mips, 6);
+        std::vector<uint8_t> expanded(faceSize * 6);
+        for (int face = 0; face < 6; ++face)
+            memcpy(expanded.data() + face * faceSize, desc.Data, faceSize);
+        UploadToDeviceImage(entry.Image, aspect, expanded.data(), faceSize * 6, desc.Width, desc.Height, desc.Mips, 6);
         entry.CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
 

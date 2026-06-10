@@ -82,7 +82,8 @@ auto BeStandardLightingPass::Render() -> void {
     _directionalLightMaterial->SetFloat("Power",         sunLight.Power);
     _directionalLightMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
     _directionalLightMaterial->SetFloat("TexelSize",     1.0f / sunLight.ShadowMapResolution);
-    _directionalLightMaterial->SetTexture("ShadowMap",   sunLight.ShadowMap.lock());
+    if (sunLight.CastsShadows)
+        _directionalLightMaterial->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
     cmd.SetPipeline(_directionalLightPipeline);
     cmd.SetBindGroup(_directionalLightMaterial->GetBindGroup(), 1);
     cmd.Draw(4, 0);
@@ -105,7 +106,8 @@ auto BeStandardLightingPass::Render() -> void {
         mat->SetFloat("HasShadowMap",       pointLight.CastsShadows ? 1.0f : 0.0f);
         mat->SetFloat("ShadowMapResolution", (float)pointLight.ShadowMapResolution);
         mat->SetFloat("ShadowNearPlane",    pointLight.ShadowNearPlane);
-        mat->SetTexture("PointLightShadowMap", pointLight.ShadowMap.lock());
+        if (pointLight.CastsShadows)
+            mat->SetTexture("PointLightShadowMap", pointLight.ShadowMap.lock());
         cmd.SetPipeline(_pointLightPipeline);
         cmd.SetBindGroup(mat->GetBindGroup(), 1);
         cmd.Draw(4, 0);

@@ -14,7 +14,7 @@
     "Albedo_RGB: texture2d = black",
     "WorldNormal_XYZ: texture2d = black",
     "ORM_RGB: texture2d = black",
-    "PointLightShadowMap: textureCube = black",
+    "PointLightShadowMap: textureCube = black-cube",
 
     "InputSampler: sampler = point-clamp"
 ]

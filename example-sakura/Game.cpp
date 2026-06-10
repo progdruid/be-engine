@@ -46,6 +46,14 @@ auto Game::Run() -> int {
     .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
     .AddToRegistry()
     .BuildNoReturn();
+    BeTexture::Create("black-cube")
+    .SetSize(1, 1)
+    .SetCubemap(true)
+    .SetUsage(SenTextureUsage::ShaderResource)
+    .SetFormat(SenFormat::RGBA8_Unorm)
+    .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
+    .AddToRegistry()
+    .BuildNoReturn();
     BeTexture::Create("default-orm")
     .SetSize(1, 1)
     .SetUsage(SenTextureUsage::ShaderResource)

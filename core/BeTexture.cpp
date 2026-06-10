@@ -14,11 +14,11 @@ BeTexture::Builder::~Builder() {
     }
 }
 
-auto BeTexture::Builder::SetUsage  (SenTextureUsage usage)  -> Builder&& { _descriptor.Usage = usage;   return std::move(*this); }
-auto BeTexture::Builder::SetFormat (SenFormat format)        -> Builder&& { _descriptor.Format = format; return std::move(*this); }
-auto BeTexture::Builder::SetMips      (uint32_t mips)            -> Builder&& { _descriptor.Mips = mips; return std::move(*this); }
-auto BeTexture::Builder::SetSize      (uint32_t w, uint32_t h)   -> Builder&& { _descriptor.Width = w; _descriptor.Height = h; return std::move(*this); }
-auto BeTexture::Builder::SetCubemap   (bool cubemap)             -> Builder&& { _descriptor.IsCubemap = cubemap; return std::move(*this); }
+auto BeTexture::Builder::SetUsage   (SenTextureUsage usage)  -> Builder&& { _descriptor.Usage = usage;   return std::move(*this); }
+auto BeTexture::Builder::SetFormat  (SenFormat format)       -> Builder&& { _descriptor.Format = format; return std::move(*this); }
+auto BeTexture::Builder::SetMips    (uint32_t mips)          -> Builder&& { _descriptor.Mips = mips; return std::move(*this); }
+auto BeTexture::Builder::SetSize    (uint32_t w, uint32_t h) -> Builder&& { _descriptor.Width = w; _descriptor.Height = h; return std::move(*this); }
+auto BeTexture::Builder::SetCubemap (bool cubemap)           -> Builder&& { _descriptor.IsCubemap = cubemap; return std::move(*this); }
 
 auto BeTexture::Builder::FillWithColor(const glm::vec4& color) -> Builder&& {
     const auto size = size_t(_descriptor.Width * _descriptor.Height);
