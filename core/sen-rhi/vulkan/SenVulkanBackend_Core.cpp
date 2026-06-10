@@ -150,10 +150,12 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     result = vmaCreateAllocator(&allocatorInfo, &_allocator);
     be_assert(result == VK_SUCCESS, "Failed to create VMA allocator!");
 
-    std::array<VkDescriptorPoolSize, 3> poolSizes {
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4096 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER, 4096 },
+    std::array<VkDescriptorPoolSize, 5> poolSizes {
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,  4096 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER,        4096 },
         VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4096 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,  1024 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1024 },
     };
     VkDescriptorPoolCreateInfo descPoolInfo {
         .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,

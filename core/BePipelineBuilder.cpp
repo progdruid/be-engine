@@ -5,10 +5,12 @@
 #include <string_view>
 
 std::unordered_map<
-    BePipelineBuilder::CachedPipelineKey, 
-    SenPipeline, 
+    BePipelineBuilder::CachedPipelineKey,
+    SenPipeline,
     BePipelineBuilder::CachedPipelineHash
 > BePipelineBuilder::_cachedPipelines;
+
+std::unordered_map<uint32_t, SenPipeline> BePipelineBuilder::_cachedComputePipelines;
 
 auto BePipelineBuilder::CachedPipelineHash::operator()(const CachedPipelineKey& k) const -> size_t {
     auto hasher         = std::hash<std::string_view>();
@@ -93,6 +95,16 @@ auto BePipelineBuilder::SetColorFormats(std::vector<SenFormat> colorFormats) -> 
 auto BePipelineBuilder::SetDepthFormat(SenFormat depthFormat) -> BePipelineBuilder& {
     _key.DepthFormat = depthFormat;
     return *this;
+}
+
+auto BePipelineBuilder::BuildCompute(const BeShader& shader) -> SenPipeline {
+    auto it = _cachedComputePipelines.find(shader.ShaderID);
+    if (it != _cachedComputePipelines.end()) {
+        return it->second;
+    }
+    auto pipeline = SenBackend::CreatePipeline(shader.GetPipelineDesc());
+    _cachedComputePipelines[shader.ShaderID] = pipeline;
+    return pipeline;
 }
 
 auto BePipelineBuilder::Build() const -> SenPipeline {

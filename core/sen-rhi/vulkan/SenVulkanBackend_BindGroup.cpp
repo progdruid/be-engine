@@ -19,11 +19,11 @@ auto SenVulkanBackend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindG
     VkResult result = vkAllocateDescriptorSets(_device, &allocInfo, &entry.Set);
     be_assert(result == VK_SUCCESS, "Failed to allocate descriptor set!");
 
-    size_t imageCount = desc.Textures.size() + desc.Samplers.size();
+    size_t imageCount = desc.Textures.size() + desc.Samplers.size() + desc.StorageTextures.size();
     std::vector<VkDescriptorImageInfo> imageInfos(imageCount);
-    std::vector<VkDescriptorBufferInfo> bufferInfos(desc.Buffers.size());
+    std::vector<VkDescriptorBufferInfo> bufferInfos(desc.Buffers.size() + desc.StorageBuffers.size());
     std::vector<VkWriteDescriptorSet> writes;
-    writes.reserve(imageCount + desc.Buffers.size());
+    writes.reserve(imageCount + desc.Buffers.size() + desc.StorageBuffers.size());
 
     for (size_t i = 0; i < desc.Textures.size(); ++i) {
         const auto& texture = desc.Textures[i];
@@ -87,6 +87,51 @@ auto SenVulkanBackend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindG
         });
     }
 
+    size_t storageImageIdx = desc.Textures.size() + desc.Samplers.size();
+    for (size_t i = 0; i < desc.StorageTextures.size(); ++i) {
+        const auto& texture = desc.StorageTextures[i];
+        const auto& textureEntry = LookupTexture(texture);
+        const uint8_t binding = desc.StorageTextureSlots[i];
+
+        imageInfos[storageImageIdx] = VkDescriptorImageInfo {
+            .imageView   = textureEntry.SRV,
+            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        };
+        writes.push_back(VkWriteDescriptorSet {
+            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet          = entry.Set,
+            .dstBinding      = binding,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            .pImageInfo      = &imageInfos[storageImageIdx],
+        });
+        storageImageIdx++;
+    }
+
+    size_t storageBufferIdx = desc.Buffers.size();
+    for (size_t i = 0; i < desc.StorageBuffers.size(); ++i) {
+        const auto& buffer = desc.StorageBuffers[i];
+        const auto& bufferEntry = LookupBuffer(buffer);
+        const uint8_t binding = desc.StorageBufferSlots[i];
+
+        bufferInfos[storageBufferIdx] = VkDescriptorBufferInfo {
+            .buffer = bufferEntry.Buffer,
+            .offset = 0,
+            .range  = bufferEntry.Size,
+        };
+        writes.push_back(VkWriteDescriptorSet {
+            .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet          = entry.Set,
+            .dstBinding      = binding,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .pBufferInfo     = &bufferInfos[storageBufferIdx],
+        });
+        storageBufferIdx++;
+    }
+
     if (!writes.empty()) {
         vkUpdateDescriptorSets(_device, uint32_t(writes.size()), writes.data(), 0, nullptr);
     }
@@ -135,6 +180,24 @@ auto SenVulkanBackend::CreateDescriptorSetLayoutFromDesc(const SenBindGroupDesc&
         bindings.push_back(VkDescriptorSetLayoutBinding {
             .binding         = slot,
             .descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags      = Sen::Vulkan::ToShaderStageFlags(desc.Stages),
+        });
+    }
+
+    for (const auto& slot : desc.StorageTextureSlots) {
+        bindings.push_back(VkDescriptorSetLayoutBinding {
+            .binding         = slot,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            .descriptorCount = 1,
+            .stageFlags      = Sen::Vulkan::ToShaderStageFlags(desc.Stages),
+        });
+    }
+
+    for (const auto& slot : desc.StorageBufferSlots) {
+        bindings.push_back(VkDescriptorSetLayoutBinding {
+            .binding         = slot,
+            .descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 1,
             .stageFlags      = Sen::Vulkan::ToShaderStageFlags(desc.Stages),
         });

@@ -164,6 +164,7 @@ auto SenVulkanCommandBuffer::TransitionTextures(const std::vector<std::pair<SenT
 
 auto SenVulkanCommandBuffer::ResetPerFrameState() -> void {
     _boundPipelineLayout = VK_NULL_HANDLE;
+    _boundBindPoint      = VK_PIPELINE_BIND_POINT_GRAPHICS;
     _pendingBindGroupDirty = {};
 }
 
@@ -173,8 +174,9 @@ auto SenVulkanCommandBuffer::ResetPerFrameState() -> void {
 auto SenVulkanCommandBuffer::SetPipeline(SenPipeline pipeline) -> void {
     auto& entry = SenVulkanBackend::LookupPipeline(pipeline);
     _boundPipelineLayout = entry.Layout;
+    _boundBindPoint      = entry.BindPoint;
     _boundPipeline = pipeline;
-    vkCmdBindPipeline(_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, entry.Pipeline);
+    vkCmdBindPipeline(_cmd, entry.BindPoint, entry.Pipeline);
     FlushPendingBindGroups();
 }
 
@@ -190,7 +192,7 @@ auto SenVulkanCommandBuffer::SetBindGroup(SenBindGroup group, uint8_t index) -> 
 
     vkCmdBindDescriptorSets(
         _cmd,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        _boundBindPoint,
         _boundPipelineLayout,
         index,
         1, &groupEntry.Set,
@@ -206,7 +208,7 @@ auto SenVulkanCommandBuffer::FlushPendingBindGroups() -> void {
         auto& groupEntry = SenVulkanBackend::LookupBindGroup(_pendingBindGroups[i]);
         vkCmdBindDescriptorSets(
             _cmd,
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            _boundBindPoint,
             _boundPipelineLayout,
             i,
             1, &groupEntry.Set,
@@ -236,4 +238,11 @@ auto SenVulkanCommandBuffer::Draw(uint32_t vertexCount, uint32_t firstVertex) ->
 
 auto SenVulkanCommandBuffer::DrawIndexed(uint32_t indexCount, uint32_t firstIndex, int32_t baseVertex) -> void {
     vkCmdDrawIndexed(_cmd, indexCount, 1, firstIndex, baseVertex, 0);
+}
+
+
+// ─── compute dispatch ─────────────────────────────────────────────────────────
+
+auto SenVulkanCommandBuffer::Dispatch(uint32_t x, uint32_t y, uint32_t z) -> void {
+    vkCmdDispatch(_cmd, x, y, z);
 }

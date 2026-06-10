@@ -16,11 +16,12 @@ class BeShaderIncludeHandler;
 class BeRenderer;
 
 enum class BeShaderType : uint8_t {
-    None = 0,
-    Vertex = 1 << 0,
-    Pixel = 1 << 1,
+    None        = 0,
+    Vertex      = 1 << 0,
+    Pixel       = 1 << 1,
     Tesselation = 1 << 2,
-    All = Vertex | Pixel | Tesselation
+    Compute     = 1 << 3,
+    AllGraphics = Vertex | Pixel | Tesselation,
 };
 ENABLE_BITMASK(BeShaderType);
 
@@ -39,6 +40,7 @@ class BeShader {
     expose SenShader ShaderHull;
     expose SenShader ShaderDomain;
     expose SenShader ShaderPixel;
+    expose SenShader ShaderCompute;
     expose std::unordered_map<std::string, uint32_t> PixelTargets;
     expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
     

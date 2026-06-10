@@ -40,6 +40,7 @@ enum class SenTextureUsage : uint32_t {
     ShaderResource = 1 << 0,
     RenderTarget   = 1 << 1,
     DepthStencil   = 1 << 2,
+    Storage        = 1 << 3,
 };
 ENABLE_BITMASK(SenTextureUsage);
 
@@ -50,6 +51,7 @@ enum class SenResourceState : uint8_t {
     DepthAttachment,
     TransferDst,
     Present,
+    UnorderedAccess,
 };
 
 struct SenTexture {
@@ -74,6 +76,7 @@ enum class SenBufferUsage : uint8_t {
     Vertex,
     Index,
     Constant,
+    Storage,
 };
 
 enum class SenBufferAccess : uint8_t {
@@ -122,12 +125,13 @@ struct SenSamplerDesc {
 
 // ─── bind group layout ───────────────────────────────────────────
 enum class SenShaderStageFlags : uint8_t {
-    None   = 0,
+    None = 0,
     Vertex = 1 << 0,
     Pixel  = 1 << 1,
-    Hull   = 1 << 2,
+    Hull = 1 << 2,
     Domain = 1 << 3,
-    All    = Vertex | Pixel | Hull | Domain,
+    Compute = 1 << 4,
+    AllGraphics = Vertex | Pixel | Hull | Domain,
 };
 ENABLE_BITMASK(SenShaderStageFlags);
 
@@ -142,13 +146,17 @@ struct SenBindGroup {
 };
 
 struct SenBindGroupDesc {
-    SenShaderStageFlags Stages = SenShaderStageFlags::All;
+    SenShaderStageFlags Stages = SenShaderStageFlags::AllGraphics;
     std::vector<uint8_t> BufferSlots;
     std::vector<uint8_t> SamplerSlots;
     std::vector<uint8_t> TextureSlots;
+    std::vector<uint8_t> StorageTextureSlots;
+    std::vector<uint8_t> StorageBufferSlots;
     std::vector<SenBuffer> Buffers = {};
     std::vector<SenSampler> Samplers = {};
     std::vector<SenTexture> Textures = {};
+    std::vector<SenTexture> StorageTextures = {};
+    std::vector<SenBuffer> StorageBuffers = {};
 };
 
 
@@ -243,6 +251,7 @@ enum class SenShaderStage : uint8_t {
     Hull,
     Domain,
     Pixel,
+    Compute,
 };
 
 struct SenShader {
@@ -281,6 +290,7 @@ struct SenPipelineDesc {
     SenShader HullShader;
     SenShader DomainShader;
     SenShader PixelShader;
+    SenShader ComputeShader;
 
     // Vertex input
     std::vector<SenVertexLayoutElement> VertexLayout;

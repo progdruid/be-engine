@@ -8,10 +8,11 @@
 
 class SenVulkanCommandBuffer {
     hide
-    VkCommandBuffer  _cmd                 = VK_NULL_HANDLE;
-    VkPipelineLayout _boundPipelineLayout = VK_NULL_HANDLE;
+    VkCommandBuffer     _cmd                 = VK_NULL_HANDLE;
+    VkPipelineLayout    _boundPipelineLayout = VK_NULL_HANDLE;
+    VkPipelineBindPoint _boundBindPoint      = VK_PIPELINE_BIND_POINT_GRAPHICS;
     SenPipeline _boundPipeline;
-    
+
     static constexpr uint8_t MaxBindGroups = 8;
     std::array<SenBindGroup, MaxBindGroups> _pendingBindGroups      = {};
     std::array<bool,         MaxBindGroups> _pendingBindGroupDirty  = {};
@@ -40,4 +41,7 @@ class SenVulkanCommandBuffer {
     // draw
     auto Draw        (uint32_t vertexCount,  uint32_t firstVertex) -> void;
     auto DrawIndexed (uint32_t indexCount, uint32_t firstIndex, int32_t baseVertex) -> void;
+
+    // compute dispatch
+    auto Dispatch (uint32_t x, uint32_t y, uint32_t z) -> void;
 };

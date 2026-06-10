@@ -25,6 +25,7 @@ namespace Sen::Vulkan {
         if (HasAny(usage, SenTextureUsage::ShaderResource)) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
         if (HasAny(usage, SenTextureUsage::RenderTarget))   flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         if (HasAny(usage, SenTextureUsage::DepthStencil))   flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        if (HasAny(usage, SenTextureUsage::Storage))        flags |= VK_IMAGE_USAGE_STORAGE_BIT;
         if (hasInitialData)                                  flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         return flags;
     }
@@ -163,21 +164,23 @@ namespace Sen::Vulkan {
 
     inline auto ToShaderStageFlags(SenShaderStageFlags stages) -> VkShaderStageFlags {
         VkShaderStageFlags flags = 0;
-        if (HasAny(stages, SenShaderStageFlags::Vertex)) flags |= VK_SHADER_STAGE_VERTEX_BIT;
-        if (HasAny(stages, SenShaderStageFlags::Pixel))  flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
-        if (HasAny(stages, SenShaderStageFlags::Hull))   flags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-        if (HasAny(stages, SenShaderStageFlags::Domain)) flags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+        if (HasAny(stages, SenShaderStageFlags::Vertex))  flags |= VK_SHADER_STAGE_VERTEX_BIT;
+        if (HasAny(stages, SenShaderStageFlags::Pixel))   flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+        if (HasAny(stages, SenShaderStageFlags::Hull))    flags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+        if (HasAny(stages, SenShaderStageFlags::Domain))  flags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+        if (HasAny(stages, SenShaderStageFlags::Compute)) flags |= VK_SHADER_STAGE_COMPUTE_BIT;
         return flags;
     }
 
     inline auto ToImageLayout(SenResourceState state) -> VkImageLayout {
         switch (state) {
-            case SenResourceState::Undefined:       return VK_IMAGE_LAYOUT_UNDEFINED;
-            case SenResourceState::ShaderRead:      return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            case SenResourceState::ColorAttachment: return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            case SenResourceState::DepthAttachment: return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            case SenResourceState::TransferDst:     return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            case SenResourceState::Present:         return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            case SenResourceState::Undefined:        return VK_IMAGE_LAYOUT_UNDEFINED;
+            case SenResourceState::ShaderRead:       return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            case SenResourceState::ColorAttachment:  return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            case SenResourceState::DepthAttachment:  return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            case SenResourceState::TransferDst:      return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            case SenResourceState::Present:          return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            case SenResourceState::UnorderedAccess:  return VK_IMAGE_LAYOUT_GENERAL;
         }
         be_assert(false, "Unknown SenResourceState");
         return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -203,8 +206,12 @@ namespace Sen::Vulkan {
                 access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
                 break;
             case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-                stage  = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+                stage  = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
                 access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_GENERAL:
+                stage  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+                access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
                 break;
             case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
                 // Present is synchronised by the swapchain semaphore, not by this barrier.

@@ -6,10 +6,11 @@
 auto SenVulkanBackend::CreateShader(const SenShaderSourceDesc& sourceDesc) -> SenShader {
     SlangStage slangStage = SLANG_STAGE_NONE;
     switch (sourceDesc.Stage) {
-        case SenShaderStage::Vertex: slangStage = SLANG_STAGE_VERTEX; break;
-        case SenShaderStage::Hull:   slangStage = SLANG_STAGE_HULL;   break;
-        case SenShaderStage::Domain: slangStage = SLANG_STAGE_DOMAIN; break;
-        case SenShaderStage::Pixel:  slangStage = SLANG_STAGE_PIXEL;  break;
+        case SenShaderStage::Vertex:  slangStage = SLANG_STAGE_VERTEX;   break;
+        case SenShaderStage::Hull:    slangStage = SLANG_STAGE_HULL;     break;
+        case SenShaderStage::Domain:  slangStage = SLANG_STAGE_DOMAIN;   break;
+        case SenShaderStage::Pixel:   slangStage = SLANG_STAGE_PIXEL;    break;
+        case SenShaderStage::Compute: slangStage = SLANG_STAGE_COMPUTE;  break;
         default: be_assert(false, "SenVulkanBackend::CreateShader: unsupported shader stage"); break;
     }
 

@@ -84,7 +84,7 @@ auto BeMaterialScheme::CreateFromJson(
     }
     
     SenBindGroupDesc desc = {};
-    desc.Stages = SenShaderStageFlags::All;
+    desc.Stages = SenShaderStageFlags::AllGraphics;
     
     if (!materialScheme.Properties.empty()) {
         desc.BufferSlots = { 0 };

@@ -29,7 +29,9 @@ class BePipelineBuilder {
     };
 
     hide static std::unordered_map<CachedPipelineKey, SenPipeline, CachedPipelineHash> _cachedPipelines;
+    hide static std::unordered_map<uint32_t, SenPipeline> _cachedComputePipelines;
     expose static auto Start(const BeShader& shader) -> BePipelineBuilder;
+    expose static auto BuildCompute(const BeShader& shader) -> SenPipeline;
     
     hide const SenPipelineDesc* _baseDesc;
     hide CachedPipelineKey _key;

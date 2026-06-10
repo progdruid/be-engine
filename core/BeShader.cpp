@@ -160,6 +160,18 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<
         }
     }
 
+    if (header.contains("compute")) {
+        const std::string computeFunctionName = header.at("compute");
+        shader->ShaderType = BeShaderType::Compute;
+        shader->ShaderCompute = SenBackend::CreateShader({
+            .SourcePath   = filePath,
+            .FunctionName = computeFunctionName,
+            .Stage        = SenShaderStage::Compute,
+        });
+        shader->_pipelineDesc.ComputeShader = shader->ShaderCompute;
+        return shader;
+    }
+
     {
         be_assert(header.contains("topology"), "", filePath);
         const auto& topology = header.at("topology");

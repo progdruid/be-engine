@@ -26,6 +26,30 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
         vkDestroyDescriptorSetLayout(_device, layout, nullptr);
     }
 
+    // ── compute pipeline ───────────────────────────────────────────────────────
+    if (desc.ComputeShader.IsValid()) {
+        be_assert(!desc.VertexShader.IsValid(), "CreatePipeline: ComputeShader and VertexShader are mutually exclusive");
+
+        VkPipelineShaderStageCreateInfo computeStage {
+            .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage  = VK_SHADER_STAGE_COMPUTE_BIT,
+            .module = LookupShader(desc.ComputeShader).Module,
+            .pName  = "main",
+        };
+        VkComputePipelineCreateInfo computeInfo {
+            .sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+            .stage  = computeStage,
+            .layout = entry.Layout,
+        };
+        result = vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computeInfo, nullptr, &entry.Pipeline);
+        be_assert(result == VK_SUCCESS, "Failed to create compute pipeline!");
+
+        entry.BindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+        const SenPipeline handle { _nextPipelineId++ };
+        _pipelines[handle.ID] = entry;
+        return handle;
+    }
+
     // ── shader stages ──────────────────────────────────────────────────────────
     std::vector<VkPipelineShaderStageCreateInfo> stages;
 
