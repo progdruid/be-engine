@@ -17,6 +17,7 @@ BeImGuiPass::BeImGuiPass(const std::shared_ptr<BeWindow>& window)
 }
 
 BeImGuiPass::~BeImGuiPass() {
+    SenBackend::WaitIdle();
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

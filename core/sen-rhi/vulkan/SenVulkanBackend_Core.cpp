@@ -183,6 +183,26 @@ auto SenVulkanBackend::Shutdown() -> void {
         DestroyBuffer(SenBuffer { id });
     }
 
+    auto pipelines = _pipelines;
+    for (const auto& id : pipelines | std::views::keys) {
+        DestroyPipeline(SenPipeline { id });
+    }
+
+    auto shaders = _shaders;
+    for (const auto& id : shaders | std::views::keys) {
+        DestroyShader(SenShader { id });
+    }
+
+    auto bindGroups = _bindGroups;
+    for (const auto& id : bindGroups | std::views::keys) {
+        DestroyBindGroup(SenBindGroup { id });
+    }
+
+    auto samplers = _samplers;
+    for (const auto& id : samplers | std::views::keys) {
+        DestroySampler(SenSampler { id });
+    }
+
     if (_commandPool)      { vkDestroyCommandPool(_device, _commandPool, nullptr); _commandPool = VK_NULL_HANDLE; }
     if (_descriptorPool)   { vkDestroyDescriptorPool(_device, _descriptorPool, nullptr); _descriptorPool = VK_NULL_HANDLE; }
     if (_allocator)        { vmaDestroyAllocator(_allocator); _allocator = VK_NULL_HANDLE; }
