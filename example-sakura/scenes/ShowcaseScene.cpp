@@ -3,7 +3,6 @@
 #include <umbrellas/include-glfw.h>
 
 #include "BeRenderPass.h"
-#include "BeTestComputePass.h"
 #include "OrbitCameraController.h"
 #include "FreeCameraController.h"
 #include "BeCamera.h"
@@ -78,7 +77,6 @@ void ShowcaseScene::Prepare() {
     _machine->DeclareDepth        ("Showcase_Depth",             SenFormat::Depth32);
     _machine->DeclareTexture      ("Showcase_FXAAOutput",        SenFormat::R11G11B10_Float);
     _machine->DeclareTexture      ("Showcase_PixelOutput",       SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Showcase_ComputeOutput",     SenFormat::RGBA8_Unorm, 1.0f, true);
 }
 
 auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
@@ -157,11 +155,7 @@ void ShowcaseScene::LoadPasses() {
         backbufferInput = "Showcase_PixelOutput";
     }
 
-    _machine->AddPass(std::make_unique<BeTestComputePass>(
-        _machine->GetRenderTexture(backbufferInput),
-        _machine->GetRenderTexture("Showcase_ComputeOutput")
-    ));
-    _machine->AddBackbufferPass("Showcase_ComputeOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
+    _machine->AddBackbufferPass(backbufferInput, { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
     _machine->BuildPasses();
 }
 
