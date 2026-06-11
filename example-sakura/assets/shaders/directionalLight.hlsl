@@ -1,49 +1,42 @@
 /*
 
-@be-material: directional-light-material
-[
-    "HasShadowMap: float = 0",
-    "Direction: float3 = [0, 0, 0]",
-    "Color: float3 = [0, 0, 0]",
-    "Power: float = 0",
-    "ProjectionView: matrix",
-    "TexelSize: float = 0",
-    
-    "Depth: texture2d = black",
-    "Albedo_RGB: texture2d = black",
-    "WorldNormal_XYZ: texture2d = black",
-    "ORM_RGB: texture2d = black",
-    "ShadowMap: texture2d = black",
-
-    "InputSampler: sampler = point-clamp",
-]
-@be-end
-
-@be-shader: directional-light
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "rasterizer": "back-solid",
-    "blend": "additive",
-    "depthStencil": "disable",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "main": { "scheme": "directional-light-material", "slot": 1, "var": "DirectionalLight" },
-    },
-    "targets": {
-        "LightHDR": { "type": "float3", "slot": 0 }
-    }
+@be-material: directional-light-material {
+    HasShadowMap: float = 0
+    Direction: float3 = (0, 0, 0)
+    Color: float3 = (0, 0, 0)
+    Power: float = 0
+    ProjectionView: matrix
+    TexelSize: float = 0
+    Depth: texture2d = black
+    Albedo_RGB: texture2d = black
+    WorldNormal_XYZ: texture2d = black
+    ORM_RGB: texture2d = black
+    ShadowMap: texture2d = black
+    InputSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader directional-light {
+    topology triangle-strip
+    rasterizer back-solid
+    blend additive
+    depth disable
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s0 frame uniform-material
+    bind s1 main directional-light-material DirectionalLight
+
+    target s0 LightHDR float3
+}
 
 */
 
+#include "BeFunctions.hlsli"
 #include "fullscreen-vertex.hlsl"
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "BeFunctions.hlsli"
 #include "uniform-material.hlsl"
 
 struct directional_light_material {

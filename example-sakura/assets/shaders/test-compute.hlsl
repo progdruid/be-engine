@@ -1,25 +1,20 @@
 /*
-@be-material: test-compute-material
-[
-    "ColorInput: texture2d = black",
-    "Output: storage texture2d = storage-black",
-]
-@be-end
-
-@be-shader: test-compute
-{
-    "compute": "CSMain",
-    "materials": {
-        "main": { "scheme": "test-compute-material", "slot": 0 }
-    }
+@be-material: test-compute-material {
+    ColorInput: texture2d = black
+    Output: storage texture2d = storage-black
 }
-@be-end
+
+@be-shader test-compute {
+    compute CSMain
+
+    bind s0 main test-compute-material
+}
 */
 
 /*========================================================*/
 // region @be-auto-boilerplate
-Texture2D<float4>   ColorInput : register(t1, space0);
-RWTexture2D<float4> Output     : register(u2, space0);
+Texture2D ColorInput : register(t1, space0);
+RWTexture2D<float4> Output : register(u2, space0);
 
 // endregion
 /*========================================================*/

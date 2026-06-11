@@ -1,42 +1,33 @@
 /*
 
-@be-material: tesselated-main-material-for-geometry-pass
-[
-    "DiffuseColor: float3 = [0.28, 0.39, 1.0]",
-    "SpecularColor: float3 = [1.0, 1.0, 1.0]",
-    "Shininess: float = 100.0",
-    "DiffuseTexture: texture2d = white",
-    "TessellationLevel: float = 1024.0",
-    "DisplacementStrength: float = -1.0",
-    "AnimationSpeed: float = 1.5",
-    "NoiseFrequency: float = 30.0",
-
-    "InputSampler: sampler = point-clamp",
-]
-@be-end
-
-@be-shader: tessellated
-{
-    "topology": "patch-list-3",
-    "vertex": "VertexFunction",
-    "vertexLayout": ["position", "normal", "uv0"],
-    "tesselation": {
-        "hull": "HullFunction",
-        "domain": "DomainFunction"
-    },
-    "pixel": "PixelFunction",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1, "var": "Object" },
-        "geometry-main": { "scheme": "tesselated-main-material-for-geometry-pass", "slot": 2, "var": "Tesselated" },
-    },
-    "targets": {
-        "Diffuse_RGB_or_Albedo_RGB": { "type": "float3", "slot": 0 },
-        "WorldNormal_XYZ_LMF_W":     { "type": "float4", "slot": 1 },
-        "SpecShin_RGBA_or_MRAO_RGB": { "type": "float4", "slot": 2 },
-    },
+@be-material: tesselated-main-material-for-geometry-pass {
+    DiffuseColor: float3 = (0.28, 0.39, 1.0)
+    SpecularColor: float3 = (1.0, 1.0, 1.0)
+    Shininess: float = 100.0
+    DiffuseTexture: texture2d = white
+    TessellationLevel: float = 1024.0
+    DisplacementStrength: float = -1.0
+    AnimationSpeed: float = 1.5
+    NoiseFrequency: float = 30.0
+    InputSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader tessellated {
+    topology patch-list-3
+
+    vertex VertexFunction(position, normal, uv0)
+    hull HullFunction
+    domain DomainFunction
+    pixel PixelFunction
+
+    bind s0 frame uniform-material
+    bind s1 geometry-object object-material-for-geometry-pass Object
+    bind s2 geometry-main tesselated-main-material-for-geometry-pass Tesselated
+
+    target s0 Diffuse_RGB_or_Albedo_RGB float3
+    target s1 WorldNormal_XYZ_LMF_W float4
+    target s2 SpecShin_RGBA_or_MRAO_RGB float4
+}
 */
 
 /*========================================================*/

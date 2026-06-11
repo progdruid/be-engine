@@ -1,41 +1,32 @@
 /*
 
-@be-material: tesselated-main-material-for-geometry-pass
-[
-    "DiffuseColor: float3 = [0.28, 0.39, 1.0]",
-    "SpecularColor: float3 = [1.0, 1.0, 1.0]",
-    "Shininess: float = 100.0",
-    "DiffuseTexture: texture2d = white",
-    "TessellationLevel: float = 1024.0",
-    "DisplacementStrength: float = -1.0",
-    "AnimationSpeed: float = 1.5",
-    "NoiseFrequency: float = 30.0",
-
-    "InputSampler: sampler = point-clamp",
-]
-@be-end
-
-@be-shader: tessellated
-{
-    "topology": "patch-list-3",
-    "vertex": "VertexFunction",
-    "vertexLayout": ["position", "normal", "uv0"],
-    "tesselation": {
-        "hull": "HullFunction",
-        "domain": "DomainFunction"
-    },
-    "pixel": "PixelFunction",
-    "materials": {
-        "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
-        "geometry-main": { "scheme": "tesselated-main-material-for-geometry-pass", "slot": 2 },
-    },
-    "targets": {
-        "DiffuseRGB":             { "type": "float3", "slot": 0 },
-        "WorldNormalXYZ_UnusedA": { "type": "float4", "slot": 1 },
-        "SpecularRGB_ShininessA": { "type": "float4", "slot": 2 },
-    },
+@be-material: tesselated-main-material-for-geometry-pass {
+    DiffuseColor: float3 = (0.28, 0.39, 1.0)
+    SpecularColor: float3 = (1.0, 1.0, 1.0)
+    Shininess: float = 100.0
+    DiffuseTexture: texture2d = white
+    TessellationLevel: float = 1024.0
+    DisplacementStrength: float = -1.0
+    AnimationSpeed: float = 1.5
+    NoiseFrequency: float = 30.0
+    InputSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader tessellated {
+    topology patch-list-3
+
+    vertex VertexFunction(position, normal, uv0)
+    hull HullFunction
+    domain DomainFunction
+    pixel PixelFunction
+
+    bind s1 geometry-object object-material-for-geometry-pass
+    bind s2 geometry-main tesselated-main-material-for-geometry-pass
+
+    target s0 DiffuseRGB float3
+    target s1 WorldNormalXYZ_UnusedA float4
+    target s2 SpecularRGB_ShininessA float4
+}
 */
 
 #include <BeUniformBuffer.hlsli>

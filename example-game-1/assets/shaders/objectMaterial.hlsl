@@ -1,13 +1,11 @@
 
 /*
 
-@be-material: object-material-for-geometry-pass
-[
-    "Model: matrix",
-    "ProjectionView: matrix",
-    "ViewerPosition: float3 = [0, 0, 0]",
-]
-@be-end
+@be-material: object-material-for-geometry-pass {
+    Model: matrix
+    ProjectionView: matrix
+    ViewerPosition: float3 = (0, 0, 0)
+}
 
 */
 

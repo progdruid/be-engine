@@ -1,35 +1,29 @@
 /*
 
-@be-material: bloom-bright-material
-[
-    "Threshold: float = 1.3",
-    "Intensity: float = 1.8",
-    "Knee: float = 1.0",
-    "Clamp: float = 16.0",
-
-    "HDRInput: texture2d = black",
-    "InputSampler: sampler = linear-clamp",
-]
-@be-end
-
-
-@be-shader: bloom-bright
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "rasterizer": "back-solid",
-    "blend": "disable",
-    "depthStencil": "disable",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "main": { "scheme": "bloom-bright-material", "slot": 1 },
-    },
-    "targets": {
-        "BloomMip": { "type": "float3", "slot": 0 }
-    },
+@be-material: bloom-bright-material {
+    Threshold: float = 1.3
+    Intensity: float = 1.8
+    Knee: float = 1.0
+    Clamp: float = 16.0
+    HDRInput: texture2d = black
+    InputSampler: sampler = linear-clamp
 }
-@be-end
+
+
+@be-shader bloom-bright {
+    topology triangle-strip
+    rasterizer back-solid
+    blend disable
+    depth disable
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s0 frame uniform-material
+    bind s1 main bloom-bright-material
+
+    target s0 BloomMip float3
+}
 
 */
 

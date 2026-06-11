@@ -1,42 +1,35 @@
 /*
 
-@be-material: point-light-material
-[
-    "Position: float3 = [0, 0, 0]",
-    "Radius: float = 0",
-    "Color: float3 = [0, 0, 0]",
-    "Power: float = 0",
-    "HasShadowMap: float = 0",
-    "ShadowMapResolution: float = 0",
-    "ShadowNearPlane: float = 0",
-    
-    "Depth: texture2d = black",
-    "Albedo_RGB: texture2d = black",
-    "WorldNormal_XYZ: texture2d = black",
-    "ORM_RGB: texture2d = black",
-    "PointLightShadowMap: textureCube = black-cube",
-
-    "InputSampler: sampler = point-clamp"
-]
-@be-end
-
-@be-shader: point-light
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "rasterizer": "back-solid",
-    "blend": "additive",
-    "depthStencil": "disable",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "main": { "scheme": "point-light-material", "slot": 1, "var": "PointLight" },
-    },
-    "targets": {
-        "LightHDR": { "type": "float3", "slot": 0 }
-    }
+@be-material: point-light-material {
+    Position: float3 = (0, 0, 0)
+    Radius: float = 0
+    Color: float3 = (0, 0, 0)
+    Power: float = 0
+    HasShadowMap: float = 0
+    ShadowMapResolution: float = 0
+    ShadowNearPlane: float = 0
+    Depth: texture2d = black
+    Albedo_RGB: texture2d = black
+    WorldNormal_XYZ: texture2d = black
+    ORM_RGB: texture2d = black
+    PointLightShadowMap: textureCube = black-cube
+    InputSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader point-light {
+    topology triangle-strip
+    rasterizer back-solid
+    blend additive
+    depth disable
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s0 frame uniform-material
+    bind s1 main point-light-material PointLight
+
+    target s0 LightHDR float3
+}
 
 */
 

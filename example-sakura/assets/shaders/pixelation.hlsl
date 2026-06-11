@@ -1,34 +1,29 @@
 /*
 
-@be-material: pixelation-material
-[
-    "ColorTexture: texture2d = white",
-    "DepthTexture: texture2d = black",
-    "PointSampler: sampler = point-clamp",
-    "PixelSize: float = 8.0",
-    "EdgeEnabled: float = 1.0",
-    "EdgeThreshold: float = 1.0",
-    "EdgeFarCutoff: float = 40.0",
-]
-@be-end
-
-@be-shader: pixelation
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PS",
-    "rasterizer": "back-solid",
-    "blend": "disable",
-    "depthStencil": "disable",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "main": { "scheme": "pixelation-material", "slot": 1 },
-    },
-    "targets": {
-        "PixelOutput": { "type": "float3", "slot": 0 }
-    }
+@be-material: pixelation-material {
+    ColorTexture: texture2d = white
+    DepthTexture: texture2d = black
+    PointSampler: sampler = point-clamp
+    PixelSize: float = 8.0
+    EdgeEnabled: float = 1.0
+    EdgeThreshold: float = 1.0
+    EdgeFarCutoff: float = 40.0
 }
-@be-end
+
+@be-shader pixelation {
+    topology triangle-strip
+    rasterizer back-solid
+    blend disable
+    depth disable
+
+    vertex FullscreenVertexKernel
+    pixel PS
+
+    bind s0 frame uniform-material
+    bind s1 main pixelation-material
+
+    target s0 PixelOutput float3
+}
 
 */
 

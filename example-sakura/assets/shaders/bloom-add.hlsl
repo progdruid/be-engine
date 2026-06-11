@@ -1,31 +1,26 @@
 /*
 
-@be-material: bloom-add-material
-[
-    "HDRInput: texture2d = black",
-    "BloomInput: texture2d = black",
-    "DirtTexture: texture2d = black",
-    "InputSampler: sampler = linear-clamp",
-]
-@be-end
-
-@be-shader: bloom-add
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "rasterizer": "back-solid",
-    "blend": "disable",
-    "depthStencil": "disable",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "main": { "scheme": "bloom-add-material", "slot": 1 },
-    },
-    "targets": {
-        "BloomOutput": { "type": "float3", "slot": 0 }
-    },
+@be-material: bloom-add-material {
+    HDRInput: texture2d = black
+    BloomInput: texture2d = black
+    DirtTexture: texture2d = black
+    InputSampler: sampler = linear-clamp
 }
-@be-end
+
+@be-shader bloom-add {
+    topology triangle-strip
+    rasterizer back-solid
+    blend disable
+    depth disable
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s0 frame uniform-material
+    bind s1 main bloom-add-material
+
+    target s0 BloomOutput float3
+}
 */
 
 /*========================================================*/

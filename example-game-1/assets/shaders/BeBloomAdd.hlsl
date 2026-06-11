@@ -1,27 +1,22 @@
 /*
 
-@be-material: add-material
-[
-    "HDRInput: texture2d = black",
-    "BloomInput: texture2d = black",
-    "DirtTexture: texture2d = black",
-    "InputSampler: sampler = linear-clamp",
-]
-@be-end
-
-@be-shader: bloom-add
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "materials": {
-        "main": { "scheme": "add-material", "slot": 2 },
-    },
-    "targets": {
-        "BloomOutput": { "type": "float3", "slot": 0 }
-    },
+@be-material: add-material {
+    HDRInput: texture2d = black
+    BloomInput: texture2d = black
+    DirtTexture: texture2d = black
+    InputSampler: sampler = linear-clamp
 }
-@be-end
+
+@be-shader bloom-add {
+    topology triangle-strip
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s2 main add-material
+
+    target s0 BloomOutput float3
+}
 */
 
 #include "fullscreen-vertex.hlsl"

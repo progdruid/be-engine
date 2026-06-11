@@ -1,40 +1,32 @@
 
 /*
 
-@be-material: checkerboard-material-for-geometry-pass
-[
-    "DiffuseColor: float3 = [1.0, 1.0, 1.0]",
-    "Metallic: float = 0.0",
-    "Roughness: float = 0.5",
-    "AO: float = 1.0",
-    "TileScale: float = 1.0",
-
-    "DiffuseTexture: texture2d = black",
-
-    "InputSampler: sampler = point-wrap",
-]
-@be-end
-
-
-@be-shader: checkerboard
-{
-    "topology": "triangle-list",
-    "vertex": "VertexFunction",
-    "vertexLayout": ["position", "normal" ],
-    "pixel": "PixelFunction",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
-        "geometry-main": { "scheme": "checkerboard-material-for-geometry-pass", "slot": 2 },
-    },
-    "targets": {
-        "Albedo_RGB":      { "type": "float3", "slot": 0 },
-        "WorldNormal_XYZ": { "type": "float4", "slot": 1 },
-        "ORM_RGB":         { "type": "float4", "slot": 2 },
-        "EmissiveRGB":     { "type": "float3", "slot": 3 },
-    }
+@be-material: checkerboard-material-for-geometry-pass {
+    DiffuseColor: float3 = (1.0, 1.0, 1.0)
+    Metallic: float = 0.0
+    Roughness: float = 0.5
+    AO: float = 1.0
+    TileScale: float = 1.0
+    DiffuseTexture: texture2d = black
+    InputSampler: sampler = point-wrap
 }
-@be-end
+
+
+@be-shader checkerboard {
+    topology triangle-list
+
+    vertex VertexFunction(position, normal)
+    pixel PixelFunction
+
+    bind s0 frame uniform-material
+    bind s1 geometry-object object-material-for-geometry-pass
+    bind s2 geometry-main checkerboard-material-for-geometry-pass
+
+    target s0 Albedo_RGB float3
+    target s1 WorldNormal_XYZ float4
+    target s2 ORM_RGB float4
+    target s3 EmissiveRGB float3
+}
 
 */
 

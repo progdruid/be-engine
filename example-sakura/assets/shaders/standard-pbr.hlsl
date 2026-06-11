@@ -1,50 +1,38 @@
 
 /*
 
-@be-material: standard-pbr-material
-[
-    "BaseColor: float3 = [1.0, 1.0, 1.0]",
-
-    "Metallic: float = 0.0",
-    "Roughness: float = 0.5",
-    "AO: float = 1.0",
-
-    "EmissiveColor: float3 = [0.0, 0.0, 0.0]",
-
-    "Diffuse_or_Albedo: texture2d = white",
-    "ORM_RGB: texture2d = default-orm",
-    "Emissive_RGB: texture2d = white",
-    "NormalMap: texture2d = flat-normal",
-
-    "InputSampler: sampler = linear-clamp",
-]
-@be-end
-
-@be-shader: standard-pbr
-{
-    "topology": "triangle-list",
-    "rasterizer": "back-solid",
-    "blend": "disable",
-    "depthStencil": "less",
-
-    "vertex": "VertexFunction",
-    "vertexLayout": ["position", "normal", "uv0", "tangent"],
-    "pixel": "PixelFunction",
-
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
-        "geometry-main": { "scheme": "standard-pbr-material", "slot": 2 },
-    },
-    
-    "targets": {
-        "Albedo_RGB":      { "type": "float3", "slot": 0 },
-        "WorldNormal_XYZ": { "type": "float4", "slot": 1 },
-        "ORM_RGB":         { "type": "float4", "slot": 2 },
-        "EmissiveRGB":     { "type": "float3", "slot": 3 },
-    }
+@be-material: standard-pbr-material {
+    BaseColor: float3 = (1.0, 1.0, 1.0)
+    Metallic: float = 0.0
+    Roughness: float = 0.5
+    AO: float = 1.0
+    EmissiveColor: float3 = (0.0, 0.0, 0.0)
+    Diffuse_or_Albedo: texture2d = white
+    ORM_RGB: texture2d = default-orm
+    Emissive_RGB: texture2d = white
+    NormalMap: texture2d = flat-normal
+    InputSampler: sampler = linear-clamp
 }
-@be-end
+
+@be-shader standard-pbr {
+    topology triangle-list
+    rasterizer back-solid
+    blend disable
+    depth less
+
+    vertex VertexFunction(position, normal, uv0, tangent)
+    pixel PixelFunction
+
+    bind s0 frame uniform-material
+    bind s1 geometry-object object-material-for-geometry-pass
+    bind s2 geometry-main standard-pbr-material
+
+    target s0 Albedo_RGB float3
+    target s1 WorldNormal_XYZ float4
+    target s2 ORM_RGB float4
+    target s3 EmissiveRGB float3
+}
+
 */
 
 

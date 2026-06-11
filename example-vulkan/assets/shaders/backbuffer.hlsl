@@ -1,28 +1,23 @@
 /*
 
-@be-material: backbuffer-material
-[
-    "InputTexture: texture2d = white",
-    "InputSampler: sampler = point-clamp",
-]
-@be-end
-
-@be-shader: backbuffer
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "rasterizer": "back-solid",
-    "blend": "disable",
-    "depthStencil": "disable",
-    "materials": {
-        "main": { "scheme": "backbuffer-material", "slot": 2 },
-    },
-    "targets": {
-        "BackbufferColor": { "type": "float4", "slot": 0 }
-    }
+@be-material: backbuffer-material {
+    InputTexture: texture2d = white
+    InputSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader backbuffer {
+    topology triangle-strip
+    rasterizer back-solid
+    blend disable
+    depth disable
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s2 main backbuffer-material
+
+    target s0 BackbufferColor float4
+}
 
 */
 

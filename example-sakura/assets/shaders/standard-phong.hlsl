@@ -1,47 +1,36 @@
 
 /*
 
-@be-material: standard-phong-material
-[
-    "DiffuseColor: float3 = [1.0, 1.0, 1.0]",
-    "SpecularColor: float3 = [1.0, 1.0, 1.0]",
-    "Shininess: float = 0.0",
-    "EmissiveColor: float3 = [1.0, 1.0, 1.0]",
-
-    "DiffuseTexture: texture2d = white",
-    "SpecularTexture: texture2d = black",
-    "EmissiveTexture: texture2d = black",
-    "NormalMap: texture2d = flat-normal",
-
-    "InputSampler: sampler = linear-clamp",
-]
-@be-end
-
-@be-shader: standard-phong
-{
-    "topology": "triangle-list",
-    "rasterizer": "back-solid",
-    "blend": "disable",
-    "depthStencil": "less",
-
-    "vertex": "VertexFunction",
-    "vertexLayout": ["position", "normal", "uv0", "tangent"],
-    "pixel": "PixelFunction",
-
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
-        "geometry-main": { "scheme": "standard-phong-material", "slot": 2 },
-    },
-
-    "targets": {
-        "Albedo_RGB":      { "type": "float3", "slot": 0 },
-        "WorldNormal_XYZ": { "type": "float4", "slot": 1 },
-        "SurfaceData":     { "type": "float4", "slot": 2 },
-        "EmissiveRGB":     { "type": "float3", "slot": 3 }
-    }
+@be-material: standard-phong-material {
+    DiffuseColor: float3 = (1.0, 1.0, 1.0)
+    SpecularColor: float3 = (1.0, 1.0, 1.0)
+    Shininess: float = 0.0
+    EmissiveColor: float3 = (1.0, 1.0, 1.0)
+    DiffuseTexture: texture2d = white
+    SpecularTexture: texture2d = black
+    EmissiveTexture: texture2d = black
+    NormalMap: texture2d = flat-normal
+    InputSampler: sampler = linear-clamp
 }
-@be-end
+
+@be-shader standard-phong {
+    topology triangle-list
+    rasterizer back-solid
+    blend disable
+    depth less
+
+    vertex VertexFunction(position, normal, uv0, tangent)
+    pixel PixelFunction
+
+    bind s0 frame uniform-material
+    bind s1 geometry-object object-material-for-geometry-pass
+    bind s2 geometry-main standard-phong-material
+
+    target s0 Albedo_RGB float3
+    target s1 WorldNormal_XYZ float4
+    target s2 SurfaceData float4
+    target s3 EmissiveRGB float3
+}
 
 */
 

@@ -1,28 +1,22 @@
 /*
 
-@be-material: kawase-material
-[
-    "TexelSize: float2 = [0.001, 0.001]",
-    "PassRadius: float = 0.5",
-
-    "BloomMipInput: texture2d = black",
-    "InputSampler: sampler = linear-clamp",
-]
-@be-end
-
-@be-shader: bloom-kawase
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "materials": {
-        "main": { "scheme": "kawase-material", "slot": 2 },
-    },
-    "targets": {
-        "BloomMipOutput": { "type": "float3", "slot": 0 }
-    },
+@be-material: kawase-material {
+    TexelSize: float2 = (0.001, 0.001)
+    PassRadius: float = 0.5
+    BloomMipInput: texture2d = black
+    InputSampler: sampler = linear-clamp
 }
-@be-end
+
+@be-shader bloom-kawase {
+    topology triangle-strip
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s2 main kawase-material
+
+    target s0 BloomMipOutput float3
+}
 
 */
 

@@ -1,16 +1,14 @@
 
 /*
 
-@be-material: uniform-material
-[
-    "CameraProjectionView: matrix",
-    "CameraInverseProjectionView: matrix",
-    "NearFarPlane: float4 = [0, 0, 0, 0]",
-    "CameraPosition: float3 = [0, 0, 0]",
-    "AmbientColor: float3 = [0, 0, 0]",
-    "Time: float = 0",
-]
-@be-end
+@be-material: uniform-material {
+    CameraProjectionView: matrix
+    CameraInverseProjectionView: matrix
+    NearFarPlane: float4 = (0, 0, 0, 0)
+    CameraPosition: float3 = (0, 0, 0)
+    AmbientColor: float3 = (0, 0, 0)
+    Time: float = 0
+}
 
 */
 

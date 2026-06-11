@@ -1,19 +1,21 @@
 #include "BeMaterialScheme.h"
 
+#include <ranges>
+
 #include "sen-rhi/SenBackend.h"
+#include "umbrellas/include-libassert.h"
 
 
-auto BeMaterialScheme::CreateFromJson(
-    const std::string& name, 
-    const Json& json
+auto BeMaterialScheme::Create(
+    const std::string& name,
+    const std::vector<BeShaderTools::ParsedMaterialProperty>& properties
 ) -> BeMaterialScheme {
-    
+
     auto materialScheme = BeMaterialScheme();
     materialScheme.Name = name;
-    
-    for (const auto& propertyItemJson : json) {
-        auto parsedProperty = BeShaderTools::ParseMaterialProperty(propertyItemJson);
-    
+
+    for (const auto& parsedProperty : properties) {
+
         // extracting
         if (parsedProperty.Type == "texture2d" || parsedProperty.Type == "textureCube") {
             auto descriptor = BeMaterialTextureDescriptor();
@@ -42,36 +44,36 @@ auto BeMaterialScheme::CreateFromJson(
             materialScheme.Properties.push_back(descriptor);
         }
         else if (parsedProperty.Type == "float2") {
-            auto json = Json::parse(parsedProperty.Default, nullptr, true, true, true);
-            auto vec = json.get<std::vector<float>>();
-            assert(vec.size() == 2);
-        
+            auto vec = BeShaderTools::ParseFloatList(parsedProperty.Default);
+            be_assert(vec.has_value(), parsedProperty.Name + " -> " + vec.error());
+            be_assert(vec->size() == 2, parsedProperty.Name);
+
             auto descriptor = BeMaterialPropertyDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float2;
-            descriptor.DefaultValue = vec;
+            descriptor.DefaultValue = *vec;
             materialScheme.Properties.push_back(descriptor);
         }
         else if (parsedProperty.Type == "float3") {
-            auto json = Json::parse(parsedProperty.Default, nullptr, true, true, true);
-            auto vec = json.get<std::vector<float>>();
-            assert(vec.size() == 3);
-        
+            auto vec = BeShaderTools::ParseFloatList(parsedProperty.Default);
+            be_assert(vec.has_value(), parsedProperty.Name + " -> " + vec.error());
+            be_assert(vec->size() == 3, parsedProperty.Name);
+
             auto descriptor = BeMaterialPropertyDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float3;
-            descriptor.DefaultValue = vec;
+            descriptor.DefaultValue = *vec;
             materialScheme.Properties.push_back(descriptor);
         }
         else if (parsedProperty.Type == "float4") {
-            Json j = Json::parse(parsedProperty.Default, nullptr, true, true, true);
-            const auto vec = j.get<std::vector<float>>();
-            assert(vec.size() == 4);
-        
+            auto vec = BeShaderTools::ParseFloatList(parsedProperty.Default);
+            be_assert(vec.has_value(), parsedProperty.Name + " -> " + vec.error());
+            be_assert(vec->size() == 4, parsedProperty.Name);
+
             auto descriptor = BeMaterialPropertyDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float4;
-            descriptor.DefaultValue = vec;
+            descriptor.DefaultValue = *vec;
             materialScheme.Properties.push_back(descriptor);
         }
         else if (parsedProperty.Type == "matrix") {

@@ -1,37 +1,30 @@
 /*
 
-@be-material: directional-light-material
-[
-    "HasShadowMap: float = 0",
-    "Direction: float3 = [0, 0, 0]",
-    "Color: float3 = [0, 0, 0]",
-    "Power: float = 0",
-    "ProjectionView: matrix",
-    "TexelSize: float = 0",
-    
-    "Depth: texture2d = black",
-    "Diffuse: texture2d = black",
-    "WorldNormal: texture2d = black",
-    "Specular_Shininess: texture2d = black",
-    "ShadowMap: texture2d = black",
-
-    "InputSampler: sampler = point-clamp",
-]
-@be-end
-
-@be-shader: directional-light
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "materials": {
-        "main": { "scheme": "directional-light-material", "slot": 2 },
-    },
-    "targets": {
-        "LightHDR": { "type": "float3", "slot": 0 }
-    }
+@be-material: directional-light-material {
+    HasShadowMap: float = 0
+    Direction: float3 = (0, 0, 0)
+    Color: float3 = (0, 0, 0)
+    Power: float = 0
+    ProjectionView: matrix
+    TexelSize: float = 0
+    Depth: texture2d = black
+    Diffuse: texture2d = black
+    WorldNormal: texture2d = black
+    Specular_Shininess: texture2d = black
+    ShadowMap: texture2d = black
+    InputSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader directional-light {
+    topology triangle-strip
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s2 main directional-light-material
+
+    target s0 LightHDR float3
+}
 
 */
 

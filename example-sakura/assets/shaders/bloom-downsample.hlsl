@@ -1,32 +1,26 @@
 /*
 
-@be-material: bloom-downsample-material
-[
-    "TexelSize: float2 = [0.001, 0.001]",
-    "UseKaris: float = 0.0",
-
-    "BloomMipInput: texture2d = black",
-    "InputSampler: sampler = linear-clamp",
-]
-@be-end
-
-@be-shader: bloom-downsample
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "rasterizer": "back-solid",
-    "blend": "disable",
-    "depthStencil": "disable",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "main": { "scheme": "bloom-downsample-material", "slot": 1 },
-    },
-    "targets": {
-        "BloomMipOutput": { "type": "float3", "slot": 0 }
-    },
+@be-material: bloom-downsample-material {
+    TexelSize: float2 = (0.001, 0.001)
+    UseKaris: float = 0.0
+    BloomMipInput: texture2d = black
+    InputSampler: sampler = linear-clamp
 }
-@be-end
+
+@be-shader bloom-downsample {
+    topology triangle-strip
+    rasterizer back-solid
+    blend disable
+    depth disable
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s0 frame uniform-material
+    bind s1 main bloom-downsample-material
+
+    target s0 BloomMipOutput float3
+}
 
 */
 

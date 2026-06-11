@@ -1,34 +1,29 @@
 /*
 
-@be-material: dof-material
-[
-    "FocalDistance: float = 10.0",
-    "FocalRange: float = 8.0",
-    "MaxBokehRadius: float = 12.0",
-    "ColorInput: texture2d = black",
-    "DepthInput: texture2d = white",
-    "LinearSampler: sampler = linear-clamp",
-    "PointSampler: sampler = point-clamp",
-]
-@be-end
-
-@be-shader: dof
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PS",
-    "rasterizer": "back-solid",
-    "blend": "disable",
-    "depthStencil": "disable",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "main": { "scheme": "dof-material", "slot": 1 },
-    },
-    "targets": {
-        "DofOutput": { "type": "float3", "slot": 0 }
-    }
+@be-material: dof-material {
+    FocalDistance: float = 10.0
+    FocalRange: float = 8.0
+    MaxBokehRadius: float = 12.0
+    ColorInput: texture2d = black
+    DepthInput: texture2d = white
+    LinearSampler: sampler = linear-clamp
+    PointSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader dof {
+    topology triangle-strip
+    rasterizer back-solid
+    blend disable
+    depth disable
+
+    vertex FullscreenVertexKernel
+    pixel PS
+
+    bind s0 frame uniform-material
+    bind s1 main dof-material
+
+    target s0 DofOutput float3
+}
 
 */
 

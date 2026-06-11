@@ -1,29 +1,24 @@
 /*
 
-@be-material: smaa-edge-material
-[
-    "ColorTexture: texture2d = white",
-    "ColorSampler: sampler = point-clamp",
-]
-@be-end
-
-@be-shader: smaa-edge
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PS",
-    "rasterizer": "back-solid",
-    "blend": "disable",
-    "depthStencil": "disable",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "main": { "scheme": "smaa-edge-material", "slot": 1 },
-    },
-    "targets": {
-        "Edges": { "type": "float4", "slot": 0 }
-    }
+@be-material: smaa-edge-material {
+    ColorTexture: texture2d = white
+    ColorSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader smaa-edge {
+    topology triangle-strip
+    rasterizer back-solid
+    blend disable
+    depth disable
+
+    vertex FullscreenVertexKernel
+    pixel PS
+
+    bind s0 frame uniform-material
+    bind s1 main smaa-edge-material
+
+    target s0 Edges float4
+}
 
 */
 

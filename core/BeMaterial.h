@@ -2,6 +2,7 @@
 #include <memory>
 #include <ranges>
 #include <string>
+#include <unordered_map>
 #include <umbrellas/access-modifiers.hpp>
 #include <umbrellas/include-glm.h>
 

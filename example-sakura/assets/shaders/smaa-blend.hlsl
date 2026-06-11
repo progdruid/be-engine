@@ -1,31 +1,26 @@
 /*
 
-@be-material: smaa-blend-material
-[
-    "ColorTexture: texture2d = white",
-    "EdgeTexture: texture2d = black",
-    "LinearSampler: sampler = linear-clamp",
-    "PointSampler: sampler = point-clamp",
-]
-@be-end
-
-@be-shader: smaa-blend
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PS",
-    "rasterizer": "back-solid",
-    "blend": "disable",
-    "depthStencil": "disable",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "main": { "scheme": "smaa-blend-material", "slot": 1 },
-    },
-    "targets": {
-        "AAOutput": { "type": "float3", "slot": 0 }
-    }
+@be-material: smaa-blend-material {
+    ColorTexture: texture2d = white
+    EdgeTexture: texture2d = black
+    LinearSampler: sampler = linear-clamp
+    PointSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader smaa-blend {
+    topology triangle-strip
+    rasterizer back-solid
+    blend disable
+    depth disable
+
+    vertex FullscreenVertexKernel
+    pixel PS
+
+    bind s0 frame uniform-material
+    bind s1 main smaa-blend-material
+
+    target s0 AAOutput float3
+}
 
 */
 

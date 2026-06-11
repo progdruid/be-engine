@@ -1,38 +1,31 @@
 /*
 
-@be-material: point-light-material
-[
-    "Position: float3 = [0, 0, 0]",
-    "Radius: float = 0",
-    "Color: float3 = [0, 0, 0]",
-    "Power: float = 0",
-    "HasShadowMap: float = 0",
-    "ShadowMapResolution: float = 0",
-    "ShadowNearPlane: float = 0",
-    
-    "Depth: texture2d = black",
-    "Diffuse: texture2d = black",
-    "WorldNormal: texture2d = black",
-    "Specular_Shininess: texture2d = black",
-    "PointLightShadowMap: texture2d = black",
-
-    "InputSampler: sampler = point-clamp"
-]
-@be-end
-
-@be-shader: point-light
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "materials": {
-        "main": { "scheme": "point-light-material", "slot": 2 },
-    },
-    "targets": {
-        "LightHDR": { "type": "float3", "slot": 0 }
-    }
+@be-material: point-light-material {
+    Position: float3 = (0, 0, 0)
+    Radius: float = 0
+    Color: float3 = (0, 0, 0)
+    Power: float = 0
+    HasShadowMap: float = 0
+    ShadowMapResolution: float = 0
+    ShadowNearPlane: float = 0
+    Depth: texture2d = black
+    Diffuse: texture2d = black
+    WorldNormal: texture2d = black
+    Specular_Shininess: texture2d = black
+    PointLightShadowMap: texture2d = black
+    InputSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader point-light {
+    topology triangle-strip
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s2 main point-light-material
+
+    target s0 LightHDR float3
+}
 
 */
 

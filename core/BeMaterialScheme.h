@@ -1,7 +1,6 @@
 #pragma once
 #include <filesystem>
 #include <vector>
-#include <nlohmann/json.hpp>
 #include <umbrellas/access-modifiers.hpp>
 
 #include "BeShaderTools.h"
@@ -35,9 +34,9 @@ struct BeMaterialSamplerDescriptor {
 };
 
 class BeMaterialScheme {
-    expose static auto CreateFromJson (
-        const std::string& name, 
-        const Json& json
+    expose static auto Create (
+        const std::string& name,
+        const std::vector<BeShaderTools::ParsedMaterialProperty>& properties
     ) -> BeMaterialScheme;
     
     expose 

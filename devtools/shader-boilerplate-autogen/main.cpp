@@ -1,4 +1,6 @@
 #include <print>
+#include <cstring>
+#include <algorithm>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -24,10 +26,7 @@ struct TargetEntry {
     uint32_t    Slot;
 };
 
-struct MaterialBlock {
-    std::string Name;
-    Json        Properties; // JSON array of property strings
-};
+using MaterialBlock = BeShaderTools::ParsedMaterial;
 
 // -------------------------------------------------------------------------
 
@@ -55,37 +54,11 @@ struct SchemeEntry {
 using SchemeRegistry = std::unordered_map<std::string, SchemeEntry>;
 
 static auto ParseAllMaterials(const std::string& src) -> std::vector<MaterialBlock> {
-    auto results  = std::vector<MaterialBlock>();
-    const auto tag    = std::string_view("@be-material:");
-    const auto endTag = std::string_view("@be-end");
-
-    auto pos = size_t(0);
-    while (true) {
-        auto tagPos = src.find(tag, pos);
-        if (tagPos == std::string::npos) break;
-
-        auto endPos = src.find(endTag, tagPos);
-        if (endPos == std::string::npos) break;
-
-        auto nameStart   = tagPos + tag.size();
-        auto nameLineEnd = src.find('\n', nameStart);
-        if (nameLineEnd == std::string::npos || nameLineEnd > endPos) break;
-
-        auto nameSubstr = src.substr(nameStart, nameLineEnd - nameStart);
-        auto name       = std::string(BeShaderTools::Trim(nameSubstr, " \t\r\n"));
-
-        auto jsonContent = src.substr(nameLineEnd + 1, endPos - (nameLineEnd + 1));
-        jsonContent.erase(0, jsonContent.find_first_not_of(" \t\r\n"));
-        if (!jsonContent.empty())
-            jsonContent.erase(jsonContent.find_last_not_of(" \t\r\n") + 1);
-
-        try {
-            results.push_back({ name, Json::parse(jsonContent, nullptr, true, true, true) });
-        } catch (...) {}
-
-        pos = endPos + endTag.size();
+    auto materials = BeShaderTools::ParseMaterials(src);
+    if (!materials) {
+        return {};
     }
-    return results;
+    return std::move(*materials);
 }
 
 static auto BuildRegistry(const std::vector<std::filesystem::path>& files) -> SchemeRegistry {
@@ -113,35 +86,33 @@ static auto VertexFieldForLayout(const std::string& layout) -> std::string {
     return "// unknown layout: " + layout;
 }
 
-static auto GenerateMaterialBlock(const MaterialBlock& mat) -> std::string {
-    if (!mat.Properties.is_array()) return "";
+static auto IsTextureOrSampler(const std::string& type) -> bool {
+    return type == "texture2d" || type == "textureCube" || type == "storage texture2d" || type == "sampler";
+}
 
+static auto GenerateMaterialBlock(const MaterialBlock& mat) -> std::string {
     auto structFields = std::string();
 
-    for (const auto& propJson : mat.Properties) {
-        if (!propJson.is_string()) continue;
-        auto prop = BeShaderTools::ParseMaterialProperty(propJson.get<std::string>());
-        auto type = std::string(prop.Type);
-        if (type == "texture2d" || type == "textureCube" || type == "sampler") continue;
-        auto hlslType = (type == "matrix") ? std::string("float4x4") : type;
-        structFields += "    " + hlslType + " " + std::string(prop.Name) + ";\n";
+    for (const auto& prop : mat.Properties) {
+        if (IsTextureOrSampler(prop.Type)) continue;
+        auto hlslType = (prop.Type == "matrix") ? std::string("float4x4") : prop.Type;
+        structFields += "    " + hlslType + " " + prop.Name + ";\n";
     }
 
     if (structFields.empty()) return "";
     return "struct " + KebabToSnakeCase(mat.Name) + " {\n" + structFields + "};";
 }
 
-static auto GenerateBoilerplate(const Json& shaderMeta, const std::vector<MaterialBlock>& materials,
+static auto GenerateBoilerplate(const BeShaderTools::ParsedShader& shader, const std::vector<MaterialBlock>& materials,
                                 const SchemeRegistry& registry, const std::filesystem::path& shaderPath) -> std::string {
     auto parts = std::vector<std::string>();
 
-    // Includes for external schemes referenced in @be-shader: materials
-    if (shaderMeta.contains("materials")) {
+    // Includes for external schemes referenced in binds
+    if (!shader.Binds.empty()) {
         auto includes = std::string();
         auto seen     = std::vector<std::filesystem::path>();
-        for (const auto& [linkName, linkVal] : shaderMeta["materials"].items()) {
-            auto schemeName = linkVal["scheme"].get<std::string>();
-            auto it = registry.find(schemeName);
+        for (const auto& bind : shader.Binds) {
+            auto it = registry.find(bind.Scheme);
             if (it == registry.end()) continue;
             if (std::filesystem::equivalent(it->second.Path, shaderPath)) continue;
             auto rel = std::filesystem::relative(it->second.Path, shaderPath.parent_path());
@@ -162,13 +133,13 @@ static auto GenerateBoilerplate(const Json& shaderMeta, const std::vector<Materi
     }
 
     // Per-material bindings: cbuffer + samplers + textures with register spaces
-    if (shaderMeta.contains("materials")) {
+    if (!shader.Binds.empty()) {
         struct BindingsEntry { uint32_t Slot; std::string Code; };
         auto entries = std::vector<BindingsEntry>();
 
-        for (const auto& [linkName, linkVal] : shaderMeta["materials"].items()) {
-            auto schemeName = linkVal["scheme"].get<std::string>();
-            auto slot       = linkVal["slot"].get<uint32_t>();
+        for (const auto& bind : shader.Binds) {
+            auto schemeName = bind.Scheme;
+            auto slot       = uint32_t(bind.Slot);
             auto space      = std::to_string(slot);
 
             auto* block = [&]() -> const MaterialBlock* {
@@ -177,31 +148,27 @@ static auto GenerateBoilerplate(const Json& shaderMeta, const std::vector<Materi
                 if (auto it = registry.find(schemeName); it != registry.end()) return &it->second.Block;
                 return nullptr;
             }();
-            if (!block || !block->Properties.is_array()) continue;
+            if (!block) continue;
 
             struct PropEntry { std::string Name; std::string Type; };
             auto scalars  = std::vector<PropEntry>();
             auto samplers = std::vector<PropEntry>();
             auto textures = std::vector<PropEntry>();
 
-            for (const auto& propJson : block->Properties) {
-                if (!propJson.is_string()) continue;
-                auto prop = BeShaderTools::ParseMaterialProperty(propJson.get<std::string>());
-                auto type = std::string(prop.Type);
-                auto name = std::string(prop.Name);
-                if (type == "sampler")
-                    samplers.push_back({ name, type });
-                else if (type == "texture2d" || type == "textureCube")
-                    textures.push_back({ name, type });
+            for (const auto& prop : block->Properties) {
+                if (prop.Type == "sampler")
+                    samplers.push_back({ prop.Name, prop.Type });
+                else if (prop.Type == "texture2d" || prop.Type == "textureCube" || prop.Type == "storage texture2d")
+                    textures.push_back({ prop.Name, prop.Type });
                 else
-                    scalars.push_back({ name, type });
+                    scalars.push_back({ prop.Name, prop.Type });
             }
 
             auto code = std::string();
 
             if (!scalars.empty()) {
                 auto structName = KebabToSnakeCase(schemeName);
-                auto varName    = linkVal.contains("var") ? linkVal["var"].get<std::string>() : KebabToPascalCase(linkName);
+                auto varName    = bind.Var.empty() ? KebabToPascalCase(bind.Link) : bind.Var;
                 code += "cbuffer CBuffer_" + space + " : register(b0, space" + space + ") {\n"
                      +  "    " + structName + " _" + varName + ";\n"
                      +  "};";
@@ -215,10 +182,19 @@ static auto GenerateBoilerplate(const Json& shaderMeta, const std::vector<Materi
 
             for (size_t i = 0; i < textures.size(); i++) {
                 if (!code.empty()) code += "\n";
-                auto reg      = std::to_string(1 + samplers.size() + i);
-                auto hlslType = std::string((textures[i].Type == "textureCube") ? "TextureCube" : "Texture2D");
+                auto reg = std::to_string(1 + samplers.size() + i);
+
+                auto hlslType  = std::string("Texture2D");
+                auto regLetter = std::string("t");
+                if (textures[i].Type == "storage texture2d") {
+                    hlslType  = "RWTexture2D<float4>";
+                    regLetter = "u";
+                } else if (textures[i].Type == "textureCube") {
+                    hlslType  = "TextureCube";
+                }
+
                 code += hlslType + " " + textures[i].Name
-                     +  " : register(t" + reg + ", space" + space + ");";
+                     +  " : register(" + regLetter + reg + ", space" + space + ");";
             }
 
             if (!code.empty())
@@ -237,18 +213,18 @@ static auto GenerateBoilerplate(const Json& shaderMeta, const std::vector<Materi
     }
 
     // VertexInput / PixelOutput
-    if (shaderMeta.contains("vertexLayout")) {
+    if (!shader.VertexLayout.empty()) {
         auto s = std::string("struct VertexInput {\n");
-        for (const auto& item : shaderMeta["vertexLayout"])
-            s += "    " + VertexFieldForLayout(item.get<std::string>()) + "\n";
+        for (const auto& item : shader.VertexLayout)
+            s += "    " + VertexFieldForLayout(item) + "\n";
         s += "};";
         parts.push_back(s);
     }
 
-    if (shaderMeta.contains("targets")) {
+    if (!shader.Targets.empty()) {
         auto entries = std::vector<TargetEntry>();
-        for (const auto& [name, val] : shaderMeta["targets"].items())
-            entries.push_back({ name, val["type"].get<std::string>(), val["slot"].get<uint32_t>() });
+        for (const auto& target : shader.Targets)
+            entries.push_back({ target.Name, target.Type, uint32_t(target.Slot) });
         std::ranges::sort(entries, {}, &TargetEntry::Slot);
 
         if (!entries.empty()) {
@@ -345,18 +321,20 @@ static auto TryProcessFile(const std::filesystem::path& path, const SchemeRegist
         std::println(stderr, "Error: {}", msg);
     };
 
-    Json shaderMeta;
-    try {
-        auto [parsedMeta, shaderName] = BeShaderTools::ParseFor(src, "@be-shader:");
-        shaderMeta = std::move(parsedMeta); 
-    } catch (const std::exception& e) {
-        writeError(std::string("Failed to parse shader metadata: ") + e.what());
-        return;
+    // Material-only files (includes) have no @be-shader block; that is not an error.
+    auto shader = BeShaderTools::ParsedShader();
+    if (src.find("@be-shader") != std::string::npos) {
+        auto parsed = BeShaderTools::ParseShader(src);
+        if (!parsed) {
+            writeError("Failed to parse @be-shader -> " + parsed.error());
+            return;
+        }
+        shader = std::move(*parsed);
     }
 
     auto materials = ParseAllMaterials(src);
-    
-    WriteToRegion(src, regionBegin, regionEnd, path, GenerateBoilerplate(shaderMeta, materials, registry, path) + "\n\n");
+
+    WriteToRegion(src, regionBegin, regionEnd, path, GenerateBoilerplate(shader, materials, registry, path) + "\n\n");
     std::println("Updated {}", path.filename().string());
 }
 

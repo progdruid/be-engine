@@ -1,29 +1,24 @@
 /*
 
-@be-material: emissive-add-material
-[
-    "InputEmissive: texture2d = black",
-    "InputSampler: sampler = point-clamp",
-]
-@be-end
-
-@be-shader: emissive-add
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "rasterizer": "back-solid",
-    "blend": "disable",
-    "depthStencil": "disable",
-    "materials": {
-        "frame": { "scheme": "uniform-material", "slot": 0 },
-        "main": { "scheme": "emissive-add-material", "slot": 1 },
-    },
-    "targets": {
-        "HDROutput": { "type": "float3", "slot": 0 }
-    },
+@be-material: emissive-add-material {
+    InputEmissive: texture2d = black
+    InputSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader emissive-add {
+    topology triangle-strip
+    rasterizer back-solid
+    blend disable
+    depth disable
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s0 frame uniform-material
+    bind s1 main emissive-add-material
+
+    target s0 HDROutput float3
+}
 */
 
 /*========================================================*/

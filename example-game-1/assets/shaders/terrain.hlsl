@@ -1,41 +1,32 @@
 /*
 
-@be-material: terrain-main-material-for-geometry-pass
-[
-    "DiffuseColor: float3 = [0.5, 0.5, 0.5]",
-    "SpecularColor: float3 = [-0.2, -0.2, -0.1]", 
-    "Shininess: float = 0.0",
-    "DiffuseTexture: texture2d = white",
-    "TerrainScale: float = 1.0",
-    "HeightScale: float = 1.0",
-    "NoiseResolution: float = 4.0",
-    "Speed: float = 0.2",
-
-    "InputSampler: sampler = point-clamp"    
-]
-@be-end
-
-@be-shader: terrain
-{
-    "topology": "patch-list-3",
-    "vertex": "VertexFunction",
-    "vertexLayout": ["position", "normal", "uv0"],
-    "tesselation": {
-        "hull": "HullFunction",
-        "domain": "DomainFunction"
-    },
-    "pixel": "PixelFunction",
-    "materials": {
-        "geometry-object": { "scheme": "object-material-for-geometry-pass", "slot": 1 },
-        "geometry-main": { "scheme": "terrain-main-material-for-geometry-pass", "slot": 2 },
-    },
-    "targets": {
-        "DiffuseRGB":             { "type": "float3", "slot": 0 },
-        "WorldNormalXYZ_UnusedA": { "type": "float4", "slot": 1 },
-        "SpecularRGB_ShininessA": { "type": "float4", "slot": 2 },
-    },
+@be-material: terrain-main-material-for-geometry-pass {
+    DiffuseColor: float3 = (0.5, 0.5, 0.5)
+    SpecularColor: float3 = (-0.2, -0.2, -0.1)
+    Shininess: float = 0.0
+    DiffuseTexture: texture2d = white
+    TerrainScale: float = 1.0
+    HeightScale: float = 1.0
+    NoiseResolution: float = 4.0
+    Speed: float = 0.2
+    InputSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader terrain {
+    topology patch-list-3
+
+    vertex VertexFunction(position, normal, uv0)
+    hull HullFunction
+    domain DomainFunction
+    pixel PixelFunction
+
+    bind s1 geometry-object object-material-for-geometry-pass
+    bind s2 geometry-main terrain-main-material-for-geometry-pass
+
+    target s0 DiffuseRGB float3
+    target s1 WorldNormalXYZ_UnusedA float4
+    target s2 SpecularRGB_ShininessA float4
+}
 
 */
 

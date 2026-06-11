@@ -94,15 +94,6 @@ namespace {
         return state;
     }
 
-    auto ParseBlendObject(const Json& obj) -> SenBlendState {
-        auto state = SenBlendState();
-        state.Enable = true;
-        state.SrcBlend = ParseBlendFactor(std::string(obj.at("src")));
-        state.DstBlend = ParseBlendFactor(std::string(obj.at("dst")));
-        state.BlendOp = ParseBlendOp(std::string(obj.at("op")));
-        return state;
-    }
-
     auto ParseComparisonFunc(const std::string& str) -> SenComparisonFunc {
         if (str == "never") return SenComparisonFunc::Never;
         if (str == "less") return SenComparisonFunc::Less;
@@ -140,32 +131,31 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<
     shader->ShaderID = ++_shaderCount;
 
     auto src = BeShaderTools::ReadFile(filePath);
-    auto [header, shaderName] = BeShaderTools::ParseFor(src, "@be-shader:");
-    shader->Name = shaderName;
+    auto parsed = BeShaderTools::ParseShader(src);
+    be_assert(parsed.has_value(), "Failed to parse @be-shader", filePath, parsed.error());
+    const auto& meta = parsed.value();
+    shader->Name = meta.Name;
 
-    if (header.contains("materials")) {
+    if (!meta.Binds.empty()) {
         shader->HasMaterial = true;
-        const auto& materialLinksJson = header.at("materials");
 
-        auto i = uint8_t(0);
-        shader->_pipelineDesc.BindGroupLayouts.resize(materialLinksJson.size());
-        for (const auto& materialLinkJson : materialLinksJson.items()) {
+        shader->_pipelineDesc.BindGroupLayouts.resize(meta.Binds.size());
+        for (const auto& bind : meta.Binds) {
             auto & entry = shader->_materialSchemes.emplace_back();
-            entry.Link = std::string(materialLinkJson.key());
-            entry.SchemeName = std::string(materialLinkJson.value()["scheme"]);
-            entry.Index = uint8_t(materialLinkJson.value()["slot"]);
-            
+            entry.Link = bind.Link;
+            entry.SchemeName = bind.Scheme;
+            entry.Index = bind.Slot;
+
             auto scheme = BeAssetRegistry::GetMaterialScheme(entry.SchemeName);
             shader->_pipelineDesc.BindGroupLayouts[entry.Index] = scheme.BindGroupLayout;
         }
     }
 
-    if (header.contains("compute")) {
-        const std::string computeFunctionName = header.at("compute");
+    if (!meta.ComputeFn.empty()) {
         shader->ShaderType = BeShaderType::Compute;
         shader->ShaderCompute = SenBackend::CreateShader({
             .SourcePath   = filePath,
-            .FunctionName = computeFunctionName,
+            .FunctionName = meta.ComputeFn,
             .Stage        = SenShaderStage::Compute,
         });
         shader->_pipelineDesc.ComputeShader = shader->ShaderCompute;
@@ -173,8 +163,8 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<
     }
 
     {
-        be_assert(header.contains("topology"), "", filePath);
-        const auto& topology = header.at("topology");
+        be_assert(!meta.Topology.empty(), "", filePath);
+        const auto& topology = meta.Topology;
 
         if (topology == "triangle-list") {
             shader->Topology = SenTopology::TriangleList;
@@ -197,21 +187,16 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<
     shader->_pipelineDesc.DepthStencilState.DepthEnable = true;
 
     // Parse render state
-    if (header.contains("rasterizer")) {
-        shader->_pipelineDesc.RasterizerState = ParseRasterizerString(std::string(header.at("rasterizer")));
+    if (!meta.Rasterizer.empty()) {
+        shader->_pipelineDesc.RasterizerState = ParseRasterizerString(meta.Rasterizer);
     }
 
-    if (header.contains("blend")) {
-        const auto& blendJson = header.at("blend");
-        if (blendJson.is_string()) {
-            shader->_pipelineDesc.BlendState = ParseBlendString(std::string(blendJson));
-        } else if (blendJson.is_object()) {
-            shader->_pipelineDesc.BlendState = ParseBlendObject(blendJson);
-        }
+    if (!meta.Blend.empty()) {
+        shader->_pipelineDesc.BlendState = ParseBlendString(meta.Blend);
     }
 
-    if (header.contains("depthStencil")) {
-        shader->_pipelineDesc.DepthStencilState = ParseDepthStencilString(std::string(header.at("depthStencil")));
+    if (!meta.Depth.empty()) {
+        shader->_pipelineDesc.DepthStencilState = ParseDepthStencilString(meta.Depth);
     }
 
     auto shaderErrMsg = [&](const std::string& err, const std::string& stage) -> std::string {
@@ -223,21 +208,18 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<
             "5. Source code:\n\n" + src;
     };
 
-    if (header.contains("vertex")) {
+    if (!meta.VertexFn.empty()) {
         shader->ShaderType = BeShaderType::Vertex;
 
-        auto vertexFunctionName = std::string(header.at("vertex"));
         shader->ShaderVertex = SenBackend::CreateShader({
             .SourcePath = filePath,
-            .FunctionName = vertexFunctionName,
+            .FunctionName = meta.VertexFn,
             .Stage = SenShaderStage::Vertex,
         });
 
         shader->_pipelineDesc.VertexShader = shader->ShaderVertex;
 
-        if (header.contains("vertexLayout")) {
-            auto vertexLayoutJson = header["vertexLayout"];
-
+        if (!meta.VertexLayout.empty()) {
             static const std::unordered_map<std::string, SenFormat> ElementFormats = {
                 {"position", SenFormat::RGB32_Float},
                 {"normal",   SenFormat::RGB32_Float},
@@ -257,7 +239,7 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<
 
             std::vector<SenVertexLayoutElement> layoutElements;
             uint32_t location = 0;
-            for (const auto& semantic : vertexLayoutJson) {
+            for (const auto& semantic : meta.VertexLayout) {
                 layoutElements.push_back({
                     .Semantic = semantic,
                     .Location = location,
@@ -272,21 +254,17 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<
         }
     }
 
-    if (header.contains("tesselation")) {
+    if (!meta.HullFn.empty() || !meta.DomainFn.empty()) {
         shader->ShaderType = shader->ShaderType | BeShaderType::Tesselation;
-
-        auto& tesselation = header.at("tesselation");
-        auto hullFunctionName = std::string(tesselation.at("hull"));
-        auto domainFunctionName = std::string(tesselation.at("domain"));
 
         shader->ShaderHull = SenBackend::CreateShader({
             .SourcePath = filePath,
-            .FunctionName = hullFunctionName,
+            .FunctionName = meta.HullFn,
             .Stage = SenShaderStage::Hull,
         });
         shader->ShaderDomain = SenBackend::CreateShader({
             .SourcePath = filePath,
-            .FunctionName = domainFunctionName,
+            .FunctionName = meta.DomainFn,
             .Stage = SenShaderStage::Domain,
         });
 
@@ -294,29 +272,26 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<
         shader->_pipelineDesc.DomainShader = shader->ShaderDomain;
     }
 
-    if (header.contains("pixel")) {
-        be_assert(header.contains("targets"), "", filePath);
+    if (!meta.PixelFn.empty()) {
+        be_assert(!meta.Targets.empty(), "", filePath);
         shader->ShaderType = shader->ShaderType | BeShaderType::Pixel;
 
-        std::string pixelFunctionName = header.at("pixel");
         shader->ShaderPixel = SenBackend::CreateShader({
             .SourcePath = filePath,
-            .FunctionName = pixelFunctionName,
+            .FunctionName = meta.PixelFn,
             .Stage = SenShaderStage::Pixel,
         });
 
         shader->_pipelineDesc.PixelShader = shader->ShaderPixel;
 
-        Json targets = header.at("targets");
-        for (const auto& target : targets.items()) {
-            const std::string& targetName = target.key();
-            uint32_t targetSlot = target.value()["slot"].get<uint32_t>();
+        for (const auto& target : meta.Targets) {
+            const uint32_t targetSlot = target.Slot;
 
-            be_assert(!shader->PixelTargets.contains(targetName), "", filePath);
+            be_assert(!shader->PixelTargets.contains(target.Name), "", filePath);
             be_assert(!shader->PixelTargetsInverse.contains(targetSlot), "", filePath);
 
-            shader->PixelTargets[targetName] = targetSlot;
-            shader->PixelTargetsInverse[targetSlot] = targetName;
+            shader->PixelTargets[target.Name] = targetSlot;
+            shader->PixelTargetsInverse[targetSlot] = target.Name;
         }
     }
 

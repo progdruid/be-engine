@@ -1,25 +1,20 @@
 /*
 
-@be-material: tonemapper-material
-[
-    "HDRInput: texture2d = black",
-    "InputSampler: sampler = point-clamp",
-]
-@be-end
-
-@be-shader: tonemapper
-{
-    "topology": "triangle-strip",
-    "vertex": "FullscreenVertexKernel",
-    "pixel": "PixelFunction",
-    "materials": {
-        "main": { "scheme": "tonemapper-material", "slot": 2 },
-    },
-    "targets": {
-        "HDRTarget": { "type": "float3", "slot": 0 }
-    },
+@be-material: tonemapper-material {
+    HDRInput: texture2d = black
+    InputSampler: sampler = point-clamp
 }
-@be-end
+
+@be-shader tonemapper {
+    topology triangle-strip
+
+    vertex FullscreenVertexKernel
+    pixel PixelFunction
+
+    bind s2 main tonemapper-material
+
+    target s0 HDRTarget float3
+}
 */
 
 #include <BeTonemappers.hlsli>

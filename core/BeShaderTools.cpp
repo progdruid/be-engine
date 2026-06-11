@@ -1,12 +1,22 @@
 #include "BeShaderTools.h"
 
 #include <fstream>
+#include <sstream>
 
 #include "umbrellas/include-libassert.h"
 
+namespace {
+    auto ParseSlot(std::string_view tok) -> uint8_t {
+        if (!tok.empty() && (tok.front() == 's' || tok.front() == 'S')) {
+            tok = tok.substr(1);
+        }
+        return static_cast<uint8_t>(std::stoi(std::string(tok)));
+    }
+}
+
 auto BeShaderTools::ReadFile(const std::filesystem::path& path) -> std::string {
     be_assert(std::filesystem::exists(path), "file does not exist", path);
-    
+
     auto file = std::ifstream(path);
     auto buffer = std::stringstream();
     buffer << file.rdbuf();
@@ -14,61 +24,173 @@ auto BeShaderTools::ReadFile(const std::filesystem::path& path) -> std::string {
     return src;
 }
 
-auto BeShaderTools::ParseMaterialProperty(const std::string& text) -> ParsedMaterialProperty {
+auto BeShaderTools::ParseMaterialProperty(const std::string& text) -> std::expected<ParsedMaterialProperty, std::string> {
     auto result = ParsedMaterialProperty();
-    
-    const auto parts = Split(text, ":=");
-    assert(!parts.empty());
-    
-    result.Name = Trim(parts[0], " \t\n\r");
-    
-    const auto typeParts = Split(Trim(parts[1], " \n\r\t"), "()");
-    assert(!typeParts.empty());
-    
-    result.Type = Trim(typeParts[0], " \t\n\r");
-    
-    if (typeParts.size() > 1) {
-        result.Slot = std::stoi(std::string(typeParts[1]));
+
+    const auto colon = text.find(':');
+    if (colon == std::string::npos) {
+        return std::unexpected("material property missing ':' -> " + text);
     }
-    if (parts.size() > 2) {
-        result.Default = Trim(parts[2], " \n\r\t");
+
+    result.Name = std::string(Trim(std::string_view(text).substr(0, colon), " \t\r\n"));
+
+    auto rest = std::string_view(text).substr(colon + 1);
+    const auto eq = rest.find('=');
+    if (eq != std::string_view::npos) {
+        result.Type = std::string(Trim(rest.substr(0, eq), " \t\r\n"));
+        result.Default = std::string(Trim(rest.substr(eq + 1), " \t\r\n"));
+    } else {
+        result.Type = std::string(Trim(rest, " \t\r\n"));
     }
-    
+
     return result;
 }
 
-auto BeShaderTools::ParseFor(const std::string& src, const std::string& target) -> std::pair<Json, std::string> {
-    const auto& startTag = target;
-    const auto& endTag = std::string("@be-end");
-    
-    auto metadata = Json::object();
-    
-    const auto startPos = src.find(startTag);
-    if (startPos == std::string::npos) return {metadata, ""};
-    const auto endPos = src.find(endTag, startPos);
-    if (endPos == std::string::npos) return {metadata, ""};
-    
-    auto jsonStart = src.find('\n', startPos);
-    be_assert(jsonStart != std::string::npos && jsonStart < endPos);
-    
-    auto nameStart = startPos + target.length();
-    auto nameToken = std::string(BeShaderTools::Trim(src.substr(nameStart, jsonStart - nameStart), " \t\n\r"));
-    
-    jsonStart++; // Move past newline
-    
-    auto jsonContent = src.substr(jsonStart, endPos - jsonStart);
-    
-    jsonContent.erase(0, jsonContent.find_first_not_of(" \t\r\n"));
-    jsonContent.erase(jsonContent.find_last_not_of(" \t\r\n") + 1);
-    
-    try {
-        metadata = Json::parse(jsonContent, nullptr, true, true, true);
-    } catch (const Json::parse_error& e) {
-        const auto msg = e.what();
-        throw std::runtime_error("Failed to parse shader header JSON: " + std::string(msg));
+auto BeShaderTools::ParseMaterials(const std::string& src) -> std::expected<std::vector<ParsedMaterial>, std::string> {
+    auto result = std::vector<ParsedMaterial>();
+
+    auto pos = size_t(0);
+    while (const auto block = FindBlock(src, "@be-material:", pos)) {
+        auto mat = ParsedMaterial();
+        mat.Name = block->Name;
+        for (const auto& line : block->Lines) {
+            auto property = ParseMaterialProperty(line);
+            if (!property) {
+                return std::unexpected("material '" + mat.Name + "' -> " + property.error());
+            }
+            mat.Properties.push_back(std::move(*property));
+        }
+
+        result.push_back(std::move(mat));
+        pos = block->End;
     }
-    
-    return {metadata, nameToken};
+
+    return result;
+}
+
+auto BeShaderTools::ParseShader(const std::string& src) -> std::expected<ParsedShader, std::string> {
+    auto result = ParsedShader();
+
+    auto block = FindBlock(src, "@be-shader", 0);
+    if (!block) {
+        return std::unexpected(std::string("no @be-shader block found"));
+    }
+    result.Name = block->Name;
+
+    for (const auto& line : block->Lines) {
+        const auto ws = line.find_first_of(" \t");
+        const auto keyword = std::string_view(line).substr(0, ws);
+        const auto rest =
+            (ws == std::string::npos)
+            ? std::string_view()
+            : Trim(std::string_view(line).substr(ws), " \t\r");
+
+        if      (keyword == "topology")   { result.Topology   = std::string(rest); }
+        else if (keyword == "rasterizer") { result.Rasterizer = std::string(rest); }
+        else if (keyword == "blend")      { result.Blend      = std::string(rest); }
+        else if (keyword == "depth")      { result.Depth      = std::string(rest); }
+        else if (keyword == "pixel")      { result.PixelFn    = std::string(rest); }
+        else if (keyword == "compute")    { result.ComputeFn  = std::string(rest); }
+        else if (keyword == "hull")       { result.HullFn     = std::string(rest); }
+        else if (keyword == "domain")     { result.DomainFn   = std::string(rest); }
+        else if (keyword == "vertex") {
+            const auto paren = rest.find('(');
+            if (paren == std::string_view::npos) {
+                result.VertexFn = std::string(rest);
+            } else {
+                result.VertexFn = std::string(Trim(rest.substr(0, paren), " \t\r"));
+                const auto close = rest.find(')', paren);
+                const auto inner = rest.substr(paren + 1, (close == std::string_view::npos ? rest.size() : close) - (paren + 1));
+                for (const auto semView : Split(inner, ",")) {
+                    const auto sem = Trim(semView, " \t\r");
+                    if (!sem.empty()) {
+                        result.VertexLayout.emplace_back(sem);
+                    }
+                }
+            }
+        }
+        else if (keyword == "bind") {
+            const auto toks = Split(rest, " \t");
+            if (toks.size() < 3) {
+                return std::unexpected("bind needs 's<slot> <link> <scheme> [<var>]' -> " + line);
+            }
+            auto bind   = ParsedBind();
+            bind.Slot   = ParseSlot(toks[0]);
+            bind.Link   = std::string(toks[1]);
+            bind.Scheme = std::string(toks[2]);
+            if (toks.size() >= 4) {
+                bind.Var = std::string(toks[3]);
+            }
+            result.Binds.push_back(std::move(bind));
+        }
+        else if (keyword == "target") {
+            const auto toks = Split(rest, " \t");
+            if (toks.size() < 3) {
+                return std::unexpected("target needs 's<slot> <Name> <type>' -> " + line);
+            }
+            auto target = ParsedTarget();
+            target.Slot = ParseSlot(toks[0]);
+            target.Name = std::string(toks[1]);
+            target.Type = std::string(toks[2]);
+            result.Targets.push_back(std::move(target));
+        }
+        else {
+            return std::unexpected("unknown @be-shader directive '" + std::string(keyword) + "' -> " + line);
+        }
+    }
+
+    return result;
+}
+
+auto BeShaderTools::FindBlock(const std::string& src, const std::string& tag, size_t from) -> std::optional<Block> {
+    const auto tagPos = src.find(tag, from);
+    if (tagPos == std::string::npos) {
+        return std::nullopt;
+    }
+
+    const auto openPos = src.find('{', tagPos + tag.size());
+    if (openPos == std::string::npos) {
+        return std::nullopt;
+    }
+
+    const auto closePos = src.find('}', openPos + 1);
+    if (closePos == std::string::npos) {
+        return std::nullopt;
+    }
+
+    auto block = Block();
+    block.Name = std::string(Trim(Take(src, tagPos + tag.size(), openPos), " \t\r\n"));
+
+    for (const auto lineView : Split(Take(src, openPos + 1, closePos), "\n")) {
+        const auto line = Trim(lineView, " \t\r");
+        if (!line.empty()) {
+            block.Lines.emplace_back(line);
+        }
+    }
+    block.End = closePos + 1;
+    return block;
+}
+
+auto BeShaderTools::ParseFloatList(const std::string& text) -> std::expected<std::vector<float>, std::string> {
+    const auto open  = text.find('(');
+    const auto close = text.rfind(')');
+    if (open == std::string::npos || close == std::string::npos || close < open) {
+        return std::unexpected("expected a '(...)' float list -> " + text);
+    }
+
+    auto result = std::vector<float>();
+    for (const auto tokView : Split(Take(text, open + 1, close), ",")) {
+        const auto tok = Trim(tokView, " \t\r\n");
+        if (tok.empty()) {
+            continue;
+        }
+        try {
+            result.push_back(std::stof(std::string(tok)));
+        } catch (const std::exception&) {
+            return std::unexpected("invalid float '" + std::string(tok) + "' -> " + text);
+        }
+    }
+    return result;
 }
 
 auto BeShaderTools::Take(const std::string_view str, const size_t start, const size_t end) -> std::string_view {
@@ -76,7 +198,12 @@ auto BeShaderTools::Take(const std::string_view str, const size_t start, const s
 }
 
 auto BeShaderTools::Trim(const std::string_view str, const char* trimmedChars) -> std::string_view {
-    return Take(str, str.find_first_not_of(trimmedChars), str.find_last_not_of(trimmedChars) + 1);
+    const auto begin = str.find_first_not_of(trimmedChars);
+    if (begin == std::string_view::npos) {
+        return {};
+    }
+    const auto end = str.find_last_not_of(trimmedChars);
+    return Take(str, begin, end + 1);
 }
 
 auto BeShaderTools::Split(std::string_view str, const char* delimiters) -> std::vector<std::string_view> {
