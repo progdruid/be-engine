@@ -58,14 +58,14 @@ auto BeStandardLightingPass::Render() -> void {
     const auto& pointLights = srm.GetPointLightEntries();
 
     BePass pass;
-    pass.AddReadTextures(_gbufferInputs);
-    pass.AddReadTexture(_depthInput);
+    pass.UseTextures(_gbufferInputs);
+    pass.UseTexture(_depthInput);
     if (const auto shadowMap = sunLight.ShadowMap.lock()) {
-        pass.AddReadTexture(shadowMap);
+        pass.UseTexture(shadowMap);
     }
     for (const auto& pointLight : pointLights) {
         if (const auto shadowMap = pointLight.ShadowMap.lock()) {
-            pass.AddReadTexture(shadowMap);
+            pass.UseTexture(shadowMap);
         }
     }
     pass.AddColorTarget(_output, SenLoadOp::Clear);

@@ -35,14 +35,13 @@ auto BeStandardBackbufferPass::Render() -> void {
         _activeInput = desired;
     }
 
-    cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
-
     BePass pass;
-    pass.AddReadMaterial(*_material);
+    pass.UseMaterial(*_material);
     pass.AddColorTarget(_renderer->GetBackbufferTexture(), SenLoadOp::Clear, glm::vec4(_clearColor, 1.0f));
     pass.SetViewport(_renderer->GetViewport());
     pass.Begin();
     cmd.SetPipeline(_pipeline);
+    cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
     cmd.SetBindGroup(_material->GetBindGroup(), 1);
     cmd.Draw(4, 0);
     pass.End();

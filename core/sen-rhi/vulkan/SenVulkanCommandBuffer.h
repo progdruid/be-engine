@@ -12,36 +12,36 @@ class SenVulkanCommandBuffer {
     VkPipelineLayout    _boundPipelineLayout = VK_NULL_HANDLE;
     VkPipelineBindPoint _boundBindPoint      = VK_PIPELINE_BIND_POINT_GRAPHICS;
     SenPipeline _boundPipeline;
+    bool        _pipelineDirty = false;
 
     static constexpr uint8_t MaxBindGroups = 8;
-    std::array<SenBindGroup, MaxBindGroups> _pendingBindGroups      = {};
-    std::array<bool,         MaxBindGroups> _pendingBindGroupDirty  = {};
+    std::array<SenBindGroup, MaxBindGroups> _boundGroups           = {};
+    std::array<bool,         MaxBindGroups> _boundGroupsDirtyFlags = {};
 
-    auto FlushPendingBindGroups() -> void;
 
     expose
     SenVulkanCommandBuffer() = default;
     explicit SenVulkanCommandBuffer(VkCommandBuffer cmd);
 
+    expose
     auto ResetPerFrameState() -> void;
-
-    // render pass
+    
+    expose
+    auto TransitionTextures (const std::vector<std::pair<SenTexture, SenResourceState>>& transitions) -> void;
     auto BeginPass (const SenPassDesc& desc) -> void;
     auto EndPass   () -> void;
 
-    // batched layout transition (must be called outside a pass)
-    auto TransitionTextures (const std::vector<std::pair<SenTexture, SenResourceState>>& transitions) -> void;
-
-    // pipeline + resources
+    expose
     auto SetPipeline     (SenPipeline pipeline) -> void;
     auto SetBindGroup    (SenBindGroup group, uint8_t index) -> void;
     auto SetVertexBuffer (SenBuffer buffer) -> void;
     auto SetIndexBuffer  (SenBuffer buffer) -> void;
 
-    // draw
+    hide
+    auto FlushState() -> void;
+
+    expose
     auto Draw        (uint32_t vertexCount,  uint32_t firstVertex) -> void;
     auto DrawIndexed (uint32_t indexCount, uint32_t firstIndex, int32_t baseVertex) -> void;
-
-    // compute dispatch
     auto Dispatch (uint32_t x, uint32_t y, uint32_t z) -> void;
 };

@@ -11,16 +11,20 @@ class BeMaterial;
 
 class BePass {
     hide
+    bool _isCompute = false;
     std::vector<SenTexture> _reads;
+    std::vector<SenTexture> _storageTextures;
     std::vector<SenColorAttachment> _colorTargets;
     std::optional<SenDepthAttachment> _depthTarget;
     SenViewport _viewport {};
 
     expose
-    auto AddReadTexture (SenTexture texture) -> BePass&;
-    auto AddReadTexture (const std::shared_ptr<BeTexture>& texture) -> BePass&;
-    auto AddReadTextures (const std::vector<std::shared_ptr<BeTexture>>& textures) -> BePass&;
-    auto AddReadMaterial (const BeMaterial& material) -> BePass&;
+    auto SetCompute (bool isCompute) -> BePass&;
+
+    auto UseTexture (SenTexture texture, bool useAsStorage = false) -> BePass&;
+    auto UseTexture (const std::shared_ptr<BeTexture>& texture, bool useAsStorage = false) -> BePass&;
+    auto UseTextures (const std::vector<std::shared_ptr<BeTexture>>& textures) -> BePass&;
+    auto UseMaterial (const BeMaterial& material) -> BePass&;
 
     auto AddColorTarget (
         SenTexture texture, 

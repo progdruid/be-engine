@@ -87,7 +87,7 @@ auto BeStandardBloomPass::RenderBrightPass() -> void {
     const auto& mip0 = _mipTextures[0];
 
     BePass pass;
-    pass.AddReadMaterial(*_brightMaterial);
+    pass.UseMaterial(*_brightMaterial);
     pass.AddColorTarget(mip0, SenLoadOp::Load);
     pass.SetViewport({ 0, 0, (float)mip0->Width, (float)mip0->Height, 0, 1 });
     pass.Begin();
@@ -104,7 +104,7 @@ auto BeStandardBloomPass::RenderDownsamplePasses() -> void {
         const auto& target = _mipTextures[mipTarget];
 
         BePass pass;
-        pass.AddReadMaterial(*_downsampleMaterials[mipTarget]);
+        pass.UseMaterial(*_downsampleMaterials[mipTarget]);
         pass.AddColorTarget(target, SenLoadOp::Load);
         pass.SetViewport({ 0, 0, (float)target->Width, (float)target->Height, 0, 1 });
         pass.Begin();
@@ -121,7 +121,7 @@ auto BeStandardBloomPass::RenderUpsamplePasses() -> void {
         const auto& target = _mipTextures[mipTarget];
 
         BePass pass;
-        pass.AddReadMaterial(*_upsampleMaterials[mipTarget]);
+        pass.UseMaterial(*_upsampleMaterials[mipTarget]);
         pass.AddColorTarget(target, SenLoadOp::Load);
         pass.SetViewport({ 0, 0, (float)target->Width, (float)target->Height, 0, 1 });
         pass.Begin();
@@ -135,7 +135,7 @@ auto BeStandardBloomPass::RenderAddPass() -> void {
     auto& cmd = _renderer->GetCommandBuffer();
 
     BePass pass;
-    pass.AddReadMaterial(*_addMaterial);
+    pass.UseMaterial(*_addMaterial);
     pass.AddColorTarget(_output, SenLoadOp::Load);
     pass.SetViewport(_renderer->GetViewport());
     pass.Begin();

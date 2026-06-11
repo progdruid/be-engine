@@ -47,7 +47,7 @@ auto BeMaterial::InitialiseSlotMaps() -> void {
             "Texture not found in registry: " + property.DefaultTexturePath
         );
 
-        _textures[property.Name] = {texWeak.lock(), property.SlotIndex};
+        _textures[property.Name] = {texWeak.lock(), property.SlotIndex, property.IsStorage};
     }
 
     for (const auto& property : _scheme.Samplers) {
@@ -93,10 +93,20 @@ auto BeMaterial::BuildBindGroupDesc() const -> SenBindGroupDesc {
     desc.Textures.clear();
     desc.Textures.reserve(desc.TextureSlots.size());
     for (const auto textureSlot : desc.TextureSlots) {
-        for (const auto& [_, pair] : _textures) {
-            const auto& [texture, slot] = pair;
-            if (slot == textureSlot && texture && texture->Handle.IsValid()) {
-                desc.Textures.push_back(texture->Handle);
+        for (const auto& [_, binding] : _textures) {
+            if (!binding.IsStorage && binding.Slot == textureSlot && binding.Texture && binding.Texture->Handle.IsValid()) {
+                desc.Textures.push_back(binding.Texture->Handle);
+                break;
+            }
+        }
+    }
+
+    desc.StorageTextures.clear();
+    desc.StorageTextures.reserve(desc.StorageTextureSlots.size());
+    for (const auto storageSlot : desc.StorageTextureSlots) {
+        for (const auto& [_, binding] : _textures) {
+            if (binding.IsStorage && binding.Slot == storageSlot && binding.Texture && binding.Texture->Handle.IsValid()) {
+                desc.StorageTextures.push_back(binding.Texture->Handle);
                 break;
             }
         }
@@ -256,13 +266,13 @@ auto BeMaterial::GetMatrix(const std::string& propertyName) const -> glm::mat4x4
 
 auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void {
     be_assert(_textures.contains(propertyName), "unknown texture property: " + propertyName);
-    _textures.at(propertyName).first = texture;
+    _textures.at(propertyName).Texture = texture;
     _bindGroupDirty = true;
 }
 
 auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture> {
     be_assert(_textures.contains(propertyName), "unknown texture property: " + propertyName);
-    return _textures.at(propertyName).first;
+    return _textures.at(propertyName).Texture;
 }
 
 

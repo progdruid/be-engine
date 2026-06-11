@@ -85,12 +85,17 @@ auto BeStandardRenderMachine::DeclareDepth(const std::string& name, SenFormat fo
     return texture;
 }
 
-auto BeStandardRenderMachine::DeclareTexture(const std::string& name, SenFormat format, float sizeMultiplier) -> std::shared_ptr<BeTexture> {
+auto BeStandardRenderMachine::DeclareTexture(const std::string& name, SenFormat format, float sizeMultiplier, bool storage) -> std::shared_ptr<BeTexture> {
     const auto w = static_cast<uint32_t>(static_cast<float>(_width)  * sizeMultiplier);
     const auto h = static_cast<uint32_t>(static_cast<float>(_height) * sizeMultiplier);
 
+    auto usage = SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource;
+    if (storage) {
+        usage = usage | SenTextureUsage::Storage;
+    }
+
     auto texture = BeTexture::Create(name)
-        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+        .SetUsage(usage)
         .SetFormat(format)
         .SetSize(w, h)
         .Build();

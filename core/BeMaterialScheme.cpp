@@ -21,6 +21,13 @@ auto BeMaterialScheme::CreateFromJson(
             descriptor.DefaultTexturePath = parsedProperty.Default;
             materialScheme.Textures.push_back(descriptor);
         }
+        else if (parsedProperty.Type == "storage texture2d") {
+            auto descriptor = BeMaterialTextureDescriptor();
+            descriptor.Name = parsedProperty.Name;
+            descriptor.DefaultTexturePath = parsedProperty.Default;
+            descriptor.IsStorage = true;
+            materialScheme.Textures.push_back(descriptor);
+        }
         else if (parsedProperty.Type == "sampler") {
             auto descriptor = BeMaterialSamplerDescriptor();
             descriptor.Name = parsedProperty.Name;
@@ -84,12 +91,12 @@ auto BeMaterialScheme::CreateFromJson(
     }
     
     SenBindGroupDesc desc = {};
-    desc.Stages = SenShaderStageFlags::AllGraphics;
-    
+    desc.Stages = SenShaderStageFlags::AllGraphics | SenShaderStageFlags::Compute;
+
     if (!materialScheme.Properties.empty()) {
         desc.BufferSlots = { 0 };
     }
-    
+
     uint8_t textureSlotsStart = 1 + materialScheme.Samplers.size();
     if (!materialScheme.Samplers.empty()) {
         auto samplerRange = std::views::iota(uint8_t(1), textureSlotsStart);
@@ -99,15 +106,17 @@ auto BeMaterialScheme::CreateFromJson(
         }
     }
 
-    if (!materialScheme.Textures.empty()) {
-        uint8_t textureSlotsEnd = textureSlotsStart + materialScheme.Textures.size();
-        auto textureRange = std::views::iota(textureSlotsStart, textureSlotsEnd);
-        desc.TextureSlots = std::vector<uint8_t>(textureRange.begin(), textureRange.end());
-        for (size_t i = 0; i < materialScheme.Textures.size(); ++i) {
-            materialScheme.Textures[i].SlotIndex = textureSlotsStart + uint8_t(i);
+    uint8_t nextSlot = textureSlotsStart;
+    for (auto& texture : materialScheme.Textures) {
+        texture.SlotIndex = nextSlot;
+        if (texture.IsStorage) {
+            desc.StorageTextureSlots.push_back(nextSlot);
+        } else {
+            desc.TextureSlots.push_back(nextSlot);
         }
+        ++nextSlot;
     }
-    
+
     materialScheme.BindGroupLayout = desc;
     return materialScheme;
 }

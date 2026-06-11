@@ -31,7 +31,7 @@ auto SenVulkanCommandBuffer::BeginPass(const SenPassDesc& desc) -> void {
             view = texEntry.MipRTVs[attachment.MipLevel];
         }
 
-        VkClearValue clearValue {};
+        VkClearValue clearValue;
         clearValue.color = { attachment.ClearColor.r, attachment.ClearColor.g, attachment.ClearColor.b, attachment.ClearColor.a };
 
         colorAttachments.push_back(VkRenderingAttachmentInfoKHR {
@@ -165,47 +165,45 @@ auto SenVulkanCommandBuffer::TransitionTextures(const std::vector<std::pair<SenT
 auto SenVulkanCommandBuffer::ResetPerFrameState() -> void {
     _boundPipelineLayout = VK_NULL_HANDLE;
     _boundBindPoint      = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    _pendingBindGroupDirty = {};
+    _boundPipeline       = {};
+    _pipelineDirty       = false;
+    _boundGroupsDirtyFlags = {};
 }
 
 
 // ─── pipeline + resources ─────────────────────────────────────────────────────
 
 auto SenVulkanCommandBuffer::SetPipeline(SenPipeline pipeline) -> void {
-    auto& entry = SenVulkanBackend::LookupPipeline(pipeline);
+    if (pipeline.ID == _boundPipeline.ID) {
+        return;
+    }
+
+    const auto& entry = SenVulkanBackend::LookupPipeline(pipeline);
     _boundPipelineLayout = entry.Layout;
-    _boundBindPoint      = entry.BindPoint;
+    _boundBindPoint = entry.BindPoint;
     _boundPipeline = pipeline;
-    vkCmdBindPipeline(_cmd, entry.BindPoint, entry.Pipeline);
-    FlushPendingBindGroups();
+    _pipelineDirty = true;
 }
 
 auto SenVulkanCommandBuffer::SetBindGroup(SenBindGroup group, uint8_t index) -> void {
     be_assert(group.IsValid(), "SetBindGroup: invalid SenBindGroup handle (index={})", index);
-    auto& groupEntry = SenVulkanBackend::LookupBindGroup(group);
 
-    if (_boundPipelineLayout == VK_NULL_HANDLE) {
-        _pendingBindGroups[index]     = group;
-        _pendingBindGroupDirty[index] = true;
-        return;
-    }
-
-    vkCmdBindDescriptorSets(
-        _cmd,
-        _boundBindPoint,
-        _boundPipelineLayout,
-        index,
-        1, &groupEntry.Set,
-        0, nullptr
-    );
+    _boundGroups[index] = group;
+    _boundGroupsDirtyFlags[index] = true;
 }
 
-auto SenVulkanCommandBuffer::FlushPendingBindGroups() -> void {
+auto SenVulkanCommandBuffer::FlushState() -> void {
+    if (_pipelineDirty) {
+        const auto& entry = SenVulkanBackend::LookupPipeline(_boundPipeline);
+        vkCmdBindPipeline(_cmd, entry.BindPoint, entry.Pipeline);
+        _pipelineDirty = false;
+    }
+    
     for (uint8_t i = 0; i < MaxBindGroups; ++i) {
-        if (!_pendingBindGroupDirty[i]) {
+        if (!_boundGroupsDirtyFlags[i]) {
             continue;
         }
-        auto& groupEntry = SenVulkanBackend::LookupBindGroup(_pendingBindGroups[i]);
+        auto& groupEntry = SenVulkanBackend::LookupBindGroup(_boundGroups[i]);
         vkCmdBindDescriptorSets(
             _cmd,
             _boundBindPoint,
@@ -214,7 +212,7 @@ auto SenVulkanCommandBuffer::FlushPendingBindGroups() -> void {
             1, &groupEntry.Set,
             0, nullptr
         );
-        _pendingBindGroupDirty[i] = false;
+        _boundGroupsDirtyFlags[i] = false;
     }
 }
 
@@ -233,16 +231,16 @@ auto SenVulkanCommandBuffer::SetIndexBuffer(SenBuffer buffer) -> void {
 // ─── draw ─────────────────────────────────────────────────────────────────────
 
 auto SenVulkanCommandBuffer::Draw(uint32_t vertexCount, uint32_t firstVertex) -> void {
+    FlushState();
     vkCmdDraw(_cmd, vertexCount, 1, firstVertex, 0);
 }
 
 auto SenVulkanCommandBuffer::DrawIndexed(uint32_t indexCount, uint32_t firstIndex, int32_t baseVertex) -> void {
+    FlushState();
     vkCmdDrawIndexed(_cmd, indexCount, 1, firstIndex, baseVertex, 0);
 }
 
-
-// ─── compute dispatch ─────────────────────────────────────────────────────────
-
 auto SenVulkanCommandBuffer::Dispatch(uint32_t x, uint32_t y, uint32_t z) -> void {
+    FlushState();
     vkCmdDispatch(_cmd, x, y, z);
 }

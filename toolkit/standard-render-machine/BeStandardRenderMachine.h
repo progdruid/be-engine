@@ -114,7 +114,7 @@ class BeStandardRenderMachine {
     expose
     auto DeclareGBufferTarget(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture>;
     auto DeclareDepth(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture>;
-    auto DeclareTexture(const std::string& name, SenFormat format, float sizeMultiplier = 1.0f) -> std::shared_ptr<BeTexture>;
+    auto DeclareTexture(const std::string& name, SenFormat format, float sizeMultiplier = 1.0f, bool storage = false) -> std::shared_ptr<BeTexture>;
     auto GetRenderTexture(const std::string& name) const -> std::shared_ptr<BeTexture>;
 
     // pass builders ---------------------------------------------------------------------------------------------------

@@ -25,6 +25,7 @@ struct BeMaterialTextureDescriptor {
     std::string Name;
     uint8_t SlotIndex;
     std::string DefaultTexturePath;
+    bool IsStorage = false;
 };
 
 struct BeMaterialSamplerDescriptor {

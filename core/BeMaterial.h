@@ -24,7 +24,12 @@ class BeMaterial {
     SenBindGroup _bindGroup;
     bool _bindGroupDirty;
 
-    std::unordered_map<std::string, std::pair<std::shared_ptr<BeTexture>, uint8_t>> _textures;
+    struct TextureBinding {
+        std::shared_ptr<BeTexture> Texture;
+        uint8_t Slot;
+        bool IsStorage;
+    };
+    std::unordered_map<std::string, TextureBinding> _textures;
     std::unordered_map<std::string, std::pair<SenSampler, uint8_t>> _samplers;
     std::unordered_map<std::string, uint32_t> _propertyOffsets;
     std::vector<float> _bufferData;

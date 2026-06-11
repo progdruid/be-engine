@@ -7,27 +7,32 @@
 #include <sen-rhi/SenBackend.h>
 #include <umbrellas/include-libassert.h>
 
-auto BePass::AddReadTexture(SenTexture texture) -> BePass& {
-    be_assert(texture.IsValid(), "BePass::AddReadTexture: invalid texture handle");
-    _reads.push_back(texture);
+auto BePass::SetCompute(bool isCompute) -> BePass& {
+    _isCompute = isCompute;
     return *this;
 }
 
-auto BePass::AddReadTexture(const std::shared_ptr<BeTexture>& texture) -> BePass& {
-    be_assert(texture != nullptr, "BePass::AddReadTexture: null texture");
-    return AddReadTexture(texture->Handle);
+auto BePass::UseTexture(SenTexture texture, bool useAsStorage) -> BePass& {
+    be_assert(texture.IsValid(), "BePass::AddReadTexture: invalid texture handle");
+    (useAsStorage ? _storageTextures : _reads).push_back(texture);
+    return *this;
 }
 
-auto BePass::AddReadTextures(const std::vector<std::shared_ptr<BeTexture>>& textures) -> BePass& {
+auto BePass::UseTexture(const std::shared_ptr<BeTexture>& texture, bool useAsStorage) -> BePass& {
+    be_assert(texture != nullptr, "BePass::AddReadTexture: null texture");
+    return UseTexture(texture->Handle, useAsStorage);
+}
+
+auto BePass::UseTextures(const std::vector<std::shared_ptr<BeTexture>>& textures) -> BePass& {
     for (const auto& texture : textures) {
-        AddReadTexture(texture);
+        UseTexture(texture);
     }
     return *this;
 }
 
-auto BePass::AddReadMaterial(const BeMaterial& material) -> BePass& {
-    for (const auto& [texture, slot] : material.GetTextures()) {
-        AddReadTexture(texture);
+auto BePass::UseMaterial(const BeMaterial& material) -> BePass& {
+    for (const auto& binding : material.GetTextures()) {
+        UseTexture(binding.Texture, binding.IsStorage);
     }
     return *this;
 }
@@ -79,17 +84,25 @@ auto BePass::SetViewport(SenViewport viewport) -> BePass& {
 }
 
 auto BePass::Begin() -> void {
+    const bool hasTargets = !_colorTargets.empty() || _depthTarget.has_value();
     be_assert(
-        !_colorTargets.empty() || _depthTarget.has_value(),
-        "BePass::Begin: pass has no render targets (need at least one color target or a depth target)"
+        _isCompute || hasTargets,
+        "BePass::Begin: graphics pass has no render targets (need at least one color target or a depth target)"
+    );
+    be_assert(
+        !_isCompute || !hasTargets,
+        "BePass::Begin: compute pass cannot have render targets"
     );
 
     auto& cmd = SenBackend::GetCommandBuffer();
 
     std::vector<std::pair<SenTexture, SenResourceState>> transitions;
-    transitions.reserve(_reads.size() + _colorTargets.size() + 1);
+    transitions.reserve(_reads.size() + _storageTextures.size() + _colorTargets.size() + 1);
     for (const auto texture : _reads) {
         transitions.emplace_back(texture, SenResourceState::ShaderRead);
+    }
+    for (const auto texture : _storageTextures) {
+        transitions.emplace_back(texture, SenResourceState::UnorderedAccess);
     }
     for (const auto& target : _colorTargets) {
         transitions.emplace_back(target.Texture, SenResourceState::ColorAttachment);
@@ -99,13 +112,17 @@ auto BePass::Begin() -> void {
     }
     cmd.TransitionTextures(transitions);
 
-    cmd.BeginPass({
-        .ColorAttachments = _colorTargets,
-        .DepthAttachment  = _depthTarget,
-        .Viewport         = _viewport,
-    });
+    if (!_isCompute) {
+        cmd.BeginPass({
+            .ColorAttachments = _colorTargets,
+            .DepthAttachment  = _depthTarget,
+            .Viewport         = _viewport,
+        });
+    }
 }
 
 auto BePass::End() -> void {
-    SenBackend::GetCommandBuffer().EndPass();
+    if (!_isCompute) {
+        SenBackend::GetCommandBuffer().EndPass();
+    }
 }

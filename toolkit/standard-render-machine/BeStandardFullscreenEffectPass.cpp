@@ -33,7 +33,7 @@ auto BeStandardFullscreenEffectPass::Render() -> void {
 
     BePass pass;
     if (_material) {
-        pass.AddReadMaterial(*_material);
+        pass.UseMaterial(*_material);
     }
     pass.AddColorTargets(_outputs, SenLoadOp::Load);
     pass.SetViewport(_renderer->GetViewport());

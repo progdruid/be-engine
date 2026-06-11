@@ -210,7 +210,7 @@ namespace Sen::Vulkan {
                 access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
                 break;
             case VK_IMAGE_LAYOUT_GENERAL:
-                stage  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+                stage  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
                 access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
                 break;
             case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
