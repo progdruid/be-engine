@@ -23,10 +23,10 @@ auto Game::Run() -> int {
     Height = 1080;
     
     Window = std::make_shared<BeWindow>(0, 0, "be: example sakura", BeWindowMode::Fullscreen);
-    Width = Window->GetFramebufferWidth();
-    Height = Window->GetFramebufferHeight();
-    Renderer = std::make_shared<BeRenderer>(Width, Height, static_cast<void*>(Window->GetGlfwWindow()));
+    Renderer = std::make_shared<BeRenderer>(Window->GetReportedPixelWidth(), Window->GetReportedPixelHeight(), static_cast<void*>(Window->GetGlfwWindow()));
     Renderer->LaunchDevice();
+    Width = Renderer->GetSwapchainPixelWidth();
+    Height = Renderer->GetSwapchainPixelHeight();
 
     Input = std::make_unique<BeInput>(Window->GetGlfwWindow());
 

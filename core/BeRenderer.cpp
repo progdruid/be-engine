@@ -9,12 +9,12 @@ auto BeRenderer::GetCommandBuffer() -> SenCommandBuffer& {
 }
 
 BeRenderer::BeRenderer(
-    uint32_t width,
-    uint32_t height,
+    uint32_t desiredWidth,
+    uint32_t desiredHeight,
     void* nativeWindow
 )
-    : _width(width)
-    , _height(height)
+    : _desiredWidth(desiredWidth)
+    , _desiredHeight(desiredHeight)
     , _nativeWindow(nativeWindow)
 {}
 
@@ -31,8 +31,8 @@ auto BeRenderer::LaunchDevice() -> void {
 
     _swapchain = SenBackend::CreateSwapchain({
         .NativeWindowHandle = _nativeWindow,
-        .Width = _width,
-        .Height = _height,
+        .Width = _desiredWidth,
+        .Height = _desiredHeight,
     });
 
     SenBackend::CreateCommandBuffer();
@@ -40,6 +40,18 @@ auto BeRenderer::LaunchDevice() -> void {
 
 auto BeRenderer::GetSwapchainFormat() const -> SenFormat {
     return SenBackend::GetSwapchainFormat(_swapchain);
+}
+
+auto BeRenderer::GetSwapchainPixelWidth() const -> uint32_t {
+    return SenBackend::GetSwapchainWidth(_swapchain);
+}
+
+auto BeRenderer::GetSwapchainPixelHeight() const -> uint32_t {
+    return SenBackend::GetSwapchainHeight(_swapchain);
+}
+
+auto BeRenderer::GetViewport() const -> SenViewport {
+    return { 0, 0, float(GetSwapchainPixelWidth()), float(GetSwapchainPixelHeight()), 0, 1 };
 }
 
 auto BeRenderer::AddRenderPass(BeRenderPass* renderPass) -> void {

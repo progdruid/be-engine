@@ -200,6 +200,14 @@ auto SenVulkanBackend::GetSwapchainFormat(SenSwapchain handle) -> SenFormat {
     return _swapchains.at(handle.ID).Format;
 }
 
+auto SenVulkanBackend::GetSwapchainWidth(SenSwapchain handle) -> uint32_t {
+    return _swapchains.at(handle.ID).Width;
+}
+
+auto SenVulkanBackend::GetSwapchainHeight(SenSwapchain handle) -> uint32_t {
+    return _swapchains.at(handle.ID).Height;
+}
+
 auto SenVulkanBackend::BeginFrame(SenSwapchain handle) -> SenTexture {
     auto& entry = _swapchains.at(handle.ID);
 

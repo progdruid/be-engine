@@ -14,14 +14,10 @@ namespace {
     }
 }
 
-BeWindow::BeWindow(int desiredWidth, int desiredHeight, const std::string& title, BeWindowMode mode) : 
-    _window(nullptr), 
-    _width(0), 
-    _height(0), 
-    _framebufferWidth(0), 
-    _framebufferHeight(0), 
-    _title(title), 
-    _mode(mode) 
+BeWindow::BeWindow(int desiredWidth, int desiredHeight, const std::string& title, BeWindowMode mode) :
+    _window(nullptr),
+    _title(title),
+    _mode(mode)
 {
     SetupErrorCallback();
 
@@ -43,9 +39,7 @@ BeWindow::BeWindow(int desiredWidth, int desiredHeight, const std::string& title
         
         _window = glfwCreateWindow(videoMode->width, videoMode->height, title.c_str(), primaryMonitor, nullptr);
         be_assert(_window, "Failed to create GLFW window for Fullscreen mode");
-        glfwGetWindowSize(_window, &_width, &_height);
-        glfwGetFramebufferSize(_window, &_framebufferWidth, &_framebufferHeight);
-    } 
+    }
     else if (mode == BeWindowMode::BorderlessFullscreen) {
         GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
         be_assert(primaryMonitor, "Primary monitor invalid");
@@ -60,15 +54,11 @@ BeWindow::BeWindow(int desiredWidth, int desiredHeight, const std::string& title
         
         _window = glfwCreateWindow(videoMode->width, videoMode->height, title.c_str(), primaryMonitor, nullptr);
         be_assert(_window, "Failed to create GLFW window for Borderless Fullscreen mode");
-        glfwGetWindowSize(_window, &_width, &_height);
-        glfwGetFramebufferSize(_window, &_framebufferWidth, &_framebufferHeight);
         glfwSetWindowPos(_window, 0, 0);
     }
     else if (mode == BeWindowMode::Windowed) {
         _window = glfwCreateWindow(desiredWidth, desiredHeight, title.c_str(), nullptr, nullptr);
         be_assert(_window, "Failed to create GLFW window for Windowed mode");
-        glfwGetWindowSize(_window, &_width, &_height);
-        glfwGetFramebufferSize(_window, &_framebufferWidth, &_framebufferHeight);
     }
 }
 
@@ -81,21 +71,14 @@ BeWindow::~BeWindow() {
 
 BeWindow::BeWindow(BeWindow&& other) noexcept
     : _window(other._window)
-    , _width(other._width)
-    , _height(other._height)
-    , _framebufferWidth(other._framebufferWidth)
-    , _framebufferHeight(other._framebufferHeight)
     , _title(std::move(other._title))
-    , _mode(other._mode) 
+    , _mode(other._mode)
 {
     other._window = nullptr;
 }
 
 BeWindow& BeWindow::operator=(BeWindow&& other) noexcept {
     if (this != &other) {
-        _height = other._height;
-        _framebufferWidth = other._framebufferWidth;
-        _framebufferHeight = other._framebufferHeight;
         _title = std::move(other._title);
         _mode = other._mode;
 
@@ -104,7 +87,6 @@ BeWindow& BeWindow::operator=(BeWindow&& other) noexcept {
         }
 
         _window = other._window;
-        _width = other._width;
         other._window = nullptr;
     }
     return *this;
@@ -124,6 +106,30 @@ auto BeWindow::ShouldClose() const -> bool {
 
 auto BeWindow::GetGlfwWindow() const -> GLFWwindow* {
     return _window;
+}
+
+auto BeWindow::GetReportedLogicalWidth() const -> int {
+    int w = 0, h = 0;
+    glfwGetWindowSize(_window, &w, &h);
+    return w;
+}
+
+auto BeWindow::GetReportedLogicalHeight() const -> int {
+    int w = 0, h = 0;
+    glfwGetWindowSize(_window, &w, &h);
+    return h;
+}
+
+auto BeWindow::GetReportedPixelWidth() const -> int {
+    int w = 0, h = 0;
+    glfwGetFramebufferSize(_window, &w, &h);
+    return w;
+}
+
+auto BeWindow::GetReportedPixelHeight() const -> int {
+    int w = 0, h = 0;
+    glfwGetFramebufferSize(_window, &w, &h);
+    return h;
 }
 
 auto BeWindow::SetupErrorCallback() -> void {
@@ -164,14 +170,13 @@ auto BeWindow::DebugPollSizes() const -> void {
     float scaleX = 1.f, scaleY = 1.f;
     int windowWidth = 0, windowHeight = 0;
     int framebufferWidth = 0, framebufferHeight = 0;
-    int computedFramebufferWidth = 0, computedFramebufferHeight = 0;
     glfwGetWindowSize(_window, &windowWidth, &windowHeight);
     glfwGetWindowContentScale(_window, &scaleX, &scaleY);
     glfwGetFramebufferSize(_window, &framebufferWidth, &framebufferHeight);
-    computedFramebufferWidth  = static_cast<int>(static_cast<float>(windowWidth)  * scaleX);
-    computedFramebufferHeight = static_cast<int>(static_cast<float>(windowHeight) * scaleY);
+    const int computedFramebufferWidth = static_cast<int>(static_cast<float>(windowWidth) * scaleX);
+    const int computedFramebufferHeight = static_cast<int>(static_cast<float>(windowHeight) * scaleY);
     std::fprintf(stderr,
         "[BeWindow] logicalSize=%dx%d  framebuffer=%dx%d  computedFramebuffer=%dx%d  contentScale=%.2fx%.2f\n",
-        _width, _height, _framebufferWidth, _framebufferHeight, computedFramebufferWidth, computedFramebufferHeight, scaleX, scaleY
+        windowWidth, windowHeight, framebufferWidth, framebufferHeight, computedFramebufferWidth, computedFramebufferHeight, scaleX, scaleY
     );
 }

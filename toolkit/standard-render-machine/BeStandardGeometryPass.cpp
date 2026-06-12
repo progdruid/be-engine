@@ -33,7 +33,7 @@ auto BeStandardGeometryPass::Render() -> void {
     BePass pass;
     pass.AddColorTargets(_colorTargets);
     pass.SetDepthTarget(_depthTarget);
-    pass.SetViewport({ 0, 0, float(_renderer->GetWidth()), float(_renderer->GetHeight()), 0, 1 });
+    pass.SetViewport({ 0, 0, float(_renderer->GetSwapchainPixelWidth()), float(_renderer->GetSwapchainPixelHeight()), 0, 1 });
     pass.Begin();
     SCOPE_EXIT { pass.End(); };
 

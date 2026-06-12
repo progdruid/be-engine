@@ -117,6 +117,8 @@ class SenVulkanBackend {
     static auto BeginFrame            (SenSwapchain handle) -> SenTexture;
     static auto EndFrame              (SenSwapchain handle) -> void;
     static auto GetSwapchainFormat    (SenSwapchain handle) -> SenFormat;
+    static auto GetSwapchainWidth     (SenSwapchain handle) -> uint32_t;
+    static auto GetSwapchainHeight    (SenSwapchain handle) -> uint32_t;
 
     expose // command buffer factory
     static auto CreateCommandBuffer () -> void;

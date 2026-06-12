@@ -20,8 +20,8 @@ auto Game::Run() -> int {
     Height = 1080;
 
     Window = std::make_shared<BeWindow>(Width, Height, "be: example game 1");
-    Width = Window->GetFramebufferWidth();
-    Height = Window->GetFramebufferHeight();
+    Width = Window->GetReportedPixelWidth();
+    Height = Window->GetReportedPixelHeight();
     Renderer = std::make_shared<BeRenderer>(Width, Height, static_cast<void*>(Window->GetGlfwWindow()));
     Renderer->LaunchDevice();
     

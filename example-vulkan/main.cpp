@@ -26,8 +26,8 @@ int main() {
 
     auto swapchain = SenBackend::CreateSwapchain({
         .NativeWindowHandle = window->GetGlfwWindow(),
-        .Width  = uint32_t(window->GetWidth()),
-        .Height = uint32_t(window->GetHeight()),
+        .Width  = uint32_t(window->GetReportedLogicalWidth()),
+        .Height = uint32_t(window->GetReportedLogicalHeight()),
     });
 
     const SenFormat swapchainFormat = SenBackend::GetSwapchainFormat(swapchain);
@@ -80,7 +80,7 @@ int main() {
 
         BePass pass;
         pass.AddColorTarget(backbuffer, SenLoadOp::Clear, { 0.1f, 0.1f, 0.1f, 1.0f });
-        pass.SetViewport({ 0, 0, float(window->GetWidth()), float(window->GetHeight()), 0, 1 });
+        pass.SetViewport({ 0, 0, float(window->GetReportedLogicalWidth()), float(window->GetReportedLogicalHeight()), 0, 1 });
         pass.Begin();
 
         cmd.SetPipeline(pipeline);

@@ -14,8 +14,8 @@ class BeShader;
 class BeRenderer {
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide
-    uint32_t _width;
-    uint32_t _height;
+    uint32_t _desiredWidth;
+    uint32_t _desiredHeight;
     void* _nativeWindow;
     SenSwapchain _swapchain;
 
@@ -26,8 +26,8 @@ class BeRenderer {
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
     explicit BeRenderer(
-        uint32_t width,
-        uint32_t height,
+        uint32_t desiredWidth,
+        uint32_t desiredHeight,
         void* nativeWindow
     );
     ~BeRenderer();
@@ -43,10 +43,8 @@ class BeRenderer {
     [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer&;
     [[nodiscard]] auto GetBackbufferTexture() const -> SenTexture { return _backbufferTexture; }
 
-    [[nodiscard]] auto GetWidth () const -> uint32_t { return _width; }
-    [[nodiscard]] auto GetHeight () const -> uint32_t { return _height; }
-    [[nodiscard]] auto GetViewport () const -> SenViewport {
-        return { 0, 0, float(_width), float(_height), 0, 1 };
-    }
+    [[nodiscard]] auto GetSwapchainPixelWidth () const -> uint32_t;
+    [[nodiscard]] auto GetSwapchainPixelHeight () const -> uint32_t;
+    [[nodiscard]] auto GetViewport () const -> SenViewport;
     [[nodiscard]] auto GetSwapchainFormat() const -> SenFormat;
 };

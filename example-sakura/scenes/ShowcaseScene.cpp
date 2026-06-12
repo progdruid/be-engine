@@ -38,8 +38,8 @@ ShowcaseScene::~ShowcaseScene() = default;
 
 void ShowcaseScene::Prepare() {
     _camera = std::make_shared<BeCamera>();
-    _camera->Width = GameIns->Window->GetWidth();
-    _camera->Height = GameIns->Window->GetHeight();
+    _camera->Width = GameIns->Renderer->GetSwapchainPixelWidth();
+    _camera->Height = GameIns->Renderer->GetSwapchainPixelHeight();
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
@@ -60,8 +60,8 @@ void ShowcaseScene::Prepare() {
     _uniformMaterial = BeMaterial::Create("uniform-material", false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
-    const uint32_t screenWidth  = GameIns->Window->GetFramebufferWidth();
-    const uint32_t screenHeight = GameIns->Window->GetFramebufferHeight();
+    const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
+    const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
 
     _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
 

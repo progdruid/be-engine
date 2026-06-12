@@ -17,6 +17,7 @@
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "BeWindow.h"
+#include "BeRenderer.h"
 #include "Components.h"
 #include "Game.h"
 #include "scenes/BeSceneManager.h"
@@ -27,8 +28,8 @@ SakuraScene::~SakuraScene() = default;
 
 auto SakuraScene::Prepare() -> void {
     _camera = std::make_unique<BeCamera>();
-    _camera->Width = GameIns->Window->GetWidth();
-    _camera->Height = GameIns->Window->GetHeight();
+    _camera->Width = GameIns->Renderer->GetSwapchainPixelWidth();
+    _camera->Height = GameIns->Renderer->GetSwapchainPixelHeight();
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
@@ -58,8 +59,8 @@ auto SakuraScene::Prepare() -> void {
     const auto phongShader       = BeAssetRegistry::GetShader("standard-phong");
     const auto checkerboardShader = BeAssetRegistry::GetShader("checkerboard");
 
-    const uint32_t screenWidth  = GameIns->Window->GetFramebufferWidth();
-    const uint32_t screenHeight = GameIns->Window->GetFramebufferHeight();
+    const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
+    const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
 
     _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
 

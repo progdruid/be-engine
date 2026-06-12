@@ -20,8 +20,8 @@ MainScene::~MainScene() = default;
 
 auto MainScene::Prepare() -> void {
     _camera = std::make_unique<BeCamera>();
-    _camera->Width = GameIns->Window->GetWidth();
-    _camera->Height = GameIns->Window->GetHeight();
+    _camera->Width = GameIns->Window->GetReportedLogicalWidth();
+    _camera->Height = GameIns->Window->GetReportedLogicalHeight();
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
 
@@ -62,8 +62,8 @@ auto MainScene::Prepare() -> void {
     const auto standardShader   = BeAssetRegistry::GetShader("standard");
     const auto tessellatedShader = BeAssetRegistry::GetShader("tessellated");
 
-    const uint32_t screenWidth  = GameIns->Window->GetFramebufferWidth();
-    const uint32_t screenHeight = GameIns->Window->GetFramebufferHeight();
+    const uint32_t screenWidth  = GameIns->Window->GetReportedPixelWidth();
+    const uint32_t screenHeight = GameIns->Window->GetReportedPixelHeight();
 
     _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
 
