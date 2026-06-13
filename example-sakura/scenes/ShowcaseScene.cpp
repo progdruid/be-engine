@@ -92,6 +92,12 @@ auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
     BeAssetRegistry::AddProp("apfel",           machine.LoadProp("assets/apfel/scene.gltf",           standardShader));
     BeAssetRegistry::AddProp("eggplant",        machine.LoadProp("assets/eggplant/scene.gltf",        standardShader));
     BeAssetRegistry::AddProp("tomatoes",        machine.LoadProp("assets/tomatoes/scene.gltf",        standardShader));
+    const auto headset =             machine.LoadProp("assets/headset/scene.gltf",         standardShader);
+    for (auto& m : headset->Materials) {
+        m->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
+        //m->SetSampler("InputSampler", BeAssetRegistry::GetSampler("linear-clamp"));
+    }
+    BeAssetRegistry::AddProp("headset", headset);
 
     auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
     skycube->Materials[0]->SetFloat3("BaseColor", HexColor("#FAC8CD"));
@@ -182,7 +188,8 @@ void ShowcaseScene::Tick(float deltaTime) {
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_2)) {
         startBrace(GLFW_KEY_2, "still-life",     "#D0D0C4", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(4.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_3)) {
-        startBrace(GLFW_KEY_3, "fiesta-tea",     "#61636D", TransformComponent { .Position = { 0, -1, 0 }, .Scale = glm::vec3(2.f) });
+        //startBrace(GLFW_KEY_3, "fiesta-tea",     "#61636D", TransformComponent { .Position = { 0, -1, 0 }, .Scale = glm::vec3(2.f) });
+        startBrace(GLFW_KEY_3, "headset",        "#84DCC6", TransformComponent { .Position = { 0, -0.5, 0 }, .Scale = glm::vec3(2.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_4)) {
         startBrace(GLFW_KEY_4, "honeydew_melons","#855C36", TransformComponent { .Position = { 0.f, 1.f, 0.f } });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_5)) {

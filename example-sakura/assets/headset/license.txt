@@ -1,0 +1,11 @@
+Model Information:
+* title:	Low-Poly "Color Pop" Razer Kraken Headset
+* source:	https://sketchfab.com/3d-models/low-poly-color-pop-razer-kraken-headset-2a8c127af7cb4261832224e5bfece51a
+* author:	impique (https://sketchfab.com/impique)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Low-Poly "Color Pop" Razer Kraken Headset" (https://sketchfab.com/3d-models/low-poly-color-pop-razer-kraken-headset-2a8c127af7cb4261832224e5bfece51a) by impique (https://sketchfab.com/impique) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
