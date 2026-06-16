@@ -113,14 +113,22 @@ PixelOutput PixelFunction(Interpolators input) {
     float3 B = cross(N, T) * input.Tangent.w;
     float3x3 TBN = float3x3(T, B, N);
     float3 normalSample = NormalMap.Sample(InputSampler, input.UV).rgb * 2.0 - 1.0;
+    // Toksvig factor: the mipped (non-renormalized) normal shrinks where sub-pixel normal variance is high
+    float toksvig = saturate(length(normalSample));
     float3 worldNormal  = normalize(mul(normalSample, TBN));
+
+    // reduce shininess to match the footprint's normal spread, killing specular aliasing
+    float shininess = _GeometryMain.Shininess * 2048.0;
+    float toksvigShininess = (toksvig < 1.0)
+        ? (toksvig * shininess) / (toksvig + shininess * (1.0 - toksvig))
+        : shininess;
 
     PixelOutput output;
     output.Albedo_RGB          = diffuse.rgb * _GeometryMain.DiffuseColor;
     output.WorldNormal_XYZ.xyz = worldNormal;
     output.WorldNormal_XYZ.w   = 1.0;  // flag: Blinn-Phong pipeline
     output.SurfaceData.rgb     = specular * _GeometryMain.SpecularColor;
-    output.SurfaceData.a       = _GeometryMain.Shininess;  // 0-1 normalized, lighting shader multiplies by 2048
+    output.SurfaceData.a       = toksvigShininess / 2048.0;  // 0-1 normalized, lighting shader multiplies by 2048
     output.EmissiveRGB         = emissive * _GeometryMain.EmissiveColor;
     return output;
 }

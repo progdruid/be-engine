@@ -115,7 +115,18 @@ PixelOutput PixelFunction(Interpolators input) {
     float3 B = cross(N, T) * input.Tangent.w;
     float3x3 TBN = float3x3(T, B, N);
     float3 normalSample = NormalMap.Sample(InputSampler, input.UV).rgb * 2.0 - 1.0;
+    // Toksvig factor: the mipped (non-renormalized) normal shrinks where sub-pixel normal variance is high
+    float toksvig = saturate(length(normalSample));
     float3 worldNormal  = normalize(mul(normalSample, TBN));
+
+    // roughen the surface to match the footprint's normal spread, killing specular aliasing.
+    // routed through the Phong-exponent relation (s = 2/a^2 - 2) so the same Toksvig factor drives both pipelines
+    float roughness = clamp(orm.g * _GeometryMain.Roughness, 0.04, 1.0);
+    float specPower = 2.0 / (roughness * roughness) - 2.0;
+    float toksvigPower = (toksvig < 1.0)
+        ? (toksvig * specPower) / (toksvig + specPower * (1.0 - toksvig))
+        : specPower;
+    float toksvigRoughness = sqrt(2.0 / (toksvigPower + 2.0));
 
     PixelOutput output;
     output.Albedo_RGB           = diffuse_albedo.rgb * _GeometryMain.BaseColor;
@@ -123,7 +134,7 @@ PixelOutput PixelFunction(Interpolators input) {
     output.WorldNormal_XYZ.w    = 0.0;
     output.ORM_RGB              = float4(
         orm.r * _GeometryMain.AO,
-        orm.g * _GeometryMain.Roughness,
+        toksvigRoughness,
         orm.b * _GeometryMain.Metallic,
         0.0
     );
