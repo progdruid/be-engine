@@ -1,26 +1,20 @@
 #pragma once
 
-#include <umbrellas/include-glm.h>
+#include <string>
+#include <unordered_map>
+
 #include <umbrellas/access-modifiers.hpp>
 
-#include "BeRail.h"
-#include "BeTrack.h"
+#include "BeCameraShot.h"
 
 class BeCamera;
-
-enum class RigAim { Target, Tangent };
 
 class RigCameraController {
     hide
     BeCamera* _camera;
 
-    BeRail _pathRail;
-    BeTrack<float> _pathWarp;
-
-    RigAim _aimMode = RigAim::Target;
-    BeTrack<glm::vec3> _aimTarget;
-    BeTrack<float> _fov;
-
+    std::unordered_map<std::string, BeCameraShot> _shots;
+    const BeCameraShot* _current = nullptr;
     float _t = 0.0f;
     float _speed = 1.0f;
     bool _playing = false;
@@ -31,17 +25,8 @@ class RigCameraController {
 
     explicit RigCameraController(BeCamera* camera);
 
-    auto SetPathRail(BeRail path) -> void;
-    auto GetPathRail() const -> const BeRail& { return _pathRail; }
-    auto PathWarp() -> BeTrack<float>& { return _pathWarp; }
-
-    auto AimAt() -> BeTrack<glm::vec3>& { _aimMode = RigAim::Target; return _aimTarget; }
-    auto AimAlongTangent() -> void { _aimMode = RigAim::Tangent; }
-
-    auto Fov() -> BeTrack<float>& { return _fov; }
-    auto Configure(bool loop = false, float speed = 1.0f) -> void;
-
-    auto Play() -> void;
+    auto AddShot(std::string name) -> BeCameraShot&;
+    auto Play(const std::string& name, bool loop = false, float speed = 1.0f) -> void;
     auto Pause() -> void;
     auto Resume() -> void;
     auto Stop() -> void;
@@ -50,7 +35,6 @@ class RigCameraController {
 
     auto Update(float deltaTime) -> void;
 
-    auto Duration() const -> float;
     auto IsPlaying() const -> bool { return _playing; }
     auto IsFinished() const -> bool;
 };

@@ -151,7 +151,8 @@ auto SakuraScene::Prepare() -> void {
 
     _rigCameraController = std::make_unique<RigCameraController>(_camera.get());
 
-    _rigCameraController->SetPathRail(BeRail()
+    BeCameraShot& flythrough = _rigCameraController->AddShot("flythrough");
+    flythrough.SetPathRail(BeRail()
         .Knot({ 12.0f, 2.0f,  0.0f})
         .Knot({  6.0f, 1.3f,  7.0f})
         .Knot({  1.5f, 2.6f,  5.5f})
@@ -163,18 +164,16 @@ auto SakuraScene::Prepare() -> void {
         .Close()
         .Finalize());
 
-    const BeRail& path = _rigCameraController->GetPathRail();
-    _rigCameraController->PathWarp()
+    const BeRail& path = flythrough.GetPathRail();
+    flythrough.PathWarp()
         .Key( 0.0f, path.IndexToDistance(0.0f), BeTrackInterp::Linear)
         .Key(22.0f, path.IndexToDistance(8.0f), BeTrackInterp::Linear);
 
-    _rigCameraController->AimAt()
+    flythrough.AimAt()
         .Key( 0.0f, {  0.0f,  1.0f,   0.0f}, BeTrackInterp::Linear)
-        .Key( 6.0f, {  0.0f,  1.0f,   0.0f}, BeTrackInterp::EaseInOut)
-        .Key(14.0f, {100.0f,150.0f, 100.0f}, BeTrackInterp::EaseInOut)
+        .Key( 12.0f, {  0.0f,  1.0f,   0.0f}, BeTrackInterp::EaseInOut)
+        .Key(18.0f, {100.0f,150.0f, 100.0f}, BeTrackInterp::EaseInOut)
         .Key(22.0f, {  0.0f,  1.0f,   0.0f}, BeTrackInterp::EaseInOut);
-
-    _rigCameraController->Configure(/*loop*/ true);
 }
 
 auto SakuraScene::OnLoad() -> void {
@@ -239,7 +238,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
 
     if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
         _cameraMode = (_cameraMode + 1) % 3;
-        if (_cameraMode == 2) _rigCameraController->Play();
+        if (_cameraMode == 2) _rigCameraController->Play("flythrough", /*loop*/ true);
     }
 
     if (GameIns->Input->GetKeyDown(GLFW_KEY_HOME)) _machine->SetDebugChannel(-1);  // normal output
