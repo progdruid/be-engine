@@ -10,7 +10,7 @@
     SpecularTexture: texture2d = black
     EmissiveTexture: texture2d = black
     NormalMap: texture2d = flat-normal
-    InputSampler: sampler = linear-clamp
+    InputSampler: sampler = anisotropic-wrap
 }
 
 @be-shader standard-phong {

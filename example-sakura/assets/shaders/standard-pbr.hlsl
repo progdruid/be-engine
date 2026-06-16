@@ -11,7 +11,7 @@
     ORM_RGB: texture2d = default-orm
     Emissive_RGB: texture2d = white
     NormalMap: texture2d = flat-normal
-    InputSampler: sampler = linear-clamp
+    InputSampler: sampler = anisotropic-wrap
 }
 
 @be-shader standard-pbr {

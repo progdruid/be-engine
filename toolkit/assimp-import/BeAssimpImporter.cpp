@@ -142,7 +142,9 @@ auto BeAssimpImporter::LoadTextureFromAssimpPath(
     auto builder =
         BeTexture::Create("TODO" + std::to_string(tempCount))
         .SetUsage(SenTextureUsage::ShaderResource)
-        .SetFormat(SenFormat::RGBA8_Unorm);
+        .SetFormat(SenFormat::RGBA8_Unorm)
+        .SetMipsAuto()
+        .GenerateMips();
 
 
     if (texPath.C_Str()[0] != '*') {
