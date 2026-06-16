@@ -128,13 +128,21 @@ PixelOutput PixelFunction(Interpolators input) {
         : specPower;
     float toksvigRoughness = sqrt(2.0 / (toksvigPower + 2.0));
 
+    // Geometric specular AA: estimate screen-space shading-normal variance and fold it in as extra roughness.
+    // catches curvature/geometry aliasing that the texture-space Toksvig term can't see.
+    float3 dNdx = ddx(worldNormal);
+    float3 dNdy = ddy(worldNormal);
+    float geoVariance = 0.5 * (dot(dNdx, dNdx) + dot(dNdy, dNdy));
+    float kernelRoughness2 = min(2.0 * geoVariance, 0.18);
+    float finalRoughness = sqrt(saturate(toksvigRoughness * toksvigRoughness + kernelRoughness2));
+
     PixelOutput output;
     output.Albedo_RGB           = diffuse_albedo.rgb * _GeometryMain.BaseColor;
     output.WorldNormal_XYZ.xyz  = worldNormal;
     output.WorldNormal_XYZ.w    = 0.0;
     output.ORM_RGB              = float4(
         orm.r * _GeometryMain.AO,
-        toksvigRoughness,
+        finalRoughness,
         orm.b * _GeometryMain.Metallic,
         0.0
     );

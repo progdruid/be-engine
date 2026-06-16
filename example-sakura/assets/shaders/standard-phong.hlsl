@@ -123,12 +123,21 @@ PixelOutput PixelFunction(Interpolators input) {
         ? (toksvig * shininess) / (toksvig + shininess * (1.0 - toksvig))
         : shininess;
 
+    // Geometric specular AA: add screen-space shading-normal variance as extra roughness (in a^2 space),
+    // catching curvature/geometry aliasing the texture-space Toksvig term can't see, then convert back to shininess
+    float3 dNdx = ddx(worldNormal);
+    float3 dNdy = ddy(worldNormal);
+    float geoVariance = 0.5 * (dot(dNdx, dNdx) + dot(dNdy, dNdy));
+    float kernelRoughness2 = min(2.0 * geoVariance, 0.18);
+    float alpha2 = saturate(2.0 / (toksvigShininess + 2.0) + kernelRoughness2);
+    float finalShininess = 2.0 / alpha2 - 2.0;
+
     PixelOutput output;
     output.Albedo_RGB          = diffuse.rgb * _GeometryMain.DiffuseColor;
     output.WorldNormal_XYZ.xyz = worldNormal;
     output.WorldNormal_XYZ.w   = 1.0;  // flag: Blinn-Phong pipeline
     output.SurfaceData.rgb     = specular * _GeometryMain.SpecularColor;
-    output.SurfaceData.a       = toksvigShininess / 2048.0;  // 0-1 normalized, lighting shader multiplies by 2048
+    output.SurfaceData.a       = finalShininess / 2048.0;  // 0-1 normalized, lighting shader multiplies by 2048
     output.EmissiveRGB         = emissive * _GeometryMain.EmissiveColor;
     return output;
 }
