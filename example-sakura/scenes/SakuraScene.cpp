@@ -7,6 +7,8 @@
 #include "BeRenderPass.h"
 #include "OrbitCameraController.h"
 #include "FreeCameraController.h"
+#include "RigCameraController.h"
+#include "RailGizmo.h"
 #include "BeAssetRegistry.h"
 #include "LuaSceneLoader.h"
 #include "BeCamera.h"
@@ -27,14 +29,6 @@ SakuraScene::SakuraScene(Game* game) : BaseScene(game) {}
 SakuraScene::~SakuraScene() = default;
 
 auto SakuraScene::Prepare() -> void {
-    _camera = std::make_unique<BeCamera>();
-    _camera->Width = GameIns->Renderer->GetSwapchainPixelWidth();
-    _camera->Height = GameIns->Renderer->GetSwapchainPixelHeight();
-    _camera->NearPlane = 0.1f;
-    _camera->FarPlane = 200.0f;
-    _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
-    _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
-
     BeAssetRegistry::IndexShaderFiles({
         "assets/shaders/uniform-material.hlsl",
         "assets/shaders/objectMaterial.hlsl",
@@ -146,6 +140,50 @@ auto SakuraScene::Prepare() -> void {
 
     _sceneLoader = std::make_unique<LuaSceneLoader>();
     RegisterComponentParsers(*_sceneLoader);
+
+    _camera = std::make_unique<BeCamera>();
+    _camera->Width = GameIns->Renderer->GetSwapchainPixelWidth();
+    _camera->Height = GameIns->Renderer->GetSwapchainPixelHeight();
+    _camera->NearPlane = 0.1f;
+    _camera->FarPlane = 250.0f;
+    _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
+    _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
+
+    _rigCameraController = std::make_unique<RigCameraController>(_camera.get());
+
+    _rigCameraController->SetPathRail(BeRail()
+        .Knot({ 12.0f, 2.0f,  0.0f})
+        .Knot({  6.0f, 1.3f,  7.0f})
+        .Knot({  1.5f, 2.6f,  5.5f})
+        .Knot({ -6.0f, 4.0f,  6.0f})
+        .Knot({-13.0f, 9.0f, -2.0f})
+        .Knot({ -5.0f,12.0f,-10.0f})
+        .Knot({  4.0f, 6.0f,-11.0f})
+        .Knot({ 10.0f, 2.5f, -5.0f})
+        .Close()
+        .Finalize());
+
+    const BeRail& path = _rigCameraController->GetPathRail();
+    _rigCameraController->PathWarp()
+        .Key( 0.0f, path.IndexToDistance(0.0f), BeTrackInterp::Linear)
+        .Key(22.0f, path.IndexToDistance(8.0f), BeTrackInterp::Linear);
+
+    _rigCameraController->SetAimRail(BeRail()
+        .Knot({  0.0f, 1.0f,  0.0f})
+        .Knot({ 20.0f,25.0f, 20.0f})
+        //.Knot({  0.0f,15.0f, 20.0f})
+        .Close()
+        .Finalize());
+
+    const BeRail& aim = _rigCameraController->GetAimRail();
+    _rigCameraController->AimWarp()
+        .Key( 0.0f, aim.IndexToDistance(0.0f), BeTrackInterp::Linear)
+        .Key( 6.0f, aim.IndexToDistance(0.0f), BeTrackInterp::EaseInOut)
+        .Key(12.0f, aim.IndexToDistance(1.0f), BeTrackInterp::EaseInOut)
+        .Key(18.0f, aim.IndexToDistance(2.0f), BeTrackInterp::Linear)
+        .Key(22.0f, aim.IndexToDistance(2.0f), BeTrackInterp::EaseInOut);
+
+    _rigCameraController->Configure(/*loop*/ true);
 }
 
 auto SakuraScene::OnLoad() -> void {
@@ -209,7 +247,8 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     static const auto OrbitingLightView = _registry.view<NameComponent, TransformComponent, PointLightComponent>(entt::exclude<StaticTag>);
 
     if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
-        _useOrbitCamera = !_useOrbitCamera;
+        _cameraMode = (_cameraMode + 1) % 3;
+        if (_cameraMode == 2) _rigCameraController->Play();
     }
 
     if (GameIns->Input->GetKeyDown(GLFW_KEY_HOME)) _machine->SetDebugChannel(-1);  // normal output
@@ -234,9 +273,12 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         _dofMaterial->SetFloat("FocalDistance",  dofFocalDistance);
     }
 
-    if (_useOrbitCamera) {
+    if (_cameraMode == 1) {
         GameIns->Input->SetMouseCapture(false);
         _orbitCameraController->Update(deltaTime, GameIns->Input.get());
+    } else if (_cameraMode == 2) {
+        GameIns->Input->SetMouseCapture(false);
+        _rigCameraController->Update(deltaTime);
     } else {
         _freeCameraController->Update(deltaTime, GameIns->Input.get());
     }
@@ -276,6 +318,10 @@ auto SakuraScene::Tick(float deltaTime) -> void {
             .CastShadows = render.CastShadows,
         });
     }
+
+    // DEBUG: aim path (warm dots / bluish knots) and position path (spheres / checker knots).
+    RailGizmo::DrawRail(*_machine, _rigCameraController->GetAimRail(), _emissiveCube, _moon);
+    RailGizmo::DrawRail(*_machine, _rigCameraController->GetPathRail(), _testSphere, _cube);
 
     for (const auto [entity, sunLight] : SunView.each()) {
         _machine->AddSunLight({

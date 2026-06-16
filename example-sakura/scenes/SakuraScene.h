@@ -10,6 +10,7 @@ class BeInput;
 class BeCamera;
 class OrbitCameraController;
 class FreeCameraController;
+class RigCameraController;
 class BeWindow;
 class BeRenderer;
 class BeStandardRenderMachine;
@@ -22,7 +23,8 @@ class SakuraScene : public BaseScene {
     std::shared_ptr<BeCamera> _camera;
     std::unique_ptr<OrbitCameraController> _orbitCameraController;
     std::unique_ptr<FreeCameraController> _freeCameraController;
-    bool _useOrbitCamera = false;
+    std::unique_ptr<RigCameraController> _rigCameraController;
+    int _cameraMode = 0;   // 0 = free, 1 = orbit, 2 = rig
 
     std::shared_ptr<BeProp> _cube, _anvil, _sakura, _sakura2, _emissiveCube, _moon, _testSphere, _axe, _katana, _rustySphere;
     std::shared_ptr<BeMaterial> _uniformMaterial;
