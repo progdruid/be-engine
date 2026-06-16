@@ -118,22 +118,30 @@ auto SenVulkanCommandBuffer::EndPass() -> void {
     vkCmdEndRendering(_cmd);
 }
 
-auto SenVulkanCommandBuffer::TransitionTextures(const std::vector<std::pair<SenTexture, SenResourceState>>& transitions) -> void {
+auto SenVulkanCommandBuffer::TransitionTextures(const std::vector<TextureTransition>& transitions) -> void {
     std::vector<VkImageMemoryBarrier2> barriers;
     barriers.reserve(transitions.size());
 
-    for (const auto& [texture, state] : transitions) {
-        auto& entry = SenVulkanBackend::LookupTexture(texture);
-        const VkImageLayout oldLayout = entry.CurrentLayout;
-        const VkImageLayout newLayout = Sen::Vulkan::ToImageLayout(state);
-        if (oldLayout == newLayout) { continue; }  // already in the target state — skip
+    for (const auto& transition : transitions) {
+        auto& entry = SenVulkanBackend::LookupTexture(transition.Texture);
+        const VkImageLayout newLayout = Sen::Vulkan::ToImageLayout(transition.State);
 
         const VkImageAspectFlags aspect = (entry.Format == VK_FORMAT_D32_SFLOAT)
             ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
 
-        const VkImageSubresourceRange range { aspect, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
-        barriers.push_back(SenVulkanBackend::MakeImageBarrier(entry.Image, range, oldLayout, newLayout));
-        entry.CurrentLayout = newLayout;
+        const uint32_t baseMip  = transition.BaseMip;
+        const uint32_t mipCount = transition.MipCount == TextureTransition::AllMips ? entry.MipLevels - baseMip : transition.MipCount;
+
+        // One barrier per mip whose layout actually changes — mips may sit in different layouts
+        // (e.g. bloom samples mip i while rendering into mip i+1 of the same image).
+        for (uint32_t mip = baseMip; mip < baseMip + mipCount; ++mip) {
+            const VkImageLayout oldLayout = entry.MipLayouts[mip];
+            if (oldLayout == newLayout) { continue; }
+
+            const VkImageSubresourceRange range { aspect, mip, 1, 0, VK_REMAINING_ARRAY_LAYERS };
+            barriers.push_back(SenVulkanBackend::MakeImageBarrier(entry.Image, range, oldLayout, newLayout));
+            entry.MipLayouts[mip] = newLayout;
+        }
     }
 
     if (barriers.empty()) { return; }

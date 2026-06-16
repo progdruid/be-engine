@@ -54,6 +54,8 @@ enum class SenResourceState : uint8_t {
     UnorderedAccess,
 };
 
+constexpr uint32_t SEN_FULL_MIPS = UINT32_MAX;
+
 struct SenTexture {
     uint32_t ID = 0;
     auto IsValid() const -> bool { return ID != 0; }
@@ -155,6 +157,7 @@ struct SenBindGroupDesc {
     std::vector<SenBuffer> Buffers = {};
     std::vector<SenSampler> Samplers = {};
     std::vector<SenTexture> Textures = {};
+    std::vector<uint32_t> TextureMips = {}; // parallel to Textures; UINT32_MAX = use full-mip SRV
     std::vector<SenTexture> StorageTextures = {};
     std::vector<SenBuffer> StorageBuffers = {};
 };

@@ -29,6 +29,7 @@ class BeMaterial {
         std::shared_ptr<BeTexture> Texture;
         uint8_t Slot;
         bool IsStorage;
+        uint32_t Mip = SEN_FULL_MIPS; // SEN_FULL_MIPS = full-mip SRV
     };
     std::unordered_map<std::string, TextureBinding> _textures;
     std::unordered_map<std::string, std::pair<SenSampler, uint8_t>> _samplers;
@@ -74,7 +75,7 @@ class BeMaterial {
     auto GetFloat4 (const std::string& propertyName) const -> glm::vec4;
     auto GetMatrix (const std::string& propertyName) const -> glm::mat4x4;
     
-    auto SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void;
+    auto SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture, uint32_t mip = SEN_FULL_MIPS) -> void;
     auto GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture>;
     auto GetTextures() const { return _textures | std::views::values; }
 

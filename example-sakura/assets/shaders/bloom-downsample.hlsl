@@ -68,19 +68,19 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     // d - e - f
     // - l - m -
     // g - h - i
-    float3 a = BloomMipInput.Sample(InputSampler, uv + t * float2(-2.0, -2.0)).rgb;
-    float3 b = BloomMipInput.Sample(InputSampler, uv + t * float2( 0.0, -2.0)).rgb;
-    float3 c = BloomMipInput.Sample(InputSampler, uv + t * float2( 2.0, -2.0)).rgb;
-    float3 d = BloomMipInput.Sample(InputSampler, uv + t * float2(-2.0,  0.0)).rgb;
-    float3 e = BloomMipInput.Sample(InputSampler, uv                         ).rgb;
-    float3 f = BloomMipInput.Sample(InputSampler, uv + t * float2( 2.0,  0.0)).rgb;
-    float3 g = BloomMipInput.Sample(InputSampler, uv + t * float2(-2.0,  2.0)).rgb;
-    float3 h = BloomMipInput.Sample(InputSampler, uv + t * float2( 0.0,  2.0)).rgb;
-    float3 i = BloomMipInput.Sample(InputSampler, uv + t * float2( 2.0,  2.0)).rgb;
-    float3 j = BloomMipInput.Sample(InputSampler, uv + t * float2(-1.0, -1.0)).rgb;
-    float3 k = BloomMipInput.Sample(InputSampler, uv + t * float2( 1.0, -1.0)).rgb;
-    float3 l = BloomMipInput.Sample(InputSampler, uv + t * float2(-1.0,  1.0)).rgb;
-    float3 m = BloomMipInput.Sample(InputSampler, uv + t * float2( 1.0,  1.0)).rgb;
+    float3 a = BloomMipInput.SampleLevel(InputSampler, uv + t * float2(-2.0, -2.0), 0).rgb;
+    float3 b = BloomMipInput.SampleLevel(InputSampler, uv + t * float2( 0.0, -2.0), 0).rgb;
+    float3 c = BloomMipInput.SampleLevel(InputSampler, uv + t * float2( 2.0, -2.0), 0).rgb;
+    float3 d = BloomMipInput.SampleLevel(InputSampler, uv + t * float2(-2.0,  0.0), 0).rgb;
+    float3 e = BloomMipInput.SampleLevel(InputSampler, uv                         , 0).rgb;
+    float3 f = BloomMipInput.SampleLevel(InputSampler, uv + t * float2( 2.0,  0.0), 0).rgb;
+    float3 g = BloomMipInput.SampleLevel(InputSampler, uv + t * float2(-2.0,  2.0), 0).rgb;
+    float3 h = BloomMipInput.SampleLevel(InputSampler, uv + t * float2( 0.0,  2.0), 0).rgb;
+    float3 i = BloomMipInput.SampleLevel(InputSampler, uv + t * float2( 2.0,  2.0), 0).rgb;
+    float3 j = BloomMipInput.SampleLevel(InputSampler, uv + t * float2(-1.0, -1.0), 0).rgb;
+    float3 k = BloomMipInput.SampleLevel(InputSampler, uv + t * float2( 1.0, -1.0), 0).rgb;
+    float3 l = BloomMipInput.SampleLevel(InputSampler, uv + t * float2(-1.0,  1.0), 0).rgb;
+    float3 m = BloomMipInput.SampleLevel(InputSampler, uv + t * float2( 1.0,  1.0), 0).rgb;
 
     float3 color;
     if (_Main.UseKaris > 0.5) {

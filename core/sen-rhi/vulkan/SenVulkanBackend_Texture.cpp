@@ -24,6 +24,7 @@ auto SenVulkanBackend::DestroyTexture(SenTexture handle) -> void {
 
         destroy(entry.SRV);
         destroy(entry.DSV);
+        for (auto v : entry.MipSRVs) { destroy(v); }
         for (auto v : entry.MipRTVs) { destroy(v); }
         for (auto v : entry.CubemapDSVs) { destroy(v); }
         for (auto& mips : entry.CubemapMipRTVs) { for (auto v : mips) { destroy(v); } }
@@ -47,6 +48,7 @@ auto SenVulkanBackend::CreateTexture2D(const SenTextureDesc& desc, SenVulkanText
     entry.Height     = desc.Height;
     entry.MipLevels  = desc.Mips;
     entry.LayerCount = 1;
+    entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_UNDEFINED);
 
     // Mip generation blits each level into the next, so every level is both a transfer source and destination.
     const VkImageUsageFlags mipUsage = desc.Mips > 1 ? (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT) : 0;
@@ -71,11 +73,15 @@ auto SenVulkanBackend::CreateTexture2D(const SenTextureDesc& desc, SenVulkanText
     if (desc.Data) {
         const uint32_t dataSize = desc.Width * desc.Height * Sen::Vulkan::BytesPerPixel(desc.Format);
         UploadToDeviceImage(entry.Image, aspect, desc.Data, dataSize, desc.Width, desc.Height, desc.Mips, 1);
-        entry.CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 
     if (HasAny(desc.Usage, SenTextureUsage::ShaderResource)) {
         entry.SRV = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, desc.Mips, 0, 1);
+        entry.MipSRVs.resize(desc.Mips);
+        for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
+            entry.MipSRVs[mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, 0, 1);
+        }
     }
     if (HasAny(desc.Usage, SenTextureUsage::DepthStencil)) {
         entry.DSV = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, 1, 0, 1);
@@ -98,6 +104,7 @@ auto SenVulkanBackend::CreateTextureCubemap(const SenTextureDesc& desc, SenVulka
     entry.Height     = desc.Height;
     entry.MipLevels  = desc.Mips;
     entry.LayerCount = 6;
+    entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_UNDEFINED);
 
     // Mip generation blits each level into the next, so every level is both a transfer source and destination.
     const VkImageUsageFlags mipUsage = desc.Mips > 1 ? (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT) : 0;
@@ -126,7 +133,7 @@ auto SenVulkanBackend::CreateTextureCubemap(const SenTextureDesc& desc, SenVulka
         for (int face = 0; face < 6; ++face)
             memcpy(expanded.data() + face * faceSize, desc.Data, faceSize);
         UploadToDeviceImage(entry.Image, aspect, expanded.data(), faceSize * 6, desc.Width, desc.Height, desc.Mips, 6);
-        entry.CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 
     if (HasAny(desc.Usage, SenTextureUsage::ShaderResource)) {
@@ -184,7 +191,8 @@ auto SenVulkanBackend::GenerateMips(SenTexture handle) -> void {
     };
 
     // Bring every level into TRANSFER_DST. Mip 0 already holds the uploaded image; the rest are scratch.
-    barrier(0, entry.MipLevels, entry.CurrentLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    // GenerateMips runs right after upload, so all mips share one layout — read level 0 as the source layout.
+    barrier(0, entry.MipLevels, entry.MipLayouts[0], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
             VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT);
 
@@ -221,7 +229,7 @@ auto SenVulkanBackend::GenerateMips(SenTexture handle) -> void {
             VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT,
             VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
 
-    entry.CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    entry.MipLayouts.assign(entry.MipLevels, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     vkEndCommandBuffer(cmd);
 

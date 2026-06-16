@@ -58,15 +58,15 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     float2 o  = _Main.TexelSize * _Main.Radius;
     float2 uv = input.UV;
 
-    float3 a = BloomMipInput.Sample(InputSampler, uv + float2(-o.x,  o.y)).rgb;
-    float3 b = BloomMipInput.Sample(InputSampler, uv + float2( 0.0,  o.y)).rgb;
-    float3 c = BloomMipInput.Sample(InputSampler, uv + float2( o.x,  o.y)).rgb;
-    float3 d = BloomMipInput.Sample(InputSampler, uv + float2(-o.x,  0.0)).rgb;
-    float3 e = BloomMipInput.Sample(InputSampler, uv                    ).rgb;
-    float3 f = BloomMipInput.Sample(InputSampler, uv + float2( o.x,  0.0)).rgb;
-    float3 g = BloomMipInput.Sample(InputSampler, uv + float2(-o.x, -o.y)).rgb;
-    float3 h = BloomMipInput.Sample(InputSampler, uv + float2( 0.0, -o.y)).rgb;
-    float3 i = BloomMipInput.Sample(InputSampler, uv + float2( o.x, -o.y)).rgb;
+    float3 a = BloomMipInput.SampleLevel(InputSampler, uv + float2(-o.x,  o.y), 0).rgb;
+    float3 b = BloomMipInput.SampleLevel(InputSampler, uv + float2( 0.0,  o.y), 0).rgb;
+    float3 c = BloomMipInput.SampleLevel(InputSampler, uv + float2( o.x,  o.y), 0).rgb;
+    float3 d = BloomMipInput.SampleLevel(InputSampler, uv + float2(-o.x,  0.0), 0).rgb;
+    float3 e = BloomMipInput.SampleLevel(InputSampler, uv                     , 0).rgb;
+    float3 f = BloomMipInput.SampleLevel(InputSampler, uv + float2( o.x,  0.0), 0).rgb;
+    float3 g = BloomMipInput.SampleLevel(InputSampler, uv + float2(-o.x, -o.y), 0).rgb;
+    float3 h = BloomMipInput.SampleLevel(InputSampler, uv + float2( 0.0, -o.y), 0).rgb;
+    float3 i = BloomMipInput.SampleLevel(InputSampler, uv + float2( o.x, -o.y), 0).rgb;
 
     float3 color = e * 4.0;
     color += (b + d + f + h) * 2.0;

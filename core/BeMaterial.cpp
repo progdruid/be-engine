@@ -91,11 +91,14 @@ auto BeMaterial::BuildBindGroupDesc() const -> SenBindGroupDesc {
     SenBindGroupDesc desc = _scheme.BindGroupLayout;
 
     desc.Textures.clear();
+    desc.TextureMips.clear();
     desc.Textures.reserve(desc.TextureSlots.size());
+    desc.TextureMips.reserve(desc.TextureSlots.size());
     for (const auto textureSlot : desc.TextureSlots) {
         for (const auto& [_, binding] : _textures) {
             if (!binding.IsStorage && binding.Slot == textureSlot && binding.Texture && binding.Texture->Handle.IsValid()) {
                 desc.Textures.push_back(binding.Texture->Handle);
+                desc.TextureMips.push_back(binding.Mip);
                 break;
             }
         }
@@ -264,9 +267,11 @@ auto BeMaterial::GetMatrix(const std::string& propertyName) const -> glm::mat4x4
 
 
 
-auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture) -> void {
+auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture, uint32_t mip) -> void {
     be_assert(_textures.contains(propertyName), "unknown texture property: " + propertyName);
-    _textures.at(propertyName).Texture = texture;
+    auto& binding = _textures.at(propertyName);
+    binding.Texture = texture;
+    binding.Mip = mip;
     _bindGroupDirty = true;
 }
 

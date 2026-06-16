@@ -21,11 +21,12 @@ struct SenVulkanTextureEntry {
     VkFormat Format = VK_FORMAT_UNDEFINED;
     VkImageView SRV = VK_NULL_HANDLE;                       // for shader sampling (all mips, all layers)
     VkImageView DSV = VK_NULL_HANDLE;                       // depth attachment (2D or per-face for cubemap — see below)
+    std::vector<VkImageView> MipSRVs;                       // [mip]       — single-mip sampling view (2D)
     std::vector<VkImageView> MipRTVs;                       // [mip]       — color attachment per mip (2D)
     std::array<VkImageView, 6> CubemapDSVs  = {};           // [face]      — depth attachment per cubemap face
     std::array<std::vector<VkImageView>, 6> CubemapMipRTVs; // [face][mip] — color attachment per cubemap face per mip
-    VkImageLayout CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;// tracked for automatic barriers
-    uint32_t Width      = 0;                                // mip-0 dimensions / layout, kept for mip generation
+    std::vector<VkImageLayout> MipLayouts;                  // per-mip current layout (all faces share a mip's layout)
+    uint32_t Width      = 0;                                // mip-0 dimensions, kept for mip generation
     uint32_t Height     = 0;
     uint32_t MipLevels  = 1;
     uint32_t LayerCount = 1;                                // 1 for 2D, 6 for cubemaps

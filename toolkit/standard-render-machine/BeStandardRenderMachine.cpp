@@ -85,7 +85,7 @@ auto BeStandardRenderMachine::DeclareDepth(const std::string& name, SenFormat fo
     return texture;
 }
 
-auto BeStandardRenderMachine::DeclareTexture(const std::string& name, SenFormat format, float sizeMultiplier, bool storage) -> std::shared_ptr<BeTexture> {
+auto BeStandardRenderMachine::DeclareTexture(const std::string& name, SenFormat format, float sizeMultiplier, bool storage, uint32_t mips) -> std::shared_ptr<BeTexture> {
     const auto w = static_cast<uint32_t>(static_cast<float>(_width)  * sizeMultiplier);
     const auto h = static_cast<uint32_t>(static_cast<float>(_height) * sizeMultiplier);
 
@@ -98,6 +98,7 @@ auto BeStandardRenderMachine::DeclareTexture(const std::string& name, SenFormat 
         .SetUsage(usage)
         .SetFormat(format)
         .SetSize(w, h)
+        .SetMips(mips)
         .Build();
 
     _textureRegistry.push_back(TextureEntry{
@@ -158,17 +159,12 @@ auto BeStandardRenderMachine::AddBloomPass(
     be_assert(input,  "AddBloomPass: input texture not found: "  + inputName);
     be_assert(output, "AddBloomPass: output texture not found: " + outputName);
 
-    std::vector<std::shared_ptr<BeTexture>> mipTextures;
-    mipTextures.reserve(mipCount);
-    for (uint32_t i = 0; i < mipCount; ++i) {
-        const float mult = 1.0f / static_cast<float>(1u << i);
-        mipTextures.push_back(DeclareTexture("__standard_bloom_mip_" + std::to_string(i), input->Format, mult));
-    }
+    auto bloomTexture = DeclareTexture("__standard_bloom", input->Format, 1.0f, false, mipCount);
 
     if (!dirtTexture)
         dirtTexture = BeAssetRegistry::GetTexture("black").lock();
 
-    auto pass = std::make_unique<BeStandardBloomPass>(this, input, std::move(mipTextures), output, dirtTexture, mipCount);
+    auto pass = std::make_unique<BeStandardBloomPass>(this, input, bloomTexture, output, dirtTexture, mipCount);
     _passes.push_back(std::move(pass));
 }
 

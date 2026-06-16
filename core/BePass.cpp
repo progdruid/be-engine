@@ -14,13 +14,23 @@ auto BePass::SetCompute(bool isCompute) -> BePass& {
 
 auto BePass::UseTexture(SenTexture texture, bool useAsStorage) -> BePass& {
     be_assert(texture.IsValid(), "BePass::AddReadTexture: invalid texture handle");
-    (useAsStorage ? _storageTextures : _reads).push_back(texture);
+    if (useAsStorage) {
+        _storageTextures.push_back(texture);
+    } else {
+        _reads.push_back({ texture, 0, SenCommandBuffer::TextureTransition::AllMips });
+    }
     return *this;
 }
 
 auto BePass::UseTexture(const std::shared_ptr<BeTexture>& texture, bool useAsStorage) -> BePass& {
     be_assert(texture != nullptr, "BePass::AddReadTexture: null texture");
     return UseTexture(texture->Handle, useAsStorage);
+}
+
+auto BePass::UseTextureMip(const std::shared_ptr<BeTexture>& texture, uint32_t mipLevel) -> BePass& {
+    be_assert(texture != nullptr, "BePass::UseTextureMip: null texture");
+    _reads.push_back({ texture->Handle, mipLevel, 1 });
+    return *this;
 }
 
 auto BePass::UseTextures(const std::vector<std::shared_ptr<BeTexture>>& textures) -> BePass& {
@@ -96,19 +106,20 @@ auto BePass::Begin() -> void {
 
     auto& cmd = SenBackend::GetCommandBuffer();
 
-    std::vector<std::pair<SenTexture, SenResourceState>> transitions;
+    using Transition = SenCommandBuffer::TextureTransition;
+    std::vector<Transition> transitions;
     transitions.reserve(_reads.size() + _storageTextures.size() + _colorTargets.size() + 1);
-    for (const auto texture : _reads) {
-        transitions.emplace_back(texture, SenResourceState::ShaderRead);
+    for (const auto& read : _reads) {
+        transitions.push_back({ read.Texture, SenResourceState::ShaderRead, read.BaseMip, read.MipCount });
     }
     for (const auto texture : _storageTextures) {
-        transitions.emplace_back(texture, SenResourceState::UnorderedAccess);
+        transitions.push_back({ texture, SenResourceState::UnorderedAccess });
     }
     for (const auto& target : _colorTargets) {
-        transitions.emplace_back(target.Texture, SenResourceState::ColorAttachment);
+        transitions.push_back({ target.Texture, SenResourceState::ColorAttachment, target.MipLevel, 1 });
     }
     if (_depthTarget) {
-        transitions.emplace_back(_depthTarget->Texture, SenResourceState::DepthAttachment);
+        transitions.push_back({ _depthTarget->Texture, SenResourceState::DepthAttachment });
     }
     cmd.TransitionTextures(transitions);
 

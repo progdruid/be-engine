@@ -16,7 +16,7 @@ class BeStandardBloomPass final : public BeRenderPass {
     hide
     BeStandardRenderMachine* _srm;
     std::shared_ptr<BeTexture> _inputHDR;
-    std::vector<std::shared_ptr<BeTexture>> _mipTextures;
+    std::shared_ptr<BeTexture> _bloomTexture;
     std::shared_ptr<BeTexture> _output;
     std::shared_ptr<BeTexture> _dirtTexture;
     uint32_t _mipCount;
@@ -34,7 +34,7 @@ class BeStandardBloomPass final : public BeRenderPass {
     explicit BeStandardBloomPass(
         BeStandardRenderMachine* srm,
         std::shared_ptr<BeTexture> inputHDR,
-        std::vector<std::shared_ptr<BeTexture>> mipTextures,
+        std::shared_ptr<BeTexture> bloomTexture,
         std::shared_ptr<BeTexture> output,
         std::shared_ptr<BeTexture> dirtTexture,
         uint32_t mipCount

@@ -135,6 +135,7 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
         texEntry.Image  = entry.Images[i];
         texEntry.Format = chosenFormat.format;
         texEntry.MipRTVs.push_back(entry.ImageViews[i]);
+        texEntry.MipLayouts.assign(1, VK_IMAGE_LAYOUT_UNDEFINED);
 
         const SenTexture texHandle { _nextTextureId++ };
         _textures[texHandle.ID] = texEntry;
@@ -235,9 +236,9 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle) -> SenTexture {
     auto& texEntry = _textures.at(entry.Textures[entry.CurrentImageIndex].ID);
     RecordImageBarrier(_activeCommandBuffer, MakeImageBarrier(
         texEntry.Image, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-        texEntry.CurrentLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        texEntry.MipLayouts[0], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     ));
-    texEntry.CurrentLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    texEntry.MipLayouts[0] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     return entry.Textures[entry.CurrentImageIndex];
 }
@@ -249,9 +250,9 @@ auto SenVulkanBackend::EndFrame(SenSwapchain handle) -> void {
     auto& texEntry = _textures.at(entry.Textures[entry.CurrentImageIndex].ID);
     RecordImageBarrier(_activeCommandBuffer, MakeImageBarrier(
         texEntry.Image, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-        texEntry.CurrentLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+        texEntry.MipLayouts[0], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     ));
-    texEntry.CurrentLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    texEntry.MipLayouts[0] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     vkEndCommandBuffer(_activeCommandBuffer);
 

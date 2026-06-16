@@ -30,8 +30,13 @@ auto SenVulkanBackend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindG
         const auto& textureEntry = LookupTexture(texture);
         const uint8_t binding = desc.TextureSlots[i];
 
+        const uint32_t mip = (i < desc.TextureMips.size()) ? desc.TextureMips[i] : SEN_FULL_MIPS;
+        const VkImageView view = (mip != SEN_FULL_MIPS && mip < textureEntry.MipSRVs.size())
+            ? textureEntry.MipSRVs[mip]
+            : textureEntry.SRV;
+
         imageInfos[i] = VkDescriptorImageInfo {
-            .imageView   = textureEntry.SRV,
+            .imageView   = view,
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         };
         writes.push_back(VkWriteDescriptorSet {
@@ -248,7 +253,7 @@ auto SenVulkanBackend::PrintBindGroup(SenBindGroup handle) -> std::string {
             s += std::format("\t\t\tVkImage       = {}\n", (void*)t.Image);
             s += std::format("\t\t\tSRV           = {}\n", (void*)t.SRV);
             s += std::format("\t\t\tVkFormat      = {}\n", (uint32_t)t.Format);
-            s += std::format("\t\t\tCurrentLayout = {}\n", (uint32_t)t.CurrentLayout);
+            s += std::format("\t\t\tMipLayouts[0] = {}\n", (uint32_t)(t.MipLayouts.empty() ? 0u : t.MipLayouts[0]));
         }
     }
 
@@ -280,7 +285,7 @@ auto SenVulkanBackend::PrintBindGroup(SenBindGroup handle) -> std::string {
         s += std::format("\t\t[{}] SenTexture.ID={} valid={}\n", i, tex.ID, tex.IsValid());
         if (tex.IsValid()) {
             const auto& t = _textures.at(tex.ID);
-            s += std::format("\t\t\tCurrentLayout = {}\n", (uint32_t)t.CurrentLayout);
+            s += std::format("\t\t\tMipLayouts[0] = {}\n", (uint32_t)(t.MipLayouts.empty() ? 0u : t.MipLayouts[0]));
         }
     }
 

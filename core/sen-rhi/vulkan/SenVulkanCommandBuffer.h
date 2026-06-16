@@ -25,9 +25,16 @@ class SenVulkanCommandBuffer {
 
     expose
     auto ResetPerFrameState() -> void;
-    
+
     expose
-    auto TransitionTextures (const std::vector<std::pair<SenTexture, SenResourceState>>& transitions) -> void;
+    struct TextureTransition {
+        static constexpr uint32_t AllMips = UINT32_MAX;
+        SenTexture Texture;
+        SenResourceState State;
+        uint32_t BaseMip = 0;
+        uint32_t MipCount = AllMips;
+    };
+    auto TransitionTextures (const std::vector<TextureTransition>& transitions) -> void;
     auto BeginPass (const SenPassDesc& desc) -> void;
     auto EndPass   () -> void;
 
