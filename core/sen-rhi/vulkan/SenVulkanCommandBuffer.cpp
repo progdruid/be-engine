@@ -131,24 +131,8 @@ auto SenVulkanCommandBuffer::TransitionTextures(const std::vector<std::pair<SenT
         const VkImageAspectFlags aspect = (entry.Format == VK_FORMAT_D32_SFLOAT)
             ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
 
-        VkPipelineStageFlags2 srcStage, dstStage;
-        VkAccessFlags2 srcAccess, dstAccess;
-        Sen::Vulkan::ScopeForLayout(oldLayout, srcStage, srcAccess);
-        Sen::Vulkan::ScopeForLayout(newLayout, dstStage, dstAccess);
-
-        barriers.push_back(VkImageMemoryBarrier2 {
-            .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-            .srcStageMask        = srcStage,
-            .srcAccessMask       = srcAccess,
-            .dstStageMask        = dstStage,
-            .dstAccessMask       = dstAccess,
-            .oldLayout           = oldLayout,
-            .newLayout           = newLayout,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image               = entry.Image,
-            .subresourceRange    = { aspect, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS },
-        });
+        const VkImageSubresourceRange range { aspect, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
+        barriers.push_back(SenVulkanBackend::MakeImageBarrier(entry.Image, range, oldLayout, newLayout));
         entry.CurrentLayout = newLayout;
     }
 

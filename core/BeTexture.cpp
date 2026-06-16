@@ -1,5 +1,7 @@
 #include "BeTexture.h"
 
+#include <algorithm>
+#include <bit>
 #include <umbrellas/include-glm.h>
 #include <stb_image/stb_image.h>
 #include "sen-rhi/SenBackend.h"
@@ -16,7 +18,9 @@ BeTexture::Builder::~Builder() {
 
 auto BeTexture::Builder::SetUsage   (SenTextureUsage usage)  -> Builder&& { _descriptor.Usage = usage;   return std::move(*this); }
 auto BeTexture::Builder::SetFormat  (SenFormat format)       -> Builder&& { _descriptor.Format = format; return std::move(*this); }
-auto BeTexture::Builder::SetMips    (uint32_t mips)          -> Builder&& { _descriptor.Mips = mips; return std::move(*this); }
+auto BeTexture::Builder::SetMips    (uint32_t mips)          -> Builder&& { _descriptor.Mips = mips; _autoMips = false; return std::move(*this); }
+auto BeTexture::Builder::SetMipsAuto()                       -> Builder&& { _autoMips = true; return std::move(*this); }
+auto BeTexture::Builder::GenerateMips()                      -> Builder&& { _descriptor.GenerateMips = true; return std::move(*this); }
 auto BeTexture::Builder::SetSize    (uint32_t w, uint32_t h) -> Builder&& { _descriptor.Width = w; _descriptor.Height = h; return std::move(*this); }
 auto BeTexture::Builder::SetCubemap (bool cubemap)           -> Builder&& { _descriptor.IsCubemap = cubemap; return std::move(*this); }
 
@@ -87,16 +91,26 @@ auto BeTexture::Builder::AddToRegistry() -> Builder&& { _addToRegistry = true; r
 
 
 auto BeTexture::Builder::Build() -> std::shared_ptr<BeTexture> {
+    // Full chain down to 1x1: bit_width(n) == floor(log2(n)) + 1, e.g. 1024 -> 11 levels.
+    if (_autoMips) {
+        _descriptor.Mips = std::bit_width(std::max(_descriptor.Width, _descriptor.Height));
+    }
     std::shared_ptr<BeTexture> resource(new BeTexture(_descriptor));
-    if (_addToRegistry)
+    if (_addToRegistry) {
         BeAssetRegistry::AddTexture(_descriptor.Name, resource);
+    }
     return resource;
 }
 
 auto BeTexture::Builder::BuildNoReturn() -> void {
+    // Full chain down to 1x1: bit_width(n) == floor(log2(n)) + 1, e.g. 1024 -> 11 levels.
+    if (_autoMips) {
+        _descriptor.Mips = std::bit_width(std::max(_descriptor.Width, _descriptor.Height));
+    }
     const std::shared_ptr<BeTexture> resource(new BeTexture(_descriptor));
-    if (_addToRegistry)
+    if (_addToRegistry) {
         BeAssetRegistry::AddTexture(_descriptor.Name, resource);
+    }
 }
 
 
@@ -119,6 +133,10 @@ BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
     senDesc.Data    = descriptor.Data;
 
     Handle = SenBackend::CreateTexture(senDesc);
+
+    if (descriptor.GenerateMips && Mips > 1) {
+        SenBackend::GenerateMips(Handle);
+    }
 
     CreateMipViewports();
 }

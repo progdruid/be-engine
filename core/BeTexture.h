@@ -20,12 +20,14 @@ class BeTexture {
         uint32_t Width = 1;
         uint32_t Height = 1;
         uint8_t* Data = nullptr;
+        bool GenerateMips = false;
     };
-    
+
     expose class Builder {
 
         hide BeTextureDescriptor _descriptor;
         hide bool _addToRegistry = false;
+        hide bool _autoMips      = false;
 
         hide explicit Builder (std::string name);
         expose ~Builder ();
@@ -37,6 +39,8 @@ class BeTexture {
         expose auto SetUsage(SenTextureUsage usage) -> Builder&&;
         expose auto SetFormat(SenFormat format) -> Builder&&;
         expose auto SetMips(uint32_t mips) -> Builder&&;
+        expose auto SetMipsAuto() -> Builder&&;
+        expose auto GenerateMips() -> Builder&&;
         expose auto SetSize(uint32_t w, uint32_t h) -> Builder&& ;
         expose auto SetCubemap(bool cubemap) -> Builder&& ;
 

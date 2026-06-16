@@ -233,11 +233,10 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle) -> SenTexture {
 
     // Transition swapchain image UNDEFINED/PRESENT_SRC → COLOR_ATTACHMENT_OPTIMAL
     auto& texEntry = _textures.at(entry.Textures[entry.CurrentImageIndex].ID);
-    TransitionRawImageLayout(
-        _activeCommandBuffer, texEntry.Image, VK_IMAGE_ASPECT_COLOR_BIT,
-        texEntry.CurrentLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        1, 1
-    );
+    RecordImageBarrier(_activeCommandBuffer, MakeImageBarrier(
+        texEntry.Image, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+        texEntry.CurrentLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    ));
     texEntry.CurrentLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     return entry.Textures[entry.CurrentImageIndex];
@@ -248,11 +247,10 @@ auto SenVulkanBackend::EndFrame(SenSwapchain handle) -> void {
 
     // Transition swapchain image COLOR_ATTACHMENT_OPTIMAL → PRESENT_SRC_KHR
     auto& texEntry = _textures.at(entry.Textures[entry.CurrentImageIndex].ID);
-    TransitionRawImageLayout(
-        _activeCommandBuffer, texEntry.Image, VK_IMAGE_ASPECT_COLOR_BIT,
-        texEntry.CurrentLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        1, 1
-    );
+    RecordImageBarrier(_activeCommandBuffer, MakeImageBarrier(
+        texEntry.Image, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+        texEntry.CurrentLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+    ));
     texEntry.CurrentLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     vkEndCommandBuffer(_activeCommandBuffer);
