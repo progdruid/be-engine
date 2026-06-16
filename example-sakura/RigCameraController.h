@@ -8,14 +8,17 @@
 
 class BeCamera;
 
+enum class RigAim { Target, Tangent };
+
 class RigCameraController {
     hide
     BeCamera* _camera;
 
     BeRail _pathRail;
     BeTrack<float> _pathWarp;
-    BeRail _aimRail;
-    BeTrack<float> _aimWarp;
+
+    RigAim _aimMode = RigAim::Target;
+    BeTrack<glm::vec3> _aimTarget;
     BeTrack<float> _fov;
 
     float _t = 0.0f;
@@ -24,14 +27,17 @@ class RigCameraController {
     bool _loop = false;
 
     expose
+    float AimDamping = 0.0f;
+
     explicit RigCameraController(BeCamera* camera);
 
     auto SetPathRail(BeRail path) -> void;
     auto GetPathRail() const -> const BeRail& { return _pathRail; }
-    auto SetAimRail(BeRail path) -> void;
-    auto GetAimRail() const -> const BeRail& { return _aimRail; }
     auto PathWarp() -> BeTrack<float>& { return _pathWarp; }
-    auto AimWarp() -> BeTrack<float>& { return _aimWarp; }
+
+    auto AimAt() -> BeTrack<glm::vec3>& { _aimMode = RigAim::Target; return _aimTarget; }
+    auto AimAlongTangent() -> void { _aimMode = RigAim::Tangent; }
+
     auto Fov() -> BeTrack<float>& { return _fov; }
     auto Configure(bool loop = false, float speed = 1.0f) -> void;
 

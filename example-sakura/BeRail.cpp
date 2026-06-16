@@ -85,6 +85,15 @@ auto BeRail::EvalByDistance(float s01) const -> glm::vec3 {
     return EvalByParam(u);
 }
 
+auto BeRail::TangentByDistance(float s01) const -> glm::vec3 {
+    constexpr float eps = 1e-3f;
+    const glm::vec3 a = EvalByDistance(glm::clamp(s01 - eps, 0.0f, 1.0f));
+    const glm::vec3 b = EvalByDistance(glm::clamp(s01 + eps, 0.0f, 1.0f));
+    const glm::vec3 d = b - a;
+    const float len = glm::length(d);
+    return len > 1e-6f ? d / len : glm::vec3(0.0f, 0.0f, 1.0f);
+}
+
 auto BeRail::IndexToDistance(float index) const -> float {
     const int segments = SegmentCount();
     if (segments <= 0 || _length <= 0.0f || _arcLen.size() < 2) return 0.0f;

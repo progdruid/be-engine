@@ -18,6 +18,7 @@ class BeRail {
     auto Finalize() -> BeRail&;
 
     auto EvalByDistance(float s01) const -> glm::vec3;
+    auto TangentByDistance(float s01) const -> glm::vec3;
     auto EvalByIndex(float index) const -> glm::vec3;
     auto IndexToDistance(float index) const -> float;
     auto SegmentCount() const -> int;

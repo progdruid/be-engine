@@ -5,7 +5,7 @@
 #include <umbrellas/include-glm.h>
 #include <umbrellas/access-modifiers.hpp>
 
-enum class BeTrackInterp { Hold, Linear, EaseIn, EaseOut, EaseInOut, Smooth };
+enum class BeTrackInterp { Hold, Linear, EaseIn, EaseOut, EaseInOut };
 
 template<class T>
 class BeTrack {
@@ -23,9 +23,16 @@ class BeTrack {
     }
 
     auto Eval(float time) const -> T {
-        if (_keys.empty()) return T{};
-        if (time <= _keys.front().time) return _keys.front().value;
-        if (time >= _keys.back().time)  return _keys.back().value;
+        const Sample s = SampleAt(time);
+        return glm::mix(s.from, s.to, s.k);
+    }
+
+    struct Sample { T from; T to; float k; };
+
+    auto SampleAt(float time) const -> Sample {
+        if (_keys.empty()) return { T{}, T{}, 0.0f };
+        if (time <= _keys.front().time) return { _keys.front().value, _keys.front().value, 0.0f };
+        if (time >= _keys.back().time)  return { _keys.back().value, _keys.back().value, 1.0f };
 
         size_t i = 0;
         while (i + 1 < _keys.size() && _keys[i + 1].time <= time) ++i;
@@ -34,32 +41,15 @@ class BeTrack {
         const float span = b.time - a.time;
         const float f = span > 0.0f ? (time - a.time) / span : 0.0f;
 
-        if (a.out == BeTrackInterp::Smooth) {
-            // Time-parameterised (non-uniform) Catmull-Rom via Hermite: tangents are
-            // scaled by the surrounding time spacing, so distant keys don't yank the
-            // curve and the result stays C1-continuous in time. Ends are one-sided.
-            const Keyframe& p0 = _keys[i > 0 ? i - 1 : i];
-            const Keyframe& p3 = _keys[i + 2 < _keys.size() ? i + 2 : i + 1];
-
-            const T m1 = (b.value - p0.value) / std::max(b.time - p0.time, 1e-6f);  // tangent at a
-            const T m2 = (p3.value - a.value) / std::max(p3.time - a.time, 1e-6f);  // tangent at b
-
-            const float f2 = f * f, f3 = f2 * f;
-            return (2.0f * f3 - 3.0f * f2 + 1.0f) * a.value
-                 + (f3 - 2.0f * f2 + f) * (span * m1)
-                 + (-2.0f * f3 + 3.0f * f2) * b.value
-                 + (f3 - f2) * (span * m2);
-        }
-
-        float e = f;   // Linear
+        float e = f;
         switch (a.out) {
             case BeTrackInterp::Hold:      e = 0.0f; break;
             case BeTrackInterp::EaseIn:    e = f * f; break;
             case BeTrackInterp::EaseOut:   e = 1.0f - (1.0f - f) * (1.0f - f); break;
             case BeTrackInterp::EaseInOut: e = f * f * (3.0f - 2.0f * f); break;
-            default:                       break;   // Linear / Smooth (handled above)
+            default:                       break;
         }
-        return glm::mix(a.value, b.value, e);
+        return { a.value, b.value, e };
     }
 
     auto Empty() const -> bool { return _keys.empty(); }

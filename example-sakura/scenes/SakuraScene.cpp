@@ -168,20 +168,11 @@ auto SakuraScene::Prepare() -> void {
         .Key( 0.0f, path.IndexToDistance(0.0f), BeTrackInterp::Linear)
         .Key(22.0f, path.IndexToDistance(8.0f), BeTrackInterp::Linear);
 
-    _rigCameraController->SetAimRail(BeRail()
-        .Knot({  0.0f, 1.0f,  0.0f})
-        .Knot({ 20.0f,25.0f, 20.0f})
-        //.Knot({  0.0f,15.0f, 20.0f})
-        .Close()
-        .Finalize());
-
-    const BeRail& aim = _rigCameraController->GetAimRail();
-    _rigCameraController->AimWarp()
-        .Key( 0.0f, aim.IndexToDistance(0.0f), BeTrackInterp::Linear)
-        .Key( 6.0f, aim.IndexToDistance(0.0f), BeTrackInterp::EaseInOut)
-        .Key(12.0f, aim.IndexToDistance(1.0f), BeTrackInterp::EaseInOut)
-        .Key(18.0f, aim.IndexToDistance(2.0f), BeTrackInterp::Linear)
-        .Key(22.0f, aim.IndexToDistance(2.0f), BeTrackInterp::EaseInOut);
+    _rigCameraController->AimAt()
+        .Key( 0.0f, {  0.0f,  1.0f,   0.0f}, BeTrackInterp::Linear)
+        .Key( 6.0f, {  0.0f,  1.0f,   0.0f}, BeTrackInterp::EaseInOut)
+        .Key(14.0f, {100.0f,150.0f, 100.0f}, BeTrackInterp::EaseInOut)
+        .Key(22.0f, {  0.0f,  1.0f,   0.0f}, BeTrackInterp::EaseInOut);
 
     _rigCameraController->Configure(/*loop*/ true);
 }
@@ -319,9 +310,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         });
     }
 
-    // DEBUG: aim path (warm dots / bluish knots) and position path (spheres / checker knots).
-    RailGizmo::DrawRail(*_machine, _rigCameraController->GetAimRail(), _emissiveCube, _moon);
-    RailGizmo::DrawRail(*_machine, _rigCameraController->GetPathRail(), _testSphere, _cube);
+    //RailGizmo::DrawRail(*_machine, _rigCameraController->GetPathRail(), _testSphere, _cube);
 
     for (const auto [entity, sunLight] : SunView.each()) {
         _machine->AddSunLight({
