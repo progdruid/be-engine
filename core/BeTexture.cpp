@@ -53,14 +53,11 @@ auto BeTexture::Builder::FillFromMemory(const uint8_t* src) -> Builder&& {
 auto BeTexture::Builder::LoadFromFile(const std::filesystem::path& file) -> Builder&& {
     int w = 0, h = 0, channelsInFile = 0;
     uint8_t* decoded = stbi_load(file.string().c_str(), &w, &h, &channelsInFile, 4);
-    if (!decoded) throw std::runtime_error("Failed to load texture from file: " + file.string());
+    be_assert(decoded, "Failed to load texture from file: {}", file.string());
 
     const size_t imageSize = static_cast<size_t>(w) * static_cast<size_t>(h) * 4;
     const auto data = static_cast<uint8_t*>(malloc(imageSize));
-    if (!data) {
-        stbi_image_free(decoded);
-        throw std::runtime_error("Failed to allocate texture");
-    }
+    be_assert(data, "Failed to allocate texture");
     memcpy(data, decoded, imageSize);
     stbi_image_free(decoded);
 
@@ -68,6 +65,24 @@ auto BeTexture::Builder::LoadFromFile(const std::filesystem::path& file) -> Buil
     _descriptor.Data = data;
     _descriptor.Width = w;
     _descriptor.Height = h;
+    return std::move(*this);
+}
+
+auto BeTexture::Builder::LoadFromFileHdr(const std::filesystem::path& file) -> Builder&& {
+    int w = 0, h = 0, channelsInFile = 0;
+    float* decoded = stbi_loadf(file.string().c_str(), &w, &h, &channelsInFile, 4);
+    be_assert(decoded, "Failed to load HDR texture from file: {}", file.string());
+
+    const size_t imageSize = static_cast<size_t>(w) * static_cast<size_t>(h) * 4 * sizeof(float);
+    const auto data = static_cast<uint8_t*>(malloc(imageSize));
+    be_assert(data, "Failed to allocate HDR texture");
+    memcpy(data, decoded, imageSize);
+    stbi_image_free(decoded);
+
+    _descriptor.Data   = data;
+    _descriptor.Width  = static_cast<uint32_t>(w);
+    _descriptor.Height = static_cast<uint32_t>(h);
+    _descriptor.Format = SenFormat::RGBA32_Float;
     return std::move(*this);
 }
 

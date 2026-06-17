@@ -47,6 +47,7 @@ class BeTexture {
         expose auto FillWithColor (const glm::vec4& color) -> Builder&&;
         expose auto FillFromMemory (const uint8_t* src) -> Builder&&;
         expose auto LoadFromFile (const std::filesystem::path& file) -> Builder&&;
+        expose auto LoadFromFileHdr (const std::filesystem::path& file) -> Builder&&;
 
         hide static auto FlipVertically (uint32_t w, uint32_t h, uint8_t* data) -> void;
 

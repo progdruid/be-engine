@@ -138,6 +138,11 @@ auto SakuraScene::Prepare() -> void {
         .AddToRegistry()
         .Build();
 
+    const auto skyTexture = BeTexture::Create("Sakura_Sky")
+        .LoadFromFileHdr("assets/moonrise_puresky.hdr")
+        .AddToRegistry()
+        .Build();
+    
     _sceneLoader = std::make_unique<LuaSceneLoader>();
     RegisterComponentParsers(*_sceneLoader);
 
