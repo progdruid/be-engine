@@ -9,13 +9,12 @@
 #include "BeMaterialScheme.h"
 #include "sen-rhi/SenTypes.h"
 
-class BeRenderer;
 class BeTexture;
 
 class BeMaterial {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
-    static auto Create(std::string_view schemeName, bool frequentlyUsed) -> std::shared_ptr<BeMaterial>;
+    static auto Create(const BeMaterialScheme& scheme, bool frequentlyUsed) -> std::shared_ptr<BeMaterial>;
 
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide uint32_t _uniqueID;
@@ -63,7 +62,7 @@ class BeMaterial {
 
     auto Print() const -> std::string;
     
-    auto SetFloat  (const std::string& propertyName, float value) -> void;
+    auto SetFloat1  (const std::string& propertyName, float value) -> void;
     auto SetFloat2 (const std::string& propertyName, glm::vec2 value) -> void;
     auto SetFloat3 (const std::string& propertyName, glm::vec3 value) -> void;
     auto SetFloat4 (const std::string& propertyName, glm::vec4 value) -> void;

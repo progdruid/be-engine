@@ -1,7 +1,5 @@
 #include "BeStandardShadowPass.h"
 
-#include <format>
-#include <scope_guard/scope_guard.hpp>
 #include <umbrellas/include-glm.h>
 #include <sen-rhi/SenBackend.h>
 
@@ -15,19 +13,22 @@
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
 BeStandardShadowPass::BeStandardShadowPass(BeStandardRenderMachine* srm) : _srm(srm) {}
+auto BeStandardShadowPass::Initialise() -> void {}
 
 auto BeStandardShadowPass::Render() -> void {
     for (const auto& sunLight : _srm->GetSunLightEntries()) {
-        if (sunLight.CastsShadows)
+        if (sunLight.CastsShadows) {
             RenderDirectionalShadows(sunLight);
+        }
     }
     for (const auto& pointLight : _srm->GetPointLightEntries()) {
-        if (pointLight.CastsShadows)
+        if (pointLight.CastsShadows) {
             RenderPointLightShadows(pointLight);
+        }
     }
 }
 
-auto BeStandardShadowPass::RenderDirectionalShadows(const BeSRMSunLightEntry& sunLight) -> void {
+auto BeStandardShadowPass::RenderDirectionalShadows(const BeSRMSunLightEntry& sunLight) const -> void {
     auto& cmd = _renderer->GetCommandBuffer();
     const auto uniformMat = _srm->UniformMaterial.lock();
     const auto& entries = _srm->GetGeometryEntries();
@@ -38,16 +39,17 @@ auto BeStandardShadowPass::RenderDirectionalShadows(const BeSRMSunLightEntry& su
     pass.SetDepthTarget(sunLight.ShadowMap.lock());
     pass.SetViewport({ 0, 0, (float)sunLight.ShadowMapResolution, (float)sunLight.ShadowMapResolution, 0, 1 });
     pass.Begin();
-    SCOPE_EXIT { pass.End(); };
 
     cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
     cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
 
     for (const auto& entry : entries) {
-        if (!entry.CastShadows)
+        if (!entry.CastShadows) {
             continue;
+        }
 
-        auto mat = _srm->AcquireNewObjectMaterial();
+        const auto& scheme = entry.Prop->Shader->GetMaterialScheme("geometry-object");
+        const auto mat = _srm->AcquireNewObjectMaterial(scheme);
         mat->SetMatrix("Model", entry.ModelMatrix);
         mat->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
         mat->SetFloat3("ViewerPosition", glm::vec3(0.f));
@@ -56,25 +58,27 @@ auto BeStandardShadowPass::RenderDirectionalShadows(const BeSRMSunLightEntry& su
         const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
         for (size_t j = 0; j < meshSlices.size(); ++j) {
             const auto& meshSlice = meshSlices[j];
-            auto& propSlice = entry.Prop->Slices[j];
-#
-            auto pipeline = BePipelineBuilder::Start(*entry.Prop->Shader)
+            const auto& propSlice = entry.Prop->Slices[j];
+
+            const auto pipeline = BePipelineBuilder::Start(*entry.Prop->Shader)
                 .SetCullMode(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back)
                 .SetDepthFormat(sunLight.ShadowMap.lock()->Format)
-                .Build();
+                .Build()
+            ;
             
             cmd.SetPipeline(pipeline);
             cmd.SetBindGroup(propSlice.Material->GetBindGroup(), 2);
             cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }
     }
+    pass.End();
 }
 
-auto BeStandardShadowPass::RenderPointLightShadows(const BeSRMPointLightEntry& pointLight) -> void {
+auto BeStandardShadowPass::RenderPointLightShadows(const BeSRMPointLightEntry& pointLight) const -> void {
     auto& cmd = _renderer->GetCommandBuffer();
-    const auto uniformMat = _srm->UniformMaterial.lock();
+    const auto  uniformMat = _srm->UniformMaterial.lock();
     const auto& entries = _srm->GetGeometryEntries();
-    auto shadowMap = pointLight.ShadowMap.lock();
+    const auto  shadowMap = pointLight.ShadowMap.lock();
 
     cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
     cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
@@ -88,13 +92,13 @@ auto BeStandardShadowPass::RenderPointLightShadows(const BeSRMPointLightEntry& p
         pass.SetDepthTarget(shadowMap, SenLoadOp::Clear, 1.0f, static_cast<int8_t>(face));
         pass.SetViewport({ 0, 0, (float)pointLight.ShadowMapResolution, (float)pointLight.ShadowMapResolution, 0, 1 });
         pass.Begin();
-        SCOPE_EXIT { pass.End(); };
 
         for (const auto& entry : entries) {
-            if (!entry.CastShadows)
+            if (!entry.CastShadows) {
                 continue;
+            }
 
-            auto mat = _srm->AcquireNewObjectMaterial();
+            const auto mat = _srm->AcquireNewObjectMaterial(entry.Prop->Shader->GetMaterialScheme("geometry-object"));
             mat->SetMatrix("Model", entry.ModelMatrix);
             mat->SetMatrix("ProjectionView", faceViewProj);
             mat->SetFloat3("ViewerPosition", pointLight.Position);
@@ -103,20 +107,24 @@ auto BeStandardShadowPass::RenderPointLightShadows(const BeSRMPointLightEntry& p
             const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
             for (size_t j = 0; j < meshSlices.size(); ++j) {
                 const auto& meshSlice = meshSlices[j];
-                auto& propSlice = entry.Prop->Slices[j];
-
-                auto pipeline = BePipelineBuilder::Start(*entry.Prop->Shader)
+                const auto& propSlice = entry.Prop->Slices[j];
+                const auto  pipeline = BePipelineBuilder::Start(*entry.Prop->Shader)
                     .SetCullMode(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back)
                     .SetDepthFormat(shadowMap->Format)
-                    .Build();
+                    .Build()
+                ;
+                
                 cmd.SetPipeline(pipeline);
                 cmd.SetBindGroup(propSlice.Material->GetBindGroup(), 2);
                 cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
             }
         }
+        
+        pass.End();
     }
 }
 
+// ReSharper disable once CppMemberFunctionMayBeStatic
 auto BeStandardShadowPass::CalculatePointLightFaceViewProjection(
     const BeSRMPointLightEntry& pointLight,
     const int faceIndex

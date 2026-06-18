@@ -121,7 +121,7 @@ namespace {
 
 
 uint32_t BeShader::_shaderCount = 0;
-auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<BeShader> {
+auto BeShader::Create(const std::filesystem::path& filePath, BeAssetRegistry& registry) -> std::shared_ptr<BeShader> {
     be_assert(
         std::filesystem::exists(filePath),
         "Shader file doesn't exist: " + filePath.string()
@@ -141,13 +141,12 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::shared_ptr<
 
         shader->_pipelineDesc.BindGroupLayouts.resize(meta.Binds.size());
         for (const auto& bind : meta.Binds) {
-            auto & entry = shader->_materialSchemes.emplace_back();
-            entry.Link = bind.Link;
-            entry.SchemeName = bind.Scheme;
-            entry.Index = bind.Slot;
+            auto& entry = shader->_materialSchemes.emplace_back();
+            entry.Link   = bind.Link;
+            entry.Scheme = registry.GetMaterialScheme(bind.Scheme);
+            entry.Index  = bind.Slot;
 
-            auto scheme = BeAssetRegistry::GetMaterialScheme(entry.SchemeName);
-            shader->_pipelineDesc.BindGroupLayouts[entry.Index] = scheme.BindGroupLayout;
+            shader->_pipelineDesc.BindGroupLayouts[entry.Index] = entry.Scheme.BindGroupLayout;
         }
     }
 

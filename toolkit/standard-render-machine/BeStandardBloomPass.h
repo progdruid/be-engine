@@ -46,8 +46,8 @@ class BeStandardBloomPass final : public BeRenderPass {
     auto GetPassName() const -> const std::string override { return "Standard Bloom Pass"; }
 
     hide
-    auto RenderBrightPass() -> void;
-    auto RenderDownsamplePasses() -> void;
-    auto RenderUpsamplePasses() -> void;
-    auto RenderAddPass() -> void;
+    auto RenderBrightPass() const -> void;
+    auto RenderDownsamplePasses() const -> void;
+    auto RenderUpsamplePasses() const -> void;
+    auto RenderAddPass() const -> void;
 };

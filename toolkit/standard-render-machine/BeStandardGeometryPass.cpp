@@ -1,6 +1,5 @@
 #include "BeStandardGeometryPass.h"
 
-#include <scope_guard/scope_guard.hpp>
 #include <sen-rhi/SenBackend.h>
 
 #include "BePass.h"
@@ -15,7 +14,12 @@ BeStandardGeometryPass::BeStandardGeometryPass(
     BeStandardRenderMachine* srm,
     std::vector<std::shared_ptr<BeTexture>> colorTargets,
     std::shared_ptr<BeTexture> depthTarget
-) : _srm(srm), _colorTargets(std::move(colorTargets)), _depthTarget(std::move(depthTarget)) {}
+) 
+: _srm(srm)
+, _colorTargets(std::move(colorTargets))
+, _depthTarget(std::move(depthTarget)) {}
+
+auto BeStandardGeometryPass::Initialise() -> void {}
 
 auto BeStandardGeometryPass::Render() -> void {
     auto& cmd = _renderer->GetCommandBuffer();
@@ -33,17 +37,17 @@ auto BeStandardGeometryPass::Render() -> void {
     BePass pass;
     pass.AddColorTargets(_colorTargets);
     pass.SetDepthTarget(_depthTarget);
-    pass.SetViewport({ 0, 0, float(_renderer->GetSwapchainPixelWidth()), float(_renderer->GetSwapchainPixelHeight()), 0, 1 });
+    pass.SetViewport(_renderer->GetViewport());
     pass.Begin();
-    SCOPE_EXIT { pass.End(); };
 
     cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
-    cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
+    cmd.SetIndexBuffer (_srm->GetSharedIndexBuffer());
 
     for (const auto& entry : entries) {
         be_assert(entry.Prop->Shader);
 
-        auto mat = _srm->AcquireNewObjectMaterial();
+        const auto& scheme = entry.Prop->Shader->GetMaterialScheme("geometry-object");
+        const auto  mat = _srm->AcquireNewObjectMaterial(scheme);
         mat->SetMatrix("Model", entry.ModelMatrix);
         mat->SetMatrix("ProjectionView", uniformMat->GetMatrix("CameraProjectionView"));
         mat->SetFloat3("ViewerPosition", uniformMat->GetFloat3("CameraPosition"));
@@ -52,17 +56,20 @@ auto BeStandardGeometryPass::Render() -> void {
         const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
         for (size_t j = 0; j < meshSlices.size(); ++j) {
             const auto& meshSlice = meshSlices[j];
-            auto& propSlice = entry.Prop->Slices[j];
+            const auto& propSlice = entry.Prop->Slices[j];
 
-            auto pipeline = BePipelineBuilder::Start(*entry.Prop->Shader)
+            const auto pipeline = BePipelineBuilder::Start(*entry.Prop->Shader)
                 .SetCullMode(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back)
                 .SetColorFormats(colorFormats)
                 .SetDepthFormat(_depthTarget->Format)
-                .Build();
+                .Build()
+            ;
             cmd.SetPipeline(pipeline);
 
             cmd.SetBindGroup(propSlice.Material->GetBindGroup(), 2);
             cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }
     }
+    
+    pass.End();
 }

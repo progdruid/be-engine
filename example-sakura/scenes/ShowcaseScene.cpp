@@ -17,6 +17,7 @@
 #include "Game.h"
 #include "scenes/BeSceneManager.h"
 #include "BeAssetRegistry.h"
+#include "BeShader.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
 // brace(0.85) -ease-in-> peak(1.2) at t=0.5 -ease-out-> settle(1.0) at t=1.0
@@ -45,7 +46,7 @@ void ShowcaseScene::Prepare() {
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
 
-    BeAssetRegistry::IndexShaderFiles({
+    _assetRegistry.IndexShaderFiles({
         "assets/shaders/uniform-material.hlsl",
         "assets/shaders/objectMaterial.hlsl",
         "assets/shaders/standard-pbr.hlsl",
@@ -57,13 +58,14 @@ void ShowcaseScene::Prepare() {
         "assets/shaders/test-compute.hlsl",
     });
 
-    _uniformMaterial = BeMaterial::Create("uniform-material", false);
+    const auto& uniformScheme = _assetRegistry.GetMaterialScheme("uniform-material");
+    _uniformMaterial = BeMaterial::Create(uniformScheme, false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
     const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
     const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
 
-    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
+    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, _assetRegistry, screenWidth, screenHeight);
 
     LoadModels(*_machine);
     CreateObjects();
@@ -80,29 +82,29 @@ void ShowcaseScene::Prepare() {
 }
 
 auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
-    auto standardShader = BeAssetRegistry::GetShader("standard-pbr");
+    auto standardShader = _assetRegistry.GetShader("standard-pbr");
 
-    BeAssetRegistry::AddProp("ramen",           machine.LoadProp("assets/ramen/scene.gltf",           standardShader));
-    BeAssetRegistry::AddProp("still-life",      machine.LoadProp("assets/still-life/scene.gltf",      standardShader));
-    BeAssetRegistry::AddProp("fiesta-tea",      machine.LoadProp("assets/fiesta_tea/scene.gltf",      standardShader));
-    BeAssetRegistry::AddProp("honeydew_melons", machine.LoadProp("assets/honeydew_melons/scene.gltf", standardShader));
-    BeAssetRegistry::AddProp("hunger_games",    machine.LoadProp("assets/hunger_games/scene.gltf",    standardShader));
-    BeAssetRegistry::AddProp("pickles",         machine.LoadProp("assets/pickles/scene.gltf",         standardShader));
-    BeAssetRegistry::AddProp("watermelons",     machine.LoadProp("assets/watermelons/scene.gltf",     standardShader));
-    BeAssetRegistry::AddProp("apfel",           machine.LoadProp("assets/apfel/scene.gltf",           standardShader));
-    BeAssetRegistry::AddProp("eggplant",        machine.LoadProp("assets/eggplant/scene.gltf",        standardShader));
-    BeAssetRegistry::AddProp("tomatoes",        machine.LoadProp("assets/tomatoes/scene.gltf",        standardShader));
-    const auto headset =             machine.LoadProp("assets/headset/scene.gltf",         standardShader);
+    _assetRegistry.AddProp("ramen",           machine.LoadProp("assets/ramen/scene.gltf",           standardShader));
+    _assetRegistry.AddProp("still-life",      machine.LoadProp("assets/still-life/scene.gltf",      standardShader));
+    _assetRegistry.AddProp("fiesta-tea",      machine.LoadProp("assets/fiesta_tea/scene.gltf",      standardShader));
+    _assetRegistry.AddProp("honeydew_melons", machine.LoadProp("assets/honeydew_melons/scene.gltf", standardShader));
+    _assetRegistry.AddProp("hunger_games",    machine.LoadProp("assets/hunger_games/scene.gltf",    standardShader));
+    _assetRegistry.AddProp("pickles",         machine.LoadProp("assets/pickles/scene.gltf",         standardShader));
+    _assetRegistry.AddProp("watermelons",     machine.LoadProp("assets/watermelons/scene.gltf",     standardShader));
+    _assetRegistry.AddProp("apfel",           machine.LoadProp("assets/apfel/scene.gltf",           standardShader));
+    _assetRegistry.AddProp("eggplant",        machine.LoadProp("assets/eggplant/scene.gltf",        standardShader));
+    _assetRegistry.AddProp("tomatoes",        machine.LoadProp("assets/tomatoes/scene.gltf",        standardShader));
+    const auto headset = machine.LoadProp("assets/headset/scene.gltf", standardShader);
     for (auto& m : headset->Materials) {
         m->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
         //m->SetSampler("InputSampler", BeAssetRegistry::GetSampler("linear-clamp"));
     }
-    BeAssetRegistry::AddProp("headset", headset);
+    _assetRegistry.AddProp("headset", headset);
 
     auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
     skycube->Materials[0]->SetFloat3("BaseColor", HexColor("#FAC8CD"));
     skycube->Slices[0].TwoSided = true;
-    BeAssetRegistry::AddProp("skycube", skycube);
+    _assetRegistry.AddProp("skycube", skycube);
     machine.RegisterMesh(skycube->Mesh);
 }
 
@@ -110,12 +112,12 @@ auto ShowcaseScene::CreateObjects() -> void {
     _showcasedEntity = CreateEntity(_registry
         ,NameComponent { .Name = "showcased-object" }
         ,TransformComponent { }
-        ,RenderComponent { .Prop = BeAssetRegistry::GetProp("ramen").lock(), .CastShadows = true }
+        ,RenderComponent { .Prop = _assetRegistry.GetProp("ramen").lock(), .CastShadows = true }
     );
     CreateEntity(_registry
         ,NameComponent { .Name = "skycube" }
         ,TransformComponent { .Position = glm::vec3(0), .Rotation = glm::quat(), .Scale = glm::vec3(100) }
-        ,RenderComponent { .Prop = BeAssetRegistry::GetProp("skycube").lock(), .CastShadows = true }
+        ,RenderComponent { .Prop = _assetRegistry.GetProp("skycube").lock(), .CastShadows = true }
     );
     CreateEntity(_registry
         ,NameComponent { .Name = "Moon" }
@@ -134,6 +136,7 @@ auto ShowcaseScene::CreateObjects() -> void {
                 .SetFormat(SenFormat::Depth32)
                 .SetSize(4096, 4096)
                 .Build()
+            ,
         }
     );
 }
@@ -147,17 +150,19 @@ void ShowcaseScene::LoadPasses() {
     _machine->ClearPasses();
     _machine->AddGeometryPass();
 
-    const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
+    const auto& fxaaScheme = _assetRegistry.GetShader("fxaa").lock()->GetMaterialScheme("main");
+    const auto fxaaMaterial = BeMaterial::Create(fxaaScheme, false);
     fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_BaseColor"));
-    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("fxaa"), fxaaMaterial, { "Showcase_FXAAOutput" });
+    _machine->AddFullscreenPass(_assetRegistry.GetShader("fxaa"), fxaaMaterial, { "Showcase_FXAAOutput" });
 
     const char* backbufferInput = "Showcase_FXAAOutput";
     if (_pixelationEnabled) {
-        const auto pixelMaterial = BeMaterial::Create("pixelation-material", false);
+        const auto& pixelScheme = _assetRegistry.GetShader("pixelation").lock()->GetMaterialScheme("main");
+        const auto pixelMaterial = BeMaterial::Create(pixelScheme, false);
         pixelMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_FXAAOutput"));
         pixelMaterial->SetTexture("DepthTexture", _machine->GetRenderTexture("Showcase_Depth"));
-        pixelMaterial->SetFloat("EdgeEnabled", _pixelEdgesEnabled ? 1.0f : 0.0f);
-        _machine->AddFullscreenPass(BeAssetRegistry::GetShader("pixelation"), pixelMaterial, { "Showcase_PixelOutput" });
+        pixelMaterial->SetFloat1("EdgeEnabled", _pixelEdgesEnabled ? 1.0f : 0.0f);
+        _machine->AddFullscreenPass(_assetRegistry.GetShader("pixelation"), pixelMaterial, { "Showcase_PixelOutput" });
         backbufferInput = "Showcase_PixelOutput";
     }
 
@@ -319,7 +324,7 @@ auto ShowcaseScene::ChangeShowcase(
     const TransformComponent& adjustedTransform
 ) -> void {
     _showcasedTransform = adjustedTransform;
-    _registry.get<RenderComponent>(_showcasedEntity).Prop = BeAssetRegistry::GetProp(modelName).lock();
+    _registry.get<RenderComponent>(_showcasedEntity).Prop = _assetRegistry.GetProp(modelName).lock();
 
     auto view = _registry.view<NameComponent, RenderComponent>();
     for (auto [entity, name, render] : view.each()) {

@@ -6,6 +6,7 @@
 
 #include "BaseScene.h"
 #include "Components.h"
+#include "BeAssetRegistry.h"
 #include "entt/entt.hpp"
 class BeInput;
 class BeCamera;
@@ -18,6 +19,7 @@ class BeMaterial;
 
 class ShowcaseScene : public BaseScene {
     hide
+    BeAssetRegistry _assetRegistry;
     entt::registry _registry;
     std::shared_ptr<BeCamera> _camera;
     std::shared_ptr<BeMaterial> _uniformMaterial;

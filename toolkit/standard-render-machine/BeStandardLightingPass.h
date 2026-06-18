@@ -7,6 +7,7 @@
 #include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
+#include "BeMaterialScheme.h"
 
 class BeTexture;
 class BeMaterial;
@@ -20,6 +21,7 @@ class BeStandardLightingPass final : public BeRenderPass {
     std::shared_ptr<BeTexture> _depthInput;
     std::shared_ptr<BeTexture> _output;
 
+    BeMaterialScheme _pointLightScheme;
     std::shared_ptr<BeMaterial> _directionalLightMaterial;
     SenPipeline _directionalLightPipeline;
     std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _pointLightMaterials;

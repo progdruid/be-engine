@@ -30,6 +30,7 @@ class BeStandardFullscreenEffectPass final : public BeRenderPass {
     );
     ~BeStandardFullscreenEffectPass() override = default;
 
+    expose
     auto Initialise() -> void override;
     auto Render() -> void override;
     auto GetPassName() const -> const std::string override { return "Standard Fullscreen Effect Pass"; }

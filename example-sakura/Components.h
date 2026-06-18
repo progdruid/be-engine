@@ -54,7 +54,8 @@ struct PointLightComponent {
 };
 
 class LuaSceneLoader;
-void RegisterComponentParsers(LuaSceneLoader& loader);
+class BeAssetRegistry;
+void RegisterComponentParsers(LuaSceneLoader& loader, BeAssetRegistry& registry);
 
 template<typename... Components>
 auto CreateEntity(entt::registry& registry, Components&&... components) -> entt::entity {

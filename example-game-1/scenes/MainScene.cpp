@@ -41,7 +41,6 @@ auto MainScene::Prepare() -> void {
         .AddToRegistry()
         .BuildNoReturn();
 
-    BeAssetRegistry::InjectRenderer(GameIns->Renderer);
     BeAssetRegistry::IndexShaderFiles({
         "assets/shaders/uniform-material.hlsl",
         "assets/shaders/standard.hlsl",
@@ -71,8 +70,8 @@ auto MainScene::Prepare() -> void {
         auto planeMesh = BeMeshPrimitives::Plane(63);
         const auto terrainShader = BeAssetRegistry::GetShader("terrain");
         _plane = BeProp::FromMesh(std::move(planeMesh), terrainShader, "geometry-main");
-        _plane->Slices[0].Material->SetFloat("TerrainScale", 200.0f);
-        _plane->Slices[0].Material->SetFloat("HeightScale", 100.0f);
+        _plane->Slices[0].Material->SetFloat1("TerrainScale", 200.0f);
+        _plane->Slices[0].Material->SetFloat1("HeightScale", 100.0f);
     }
     _witchItems = _machine->LoadProp("assets/witch_items.glb",    standardShader);
     _cube       = _machine->LoadProp("assets/cube.glb",           tessellatedShader);

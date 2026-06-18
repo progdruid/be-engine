@@ -3,6 +3,7 @@
 #include <umbrellas/access-modifiers.hpp>
 
 #include "BaseScene.h"
+#include "BeAssetRegistry.h"
 #include "entt/entt.hpp"
 
 struct BeProp;
@@ -19,6 +20,7 @@ class LuaSceneLoader;
 
 class SakuraScene : public BaseScene {
     hide
+    BeAssetRegistry _assetRegistry;
     entt::registry _registry;
     std::shared_ptr<BeCamera> _camera;
     std::unique_ptr<OrbitCameraController> _orbitCameraController;

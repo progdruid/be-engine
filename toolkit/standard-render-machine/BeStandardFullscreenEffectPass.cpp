@@ -15,15 +15,20 @@ BeStandardFullscreenEffectPass::BeStandardFullscreenEffectPass(
     std::weak_ptr<BeShader> shader,
     std::shared_ptr<BeMaterial> material,
     std::vector<std::shared_ptr<BeTexture>> outputs
-) : _srm(srm), _shader(std::move(shader)), _material(std::move(material)), _outputs(std::move(outputs)) {}
+) 
+: _srm(srm)
+, _shader(std::move(shader))
+, _material(std::move(material))
+, _outputs(std::move(outputs)) {}
 
 auto BeStandardFullscreenEffectPass::Initialise() -> void {
     auto shader = _shader.lock();
     be_assert(shader, "BeStandardFullscreenEffectPass: shader not set");
 
     auto pipelineDesc = shader->GetPipelineDesc();
-    for (const auto& tex : _outputs)
+    for (const auto& tex : _outputs) {
         pipelineDesc.RenderTargetFormats.push_back(tex->Format);
+    }
     _pipeline = SenBackend::CreatePipeline(pipelineDesc);
     be_assert(_pipeline.IsValid(), "BeStandardFullscreenEffectPass: failed to create pipeline");
 }

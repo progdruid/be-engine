@@ -9,7 +9,7 @@ static glm::vec3 ReadVec3(luabridge::LuaRef t) {
     return glm::vec3(t[1].unsafe_cast<float>(), t[2].unsafe_cast<float>(), t[3].unsafe_cast<float>());
 }
 
-void RegisterComponentParsers(LuaSceneLoader& loader) {
+void RegisterComponentParsers(LuaSceneLoader& loader, BeAssetRegistry& registry) {
     loader.AddComponentParser("transform", [](entt::registry& reg, entt::entity e, std::string_view entityName, luabridge::LuaRef tbl) {
         TransformComponent comp;
         if (tbl["position"].isTable()) {
@@ -25,12 +25,12 @@ void RegisterComponentParsers(LuaSceneLoader& loader) {
         reg.emplace<TransformComponent>(e, comp);
     });
 
-    loader.AddComponentParser("render", [](entt::registry& reg, entt::entity e, std::string_view entityName, luabridge::LuaRef tbl) {
+    loader.AddComponentParser("render", [&registry](entt::registry& reg, entt::entity e, std::string_view entityName, luabridge::LuaRef tbl) {
         if (!tbl["prop"].isString()) {
             return;
         }
         auto propName = tbl["prop"].unsafe_cast<std::string>();
-        if (auto prop = BeAssetRegistry::GetProp(propName).lock()) {
+        if (auto prop = registry.GetProp(propName).lock()) {
             bool castShadows = tbl["castShadows"].isBool() ? tbl["castShadows"].unsafe_cast<bool>() : true;
             reg.emplace<RenderComponent>(e, RenderComponent{ .Prop = prop, .CastShadows = castShadows });
         }

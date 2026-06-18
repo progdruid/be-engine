@@ -29,6 +29,7 @@ class BeStandardBackbufferPass final : public BeRenderPass {
     );
     ~BeStandardBackbufferPass() override = default;
 
+    expose
     auto Initialise() -> void override;
     auto Render() -> void override;
     auto GetPassName() const -> const std::string override { return "Standard Backbuffer Pass"; }

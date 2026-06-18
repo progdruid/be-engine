@@ -102,7 +102,7 @@ auto BeTexture::Builder::FlipVertically(const uint32_t w, const uint32_t h, uint
     delete[] tempRow;
 }
 
-auto BeTexture::Builder::AddToRegistry() -> Builder&& { _addToRegistry = true; return std::move(*this); }
+auto BeTexture::Builder::AddToRegistry(BeAssetRegistry& registry) -> Builder&& { _registry = &registry; return std::move(*this); }
 
 
 auto BeTexture::Builder::Build() -> std::shared_ptr<BeTexture> {
@@ -111,8 +111,8 @@ auto BeTexture::Builder::Build() -> std::shared_ptr<BeTexture> {
         _descriptor.Mips = std::bit_width(std::max(_descriptor.Width, _descriptor.Height));
     }
     std::shared_ptr<BeTexture> resource(new BeTexture(_descriptor));
-    if (_addToRegistry) {
-        BeAssetRegistry::AddTexture(_descriptor.Name, resource);
+    if (_registry) {
+        _registry->AddTexture(_descriptor.Name, resource);
     }
     return resource;
 }
@@ -123,8 +123,8 @@ auto BeTexture::Builder::BuildNoReturn() -> void {
         _descriptor.Mips = std::bit_width(std::max(_descriptor.Width, _descriptor.Height));
     }
     const std::shared_ptr<BeTexture> resource(new BeTexture(_descriptor));
-    if (_addToRegistry) {
-        BeAssetRegistry::AddTexture(_descriptor.Name, resource);
+    if (_registry) {
+        _registry->AddTexture(_descriptor.Name, resource);
     }
 }
 

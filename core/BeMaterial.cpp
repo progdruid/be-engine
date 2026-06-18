@@ -1,15 +1,12 @@
 #include "BeMaterial.h"
 
 #include <sstream>
-#include <iomanip>
 
 #include "BeAssetRegistry.h"
-#include "BeRenderer.h"
 #include "BeTexture.h"
 #include "sen-rhi/SenBackend.h"
 
-auto BeMaterial::Create(std::string_view schemeName, bool frequentlyUsed) -> std::shared_ptr<BeMaterial> {
-    auto scheme = BeAssetRegistry::GetMaterialScheme(schemeName);
+auto BeMaterial::Create(const BeMaterialScheme& scheme, bool frequentlyUsed) -> std::shared_ptr<BeMaterial> {
     auto material = std::make_shared<BeMaterial>(scheme, frequentlyUsed);
     material->InitialiseSlotMaps();
     material->RebuildBindGroup();
@@ -41,12 +38,8 @@ BeMaterial::~BeMaterial() {
 
 auto BeMaterial::InitialiseSlotMaps() -> void {
     for (const auto& property : _scheme.Textures) {
-        auto texWeak = BeAssetRegistry::GetTexture(property.DefaultTexturePath);
-        be_assert(
-            !texWeak.expired(), 
-            "Texture not found in registry: " + property.DefaultTexturePath
-        );
-
+        auto texWeak = BeAssetRegistry::GetDefaultTexture(property.DefaultTexturePath);
+        be_assert(!texWeak.expired(), "Default texture not found: " + property.DefaultTexturePath);
         _textures[property.Name] = {texWeak.lock(), property.SlotIndex, property.IsStorage};
     }
 
@@ -190,7 +183,7 @@ auto BeMaterial::Print() const -> std::string {
 }
 
 
-auto BeMaterial::SetFloat(const std::string& propertyName, float value) -> void {
+auto BeMaterial::SetFloat1(const std::string& propertyName, float value) -> void {
     be_assert(_propertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     const uint32_t offset = _propertyOffsets.at(propertyName);
     memcpy(_bufferData.data() + offset, &value, sizeof(float));

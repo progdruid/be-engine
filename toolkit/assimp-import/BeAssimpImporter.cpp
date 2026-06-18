@@ -24,7 +24,8 @@ auto BeAssimpImporter::LoadProp(
         aiProcess_ImproveCacheLocality |
         aiProcess_CalcTangentSpace |
         aiProcess_ValidateDataStructure |
-        aiProcess_OptimizeMeshes);
+        aiProcess_OptimizeMeshes
+    );
     
     const aiScene* scene = _importer.ReadFile(modelPath.string().c_str(), flags);
     be_assert(scene && scene->mRootNode, "Failed to load model: " + modelPath.string());
@@ -92,16 +93,16 @@ auto BeAssimpImporter::LoadProp(
 
             // Negate X on all vectors for the engine's left-handed coordinate system.
             // Compute handedness in engine space so cross(N, T) * w reconstructs the correct bitangent.
-            glm::vec3 n_neg = {-normal.x,   normal.y,   normal.z};
-            glm::vec3 t_neg = {-tangent.x,  tangent.y,  tangent.z};
-            glm::vec3 b_neg = {-bitangent.x, bitangent.y, bitangent.z};
-            float handedness = glm::dot(glm::cross(n_neg, t_neg), b_neg) >= 0.0f ? 1.0f : -1.0f;
+            glm::vec3 nNeg = {-normal.x,   normal.y,   normal.z};
+            glm::vec3 tNeg = {-tangent.x,  tangent.y,  tangent.z};
+            glm::vec3 bNeg = {-bitangent.x, bitangent.y, bitangent.z};
+            float handedness = glm::dot(glm::cross(nNeg, tNeg), bNeg) >= 0.0f ? 1.0f : -1.0f;
 
             vertex.Position = {-position.x, position.y, position.z};
-            vertex.Normal   = n_neg;
+            vertex.Normal      = nNeg;
             vertex.Color    = {color.r, color.g, color.b, color.a};
             vertex.UV0      = {texCoord0.x, texCoord0.y};
-            vertex.Tangent  = {t_neg.x, t_neg.y, t_neg.z, handedness};
+            vertex.Tangent  = {tNeg.x, tNeg.y, tNeg.z, handedness};
             prop->Mesh->Vertices.push_back(vertex);
         }
 
@@ -157,7 +158,6 @@ auto BeAssimpImporter::LoadTextureFromAssimpPath(
         }
         return builder
             .LoadFromFile(path)
-            .AddToRegistry()
             .Build();
     }
 
@@ -172,14 +172,14 @@ auto BeAssimpImporter::LoadTextureFromAssimpPath(
         if (!decoded) throw std::runtime_error("Failed to decode embedded texture");
 
         const auto & resource = builder
-            .SetSize(w, h).FillFromMemory(decoded).AddToRegistry().Build();
+            .SetSize(w, h).FillFromMemory(decoded).Build();
         stbi_image_free(decoded);
         return resource;
     }
 
     // decoded texture
     const size_t pixelCount = aiTex->mWidth * aiTex->mHeight;
-    uint8_t* converted = static_cast<uint8_t*>(malloc(pixelCount * 4));
+    const auto converted = static_cast<uint8_t*>(malloc(pixelCount * 4));
     const uint8_t* srcData = reinterpret_cast<const uint8_t*>(aiTex->pcData);
     for (size_t i = 0; i < pixelCount; ++i) {
         converted[i * 4 + 0] = srcData[i * 4 + 2]; // B -> R
@@ -188,7 +188,10 @@ auto BeAssimpImporter::LoadTextureFromAssimpPath(
         converted[i * 4 + 3] = srcData[i * 4 + 3]; // A
     }
     const auto & resource = builder
-        .SetSize(aiTex->mWidth, aiTex->mHeight).FillFromMemory(converted).AddToRegistry().Build();
+        .SetSize(aiTex->mWidth, aiTex->mHeight)
+        .FillFromMemory(converted)
+        .Build()
+    ;
     free(converted);
     return resource;
 }

@@ -21,7 +21,7 @@ struct BeProp {
     static auto FromMesh(
         std::shared_ptr<BeMesh> mesh,
         std::weak_ptr<BeShader> shader,
-        const std::string& schemeName
+        const std::string& schemeLink
     ) -> std::shared_ptr<BeProp>;
 
     BeProp() = default;

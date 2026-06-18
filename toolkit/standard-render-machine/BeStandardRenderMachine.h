@@ -16,6 +16,7 @@ class BeTexture;
 class BeRenderer;
 class BeShader;
 class BeRenderPass;
+class BeAssetRegistry;
 
 // =====================================================================================================================
 
@@ -72,6 +73,7 @@ class BeStandardRenderMachine {
 
     hide
     std::weak_ptr<BeRenderer> _renderer;
+    BeAssetRegistry& _assetRegistry;
     uint32_t _width;
     uint32_t _height;
 
@@ -100,7 +102,7 @@ class BeStandardRenderMachine {
 
     // lifetime --------------------------------------------------------------------------------------------------------
     expose
-    explicit BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, uint32_t width, uint32_t height);
+    explicit BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, BeAssetRegistry& assetRegistry, uint32_t width, uint32_t height);
     ~BeStandardRenderMachine();
 
     // texture registry ------------------------------------------------------------------------------------------------
@@ -160,5 +162,6 @@ class BeStandardRenderMachine {
 
     // internal use by passes ------------------------------------------------------------------------------------------
     expose
-    auto AcquireNewObjectMaterial() -> std::shared_ptr<BeMaterial>;
+    auto GetAssetRegistry() const -> BeAssetRegistry& { return _assetRegistry; }
+    auto AcquireNewObjectMaterial(const BeMaterialScheme& scheme) -> std::shared_ptr<BeMaterial>;
 };

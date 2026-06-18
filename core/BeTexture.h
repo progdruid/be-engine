@@ -8,6 +8,8 @@
 #include <umbrellas/access-modifiers.hpp>
 #include <sen-rhi/SenTypes.h>
 
+class BeAssetRegistry;
+
 class BeTexture {
 
     // types ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -26,7 +28,7 @@ class BeTexture {
     expose class Builder {
 
         hide BeTextureDescriptor _descriptor;
-        hide bool _addToRegistry = false;
+        hide BeAssetRegistry* _registry = nullptr;
         hide bool _autoMips      = false;
 
         hide explicit Builder (std::string name);
@@ -51,7 +53,7 @@ class BeTexture {
 
         hide static auto FlipVertically (uint32_t w, uint32_t h, uint8_t* data) -> void;
 
-        expose auto AddToRegistry () -> Builder&&;
+        expose auto AddToRegistry (BeAssetRegistry& registry) -> Builder&&;
 
         expose auto Build() -> std::shared_ptr<BeTexture>;
         expose auto BuildNoReturn() -> void;

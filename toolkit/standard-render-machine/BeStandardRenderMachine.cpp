@@ -16,7 +16,6 @@
 #include "standard-render-machine/BeStandardBloomPass.h"
 #include "standard-render-machine/BeStandardFullscreenEffectPass.h"
 #include "standard-render-machine/BeStandardBackbufferPass.h"
-#include "standard-render-machine/BeStandardEnvironmentBakePass.h"
 
 auto BeSRMGeometryEntry::CalculateModelMatrix(glm::vec3 pos, glm::quat rot, glm::vec3 scale) -> glm::mat4 {
     return
@@ -39,8 +38,8 @@ auto BeSRMSunLightEntry::CalculateViewProj(
     return lightOrtho * lightView;
 }
 
-BeStandardRenderMachine::BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, uint32_t width, uint32_t height)
-    : _renderer(std::move(renderer)), _width(width), _height(height) {}
+BeStandardRenderMachine::BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, BeAssetRegistry& assetRegistry, uint32_t width, uint32_t height)
+    : _renderer(std::move(renderer)), _assetRegistry(assetRegistry), _width(width), _height(height) {}
 
 BeStandardRenderMachine::~BeStandardRenderMachine() = default;
 
@@ -140,8 +139,9 @@ auto BeStandardRenderMachine::AddBloomPass(
 
     auto bloomTexture = DeclareTexture("__standard_bloom", input->Format, 1.0f, false, mipCount);
 
-    if (!dirtTexture)
-        dirtTexture = BeAssetRegistry::GetTexture("black").lock();
+    if (!dirtTexture) {
+        dirtTexture = BeAssetRegistry::GetDefaultTexture("black").lock();
+    }
 
     auto pass = std::make_unique<BeStandardBloomPass>(this, input, bloomTexture, output, dirtTexture, mipCount);
     _passes.push_back(std::move(pass));
@@ -258,8 +258,8 @@ auto BeStandardRenderMachine::LoadProp(
 
     if (model == BeSRMLightingModel::PBR) {
         materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
-            const auto schemeName = shader.lock()->GetMaterialSchemeName("geometry-main");
-            auto material = BeMaterial::Create(schemeName, true);
+            const auto scheme = shader.lock()->GetMaterialScheme("geometry-main");
+            auto material = BeMaterial::Create(scheme, true);
 
             aiString texPath;
             if (mat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) == AI_SUCCESS ||
@@ -284,8 +284,8 @@ auto BeStandardRenderMachine::LoadProp(
         };
     } else {
         materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
-            const auto schemeName = shader.lock()->GetMaterialSchemeName("geometry-main");
-            auto material = BeMaterial::Create(schemeName, true);
+            const auto scheme = shader.lock()->GetMaterialScheme("geometry-main");
+            auto material = BeMaterial::Create(scheme, true);
 
             aiString texPath;
             if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
@@ -311,7 +311,7 @@ auto BeStandardRenderMachine::LoadProp(
 
             float shininess = 0.0f;
             if (mat->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
-                material->SetFloat("Shininess", shininess / 2048.0f);
+                material->SetFloat1("Shininess", shininess / 2048.0f);
 
             return material;
         };
@@ -395,8 +395,11 @@ auto BeStandardRenderMachine::BakeMeshes() -> void {
  *      ring buffer option for `SenBuffer` with bump on every write;
  *      structured buffer option for `SenBuffer` with enough slots for every object
  */
-auto BeStandardRenderMachine::AcquireNewObjectMaterial() -> std::shared_ptr<BeMaterial> {
-    if (_objectMaterialCursor >= _objectMaterialPool.size())
-        _objectMaterialPool.push_back(BeMaterial::Create("object-material-for-geometry-pass", true));
+auto BeStandardRenderMachine::AcquireNewObjectMaterial(const BeMaterialScheme& scheme) -> std::shared_ptr<BeMaterial> {
+    if (_objectMaterialCursor >= _objectMaterialPool.size()) {
+        _objectMaterialPool.push_back(BeMaterial::Create(scheme, true));
+    } else if (_objectMaterialPool[_objectMaterialCursor]->GetSchemeName() != scheme.Name) {
+        _objectMaterialPool[_objectMaterialCursor] = BeMaterial::Create(scheme, true);
+    }
     return _objectMaterialPool[_objectMaterialCursor++];
 }

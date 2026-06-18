@@ -8,69 +8,64 @@
 #include "umbrellas/include-libassert.h"
 #include <sen-rhi/SenTypes.h>
 
-// Windows headers define GetProp as GetPropW — undef to avoid macro collision
 #ifdef GetProp
 #undef GetProp
 #endif
 
-class BeRenderer;
 class BeTexture;
 class BeShader;
 class BeMaterial;
 struct BeProp;
 
 class BeAssetRegistry {
-    
+
     hide
-    static std::weak_ptr<BeRenderer> _renderer;
-
-    static std::unordered_map<std::filesystem::path, std::string> _shaderSources;
-
-    static std::unordered_map<std::string, std::shared_ptr<BeShader>> _shaders;
-    static std::unordered_map<std::string, BeMaterialScheme> _materialSchemes;
+    static std::unordered_map<std::string, std::shared_ptr<BeTexture>> _defaultTextures;
     static std::unordered_map<std::string, SenSampler> _samplers;
-    static std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _materials;
-    static std::unordered_map<std::string, std::shared_ptr<BeTexture>> _textures;
-    static std::unordered_map<std::string, std::shared_ptr<BeProp>> _props;
 
     expose
-    //BeAssetRegistry() = default;
-    //~BeAssetRegistry() = default;
-    BeAssetRegistry() = delete;
-    ~BeAssetRegistry() = delete;
+    static auto RegisterDefaultTexture(std::string_view name, std::shared_ptr<BeTexture> texture) -> void;
+    static auto GetDefaultTexture(std::string_view name) -> std::weak_ptr<BeTexture> { be_assert(_defaultTextures.contains(std::string(name))); return _defaultTextures.at(std::string(name)); }
+    static auto HasDefaultTexture(std::string_view name) -> bool { return _defaultTextures.contains(std::string(name)); }
+    static auto GetSampler(std::string_view samplerDescString) -> SenSampler;
+    static auto StaticShutdown() -> void;
 
-    static auto InjectRenderer (const std::weak_ptr<BeRenderer>& renderer) -> void { _renderer = renderer; }
-    static auto Shutdown       () -> void;
-    
-    // Shaders
-    static auto IndexShaderFiles (const std::vector<std::filesystem::path>& filePaths) -> void;
-    
-    static auto GetShader(std::string_view name) -> std::weak_ptr<BeShader> {
-        be_assert(_shaders.contains(std::string(name)), name); 
-        return _shaders.at(std::string(name));
-    }
-    static auto HasShader(std::string_view name) -> bool { return _shaders.contains(std::string(name)); }
+    hide
+    std::unordered_map<std::filesystem::path, std::string> _shaderSources;
+    std::unordered_map<std::string, std::shared_ptr<BeShader>> _shaders;
+    std::unordered_map<std::string, BeMaterialScheme> _materialSchemes;
+    std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _materials;
+    std::unordered_map<std::string, std::shared_ptr<BeTexture>> _textures;
+    std::unordered_map<std::string, std::shared_ptr<BeProp>> _props;
 
-    static auto GetMaterialScheme(std::string_view name) -> BeMaterialScheme { be_assert(_materialSchemes.contains(std::string(name))); return _materialSchemes.at(std::string(name)); }
-    static auto HasMaterialScheme(std::string_view name) -> bool { return _materialSchemes.contains(std::string(name)); }
-    
-    static auto GetSampler (std::string_view samplerDescString) -> SenSampler;
-    
-    // Material
-    static auto AddMaterial(std::string_view name, std::shared_ptr<BeMaterial> material) -> void { _materials[std::string(name)] = material; }
-    static auto GetMaterial(std::string_view name) -> std::weak_ptr<BeMaterial> { be_assert(_materials.contains(std::string(name))); return _materials.at(std::string(name)); }
-    static auto RemoveMaterial(std::string_view name) -> void { _materials.erase(std::string(name)); }
-    static auto HasMaterial(std::string_view name) -> bool { return _materials.contains(std::string(name)); }
+    expose
+    explicit BeAssetRegistry();
+    ~BeAssetRegistry();
 
-    // Texture
-    static auto AddTexture(std::string_view name, std::shared_ptr<BeTexture> resource) -> void { _textures[std::string(name)] = resource; }
-    static auto GetTexture(std::string_view name) -> std::weak_ptr<BeTexture> { be_assert(_textures.contains(std::string(name))); return _textures.at(std::string(name)); }
-    static auto RemoveTexture(std::string_view name) -> void { _textures.erase(std::string(name)); }
-    static auto HasTexture(std::string_view name) -> bool { return _textures.contains(std::string(name)); }
-    
-    // Prop
-    static auto AddProp(std::string_view name, std::shared_ptr<BeProp> prop) -> void { _props[std::string(name)] = prop; }
-    static auto GetProp(std::string_view name) -> std::weak_ptr<BeProp> { be_assert(_props.contains(std::string(name))); return _props.at(std::string(name)); }
-    static auto RemoveProp(std::string_view name) -> void { _props.erase(std::string(name)); }
-    static auto HasProp(std::string_view name) -> bool { return _props.contains(std::string(name)); }
+    expose // Shaders
+    auto IndexShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void;
+
+    auto GetShader(std::string_view name) -> std::weak_ptr<BeShader> { be_assert(_shaders.contains(std::string(name)), name); return _shaders.at(std::string(name)); }
+    auto HasShader(std::string_view name) const -> bool { return _shaders.contains(std::string(name)); }
+
+    auto GetMaterialScheme(std::string_view name) -> BeMaterialScheme { be_assert(_materialSchemes.contains(std::string(name))); return _materialSchemes.at(std::string(name)); }
+    auto HasMaterialScheme(std::string_view name) const -> bool { return _materialSchemes.contains(std::string(name)); }
+
+    expose // Material
+    auto AddMaterial(std::string_view name, std::shared_ptr<BeMaterial> material) -> void { _materials[std::string(name)] = material; }
+    auto GetMaterial(std::string_view name) -> std::weak_ptr<BeMaterial> { be_assert(_materials.contains(std::string(name))); return _materials.at(std::string(name)); }
+    auto RemoveMaterial(std::string_view name) -> void { _materials.erase(std::string(name)); }
+    auto HasMaterial(std::string_view name) const -> bool { return _materials.contains(std::string(name)); }
+
+    expose // Texture
+    auto AddTexture(std::string_view name, std::shared_ptr<BeTexture> resource) -> void { _textures[std::string(name)] = resource; }
+    auto GetTexture(std::string_view name) -> std::weak_ptr<BeTexture> { be_assert(_textures.contains(std::string(name))); return _textures.at(std::string(name)); }
+    auto RemoveTexture(std::string_view name) -> void { _textures.erase(std::string(name)); }
+    auto HasTexture(std::string_view name) const -> bool { return _textures.contains(std::string(name)); }
+
+    expose // Prop
+    auto AddProp(std::string_view name, std::shared_ptr<BeProp> prop) -> void { _props[std::string(name)] = prop; }
+    auto GetProp(std::string_view name) -> std::weak_ptr<BeProp> { be_assert(_props.contains(std::string(name))); return _props.at(std::string(name)); }
+    auto RemoveProp(std::string_view name) -> void { _props.erase(std::string(name)); }
+    auto HasProp(std::string_view name) const -> bool { return _props.contains(std::string(name)); }
 };

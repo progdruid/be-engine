@@ -16,10 +16,9 @@
 #include "BeMaterial.h"
 #include "BeMeshPrimitives.h"
 #include "BeProp.h"
-#include "BeShader.h"
 #include "BeTexture.h"
-#include "BeWindow.h"
 #include "BeRenderer.h"
+#include "BeShader.h"
 #include "Components.h"
 #include "Game.h"
 #include "scenes/BeSceneManager.h"
@@ -29,7 +28,7 @@ SakuraScene::SakuraScene(Game* game) : BaseScene(game) {}
 SakuraScene::~SakuraScene() = default;
 
 auto SakuraScene::Prepare() -> void {
-    BeAssetRegistry::IndexShaderFiles({
+    _assetRegistry.IndexShaderFiles({
         "assets/shaders/uniform-material.hlsl",
         "assets/shaders/objectMaterial.hlsl",
         "assets/shaders/standard-pbr.hlsl",
@@ -49,20 +48,20 @@ auto SakuraScene::Prepare() -> void {
         "assets/shaders/dof.hlsl",
     });
 
-    const auto standardShader    = BeAssetRegistry::GetShader("standard-pbr");
-    const auto phongShader       = BeAssetRegistry::GetShader("standard-phong");
-    const auto checkerboardShader = BeAssetRegistry::GetShader("checkerboard");
+    const auto standardShader     = _assetRegistry.GetShader("standard-pbr");
+    const auto phongShader        = _assetRegistry.GetShader("standard-phong");
+    const auto checkerboardShader = _assetRegistry.GetShader("checkerboard");
 
     const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
     const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
 
-    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
+    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, _assetRegistry, screenWidth, screenHeight);
 
     _cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), checkerboardShader, "geometry-main");
     _cube->Materials[0]->SetTexture("DiffuseTexture",
         BeTexture::Create("Sakura_Checkerboard")
         .LoadFromFile("assets/checkerboard.png")
-        .AddToRegistry()
+        .AddToRegistry(_assetRegistry)
         .Build()
     );
 
@@ -73,28 +72,28 @@ auto SakuraScene::Prepare() -> void {
     _moon->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 2.1f);
 
     _anvil = _machine->LoadProp("assets/anvil/scene.gltf", standardShader);
-    _anvil->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
+    _anvil->Materials[0]->SetSampler("InputSampler", _assetRegistry.GetSampler("point-clamp"));
 
     _sakura = _machine->LoadProp("assets/sakura/scene.gltf", standardShader);
-    _sakura->Materials[0]->SetSampler("InputSampler", BeAssetRegistry::GetSampler("linear-wrap"));
+    _sakura->Materials[0]->SetSampler("InputSampler", _assetRegistry.GetSampler("linear-wrap"));
 
     _sakura2 = _machine->LoadProp("assets/stylized_sakura_tree.glb", standardShader);
 
     _testSphere = BeProp::FromMesh(BeMeshPrimitives::Sphere(), standardShader, "geometry-main");
     _testSphere->Materials[0]->SetFloat3("BaseColor", glm::vec3(0.8f, 0.3f, 0.1f));
-    _testSphere->Materials[0]->SetFloat("Metallic", 0.8f);
-    _testSphere->Materials[0]->SetFloat("Roughness", 0.5f);
+    _testSphere->Materials[0]->SetFloat1("Metallic", 0.8f);
+    _testSphere->Materials[0]->SetFloat1("Roughness", 0.5f);
 
     _axe = _machine->LoadProp("assets/pixel_molten_axe/scene.gltf",phongShader,BeSRMLightingModel::Phong);
     for (const auto& material : _axe->Materials) {
-        material->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
+        material->SetSampler("InputSampler", _assetRegistry.GetSampler("point-clamp"));
         material->SetFloat3("EmissiveColor", glm::vec3(1.5f));
     }
 
     _katana = _machine->LoadProp("assets/cyberpunk_katana/scene.gltf", standardShader);
     for (const auto& material : _katana->Materials) {
         material->SetFloat3("EmissiveColor", glm::vec3(2.5f));
-        material->SetFloat("Metallic", 0.01f);
+        material->SetFloat1("Metallic", 0.01f);
     }
     
     _rustySphere = _machine->LoadProp("assets/rusty-sphere/scene.gltf", standardShader);
@@ -102,18 +101,19 @@ auto SakuraScene::Prepare() -> void {
     //     material->SetFloat("Metallic", 0.9f);
     // }
     
-    BeAssetRegistry::AddProp("cube", _cube);
-    BeAssetRegistry::AddProp("emissiveCube", _emissiveCube);
-    BeAssetRegistry::AddProp("moon", _moon);
-    BeAssetRegistry::AddProp("anvil", _anvil);
-    BeAssetRegistry::AddProp("sakura", _sakura);
-    BeAssetRegistry::AddProp("sakura2", _sakura2);
-    BeAssetRegistry::AddProp("testSphere", _testSphere);
-    BeAssetRegistry::AddProp("axe", _axe);
-    BeAssetRegistry::AddProp("katana", _katana);
-    BeAssetRegistry::AddProp("rusty-sphere", _rustySphere);
+    _assetRegistry.AddProp("cube", _cube);
+    _assetRegistry.AddProp("emissiveCube", _emissiveCube);
+    _assetRegistry.AddProp("moon", _moon);
+    _assetRegistry.AddProp("anvil", _anvil);
+    _assetRegistry.AddProp("sakura", _sakura);
+    _assetRegistry.AddProp("sakura2", _sakura2);
+    _assetRegistry.AddProp("testSphere", _testSphere);
+    _assetRegistry.AddProp("axe", _axe);
+    _assetRegistry.AddProp("katana", _katana);
+    _assetRegistry.AddProp("rusty-sphere", _rustySphere);
 
-    _uniformMaterial = BeMaterial::Create("uniform-material", false);
+    const auto& uniformScheme = _assetRegistry.GetMaterialScheme("uniform-material");
+    _uniformMaterial = BeMaterial::Create(uniformScheme, false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
     _machine->RegisterMesh(_cube->Mesh);
@@ -135,16 +135,16 @@ auto SakuraScene::Prepare() -> void {
 
     const auto dirtTexture = BeTexture::Create("Sakura_BloomDirtTexture")
         .LoadFromFile("assets/bloom-dirt-mask.png")
-        .AddToRegistry()
+        .AddToRegistry(_assetRegistry)
         .Build();
 
     const auto skyTexture = BeTexture::Create("Sakura_Sky")
         .LoadFromFileHdr("assets/moonrise_puresky.hdr")
-        .AddToRegistry()
+        .AddToRegistry(_assetRegistry)
         .Build();
     
     _sceneLoader = std::make_unique<LuaSceneLoader>();
-    RegisterComponentParsers(*_sceneLoader);
+    RegisterComponentParsers(*_sceneLoader, _assetRegistry);
 
     _camera = std::make_unique<BeCamera>();
     _camera->Width = GameIns->Renderer->GetSwapchainPixelWidth();
@@ -196,27 +196,30 @@ auto SakuraScene::RebuildPasses() -> void {
     _machine->AddShadowPass();
     _machine->AddGeometryPass();
     _machine->AddLightingPass("Sakura_HDR");
-    _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_Bloom", BeAssetRegistry::GetTexture("Sakura_BloomDirtTexture").lock());
+    _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_Bloom", _assetRegistry.GetTexture("Sakura_BloomDirtTexture").lock());
 
     std::string tonemapperInput = "Sakura_Bloom";
 
     if (_dofEnabled) {
         if (!_dofMaterial) {
-            _dofMaterial = BeMaterial::Create("dof-material", false);
+            const auto& dofScheme = _assetRegistry.GetShader("dof").lock()->GetMaterialScheme("main");
+            _dofMaterial = BeMaterial::Create(dofScheme, false);
         }
         _dofMaterial->SetTexture("ColorInput", _machine->GetRenderTexture("Sakura_Bloom"));
         _dofMaterial->SetTexture("DepthInput", _machine->GetRenderTexture("Sakura_Depth"));
-        _machine->AddFullscreenPass(BeAssetRegistry::GetShader("dof"), _dofMaterial, { "Sakura_DoF" });
+        _machine->AddFullscreenPass(_assetRegistry.GetShader("dof"), _dofMaterial, { "Sakura_DoF" });
         tonemapperInput = "Sakura_DoF";
     }
 
-    const auto tonemapperMaterial = BeMaterial::Create("tonemapper-material", false);
+    const auto& tonemapperScheme = _assetRegistry.GetShader("tonemapper").lock()->GetMaterialScheme("main");
+    const auto tonemapperMaterial = BeMaterial::Create(tonemapperScheme, false);
     tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture(tonemapperInput));
-    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("tonemapper"), tonemapperMaterial, { "Sakura_Tonemapper" });
+    _machine->AddFullscreenPass(_assetRegistry.GetShader("tonemapper"), tonemapperMaterial, { "Sakura_Tonemapper" });
 
-    const auto fxaaMaterial = BeMaterial::Create("fxaa-material", false);
+    const auto& fxaaScheme = _assetRegistry.GetShader("fxaa").lock()->GetMaterialScheme("main");
+    const auto fxaaMaterial = BeMaterial::Create(fxaaScheme, false);
     fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Sakura_Tonemapper"));
-    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });
+    _machine->AddFullscreenPass(_assetRegistry.GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });
 
     _machine->AddBackbufferPass("Sakura_FXAA", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
     _machine->BuildPasses();
@@ -265,7 +268,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         if (GameIns->Input->GetKey(GLFW_KEY_RIGHT_BRACKET))
             dofFocalDistance += 5.0f * deltaTime;
 
-        _dofMaterial->SetFloat("FocalDistance",  dofFocalDistance);
+        _dofMaterial->SetFloat1("FocalDistance",  dofFocalDistance);
     }
 
     if (_cameraMode == 1) {

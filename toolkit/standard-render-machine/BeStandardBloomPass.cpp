@@ -18,47 +18,50 @@ BeStandardBloomPass::BeStandardBloomPass(
     std::shared_ptr<BeTexture> bloomTexture,
     std::shared_ptr<BeTexture> output,
     std::shared_ptr<BeTexture> dirtTexture,
-    uint32_t mipCount
+    const uint32_t mipCount
 ) : _srm(srm), _inputHDR(std::move(inputHDR)), _bloomTexture(std::move(bloomTexture)),
     _output(std::move(output)), _dirtTexture(std::move(dirtTexture)), _mipCount(mipCount) {}
 
 auto BeStandardBloomPass::Initialise() -> void {
+    auto& registry = _srm->GetAssetRegistry();
     const SenFormat mipFormat = _bloomTexture->Format;
 
-    _brightMaterial = BeMaterial::Create("bloom-bright-material", false);
+    const auto  brightShader = registry.GetShader("bloom-bright").lock();
+    be_assert(  brightShader, "BeStandardBloomPass: bloom-bright shader not found");
+    const auto& brightScheme = brightShader->GetMaterialScheme("main");
+    _brightMaterial = BeMaterial::Create(brightScheme, false);
     _brightMaterial->SetTexture("HDRInput", _inputHDR);
-    const auto brightShader = BeAssetRegistry::GetShader("bloom-bright").lock();
-    be_assert(brightShader, "BeStandardBloomPass: bloom-bright shader not found");
     _brightPipeline = BePipelineBuilder::Start(*brightShader).SetColorFormats({ mipFormat }).Build();
 
     // Downsample mipTarget i (1..mipCount-1) reads source mip i-1 of the same texture.
+    const auto  downsampleShader = registry.GetShader("bloom-downsample").lock();
+    be_assert(  downsampleShader, "BeStandardBloomPass: bloom-downsample shader not found");
+    const auto& downsampleScheme = downsampleShader->GetMaterialScheme("main");
     _downsampleMaterials.resize(_mipCount);
     for (uint32_t mipTarget = 1; mipTarget < _mipCount; ++mipTarget) {
         const auto& source = _bloomTexture->GetMipViewport(mipTarget - 1);
-        auto mat = BeMaterial::Create("bloom-downsample-material", false);
+        const auto  mat    = BeMaterial::Create(downsampleScheme, false);
         mat->SetFloat2("TexelSize", glm::vec2(1.0f / source.Width, 1.0f / source.Height));
-        mat->SetFloat("UseKaris", mipTarget == 1 ? 1.0f : 0.0f);
+        mat->SetFloat1("UseKaris", mipTarget == 1 ? 1.0f : 0.0f);
         mat->SetTexture("BloomMipInput", _bloomTexture, mipTarget - 1);
         _downsampleMaterials[mipTarget] = mat;
     }
 
+    _downsamplePipeline = BePipelineBuilder::Start(*downsampleShader).SetColorFormats({ mipFormat }).Build();
+
     // Upsample mipTarget i (0..mipCount-2) reads source mip i+1 of the same texture.
+    const auto  upsampleShader = registry.GetShader("bloom-upsample").lock();
+    be_assert(  upsampleShader, "BeStandardBloomPass: bloom-upsample shader not found");
+    const auto& upsampleScheme = upsampleShader->GetMaterialScheme("main");
     _upsampleMaterials.resize(_mipCount);
     for (uint32_t mipTarget = 0; mipTarget < _mipCount - 1; ++mipTarget) {
         const auto& source = _bloomTexture->GetMipViewport(mipTarget + 1);
-        auto mat = BeMaterial::Create("bloom-upsample-material", false);
+        const auto  mat = BeMaterial::Create(upsampleScheme, false);
         mat->SetFloat2("TexelSize", glm::vec2(1.0f / source.Width, 1.0f / source.Height));
-        mat->SetFloat("Radius", 1.0f);
+        mat->SetFloat1("Radius", 1.0f);
         mat->SetTexture("BloomMipInput", _bloomTexture, mipTarget + 1);
         _upsampleMaterials[mipTarget] = mat;
     }
-
-    const auto downsampleShader = BeAssetRegistry::GetShader("bloom-downsample").lock();
-    be_assert(downsampleShader, "BeStandardBloomPass: bloom-downsample shader not found");
-    _downsamplePipeline = BePipelineBuilder::Start(*downsampleShader).SetColorFormats({ mipFormat }).Build();
-
-    const auto upsampleShader = BeAssetRegistry::GetShader("bloom-upsample").lock();
-    be_assert(upsampleShader, "BeStandardBloomPass: bloom-upsample shader not found");
     _upsamplePipeline = BePipelineBuilder::Start(*upsampleShader)
         .SetBlend({
             .Enable = true,
@@ -67,12 +70,13 @@ auto BeStandardBloomPass::Initialise() -> void {
         })
         .SetColorFormats({ mipFormat }).Build();
 
-    _addMaterial = BeMaterial::Create("bloom-add-material", false);
-    _addMaterial->SetTexture("HDRInput",    _inputHDR);
-    _addMaterial->SetTexture("BloomInput",  _bloomTexture);
+    const auto addShader = registry.GetShader("bloom-add").lock();
+    be_assert( addShader, "BeStandardBloomPass: bloom-add shader not found");
+    const auto addScheme = addShader->GetMaterialScheme("main");
+    _addMaterial = BeMaterial::Create(addScheme, false);
+    _addMaterial->SetTexture("HDRInput", _inputHDR);
+    _addMaterial->SetTexture("BloomInput", _bloomTexture);
     _addMaterial->SetTexture("DirtTexture", _dirtTexture);
-    const auto addShader = BeAssetRegistry::GetShader("bloom-add").lock();
-    be_assert(addShader, "BeStandardBloomPass: bloom-add shader not found");
     _addPipeline = BePipelineBuilder::Start(*addShader).SetColorFormats({ mipFormat }).Build();
 }
 
@@ -84,7 +88,7 @@ auto BeStandardBloomPass::Render() -> void {
     RenderAddPass();
 }
 
-auto BeStandardBloomPass::RenderBrightPass() -> void {
+auto BeStandardBloomPass::RenderBrightPass() const -> void {
     auto& cmd = _renderer->GetCommandBuffer();
 
     BePass pass;
@@ -99,7 +103,7 @@ auto BeStandardBloomPass::RenderBrightPass() -> void {
     pass.End();
 }
 
-auto BeStandardBloomPass::RenderDownsamplePasses() -> void {
+auto BeStandardBloomPass::RenderDownsamplePasses() const -> void {
     auto& cmd = _renderer->GetCommandBuffer();
     cmd.SetPipeline(_downsamplePipeline);
     for (uint32_t mipTarget = 1; mipTarget < _mipCount; ++mipTarget) {
@@ -114,7 +118,7 @@ auto BeStandardBloomPass::RenderDownsamplePasses() -> void {
     }
 }
 
-auto BeStandardBloomPass::RenderUpsamplePasses() -> void {
+auto BeStandardBloomPass::RenderUpsamplePasses() const -> void {
     auto& cmd = _renderer->GetCommandBuffer();
     cmd.SetPipeline(_upsamplePipeline);
     for (int32_t mipTarget = _mipCount - 2; mipTarget >= 0; --mipTarget) {
@@ -129,7 +133,7 @@ auto BeStandardBloomPass::RenderUpsamplePasses() -> void {
     }
 }
 
-auto BeStandardBloomPass::RenderAddPass() -> void {
+auto BeStandardBloomPass::RenderAddPass() const -> void {
     auto& cmd = _renderer->GetCommandBuffer();
 
     BePass pass;

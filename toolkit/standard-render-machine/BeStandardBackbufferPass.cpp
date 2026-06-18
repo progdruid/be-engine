@@ -1,7 +1,5 @@
 #include "BeStandardBackbufferPass.h"
 
-#include <sen-rhi/SenBackend.h>
-
 #include "BeAssetRegistry.h"
 #include "BePass.h"
 #include "BeMaterial.h"
@@ -15,26 +13,27 @@ BeStandardBackbufferPass::BeStandardBackbufferPass(
     BeStandardRenderMachine* srm,
     std::shared_ptr<BeTexture> input,
     glm::vec3 clearColor
-) : _srm(srm), _input(std::move(input)), _clearColor(clearColor) {}
+) 
+: _srm(srm)
+, _input(std::move(input))
+, _clearColor(clearColor) {}
 
 auto BeStandardBackbufferPass::Initialise() -> void {
-    const auto shader = BeAssetRegistry::GetShader("backbuffer").lock();
-    _material = BeMaterial::Create("backbuffer-material", false);
+    auto& registry = _srm->GetAssetRegistry();
+    const auto  shader = registry.GetShader("backbuffer").lock();
+    const auto& scheme = shader->GetMaterialScheme("main");
+    _material = BeMaterial::Create(scheme, false);
     _material->SetTexture("InputTexture", _input);
     _activeInput = _input;
-    _pipeline = BePipelineBuilder::Start(*shader).SetColorFormats({ _renderer->GetSwapchainFormat() }).Build();
+    _pipeline = BePipelineBuilder::Start(*shader)
+        .SetColorFormats({ _renderer->GetSwapchainFormat() })
+        .Build()
+    ;
 }
 
 auto BeStandardBackbufferPass::Render() -> void {
     auto& cmd = _renderer->GetCommandBuffer();
-
-    const auto debugTex = _srm->GetDebugChannelTexture();
-    const auto& desired = debugTex ? debugTex : _input;
-    if (desired != _activeInput) {
-        _material->SetTexture("InputTexture", desired);
-        _activeInput = desired;
-    }
-
+    
     BePass pass;
     pass.UseMaterial(*_material);
     pass.AddColorTarget(_renderer->GetBackbufferTexture(), SenLoadOp::Clear, glm::vec4(_clearColor, 1.0f));
