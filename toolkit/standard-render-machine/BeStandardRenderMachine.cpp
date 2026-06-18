@@ -16,6 +16,7 @@
 #include "standard-render-machine/BeStandardBloomPass.h"
 #include "standard-render-machine/BeStandardFullscreenEffectPass.h"
 #include "standard-render-machine/BeStandardBackbufferPass.h"
+#include "standard-render-machine/BeStandardEnvironmentBakePass.h"
 
 auto BeSRMGeometryEntry::CalculateModelMatrix(glm::vec3 pos, glm::quat rot, glm::vec3 scale) -> glm::mat4 {
     return
@@ -56,13 +57,7 @@ auto BeStandardRenderMachine::DeclareGBufferTarget(const std::string& name, SenF
         .SetSize(_width, _height)
         .Build();
 
-    _textureRegistry.push_back(TextureEntry{
-        .Name = name, 
-        .Texture = texture, 
-        .IsGBufferTarget = true, 
-        .IsDepth = false 
-    });
-    
+    _textureRegistry[name] = texture;
     _gbufferTargets.push_back(texture);
     return texture;
 }
@@ -74,13 +69,7 @@ auto BeStandardRenderMachine::DeclareDepth(const std::string& name, SenFormat fo
         .SetSize(_width, _height)
         .Build();
 
-    _textureRegistry.push_back(TextureEntry{
-        .Name = name, 
-        .Texture = texture, 
-        .IsGBufferTarget = false, 
-        .IsDepth = true 
-    });
-    
+    _textureRegistry[name] = texture;
     _depthTarget = texture;
     return texture;
 }
@@ -101,23 +90,13 @@ auto BeStandardRenderMachine::DeclareTexture(const std::string& name, SenFormat 
         .SetMips(mips)
         .Build();
 
-    _textureRegistry.push_back(TextureEntry{
-        .Name = name, 
-        .Texture = texture, 
-        .IsGBufferTarget = false, 
-        .IsDepth = false 
-    });
-    
+    _textureRegistry[name] = texture;
     return texture;
 }
 
 auto BeStandardRenderMachine::GetRenderTexture(const std::string& name) const -> std::shared_ptr<BeTexture> {
-    for (const auto& entry : _textureRegistry) {
-        if (entry.Name == name) {
-            return entry.Texture;
-        }
-    }
-    return nullptr;
+    auto it = _textureRegistry.find(name);
+    return it != _textureRegistry.end() ? it->second : nullptr;
 }
 
 // =====================================================================================================================

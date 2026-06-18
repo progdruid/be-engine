@@ -70,13 +70,6 @@ struct BeSRMPointLightEntry {
 
 class BeStandardRenderMachine {
 
-    struct TextureEntry {
-        std::string Name;
-        std::shared_ptr<BeTexture> Texture;
-        bool IsGBufferTarget = false;
-        bool IsDepth = false;
-    };
-
     hide
     std::weak_ptr<BeRenderer> _renderer;
     uint32_t _width;
@@ -84,7 +77,7 @@ class BeStandardRenderMachine {
 
     int _debugChannel = -1;
 
-    std::vector<TextureEntry> _textureRegistry;
+    std::unordered_map<std::string, std::shared_ptr<BeTexture>> _textureRegistry;
     std::vector<std::shared_ptr<BeTexture>> _gbufferTargets;
     std::shared_ptr<BeTexture> _depthTarget;
 
@@ -125,6 +118,7 @@ class BeStandardRenderMachine {
     auto AddBloomPass(uint32_t mipCount, const std::string& inputName, const std::string& outputName, std::shared_ptr<BeTexture> dirtTexture = nullptr) -> void;
     auto AddFullscreenPass(std::weak_ptr<BeShader> shader, std::shared_ptr<BeMaterial> material, const std::vector<std::string>& outputNames) -> void;
     auto AddBackbufferPass(const std::string& inputName, glm::vec3 clearColor = {}) -> void;
+    auto AddEnvironmentBakePass(std::shared_ptr<BeTexture> equirect, const std::string& envMapName) -> std::shared_ptr<BeTexture>;
     auto AddPass(std::unique_ptr<BeRenderPass> pass) -> void;
 
     expose
