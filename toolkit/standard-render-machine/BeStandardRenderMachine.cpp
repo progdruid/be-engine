@@ -50,12 +50,7 @@ BeStandardRenderMachine::~BeStandardRenderMachine() = default;
 
 
 auto BeStandardRenderMachine::DeclareGBufferTarget(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture> {
-    auto texture = BeTexture::Create(name)
-        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
-        .SetFormat(format)
-        .SetSize(_width, _height)
-        .Build();
-
+    auto texture = DeclareTexture(name, format, false, 1);
     _textureRegistry[name] = texture;
     _gbufferTargets.push_back(texture);
     return texture;
@@ -73,10 +68,7 @@ auto BeStandardRenderMachine::DeclareDepth(const std::string& name, SenFormat fo
     return texture;
 }
 
-auto BeStandardRenderMachine::DeclareTexture(const std::string& name, SenFormat format, float sizeMultiplier, bool storage, uint32_t mips) -> std::shared_ptr<BeTexture> {
-    const auto w = static_cast<uint32_t>(static_cast<float>(_width)  * sizeMultiplier);
-    const auto h = static_cast<uint32_t>(static_cast<float>(_height) * sizeMultiplier);
-
+auto BeStandardRenderMachine::DeclareTexture(const std::string& name, SenFormat format, bool storage, uint32_t mips) -> std::shared_ptr<BeTexture> {
     auto usage = SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource;
     if (storage) {
         usage = usage | SenTextureUsage::Storage;
@@ -85,7 +77,7 @@ auto BeStandardRenderMachine::DeclareTexture(const std::string& name, SenFormat 
     auto texture = BeTexture::Create(name)
         .SetUsage(usage)
         .SetFormat(format)
-        .SetSize(w, h)
+        .SetSize(_width, _height)
         .SetMips(mips)
         .Build();
 
@@ -137,7 +129,7 @@ auto BeStandardRenderMachine::AddBloomPass(
     be_assert(input,  "AddBloomPass: input texture not found: "  + inputName);
     be_assert(output, "AddBloomPass: output texture not found: " + outputName);
 
-    auto bloomTexture = DeclareTexture("__standard_bloom", input->Format, 1.0f, false, mipCount);
+    auto bloomTexture = DeclareTexture("__standard_bloom", input->Format, false, mipCount);
 
     if (!dirtTexture) {
         dirtTexture = BeAssetRegistry::GetDefaultTexture("black").lock();

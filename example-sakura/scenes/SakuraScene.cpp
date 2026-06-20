@@ -122,16 +122,16 @@ auto SakuraScene::Prepare() -> void {
     _machine->RegisterMesh(_testSphere->Mesh);
     _machine->BakeMeshes();
 
-    _machine->DeclareGBufferTarget("Sakura_Albedo_RGB",         SenFormat::R11G11B10_Float);
-    _machine->DeclareGBufferTarget("Sakura_WorldNormal_XYZ",    SenFormat::RGBA16_Float);
-    _machine->DeclareGBufferTarget("Sakura_ORM_RGB",            SenFormat::RGBA8_Unorm);
-    _machine->DeclareGBufferTarget("Sakura_Emissive_RGB",       SenFormat::R11G11B10_Float);
-    _machine->DeclareDepth        ("Sakura_Depth",              SenFormat::Depth32);
-    _machine->DeclareTexture      ("Sakura_HDR",                SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Sakura_Bloom",              SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Sakura_DoF",                SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Sakura_Tonemapper",         SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Sakura_FXAA",               SenFormat::R11G11B10_Float);
+    _machine->DeclareGBufferTarget("Sakura_Albedo_RGB",      SenFormat::R11G11B10_Float);
+    _machine->DeclareGBufferTarget("Sakura_WorldNormal_XYZ", SenFormat::RGBA16_Float);
+    _machine->DeclareGBufferTarget("Sakura_ORM_RGB",         SenFormat::RGBA8_Unorm);
+    _machine->DeclareGBufferTarget("Sakura_Emissive_RGB",    SenFormat::R11G11B10_Float);
+    _machine->DeclareDepth        ("Sakura_Depth",           SenFormat::Depth32);
+    _machine->DeclareTexture      ("Sakura_HDR",             SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_Bloom",           SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_DoF",             SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_Tonemapper",      SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Sakura_FXAA",            SenFormat::R11G11B10_Float);
 
     const auto dirtTexture = BeTexture::Create("Sakura_BloomDirtTexture")
         .LoadFromFile("assets/bloom-dirt-mask.png")

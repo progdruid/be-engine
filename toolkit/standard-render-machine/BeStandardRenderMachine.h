@@ -109,7 +109,7 @@ class BeStandardRenderMachine {
     expose
     auto DeclareGBufferTarget(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture>;
     auto DeclareDepth(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture>;
-    auto DeclareTexture(const std::string& name, SenFormat format, float sizeMultiplier = 1.0f, bool storage = false, uint32_t mips = 1) -> std::shared_ptr<BeTexture>;
+    auto DeclareTexture(const std::string& name, SenFormat format, bool storage = false, uint32_t mips = 1) -> std::shared_ptr<BeTexture>;
     auto GetRenderTexture(const std::string& name) const -> std::shared_ptr<BeTexture>;
 
     // pass builders ---------------------------------------------------------------------------------------------------
@@ -120,7 +120,6 @@ class BeStandardRenderMachine {
     auto AddBloomPass(uint32_t mipCount, const std::string& inputName, const std::string& outputName, std::shared_ptr<BeTexture> dirtTexture = nullptr) -> void;
     auto AddFullscreenPass(std::weak_ptr<BeShader> shader, std::shared_ptr<BeMaterial> material, const std::vector<std::string>& outputNames) -> void;
     auto AddBackbufferPass(const std::string& inputName, glm::vec3 clearColor = {}) -> void;
-    auto AddEnvironmentBakePass(std::shared_ptr<BeTexture> equirect, const std::string& envMapName) -> std::shared_ptr<BeTexture>;
     auto AddPass(std::unique_ptr<BeRenderPass> pass) -> void;
 
     expose
