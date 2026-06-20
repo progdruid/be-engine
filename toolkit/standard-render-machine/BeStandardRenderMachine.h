@@ -85,6 +85,9 @@ class BeStandardRenderMachine {
 
     std::vector<std::unique_ptr<BeRenderPass>> _passes;
 
+    std::shared_ptr<BeTexture> _envCubemap;
+    std::unique_ptr<BeRenderPass> _environmentBakePass;
+
     std::vector<BeSRMGeometryEntry> _geometryEntries;
     std::vector<BeSRMSunLightEntry> _sunLightEntries;
     std::vector<BeSRMPointLightEntry> _pointLightEntries;
@@ -121,6 +124,12 @@ class BeStandardRenderMachine {
     auto AddFullscreenPass(std::weak_ptr<BeShader> shader, std::shared_ptr<BeMaterial> material, const std::vector<std::string>& outputNames) -> void;
     auto AddBackbufferPass(const std::string& inputName, glm::vec3 clearColor = {}) -> void;
     auto AddPass(std::unique_ptr<BeRenderPass> pass) -> void;
+
+    auto AddEnvironmentBakePass(std::shared_ptr<BeTexture> equirect, uint32_t cubemapSize = 512) -> void;
+    auto BakeEnvironment() -> void;
+    auto GetEnvironmentCubemap() const -> std::shared_ptr<BeTexture> { return _envCubemap; }
+
+    auto AddSkyboxPass(const std::string& outputName, float clampRadiance = 0.0f) -> void;
 
     expose
     auto ClearPasses() -> void;

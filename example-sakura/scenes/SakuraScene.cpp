@@ -46,6 +46,8 @@ auto SakuraScene::Prepare() -> void {
         "assets/shaders/backbuffer.hlsl",
         "assets/shaders/fxaa.hlsl",
         "assets/shaders/dof.hlsl",
+        "assets/shaders/environment-bake.hlsl",
+        "assets/shaders/skybox.hlsl",
     });
 
     const auto standardShader     = _assetRegistry.GetShader("standard-pbr");
@@ -142,7 +144,10 @@ auto SakuraScene::Prepare() -> void {
         .LoadFromFileHdr("assets/moonrise_puresky.hdr")
         .AddToRegistry(_assetRegistry)
         .Build();
-    
+
+    _machine->AddEnvironmentBakePass(skyTexture);
+    _machine->BakeEnvironment();
+
     _sceneLoader = std::make_unique<LuaSceneLoader>();
     RegisterComponentParsers(*_sceneLoader, _assetRegistry);
 
@@ -196,6 +201,7 @@ auto SakuraScene::RebuildPasses() -> void {
     _machine->AddShadowPass();
     _machine->AddGeometryPass();
     _machine->AddLightingPass("Sakura_HDR");
+    _machine->AddSkyboxPass("Sakura_HDR", 0.0f);
     _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_Bloom", _assetRegistry.GetTexture("Sakura_BloomDirtTexture").lock());
 
     std::string tonemapperInput = "Sakura_Bloom";

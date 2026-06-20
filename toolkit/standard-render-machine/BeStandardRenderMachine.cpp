@@ -16,6 +16,8 @@
 #include "standard-render-machine/BeStandardBloomPass.h"
 #include "standard-render-machine/BeStandardFullscreenEffectPass.h"
 #include "standard-render-machine/BeStandardBackbufferPass.h"
+#include "standard-render-machine/BeStandardEnvironmentBakePass.h"
+#include "standard-render-machine/BeStandardSkyboxPass.h"
 
 auto BeSRMGeometryEntry::CalculateModelMatrix(glm::vec3 pos, glm::quat rot, glm::vec3 scale) -> glm::mat4 {
     return
@@ -166,6 +168,33 @@ auto BeStandardRenderMachine::AddBackbufferPass(const std::string& inputName, gl
 
 auto BeStandardRenderMachine::AddPass(std::unique_ptr<BeRenderPass> pass) -> void {
     _passes.push_back(std::move(pass));
+}
+
+auto BeStandardRenderMachine::AddEnvironmentBakePass(std::shared_ptr<BeTexture> equirect, uint32_t cubemapSize) -> void {
+    _envCubemap = BeTexture::Create("__standard_env_cubemap")
+        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::RGBA16_Float)
+        .SetCubemap(true)
+        .SetSize(cubemapSize, cubemapSize)
+        .Build();
+
+    _environmentBakePass = std::make_unique<BeStandardEnvironmentBakePass>(this, std::move(equirect), _envCubemap);
+}
+
+auto BeStandardRenderMachine::BakeEnvironment() -> void {
+    be_assert(_environmentBakePass, "BakeEnvironment: AddEnvironmentBakePass was not called");
+    _environmentBakePass->Initialise();
+    _renderer.lock()->RenderOnce({ _environmentBakePass.get() });
+}
+
+auto BeStandardRenderMachine::AddSkyboxPass(const std::string& outputName, float clampRadiance) -> void {
+    be_assert(_envCubemap, "AddSkyboxPass: AddEnvironmentBakePass must be called first");
+    be_assert(_depthTarget, "AddSkyboxPass: no depth target declared");
+
+    auto output = GetRenderTexture(outputName);
+    be_assert(output, "AddSkyboxPass: output texture not found: " + outputName);
+
+    _passes.push_back(std::make_unique<BeStandardSkyboxPass>(this, _depthTarget, _envCubemap, output, clampRadiance));
 }
 
 // =====================================================================================================================
