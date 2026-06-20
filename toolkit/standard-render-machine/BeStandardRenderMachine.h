@@ -86,6 +86,7 @@ class BeStandardRenderMachine {
     std::vector<std::unique_ptr<BeRenderPass>> _passes;
 
     std::shared_ptr<BeTexture> _envCubemap;
+    std::shared_ptr<BeTexture> _irradianceCubemap;
     std::unique_ptr<BeRenderPass> _environmentBakePass;
 
     std::vector<BeSRMGeometryEntry> _geometryEntries;
@@ -128,6 +129,7 @@ class BeStandardRenderMachine {
     auto AddEnvironmentBakePass(std::shared_ptr<BeTexture> equirect, uint32_t cubemapSize = 512) -> void;
     auto BakeEnvironment() -> void;
     auto GetEnvironmentCubemap() const -> std::shared_ptr<BeTexture> { return _envCubemap; }
+    auto GetIrradianceCubemap() const -> std::shared_ptr<BeTexture> { return _irradianceCubemap; }
 
     auto AddSkyboxPass(const std::string& outputName, float clampRadiance = 0.0f) -> void;
 

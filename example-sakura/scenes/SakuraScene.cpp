@@ -47,6 +47,7 @@ auto SakuraScene::Prepare() -> void {
         "assets/shaders/fxaa.hlsl",
         "assets/shaders/dof.hlsl",
         "assets/shaders/environment-bake.hlsl",
+        "assets/shaders/irradiance-bake.hlsl",
         "assets/shaders/skybox.hlsl",
     });
 

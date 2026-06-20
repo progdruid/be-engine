@@ -19,15 +19,20 @@ class BeStandardEnvironmentBakePass final : public BeRenderPass {
     BeStandardRenderMachine* _srm;
     std::shared_ptr<BeTexture> _equirect;
     std::shared_ptr<BeTexture> _envCubemap;
+    std::shared_ptr<BeTexture> _irradianceCubemap;
 
     SenPipeline _envPipeline;
-    std::array<std::shared_ptr<BeMaterial>, FaceCount> _faceMaterials;
+    std::array<std::shared_ptr<BeMaterial>, FaceCount> _envFaceMaterials;
+
+    SenPipeline _irradiancePipeline;
+    std::array<std::shared_ptr<BeMaterial>, FaceCount> _irradianceFaceMaterials;
 
     expose
     explicit BeStandardEnvironmentBakePass(
         BeStandardRenderMachine* srm,
         std::shared_ptr<BeTexture> equirect,
-        std::shared_ptr<BeTexture> envCubemap
+        std::shared_ptr<BeTexture> envCubemap,
+        std::shared_ptr<BeTexture> irradianceCubemap
     );
     ~BeStandardEnvironmentBakePass() override = default;
 

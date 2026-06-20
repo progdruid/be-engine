@@ -178,7 +178,14 @@ auto BeStandardRenderMachine::AddEnvironmentBakePass(std::shared_ptr<BeTexture> 
         .SetSize(cubemapSize, cubemapSize)
         .Build();
 
-    _environmentBakePass = std::make_unique<BeStandardEnvironmentBakePass>(this, std::move(equirect), _envCubemap);
+    _irradianceCubemap = BeTexture::Create("__standard_irradiance_cubemap")
+        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::RGBA16_Float)
+        .SetCubemap(true)
+        .SetSize(32, 32)
+        .Build();
+
+    _environmentBakePass = std::make_unique<BeStandardEnvironmentBakePass>(this, std::move(equirect), _envCubemap, _irradianceCubemap);
 }
 
 auto BeStandardRenderMachine::BakeEnvironment() -> void {
