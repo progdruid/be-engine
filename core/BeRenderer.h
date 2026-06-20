@@ -20,6 +20,7 @@ class BeRenderer {
     SenSwapchain _swapchain;
 
     SenTexture _backbufferTexture;
+    SenCommandBuffer _frameCmd;
 
     std::vector<BeRenderPass*> _passes;
 
@@ -39,8 +40,8 @@ class BeRenderer {
     auto AddRenderPass(BeRenderPass* renderPass) -> void;
     auto ClearPasses() -> void;
     auto Render() -> void;
+    auto RenderOnce(const std::vector<BeRenderPass*>& passes) -> void;
 
-    [[nodiscard]] auto GetCommandBuffer () -> SenCommandBuffer&;
     [[nodiscard]] auto GetBackbufferTexture() const -> SenTexture { return _backbufferTexture; }
 
     [[nodiscard]] auto GetSwapchainPixelWidth () const -> uint32_t;

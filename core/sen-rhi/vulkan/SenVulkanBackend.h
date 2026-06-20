@@ -96,12 +96,7 @@ class SenVulkanBackend {
     static VkDescriptorPool _descriptorPool;
     static VmaAllocator _allocator;
 
-    expose // active command buffer (used by SenVulkanCommandBuffer)
-    static VkCommandBuffer            _activeCommandBuffer;
-
     hide
-    static SenVulkanCommandBuffer _commandBufferInstance;
-    
     static std::unordered_map<uint32_t, SenVulkanSwapchainEntry> _swapchains;   static uint32_t _nextSwapchainId;
     static std::unordered_map<uint32_t, SenVulkanTextureEntry> _textures;       static uint32_t _nextTextureId;
     static std::unordered_map<uint32_t, SenVulkanBufferEntry> _buffers;         static uint32_t _nextBufferId;
@@ -120,18 +115,17 @@ class SenVulkanBackend {
     static auto DestroySwapchain      (SenSwapchain handle) -> void;
     static auto ResizeSwapchain       (SenSwapchain& handle, uint32_t width, uint32_t height) -> void;
     static auto BeginFrame            (SenSwapchain handle) -> SenTexture;
-    static auto EndFrame              (SenSwapchain handle) -> void;
+    static auto EndFrame              (SenSwapchain handle, SenVulkanCommandBuffer& cmd) -> void;
     static auto GetSwapchainFormat    (SenSwapchain handle) -> SenFormat;
     static auto GetSwapchainWidth     (SenSwapchain handle) -> uint32_t;
     static auto GetSwapchainHeight    (SenSwapchain handle) -> uint32_t;
 
     expose // command buffer factory
-    static auto CreateCommandBuffer () -> void;
-    static auto GetCommandBuffer    () -> SenVulkanCommandBuffer&;
+    static auto AllocateCommandBuffer () -> SenVulkanCommandBuffer;
+    static auto SubmitImmediate       (SenVulkanCommandBuffer& cmd) -> void;  // submit + fence-wait, no swapchain sync
 
     expose // native API escape hatches (for ImGui, etc.)
     static auto GetNativeDevice          () -> void*;  // VkDevice
-    static auto GetNativeContext         () -> void*;  // VkCommandBuffer (current frame)
     static auto GetNativeInstance        () -> void*;  // VkInstance
     static auto GetNativePhysicalDevice  () -> void*;  // VkPhysicalDevice
     static auto GetNativeQueue           () -> void*;  // VkQueue

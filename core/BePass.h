@@ -5,6 +5,7 @@
 #include <umbrellas/access-modifiers.hpp>
 #include <umbrellas/include-glm.h>
 #include <sen-rhi/SenTypes.h>
+#include <sen-rhi/SenCommandBuffer.h>
 
 class BeTexture;
 class BeMaterial;
@@ -17,6 +18,7 @@ class BePass {
         uint32_t MipCount;
     };
 
+    SenCommandBuffer& _cmd;
     bool _isCompute = false;
     std::vector<ReadBinding> _reads;
     std::vector<SenTexture> _storageTextures;
@@ -25,6 +27,8 @@ class BePass {
     SenViewport _viewport {};
 
     expose
+    explicit BePass (SenCommandBuffer& cmd);
+
     auto SetCompute (bool isCompute) -> BePass&;
 
     auto UseTexture (SenTexture texture, bool useAsStorage = false) -> BePass&;

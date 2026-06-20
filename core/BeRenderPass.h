@@ -2,6 +2,7 @@
 #include <string>
 
 #include "umbrellas/access-modifiers.hpp"
+#include <sen-rhi/SenCommandBuffer.h>
 
 class BeRenderer;
 
@@ -17,6 +18,6 @@ class BeRenderPass {
     }
 
     virtual auto Initialise() -> void = 0;
-    virtual auto Render() -> void = 0;
+    virtual auto Render(SenCommandBuffer& cmd) -> void = 0;
     virtual auto GetPassName() const -> const std::string { return "RenderPass"; }
 };

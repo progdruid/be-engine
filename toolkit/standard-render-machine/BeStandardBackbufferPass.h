@@ -31,6 +31,6 @@ class BeStandardBackbufferPass final : public BeRenderPass {
 
     expose
     auto Initialise() -> void override;
-    auto Render() -> void override;
+    auto Render(SenCommandBuffer& cmd) -> void override;
     auto GetPassName() const -> const std::string override { return "Standard Backbuffer Pass"; }
 };

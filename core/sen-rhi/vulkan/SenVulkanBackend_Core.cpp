@@ -20,9 +20,6 @@ VkDescriptorPool SenVulkanBackend::_descriptorPool = VK_NULL_HANDLE;
 VkCommandPool SenVulkanBackend::_commandPool;
 VmaAllocator SenVulkanBackend::_allocator;
 
-VkCommandBuffer            SenVulkanBackend::_activeCommandBuffer     = VK_NULL_HANDLE;
-SenVulkanCommandBuffer     SenVulkanBackend::_commandBufferInstance   = {};
-
 std::unordered_map<uint32_t, SenVulkanTextureEntry> SenVulkanBackend::_textures;     uint32_t SenVulkanBackend::_nextTextureId = 1;
 std::unordered_map<uint32_t, SenVulkanBufferEntry> SenVulkanBackend::_buffers;       uint32_t SenVulkanBackend::_nextBufferId = 1;
 std::unordered_map<uint32_t, SenVulkanSamplerEntry> SenVulkanBackend::_samplers;     uint32_t SenVulkanBackend::_nextSamplerId = 1;
@@ -218,31 +215,41 @@ auto SenVulkanBackend::WaitIdle() -> void {
 }
 
 // ─── command buffer ────────────────────────────────────────────────────────────────
-auto SenVulkanBackend::CreateCommandBuffer() -> void {
-    be_assert(_activeCommandBuffer == VK_NULL_HANDLE, "CreateCommandBuffer called more than once");
-
+auto SenVulkanBackend::AllocateCommandBuffer() -> SenVulkanCommandBuffer {
     VkCommandBufferAllocateInfo allocInfo {
         .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool        = _commandPool,
         .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1,
     };
-    VkResult result = vkAllocateCommandBuffers(_device, &allocInfo, &_activeCommandBuffer);
+    VkCommandBuffer cmd = VK_NULL_HANDLE;
+    VkResult result = vkAllocateCommandBuffers(_device, &allocInfo, &cmd);
     be_assert(result == VK_SUCCESS, "Failed to allocate command buffer!");
-    _commandBufferInstance = SenVulkanCommandBuffer(_activeCommandBuffer);
+    return SenVulkanCommandBuffer(cmd);
 }
 
-auto SenVulkanBackend::GetCommandBuffer() -> SenVulkanCommandBuffer& {
-    return _commandBufferInstance;
+auto SenVulkanBackend::SubmitImmediate(SenVulkanCommandBuffer& cmd) -> void {
+    const VkCommandBuffer vkCmd = cmd.GetNativeHandle();
+
+    const VkSubmitInfo submitInfo {
+        .sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .commandBufferCount = 1,
+        .pCommandBuffers    = &vkCmd,
+    };
+
+    const VkFenceCreateInfo fenceInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    VkFence fence;
+    vkCreateFence(_device, &fenceInfo, nullptr, &fence);
+
+    vkQueueSubmit(_queue, 1, &submitInfo, fence);
+    vkWaitForFences(_device, 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(_device, fence, nullptr);
 }
 
 // ─── native escape hatches ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::GetNativeDevice() -> void* {
     return _device;
-}
-
-auto SenVulkanBackend::GetNativeContext() -> void* {
-    return _activeCommandBuffer;
 }
 
 auto SenVulkanBackend::GetNativeInstance() -> void* {

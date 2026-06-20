@@ -4,10 +4,6 @@
 #include "BeShader.h"
 #include <sen-rhi/SenBackend.h>
 
-auto BeRenderer::GetCommandBuffer() -> SenCommandBuffer& {
-    return SenBackend::GetCommandBuffer();
-}
-
 BeRenderer::BeRenderer(
     uint32_t desiredWidth,
     uint32_t desiredHeight,
@@ -35,7 +31,7 @@ auto BeRenderer::LaunchDevice() -> void {
         .Height = _desiredHeight,
     });
 
-    SenBackend::CreateCommandBuffer();
+    _frameCmd = SenBackend::AllocateCommandBuffer();
 }
 
 auto BeRenderer::GetSwapchainFormat() const -> SenFormat {
@@ -69,12 +65,35 @@ auto BeRenderer::Render() -> void {
 
     _backbufferTexture = SenBackend::BeginFrame(_swapchain);
 
+    _frameCmd.Begin();
+
     for (const auto& pass : _passes) {
         SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
-        pass->Render();
+        pass->Render(_frameCmd);
         SenBackend::EndDebugEvent();
     }
 
-    SenBackend::EndFrame(_swapchain);
+    _frameCmd.TransitionTextures({ { _backbufferTexture, SenResourceState::Present } });
+    _frameCmd.End();
+
+    SenBackend::EndFrame(_swapchain, _frameCmd);
+    SenBackend::EndDebugEvent();
+}
+
+auto BeRenderer::RenderOnce(const std::vector<BeRenderPass*>& passes) -> void {
+    SenBackend::BeginDebugEvent("RenderOnce");
+
+    _frameCmd.Begin();
+
+    for (const auto& pass : passes) {
+        pass->InjectRenderer(this);
+        SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
+        pass->Render(_frameCmd);
+        SenBackend::EndDebugEvent();
+    }
+
+    _frameCmd.End();
+
+    SenBackend::SubmitImmediate(_frameCmd);
     SenBackend::EndDebugEvent();
 }

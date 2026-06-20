@@ -62,15 +62,14 @@ auto BeStandardLightingPass::Initialise() -> void {
     ;
 }
 
-auto BeStandardLightingPass::Render() -> void {
+auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {
     const auto& srm = *_srm;
-    auto& cmd = _renderer->GetCommandBuffer();
     const auto& sunLight = srm.GetSunLightEntries()[0];
     const auto& pointLights = srm.GetPointLightEntries();
 
     cmd.SetBindGroup(srm.UniformMaterial.lock()->GetBindGroup(), 0);
     
-    BePass pass;
+    BePass pass(cmd);
     pass.UseTextures(_gbufferInputs);
     pass.UseTexture(_depthInput);
     if (sunLight.CastsShadows) {
@@ -84,7 +83,7 @@ auto BeStandardLightingPass::Render() -> void {
     pass.AddColorTarget(_output, SenLoadOp::Clear);
     pass.SetViewport(_renderer->GetViewport());
     pass.Begin();
-    
+
     // Directional light
     _directionalLightMaterial->SetFloat1("HasShadowMap",   sunLight.CastsShadows ? 1.0f : 0.0f);
     _directionalLightMaterial->SetFloat3("Direction",      sunLight.Direction);
@@ -129,6 +128,6 @@ auto BeStandardLightingPass::Render() -> void {
     cmd.SetPipeline(_emissivePipeline);
     cmd.SetBindGroup(_emissiveMaterial->GetBindGroup(), 1);
     cmd.Draw(4, 0);
-    
+
     pass.End();
 }

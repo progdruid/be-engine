@@ -22,11 +22,11 @@ class BeStandardShadowPass final : public BeRenderPass {
 
     expose
     auto Initialise() -> void override;
-    auto Render() -> void override;
+    auto Render(SenCommandBuffer& cmd) -> void override;
     auto GetPassName() const -> const std::string override { return "Standard Shadow Pass"; }
 
     hide
-    auto RenderDirectionalShadows(const BeSRMSunLightEntry& sunLight) const -> void;
-    auto RenderPointLightShadows(const BeSRMPointLightEntry& pointLight) const -> void;
+    auto RenderDirectionalShadows(SenCommandBuffer& cmd, const BeSRMSunLightEntry& sunLight) const -> void;
+    auto RenderPointLightShadows(SenCommandBuffer& cmd, const BeSRMPointLightEntry& pointLight) const -> void;
     auto CalculatePointLightFaceViewProjection(const BeSRMPointLightEntry& pointLight, int faceIndex) const -> glm::mat4;
 };

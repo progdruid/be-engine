@@ -39,6 +39,6 @@ class BeStandardLightingPass final : public BeRenderPass {
     ~BeStandardLightingPass() override = default;
 
     auto Initialise() -> void override;
-    auto Render() -> void override;
+    auto Render(SenCommandBuffer& cmd) -> void override;
     auto GetPassName() const -> const std::string override { return "Standard Lighting Pass"; }
 };

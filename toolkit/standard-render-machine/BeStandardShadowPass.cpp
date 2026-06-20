@@ -15,27 +15,26 @@
 BeStandardShadowPass::BeStandardShadowPass(BeStandardRenderMachine* srm) : _srm(srm) {}
 auto BeStandardShadowPass::Initialise() -> void {}
 
-auto BeStandardShadowPass::Render() -> void {
+auto BeStandardShadowPass::Render(SenCommandBuffer& cmd) -> void {
     for (const auto& sunLight : _srm->GetSunLightEntries()) {
         if (sunLight.CastsShadows) {
-            RenderDirectionalShadows(sunLight);
+            RenderDirectionalShadows(cmd, sunLight);
         }
     }
     for (const auto& pointLight : _srm->GetPointLightEntries()) {
         if (pointLight.CastsShadows) {
-            RenderPointLightShadows(pointLight);
+            RenderPointLightShadows(cmd, pointLight);
         }
     }
 }
 
-auto BeStandardShadowPass::RenderDirectionalShadows(const BeSRMSunLightEntry& sunLight) const -> void {
-    auto& cmd = _renderer->GetCommandBuffer();
+auto BeStandardShadowPass::RenderDirectionalShadows(SenCommandBuffer& cmd, const BeSRMSunLightEntry& sunLight) const -> void {
     const auto uniformMat = _srm->UniformMaterial.lock();
     const auto& entries = _srm->GetGeometryEntries();
 
     cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
 
-    BePass pass;
+    BePass pass(cmd);
     pass.SetDepthTarget(sunLight.ShadowMap.lock());
     pass.SetViewport({ 0, 0, (float)sunLight.ShadowMapResolution, (float)sunLight.ShadowMapResolution, 0, 1 });
     pass.Begin();
@@ -74,8 +73,7 @@ auto BeStandardShadowPass::RenderDirectionalShadows(const BeSRMSunLightEntry& su
     pass.End();
 }
 
-auto BeStandardShadowPass::RenderPointLightShadows(const BeSRMPointLightEntry& pointLight) const -> void {
-    auto& cmd = _renderer->GetCommandBuffer();
+auto BeStandardShadowPass::RenderPointLightShadows(SenCommandBuffer& cmd, const BeSRMPointLightEntry& pointLight) const -> void {
     const auto  uniformMat = _srm->UniformMaterial.lock();
     const auto& entries = _srm->GetGeometryEntries();
     const auto  shadowMap = pointLight.ShadowMap.lock();
@@ -88,7 +86,7 @@ auto BeStandardShadowPass::RenderPointLightShadows(const BeSRMPointLightEntry& p
     for (int face = 0; face < 6; ++face) {
         const glm::mat4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
 
-        BePass pass;
+        BePass pass(cmd);
         pass.SetDepthTarget(shadowMap, SenLoadOp::Clear, 1.0f, static_cast<int8_t>(face));
         pass.SetViewport({ 0, 0, (float)pointLight.ShadowMapResolution, (float)pointLight.ShadowMapResolution, 0, 1 });
         pass.Begin();
@@ -119,7 +117,7 @@ auto BeStandardShadowPass::RenderPointLightShadows(const BeSRMPointLightEntry& p
                 cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
             }
         }
-        
+
         pass.End();
     }
 }

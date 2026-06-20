@@ -80,18 +80,16 @@ auto BeStandardBloomPass::Initialise() -> void {
     _addPipeline = BePipelineBuilder::Start(*addShader).SetColorFormats({ mipFormat }).Build();
 }
 
-auto BeStandardBloomPass::Render() -> void {
-    _renderer->GetCommandBuffer().SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
-    RenderBrightPass();
-    RenderDownsamplePasses();
-    RenderUpsamplePasses();
-    RenderAddPass();
+auto BeStandardBloomPass::Render(SenCommandBuffer& cmd) -> void {
+    cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
+    RenderBrightPass(cmd);
+    RenderDownsamplePasses(cmd);
+    RenderUpsamplePasses(cmd);
+    RenderAddPass(cmd);
 }
 
-auto BeStandardBloomPass::RenderBrightPass() const -> void {
-    auto& cmd = _renderer->GetCommandBuffer();
-
-    BePass pass;
+auto BeStandardBloomPass::RenderBrightPass(SenCommandBuffer& cmd) const -> void {
+    BePass pass(cmd);
     pass.UseTexture(_inputHDR);
     pass.UseMaterial(*_brightMaterial);
     pass.AddColorTarget(_bloomTexture, SenLoadOp::DontCare, {}, 0);
@@ -103,11 +101,10 @@ auto BeStandardBloomPass::RenderBrightPass() const -> void {
     pass.End();
 }
 
-auto BeStandardBloomPass::RenderDownsamplePasses() const -> void {
-    auto& cmd = _renderer->GetCommandBuffer();
+auto BeStandardBloomPass::RenderDownsamplePasses(SenCommandBuffer& cmd) const -> void {
     cmd.SetPipeline(_downsamplePipeline);
     for (uint32_t mipTarget = 1; mipTarget < _mipCount; ++mipTarget) {
-        BePass pass;
+        BePass pass(cmd);
         pass.UseTextureMip(_bloomTexture, mipTarget - 1);
         pass.AddColorTarget(_bloomTexture, SenLoadOp::DontCare, {}, mipTarget);
         pass.SetViewport(_bloomTexture->GetMipViewport(mipTarget));
@@ -118,11 +115,10 @@ auto BeStandardBloomPass::RenderDownsamplePasses() const -> void {
     }
 }
 
-auto BeStandardBloomPass::RenderUpsamplePasses() const -> void {
-    auto& cmd = _renderer->GetCommandBuffer();
+auto BeStandardBloomPass::RenderUpsamplePasses(SenCommandBuffer& cmd) const -> void {
     cmd.SetPipeline(_upsamplePipeline);
     for (int32_t mipTarget = _mipCount - 2; mipTarget >= 0; --mipTarget) {
-        BePass pass;
+        BePass pass(cmd);
         pass.UseTextureMip(_bloomTexture, mipTarget + 1);
         pass.AddColorTarget(_bloomTexture, SenLoadOp::Load, {}, mipTarget);
         pass.SetViewport(_bloomTexture->GetMipViewport(mipTarget));
@@ -133,10 +129,8 @@ auto BeStandardBloomPass::RenderUpsamplePasses() const -> void {
     }
 }
 
-auto BeStandardBloomPass::RenderAddPass() const -> void {
-    auto& cmd = _renderer->GetCommandBuffer();
-
-    BePass pass;
+auto BeStandardBloomPass::RenderAddPass(SenCommandBuffer& cmd) const -> void {
+    BePass pass(cmd);
     pass.UseMaterial(*_addMaterial);
     pass.AddColorTarget(_output, SenLoadOp::Load);
     pass.SetViewport(_renderer->GetViewport());

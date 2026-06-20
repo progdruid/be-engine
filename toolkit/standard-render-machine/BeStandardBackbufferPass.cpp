@@ -31,10 +31,8 @@ auto BeStandardBackbufferPass::Initialise() -> void {
     ;
 }
 
-auto BeStandardBackbufferPass::Render() -> void {
-    auto& cmd = _renderer->GetCommandBuffer();
-    
-    BePass pass;
+auto BeStandardBackbufferPass::Render(SenCommandBuffer& cmd) -> void {
+    BePass pass(cmd);
     pass.UseMaterial(*_material);
     pass.AddColorTarget(_renderer->GetBackbufferTexture(), SenLoadOp::Clear, glm::vec4(_clearColor, 1.0f));
     pass.SetViewport(_renderer->GetViewport());

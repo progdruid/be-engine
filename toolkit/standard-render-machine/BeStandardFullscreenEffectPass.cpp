@@ -33,10 +33,8 @@ auto BeStandardFullscreenEffectPass::Initialise() -> void {
     be_assert(_pipeline.IsValid(), "BeStandardFullscreenEffectPass: failed to create pipeline");
 }
 
-auto BeStandardFullscreenEffectPass::Render() -> void {
-    auto& cmd = _renderer->GetCommandBuffer();
-
-    BePass pass;
+auto BeStandardFullscreenEffectPass::Render(SenCommandBuffer& cmd) -> void {
+    BePass pass(cmd);
     if (_material) {
         pass.UseMaterial(*_material);
     }

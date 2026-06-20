@@ -23,7 +23,13 @@ class SenVulkanCommandBuffer {
     SenVulkanCommandBuffer() = default;
     explicit SenVulkanCommandBuffer(VkCommandBuffer cmd);
 
+    auto GetNativeHandle() const -> VkCommandBuffer { return _cmd; }
+
     expose
+    auto Begin() -> void;
+    auto End()   -> void;
+
+    hide
     auto ResetPerFrameState() -> void;
 
     expose

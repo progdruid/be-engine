@@ -216,45 +216,22 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle) -> SenTexture {
     vkWaitForFences(_device, 1, &entry.InFlightFence, VK_TRUE, UINT64_MAX);
     vkResetFences(_device, 1, &entry.InFlightFence);
 
-    // Acquire the next swapchain image
+    // Acquire the next swapchain image. The backbuffer's layout transitions are handled
+    // generically: a pass moves it to COLOR_ATTACHMENT as a render target, and the caller
+    // transitions it back to Present before submitting.
     vkAcquireNextImageKHR(
         _device, entry.Swapchain, UINT64_MAX,
         entry.ImageAvailableSemaphore, VK_NULL_HANDLE,
         &entry.CurrentImageIndex
     );
 
-    // Reset and begin recording the active command buffer
-    _commandBufferInstance.ResetPerFrameState();
-    vkResetCommandBuffer(_activeCommandBuffer, 0);
-    VkCommandBufferBeginInfo beginInfo {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    };
-    vkBeginCommandBuffer(_activeCommandBuffer, &beginInfo);
-
-    // Transition swapchain image UNDEFINED/PRESENT_SRC → COLOR_ATTACHMENT_OPTIMAL
-    auto& texEntry = _textures.at(entry.Textures[entry.CurrentImageIndex].ID);
-    RecordImageBarrier(_activeCommandBuffer, MakeImageBarrier(
-        texEntry.Image, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-        texEntry.MipLayouts[0], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    ));
-    texEntry.MipLayouts[0] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
     return entry.Textures[entry.CurrentImageIndex];
 }
 
-auto SenVulkanBackend::EndFrame(SenSwapchain handle) -> void {
+auto SenVulkanBackend::EndFrame(SenSwapchain handle, SenVulkanCommandBuffer& cmd) -> void {
     auto& entry = _swapchains.at(handle.ID);
 
-    // Transition swapchain image COLOR_ATTACHMENT_OPTIMAL → PRESENT_SRC_KHR
-    auto& texEntry = _textures.at(entry.Textures[entry.CurrentImageIndex].ID);
-    RecordImageBarrier(_activeCommandBuffer, MakeImageBarrier(
-        texEntry.Image, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-        texEntry.MipLayouts[0], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-    ));
-    texEntry.MipLayouts[0] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    vkEndCommandBuffer(_activeCommandBuffer);
+    const VkCommandBuffer vkCmd = cmd.GetNativeHandle();
 
     // Submit: wait on imageAvailable, signal renderFinished, signal fence when done
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -264,7 +241,7 @@ auto SenVulkanBackend::EndFrame(SenSwapchain handle) -> void {
         .pWaitSemaphores      = &entry.ImageAvailableSemaphore,
         .pWaitDstStageMask    = &waitStage,
         .commandBufferCount   = 1,
-        .pCommandBuffers      = &_activeCommandBuffer,
+        .pCommandBuffers      = &vkCmd,
         .signalSemaphoreCount = 1,
         .pSignalSemaphores    = &entry.RenderFinishedSemaphore,
     };

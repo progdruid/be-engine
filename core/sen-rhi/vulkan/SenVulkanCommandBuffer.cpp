@@ -154,6 +154,20 @@ auto SenVulkanCommandBuffer::TransitionTextures(const std::vector<TextureTransit
     vkCmdPipelineBarrier2(_cmd, &dependency);
 }
 
+auto SenVulkanCommandBuffer::Begin() -> void {
+    ResetPerFrameState();
+    vkResetCommandBuffer(_cmd, 0);
+    const VkCommandBufferBeginInfo beginInfo {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
+    vkBeginCommandBuffer(_cmd, &beginInfo);
+}
+
+auto SenVulkanCommandBuffer::End() -> void {
+    vkEndCommandBuffer(_cmd);
+}
+
 auto SenVulkanCommandBuffer::ResetPerFrameState() -> void {
     _boundPipelineLayout = VK_NULL_HANDLE;
     _boundBindPoint      = VK_PIPELINE_BIND_POINT_GRAPHICS;

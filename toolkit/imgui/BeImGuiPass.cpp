@@ -53,7 +53,7 @@ auto BeImGuiPass::Initialise() -> void {
     ImGui_ImplVulkan_Init(&init_info);
 }
 
-auto BeImGuiPass::Render() -> void {
+auto BeImGuiPass::Render(SenCommandBuffer& cmd) -> void {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -77,16 +77,14 @@ auto BeImGuiPass::Render() -> void {
 
     ImGui::Render();
 
-    auto& cmd = _renderer->GetCommandBuffer();
-
-    BePass pass;
+    BePass pass(cmd);
     pass.AddColorTarget(_renderer->GetBackbufferTexture(), SenLoadOp::Load);
     pass.SetViewport(_renderer->GetViewport());
     pass.Begin();
 
     ImGui_ImplVulkan_RenderDrawData(
         ImGui::GetDrawData(),
-        static_cast<VkCommandBuffer>(SenBackend::GetNativeContext())
+        cmd.GetNativeHandle()
     );
 
     pass.End();

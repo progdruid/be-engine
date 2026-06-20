@@ -68,8 +68,7 @@ int main() {
         .RenderTargetFormats = { swapchainFormat },
     });
 
-    SenBackend::CreateCommandBuffer();
-    auto& cmd = SenBackend::GetCommandBuffer();
+    auto cmd = SenBackend::AllocateCommandBuffer();
 
     std::println("Ready. Running loop...");
 
@@ -78,7 +77,9 @@ int main() {
 
         auto backbuffer = SenBackend::BeginFrame(swapchain);
 
-        BePass pass;
+        cmd.Begin();
+
+        BePass pass(cmd);
         pass.AddColorTarget(backbuffer, SenLoadOp::Clear, { 0.1f, 0.1f, 0.1f, 1.0f });
         pass.SetViewport({ 0, 0, float(window->GetReportedLogicalWidth()), float(window->GetReportedLogicalHeight()), 0, 1 });
         pass.Begin();
@@ -89,7 +90,10 @@ int main() {
 
         pass.End();
 
-        SenBackend::EndFrame(swapchain);
+        cmd.TransitionTextures({ { backbuffer, SenResourceState::Present } });
+        cmd.End();
+
+        SenBackend::EndFrame(swapchain, cmd);
     }
 
     SenBackend::WaitIdle();

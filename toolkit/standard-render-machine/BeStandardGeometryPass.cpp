@@ -21,8 +21,7 @@ BeStandardGeometryPass::BeStandardGeometryPass(
 
 auto BeStandardGeometryPass::Initialise() -> void {}
 
-auto BeStandardGeometryPass::Render() -> void {
-    auto& cmd = _renderer->GetCommandBuffer();
+auto BeStandardGeometryPass::Render(SenCommandBuffer& cmd) -> void {
     const auto uniformMat = _srm->UniformMaterial.lock();
     const auto& entries = _srm->GetGeometryEntries();
 
@@ -34,7 +33,7 @@ auto BeStandardGeometryPass::Render() -> void {
 
     cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
 
-    BePass pass;
+    BePass pass(cmd);
     pass.AddColorTargets(_colorTargets);
     pass.SetDepthTarget(_depthTarget);
     pass.SetViewport(_renderer->GetViewport());
@@ -70,6 +69,6 @@ auto BeStandardGeometryPass::Render() -> void {
             cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }
     }
-    
+
     pass.End();
 }

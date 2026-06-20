@@ -7,6 +7,10 @@
 #include <sen-rhi/SenBackend.h>
 #include <umbrellas/include-libassert.h>
 
+BePass::BePass(SenCommandBuffer& cmd)
+    : _cmd(cmd)
+{}
+
 auto BePass::SetCompute(bool isCompute) -> BePass& {
     _isCompute = isCompute;
     return *this;
@@ -104,8 +108,6 @@ auto BePass::Begin() -> void {
         "BePass::Begin: compute pass cannot have render targets"
     );
 
-    auto& cmd = SenBackend::GetCommandBuffer();
-
     using Transition = SenCommandBuffer::TextureTransition;
     std::vector<Transition> transitions;
     transitions.reserve(_reads.size() + _storageTextures.size() + _colorTargets.size() + 1);
@@ -121,10 +123,10 @@ auto BePass::Begin() -> void {
     if (_depthTarget) {
         transitions.push_back({ _depthTarget->Texture, SenResourceState::DepthAttachment });
     }
-    cmd.TransitionTextures(transitions);
+    _cmd.TransitionTextures(transitions);
 
     if (!_isCompute) {
-        cmd.BeginPass({
+        _cmd.BeginPass({
             .ColorAttachments = _colorTargets,
             .DepthAttachment  = _depthTarget,
             .Viewport         = _viewport,
@@ -134,6 +136,6 @@ auto BePass::Begin() -> void {
 
 auto BePass::End() -> void {
     if (!_isCompute) {
-        SenBackend::GetCommandBuffer().EndPass();
+        _cmd.EndPass();
     }
 }
