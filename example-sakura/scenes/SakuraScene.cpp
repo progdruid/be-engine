@@ -48,6 +48,7 @@ auto SakuraScene::Prepare() -> void {
         "assets/shaders/dof.hlsl",
         "assets/shaders/environment-bake.hlsl",
         "assets/shaders/irradiance-bake.hlsl",
+        "assets/shaders/ambient-ibl.hlsl",
         "assets/shaders/skybox.hlsl",
     });
 
@@ -206,7 +207,7 @@ auto SakuraScene::RebuildPasses() -> void {
     _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_Bloom", _assetRegistry.GetTexture("Sakura_BloomDirtTexture").lock());
 
     std::string tonemapperInput = "Sakura_Bloom";
-
+    
     if (_dofEnabled) {
         if (!_dofMaterial) {
             const auto& dofScheme = _assetRegistry.GetShader("dof").lock()->GetMaterialScheme("main");
@@ -239,7 +240,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     }
 
     constexpr auto scenePath = "assets/sakura_scene.lua";
-    auto writeTime = std::filesystem::last_write_time(scenePath);
+    const auto writeTime = std::filesystem::last_write_time(scenePath);
     if (writeTime > _sceneLastWriteTime) {
         _registry.clear();
         _sceneLoader->Load(scenePath, _registry);

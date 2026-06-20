@@ -1,7 +1,7 @@
 /*
 
 @be-material: bloom-bright-material {
-    Threshold: float = 100000.3
+    Threshold: float = 1.9
     Intensity: float = 1.8
     Knee: float = 1.0
     Clamp: float = 16.0

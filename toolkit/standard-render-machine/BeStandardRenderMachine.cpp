@@ -116,7 +116,7 @@ auto BeStandardRenderMachine::AddLightingPass(const std::string& outputName) -> 
     auto output = GetRenderTexture(outputName);
     be_assert(output, "AddLightingPass: output texture not found: " + outputName);
 
-    auto pass = std::make_unique<BeStandardLightingPass>(this, _gbufferTargets, _depthTarget, output);
+    auto pass = std::make_unique<BeStandardLightingPass>(this, _gbufferTargets, _depthTarget, _irradianceCubemap, output);
     _passes.push_back(std::move(pass));
 }
 

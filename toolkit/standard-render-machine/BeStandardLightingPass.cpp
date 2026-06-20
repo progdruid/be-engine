@@ -13,8 +13,14 @@ BeStandardLightingPass::BeStandardLightingPass(
     BeStandardRenderMachine* srm,
     std::vector<std::shared_ptr<BeTexture>> gbufferInputs,
     std::shared_ptr<BeTexture> depthInput,
+    std::shared_ptr<BeTexture> irradianceCubemap,
     std::shared_ptr<BeTexture> output
-) : _srm(srm), _gbufferInputs(std::move(gbufferInputs)), _depthInput(std::move(depthInput)), _output(std::move(output)) {}
+) 
+: _srm(srm)
+, _gbufferInputs(std::move(gbufferInputs))
+, _depthInput(std::move(depthInput))
+, _irradianceCubemap(std::move(irradianceCubemap))
+, _output(std::move(output)) {}
 
 auto BeStandardLightingPass::Initialise() -> void {
     auto& registry = _srm->GetAssetRegistry();
@@ -60,6 +66,21 @@ auto BeStandardLightingPass::Initialise() -> void {
         .SetColorFormats({ outputFormat })
         .Build()
     ;
+
+    if (_irradianceCubemap) {
+        const auto ambientShader = registry.GetShader("ambient-ibl").lock();
+        const auto& ambientScheme = ambientShader->GetMaterialScheme("main");
+        _ambientMaterial = BeMaterial::Create(ambientScheme, false);
+        _ambientMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
+        _ambientMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
+        _ambientMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
+        _ambientMaterial->SetTexture("IrradianceCubemap", _irradianceCubemap);
+        _ambientPipeline = BePipelineBuilder::Start(*ambientShader)
+            .SetBlend(additiveBlend)
+            .SetColorFormats({ outputFormat })
+            .Build()
+        ;
+    }
 }
 
 auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {
@@ -79,6 +100,9 @@ auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {
         if (pointLight.CastsShadows) {
             pass.UseTexture(pointLight.ShadowMap.lock());
         }
+    }
+    if (_irradianceCubemap) {
+        pass.UseTexture(_irradianceCubemap);
     }
     pass.AddColorTarget(_output, SenLoadOp::Clear);
     pass.SetViewport(_renderer->GetViewport());
@@ -128,6 +152,12 @@ auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {
     cmd.SetPipeline(_emissivePipeline);
     cmd.SetBindGroup(_emissiveMaterial->GetBindGroup(), 1);
     cmd.Draw(4, 0);
+
+    if (_ambientMaterial) {
+        cmd.SetPipeline(_ambientPipeline);
+        cmd.SetBindGroup(_ambientMaterial->GetBindGroup(), 1);
+        cmd.Draw(4, 0);
+    }
 
     pass.End();
 }

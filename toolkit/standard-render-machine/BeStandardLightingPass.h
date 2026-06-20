@@ -19,21 +19,25 @@ class BeStandardLightingPass final : public BeRenderPass {
     BeStandardRenderMachine* _srm;
     std::vector<std::shared_ptr<BeTexture>> _gbufferInputs;
     std::shared_ptr<BeTexture> _depthInput;
+    std::shared_ptr<BeTexture> _irradianceCubemap;
     std::shared_ptr<BeTexture> _output;
 
-    BeMaterialScheme _pointLightScheme;
     std::shared_ptr<BeMaterial> _directionalLightMaterial;
     SenPipeline _directionalLightPipeline;
+    BeMaterialScheme _pointLightScheme;
     std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _pointLightMaterials;
     SenPipeline _pointLightPipeline;
     std::shared_ptr<BeMaterial> _emissiveMaterial;
     SenPipeline _emissivePipeline;
+    std::shared_ptr<BeMaterial> _ambientMaterial;
+    SenPipeline _ambientPipeline;
 
     expose
     explicit BeStandardLightingPass(
         BeStandardRenderMachine* srm,
         std::vector<std::shared_ptr<BeTexture>> gbufferInputs,
         std::shared_ptr<BeTexture> depthInput,
+        std::shared_ptr<BeTexture> irradianceCubemap,
         std::shared_ptr<BeTexture> output
     );
     ~BeStandardLightingPass() override = default;
