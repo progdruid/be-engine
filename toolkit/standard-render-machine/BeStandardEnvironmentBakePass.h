@@ -2,6 +2,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <vector>
 #include <umbrellas/access-modifiers.hpp>
 #include <sen-rhi/SenTypes.h>
 
@@ -20,6 +21,8 @@ class BeStandardEnvironmentBakePass final : public BeRenderPass {
     std::shared_ptr<BeTexture> _equirect;
     std::shared_ptr<BeTexture> _envCubemap;
     std::shared_ptr<BeTexture> _irradianceCubemap;
+    std::shared_ptr<BeTexture> _prefilteredCubemap;
+    std::shared_ptr<BeTexture> _brdfLutTexture;
 
     SenPipeline _envPipeline;
     std::array<std::shared_ptr<BeMaterial>, FaceCount> _envFaceMaterials;
@@ -27,12 +30,20 @@ class BeStandardEnvironmentBakePass final : public BeRenderPass {
     SenPipeline _irradiancePipeline;
     std::array<std::shared_ptr<BeMaterial>, FaceCount> _irradianceFaceMaterials;
 
+    SenPipeline _prefilterPipeline;
+    std::vector<std::array<std::shared_ptr<BeMaterial>, FaceCount>> _prefilterFaceMaterials;
+
+    SenPipeline _brdfLutPipeline;
+    std::shared_ptr<BeMaterial> _brdfLutMaterial;
+
     expose
     explicit BeStandardEnvironmentBakePass(
         BeStandardRenderMachine* srm,
         std::shared_ptr<BeTexture> equirect,
         std::shared_ptr<BeTexture> envCubemap,
-        std::shared_ptr<BeTexture> irradianceCubemap
+        std::shared_ptr<BeTexture> irradianceCubemap,
+        std::shared_ptr<BeTexture> prefilteredCubemap,
+        std::shared_ptr<BeTexture> brdfLutTexture
     );
     ~BeStandardEnvironmentBakePass() override = default;
 

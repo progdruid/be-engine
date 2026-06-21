@@ -16,3 +16,27 @@ float3 DirectionForFace(int face, float2 uv) {
 
     return normalize(dir);
 }
+
+float RadicalInverseVdC(uint bits) {
+    return float(reversebits(bits)) * 2.3283064365386963e-10;
+}
+
+float2 Hammersley(uint i, uint count) {
+    return float2(float(i) / float(count), RadicalInverseVdC(i));
+}
+
+float3 ImportanceSampleGGX(float2 xi, float3 N, float roughness) {
+    float a = roughness * roughness;
+
+    float phi = 2.0 * PI * xi.x;
+    float cosTheta = sqrt((1.0 - xi.y) / (1.0 + (a * a - 1.0) * xi.y));
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+    float3 H = float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+
+    float3 up = abs(N.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
+    float3 tangent = normalize(cross(up, N));
+    float3 bitangent = cross(N, tangent);
+
+    return normalize(tangent * H.x + bitangent * H.y + N * H.z);
+}

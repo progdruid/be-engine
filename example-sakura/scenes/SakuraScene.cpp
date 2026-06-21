@@ -48,12 +48,14 @@ auto SakuraScene::Prepare() -> void {
         "assets/shaders/dof.hlsl",
         "assets/shaders/environment-bake.hlsl",
         "assets/shaders/irradiance-bake.hlsl",
+        "assets/shaders/prefilter-bake.hlsl",
+        "assets/shaders/brdf-lut.hlsl",
         "assets/shaders/ambient-ibl.hlsl",
         "assets/shaders/skybox.hlsl",
     });
 
-    const auto standardShader     = _assetRegistry.GetShader("standard-pbr");
-    const auto phongShader        = _assetRegistry.GetShader("standard-phong");
+    const auto standardShader = _assetRegistry.GetShader("standard-pbr");
+    const auto phongShader = _assetRegistry.GetShader("standard-phong");
     const auto checkerboardShader = _assetRegistry.GetShader("checkerboard");
 
     const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
@@ -325,7 +327,9 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         });
     }
 
-    //RailGizmo::DrawRail(*_machine, _rigCameraController->GetPathRail(), _testSphere, _cube);
+    if (const auto shot = _rigCameraController->GetCurrentShot()) {
+        RailGizmo::DrawRail(*_machine, shot->GetPathRail(), _testSphere, _cube);
+    }
 
     for (const auto [entity, sunLight] : SunView.each()) {
         _machine->AddSunLight({

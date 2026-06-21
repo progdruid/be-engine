@@ -20,6 +20,8 @@ class BeStandardLightingPass final : public BeRenderPass {
     std::vector<std::shared_ptr<BeTexture>> _gbufferInputs;
     std::shared_ptr<BeTexture> _depthInput;
     std::shared_ptr<BeTexture> _irradianceCubemap;
+    std::shared_ptr<BeTexture> _prefilteredCubemap;
+    std::shared_ptr<BeTexture> _brdfLutTexture;
     std::shared_ptr<BeTexture> _output;
 
     std::shared_ptr<BeMaterial> _directionalLightMaterial;
@@ -38,6 +40,8 @@ class BeStandardLightingPass final : public BeRenderPass {
         std::vector<std::shared_ptr<BeTexture>> gbufferInputs,
         std::shared_ptr<BeTexture> depthInput,
         std::shared_ptr<BeTexture> irradianceCubemap,
+        std::shared_ptr<BeTexture> prefilteredCubemap,
+        std::shared_ptr<BeTexture> brdfLutTexture,
         std::shared_ptr<BeTexture> output
     );
     ~BeStandardLightingPass() override = default;

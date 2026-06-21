@@ -116,7 +116,7 @@ auto BeStandardRenderMachine::AddLightingPass(const std::string& outputName) -> 
     auto output = GetRenderTexture(outputName);
     be_assert(output, "AddLightingPass: output texture not found: " + outputName);
 
-    auto pass = std::make_unique<BeStandardLightingPass>(this, _gbufferTargets, _depthTarget, _irradianceCubemap, output);
+    auto pass = std::make_unique<BeStandardLightingPass>(this, _gbufferTargets, _depthTarget, _irradianceCubemap, _prefilteredCubemap, _brdfLutTexture, output);
     _passes.push_back(std::move(pass));
 }
 
@@ -185,7 +185,28 @@ auto BeStandardRenderMachine::AddEnvironmentBakePass(std::shared_ptr<BeTexture> 
         .SetSize(32, 32)
         .Build();
 
-    _environmentBakePass = std::make_unique<BeStandardEnvironmentBakePass>(this, std::move(equirect), _envCubemap, _irradianceCubemap);
+    uint32_t prefilteredSize = cubemapSize / 4;
+    uint32_t mipCount = 0;
+    uint32_t s = prefilteredSize;
+    while (s >= 1) {
+        ++mipCount;
+        s /= 2;
+    }
+    _prefilteredCubemap = BeTexture::Create("__standard_prefiltered_cubemap")
+        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::RGBA16_Float)
+        .SetCubemap(true)
+        .SetSize(prefilteredSize, prefilteredSize)
+        .SetMips(mipCount)
+        .Build();
+
+    _brdfLutTexture = BeTexture::Create("__standard_brdf_lut")
+        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::RG32_Float)
+        .SetSize(512, 512)
+        .Build();
+
+    _environmentBakePass = std::make_unique<BeStandardEnvironmentBakePass>(this, std::move(equirect), _envCubemap, _irradianceCubemap, _prefilteredCubemap, _brdfLutTexture);
 }
 
 auto BeStandardRenderMachine::BakeEnvironment() -> void {

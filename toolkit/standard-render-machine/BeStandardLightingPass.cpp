@@ -14,12 +14,16 @@ BeStandardLightingPass::BeStandardLightingPass(
     std::vector<std::shared_ptr<BeTexture>> gbufferInputs,
     std::shared_ptr<BeTexture> depthInput,
     std::shared_ptr<BeTexture> irradianceCubemap,
+    std::shared_ptr<BeTexture> prefilteredCubemap,
+    std::shared_ptr<BeTexture> brdfLutTexture,
     std::shared_ptr<BeTexture> output
-) 
+)
 : _srm(srm)
 , _gbufferInputs(std::move(gbufferInputs))
 , _depthInput(std::move(depthInput))
 , _irradianceCubemap(std::move(irradianceCubemap))
+, _prefilteredCubemap(std::move(prefilteredCubemap))
+, _brdfLutTexture(std::move(brdfLutTexture))
 , _output(std::move(output)) {}
 
 auto BeStandardLightingPass::Initialise() -> void {
@@ -74,7 +78,15 @@ auto BeStandardLightingPass::Initialise() -> void {
         _ambientMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
         _ambientMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
         _ambientMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
+        _ambientMaterial->SetTexture("Depth_Tex", _depthInput);
         _ambientMaterial->SetTexture("IrradianceCubemap", _irradianceCubemap);
+        if (_prefilteredCubemap) {
+            _ambientMaterial->SetTexture("PrefilteredCubemap", _prefilteredCubemap);
+            _ambientMaterial->SetFloat1("MaxMipLevel", static_cast<float>(_prefilteredCubemap->Mips - 1));
+        }
+        if (_brdfLutTexture) {
+            _ambientMaterial->SetTexture("BrdfLut", _brdfLutTexture);
+        }
         _ambientPipeline = BePipelineBuilder::Start(*ambientShader)
             .SetBlend(additiveBlend)
             .SetColorFormats({ outputFormat })
@@ -103,6 +115,12 @@ auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {
     }
     if (_irradianceCubemap) {
         pass.UseTexture(_irradianceCubemap);
+    }
+    if (_prefilteredCubemap) {
+        pass.UseTexture(_prefilteredCubemap);
+    }
+    if (_brdfLutTexture) {
+        pass.UseTexture(_brdfLutTexture);
     }
     pass.AddColorTarget(_output, SenLoadOp::Clear);
     pass.SetViewport(_renderer->GetViewport());

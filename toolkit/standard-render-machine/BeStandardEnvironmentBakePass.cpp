@@ -16,9 +16,12 @@ BeStandardEnvironmentBakePass::BeStandardEnvironmentBakePass(
     BeStandardRenderMachine* srm,
     std::shared_ptr<BeTexture> equirect,
     std::shared_ptr<BeTexture> envCubemap,
-    std::shared_ptr<BeTexture> irradianceCubemap
+    std::shared_ptr<BeTexture> irradianceCubemap,
+    std::shared_ptr<BeTexture> prefilteredCubemap,
+    std::shared_ptr<BeTexture> brdfLutTexture
 ) : _srm(srm), _equirect(std::move(equirect)), _envCubemap(std::move(envCubemap)),
-    _irradianceCubemap(std::move(irradianceCubemap)) {}
+    _irradianceCubemap(std::move(irradianceCubemap)), _prefilteredCubemap(std::move(prefilteredCubemap)),
+    _brdfLutTexture(std::move(brdfLutTexture)) {}
 
 auto BeStandardEnvironmentBakePass::Initialise() -> void {
     auto& registry = _srm->GetAssetRegistry();
@@ -46,6 +49,31 @@ auto BeStandardEnvironmentBakePass::Initialise() -> void {
         _irradianceFaceMaterials[face] = mat;
     }
     _irradiancePipeline = BePipelineBuilder::Start(*irradianceShader).SetColorFormats({ _irradianceCubemap->Format }).Build();
+
+    const auto prefilterShader = registry.GetShader("prefilter-bake").lock();
+    be_assert(prefilterShader, "BeStandardEnvironmentBakePass: prefilter-bake shader not found");
+
+    const auto& prefilterScheme = prefilterShader->GetMaterialScheme("main");
+    const uint32_t mipCount = _prefilteredCubemap->Mips;
+    _prefilterFaceMaterials.resize(mipCount);
+    for (uint32_t mip = 0; mip < mipCount; ++mip) {
+        const float roughness = mipCount > 1 ? static_cast<float>(mip) / static_cast<float>(mipCount - 1) : 0.0f;
+        for (uint32_t face = 0; face < FaceCount; ++face) {
+            const auto mat = BeMaterial::Create(prefilterScheme, false);
+            mat->SetFloat1("FaceIndex", static_cast<float>(face));
+            mat->SetFloat1("Roughness", roughness);
+            mat->SetTexture("EnvCubemap", _envCubemap);
+            _prefilterFaceMaterials[mip][face] = mat;
+        }
+    }
+    _prefilterPipeline = BePipelineBuilder::Start(*prefilterShader).SetColorFormats({ _prefilteredCubemap->Format }).Build();
+
+    const auto brdfLutShader = registry.GetShader("brdf-lut").lock();
+    be_assert(brdfLutShader, "BeStandardEnvironmentBakePass: brdf-lut shader not found");
+
+    const auto& brdfLutScheme = brdfLutShader->GetMaterialScheme("main");
+    _brdfLutMaterial = BeMaterial::Create(brdfLutScheme, false);
+    _brdfLutPipeline = BePipelineBuilder::Start(*brdfLutShader).SetColorFormats({ _brdfLutTexture->Format }).Build();
 }
 
 auto BeStandardEnvironmentBakePass::Render(SenCommandBuffer& cmd) -> void {
@@ -69,6 +97,32 @@ auto BeStandardEnvironmentBakePass::Render(SenCommandBuffer& cmd) -> void {
         pass.SetViewport(_irradianceCubemap->GetMipViewport(0));
         pass.Begin();
         cmd.SetBindGroup(_irradianceFaceMaterials[face]->GetBindGroup(), 0);
+        cmd.Draw(4, 0);
+        pass.End();
+    }
+
+    cmd.SetPipeline(_prefilterPipeline);
+    const uint32_t mipCount = _prefilteredCubemap->Mips;
+    for (uint32_t mip = 0; mip < mipCount; ++mip) {
+        for (uint32_t face = 0; face < FaceCount; ++face) {
+            BePass pass(cmd);
+            pass.UseTexture(_envCubemap);
+            pass.AddColorTarget(_prefilteredCubemap, SenLoadOp::DontCare, {}, static_cast<uint8_t>(mip), static_cast<int8_t>(face));
+            pass.SetViewport(_prefilteredCubemap->GetMipViewport(mip));
+            pass.Begin();
+            cmd.SetBindGroup(_prefilterFaceMaterials[mip][face]->GetBindGroup(), 0);
+            cmd.Draw(4, 0);
+            pass.End();
+        }
+    }
+
+    cmd.SetPipeline(_brdfLutPipeline);
+    {
+        BePass pass(cmd);
+        pass.AddColorTarget(_brdfLutTexture, SenLoadOp::DontCare, {});
+        pass.SetViewport(_brdfLutTexture->GetMipViewport(0));
+        pass.Begin();
+        cmd.SetBindGroup(_brdfLutMaterial->GetBindGroup(), 0);
         cmd.Draw(4, 0);
         pass.End();
     }

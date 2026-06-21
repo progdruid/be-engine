@@ -75,7 +75,7 @@ function makeScene()
             shadowNearPlane = 0.1,
             shadowFarPlane = 400.0
         }
-    }
+    }   
 
     for i = 0, 99 do
         scene["Star_" .. i] = {
@@ -88,7 +88,12 @@ function makeScene()
         scene["PointLight_" .. i] = {
             transform = { scale = { 1.0, 1.0, 1.0 } },
             render = { prop = "emissiveCube", castShadows = false },
-            pointLight = { radius = 15.0, color = {1.0, 0.95, 0.85}, power = 3.0, castsShadows = false },
+            pointLight = { 
+                radius = 15.0, 
+                color = {1.0, 0.95, 0.85}, 
+                power = 3.0, 
+                castsShadows = false,
+            },
         }
     end
 

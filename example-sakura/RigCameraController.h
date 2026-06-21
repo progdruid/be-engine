@@ -26,6 +26,7 @@ class RigCameraController {
     explicit RigCameraController(BeCamera* camera);
 
     auto AddShot(std::string name) -> BeCameraShot&;
+    auto GetCurrentShot() const -> const BeCameraShot* { return _current; };
     auto Play(const std::string& name, bool loop = false, float speed = 1.0f) -> void;
     auto Pause() -> void;
     auto Resume() -> void;
