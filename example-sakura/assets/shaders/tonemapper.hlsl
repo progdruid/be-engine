@@ -1,7 +1,8 @@
 /*
 
 @be-material: tonemapper-material {
-    Exposure: float = 0.3
+    Exposure: float = 0.2
+    Contrast: float = 1.90
     HDRInput: texture2d = black
     InputSampler: sampler = point-clamp
 }
@@ -28,6 +29,7 @@
 
 struct tonemapper_material {
     float Exposure;
+    float Contrast;
 };
 
 cbuffer CBuffer_0 : register(b0, space0) {
@@ -53,7 +55,8 @@ struct PixelOutput {
 PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 hdrColor = HDRInput.Sample(InputSampler, input.UV).rgb;
 
-    float3 finalColor = Tonemap_AgX(hdrColor * _Main.Exposure);
+    float3 graded = ApplyContrast(hdrColor * _Main.Exposure, _Main.Contrast);
+    float3 finalColor = LinearToSrgb(Tonemap_ACES_Knarkowicz(graded));
     
     PixelOutput output;
     output.HDRTarget = finalColor;

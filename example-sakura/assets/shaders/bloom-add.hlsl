@@ -51,7 +51,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 dirtColor = DirtTexture.Sample(InputSampler, input.UV).rgb;
     
     float dirt = 0.0;//dot(dirtColor, float3(0.333, 0.333, 0.333));
-    
+
     float3 finalColor = hdrColor + bloomColor * (1.0 + dirt * 6.0);
     
     PixelOutput output;

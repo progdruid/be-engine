@@ -70,12 +70,13 @@ auto SakuraScene::Prepare() -> void {
         .AddToRegistry(_assetRegistry)
         .Build()
     );
-
+    
+    
     _emissiveCube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
-    _emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.99f, 0.8f, 0.6f) * 1.7f);
+    _emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(1.f) * 5.0f);
 
     _moon = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
-    _moon->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 2.1f);
+    _moon->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 10.0f);
 
     _anvil = _machine->LoadProp("assets/anvil/scene.gltf", standardShader);
     _anvil->Materials[0]->SetSampler("InputSampler", _assetRegistry.GetSampler("point-clamp"));
@@ -93,12 +94,12 @@ auto SakuraScene::Prepare() -> void {
     _axe = _machine->LoadProp("assets/pixel_molten_axe/scene.gltf",phongShader,BeSRMLightingModel::Phong);
     for (const auto& material : _axe->Materials) {
         material->SetSampler("InputSampler", _assetRegistry.GetSampler("point-clamp"));
-        material->SetFloat3("EmissiveColor", glm::vec3(1.5f));
+        material->SetFloat3("EmissiveColor", glm::vec3(6.0f));
     }
 
     _katana = _machine->LoadProp("assets/cyberpunk_katana/scene.gltf", standardShader);
     for (const auto& material : _katana->Materials) {
-        material->SetFloat3("EmissiveColor", glm::vec3(2.5f));
+        material->SetFloat3("EmissiveColor", glm::vec3(6.0f));
         material->SetFloat1("Metallic", 0.01f);
     }
     
@@ -188,8 +189,8 @@ auto SakuraScene::Prepare() -> void {
         .Key( 12.0f, {  0.0f,  1.0f,   0.0f}, BeTrackInterp::EaseInOut)
         .Key(18.0f, {100.0f,150.0f, 100.0f}, BeTrackInterp::EaseInOut)
         .Key(22.0f, {  0.0f,  1.0f,   0.0f}, BeTrackInterp::EaseInOut);
-}
-
+}  
+ 
 auto SakuraScene::OnLoad() -> void {
     RebuildPasses();
 
@@ -206,9 +207,10 @@ auto SakuraScene::RebuildPasses() -> void {
     _machine->AddGeometryPass();
     _machine->AddLightingPass("Sakura_HDR");
     _machine->AddSkyboxPass("Sakura_HDR", 0.0f);
-    _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_Bloom", _assetRegistry.GetTexture("Sakura_BloomDirtTexture").lock());
+    _machine->AddBloomPass(4, "Sakura_HDR", "Sakura_Bloom", _assetRegistry.GetTexture("Sakura_BloomDirtTexture").lock());
 
     std::string tonemapperInput = "Sakura_Bloom";
+    //std::string tonemapperInput = "Sakura_HDR"; 
     
     if (_dofEnabled) {
         if (!_dofMaterial) {
@@ -224,6 +226,7 @@ auto SakuraScene::RebuildPasses() -> void {
     const auto& tonemapperScheme = _assetRegistry.GetShader("tonemapper").lock()->GetMaterialScheme("main");
     const auto tonemapperMaterial = BeMaterial::Create(tonemapperScheme, false);
     tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture(tonemapperInput));
+    //tonemapperMaterial->SetFloat1("Exposure", 1.0f); // -- better use shader default, this way it can be hot-reloaded
     _machine->AddFullscreenPass(_assetRegistry.GetShader("tonemapper"), tonemapperMaterial, { "Sakura_Tonemapper" });
 
     const auto& fxaaScheme = _assetRegistry.GetShader("fxaa").lock()->GetMaterialScheme("main");
@@ -327,9 +330,9 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         });
     }
 
-    if (const auto shot = _rigCameraController->GetCurrentShot()) {
-        RailGizmo::DrawRail(*_machine, shot->GetPathRail(), _testSphere, _cube);
-    }
+    // if (const auto shot = _rigCameraController->GetCurrentShot()) {
+    //     RailGizmo::DrawRail(*_machine, shot->GetPathRail(), _testSphere, _cube);
+    // }
 
     for (const auto [entity, sunLight] : SunView.each()) {
         _machine->AddSunLight({

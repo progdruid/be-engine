@@ -7,6 +7,11 @@ float3 LinearToSrgb(float3 c) {
     return pow(saturate(c), 1.0 / 2.2);
 }
 
+float3 ApplyContrast(float3 color, float contrast) {
+    const float pivot = 0.18;
+    return pow(max(color, 0.0) / pivot, contrast) * pivot;
+}
+
 float3 Tonemap_ReinhardWhite(float3 x, float white) { // white ~ 2–4 
     float3 num = x * (1.0 + x / (white * white));
     return num / (1.0 + x);
