@@ -147,6 +147,7 @@ auto SakuraScene::Prepare() -> void {
 
     const auto skyTexture = BeTexture::Create("Sakura_Sky")
         .LoadFromFileHdr("assets/moonrise_puresky.hdr")
+        //.LoadFromFileHdr("assets/kloofendal_puresky.hdr")
         .AddToRegistry(_assetRegistry)
         .Build();
 
