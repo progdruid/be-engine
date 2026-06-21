@@ -3,6 +3,10 @@ float3 Tonemap_Reinhard(float3 x) {
     return x / (1.0 + x);
 }
 
+float3 LinearToSrgb(float3 c) {
+    return pow(saturate(c), 1.0 / 2.2);
+}
+
 float3 Tonemap_ReinhardWhite(float3 x, float white) { // white ~ 2–4 
     float3 num = x * (1.0 + x / (white * white));
     return num / (1.0 + x);
@@ -69,5 +73,52 @@ float3 Tonemap_ACES_Knarkowicz(float3 x)
 {
     const float a = 2.51f, b = 0.03f, c = 2.43f, d = 0.59f, e = 0.14f;
     return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
+}
+
+float3 AgXDefaultContrastApprox(float3 x)
+{
+    float3 x2 = x * x;
+    float3 x4 = x2 * x2;
+    return 15.5 * x4 * x2
+         - 40.14 * x4 * x
+         + 31.96 * x4
+         - 6.868 * x2 * x
+         + 0.4298 * x2
+         + 0.1191 * x
+         - 0.00232;
+}
+
+float3 AgXLookPunchy(float3 color)
+{
+    const float3 lw = float3(0.2126, 0.7152, 0.0722);
+    float luma = dot(color, lw);
+    const float3 power = float3(1.35, 1.35, 1.35);
+    const float sat = 1.4;
+    color = pow(color, power);
+    return luma + sat * (color - luma);
+}
+
+float3 Tonemap_AgX(float3 color)
+{
+    const float3x3 agxMat = {
+        0.842479062253094, 0.0423282422610123, 0.0423756549057051,
+        0.0784335999999992, 0.878468636469772, 0.0784336,
+        0.0792237451477643, 0.0791661274605434, 0.879142973793104
+    };
+    const float3x3 agxMatInv = {
+        1.19687900512017, -0.0528968517574562, -0.0529716355144438,
+        -0.0980208811401368, 1.15190312990417, -0.0980434501171241,
+        -0.0990297440797205, -0.0989611768448433, 1.15107367264116
+    };
+    const float minEv = -12.47393;
+    const float maxEv = 4.026069;
+
+    color = mul(color, agxMat);
+    color = clamp(log2(color), minEv, maxEv);
+    color = (color - minEv) / (maxEv - minEv);
+    color = AgXDefaultContrastApprox(color);
+    color = AgXLookPunchy(color);
+    color = mul(color, agxMatInv);
+    return saturate(color);
 }
 

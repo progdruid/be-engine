@@ -1,6 +1,7 @@
 /*
 
 @be-material: tonemapper-material {
+    Exposure: float = 0.3
     HDRInput: texture2d = black
     InputSampler: sampler = point-clamp
 }
@@ -25,10 +26,17 @@
 // region @be-auto-boilerplate
 #include "uniform-material.hlsl"
 
+struct tonemapper_material {
+    float Exposure;
+};
+
 cbuffer CBuffer_0 : register(b0, space0) {
     uniform_material _Frame;
 };
 
+cbuffer CBuffer_1 : register(b0, space1) {
+    tonemapper_material _Main;
+};
 SamplerState InputSampler : register(s1, space1);
 Texture2D HDRInput : register(t2, space1);
 
@@ -45,7 +53,7 @@ struct PixelOutput {
 PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 hdrColor = HDRInput.Sample(InputSampler, input.UV).rgb;
 
-    float3 finalColor = Tonemap_ReinhardWhite(hdrColor, 1.5);
+    float3 finalColor = Tonemap_AgX(hdrColor * _Main.Exposure);
     
     PixelOutput output;
     output.HDRTarget = finalColor;
