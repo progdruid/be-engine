@@ -2,7 +2,7 @@
 
 @be-material: tonemapper-material {
     Exposure: float = 0.2
-    Contrast: float = 1.90
+    Contrast: float = 1.80
     HDRInput: texture2d = black
     InputSampler: sampler = point-clamp
 }

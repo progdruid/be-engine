@@ -19,10 +19,17 @@ function(be_apply_defaults target)
 endfunction()
 
 function(be_copy_assets target)
-    add_custom_command(TARGET ${target} POST_BUILD
+    file(GLOB_RECURSE _assets CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/*")
+    set(_stamp "${CMAKE_CURRENT_BINARY_DIR}/${target}_assets.stamp")
+    add_custom_command(OUTPUT "${_stamp}"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_CURRENT_SOURCE_DIR}/assets"
-            "$<TARGET_FILE_DIR:${target}>/assets")
+            "$<TARGET_FILE_DIR:${target}>/assets"
+        COMMAND ${CMAKE_COMMAND} -E touch "${_stamp}"
+        DEPENDS ${_assets}
+        COMMENT "Copying assets for ${target}")
+    add_custom_target(${target}_assets ALL DEPENDS "${_stamp}")
+    add_dependencies(${target} ${target}_assets)
 endfunction()
 
 function(be_symlink_assets target)
