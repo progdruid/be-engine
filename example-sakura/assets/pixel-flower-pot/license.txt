@@ -1,0 +1,11 @@
+Model Information:
+* title:	Pixel Flower Pot
+* source:	https://sketchfab.com/3d-models/pixel-flower-pot-f80e4241bebe4a00ad57b0fb8d89b671
+* author:	AtskaHeart (https://sketchfab.com/atskaheart)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Pixel Flower Pot" (https://sketchfab.com/3d-models/pixel-flower-pot-f80e4241bebe4a00ad57b0fb8d89b671) by AtskaHeart (https://sketchfab.com/atskaheart) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

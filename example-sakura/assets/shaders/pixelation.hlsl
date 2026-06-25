@@ -83,7 +83,8 @@ PixelOutput PS(FullscreenVSOutput input) {
 
     float dMin = min(min(dTL, dTR), min(dBL, dBR));
     float dMax = max(max(dTL, dTR), max(dBL, dBR));
-    float edge = step(_Main.EdgeThreshold, dMax - dMin) * step(dMin, _Main.EdgeFarCutoff) * step(0.5, _Main.EdgeEnabled);
+    float threshold = _Main.EdgeThreshold * ((_Main.PixelSize + 1.0) / 9.0);
+    float edge = step(threshold, dMax - dMin) * step(dMin, _Main.EdgeFarCutoff) * step(0.5, _Main.EdgeEnabled);
 
     PixelOutput output;
     output.PixelOutput = lerp(color, float3(0, 0, 0), edge);

@@ -30,6 +30,7 @@ class ShowcaseScene : public BaseScene {
     bool _animatedTransitions = true;
     bool _pixelationEnabled = true;
     bool _pixelEdgesEnabled = true;
+    float _pixelSize = 8.0f;
     entt::entity _showcasedEntity = entt::null;
     TransformComponent _showcasedTransform = {};
 

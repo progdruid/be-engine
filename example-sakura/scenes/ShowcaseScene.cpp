@@ -84,24 +84,30 @@ void ShowcaseScene::Prepare() {
 auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
     auto standardShader = _assetRegistry.GetShader("standard-pbr");
 
-    _assetRegistry.AddProp("ramen",           machine.LoadProp("assets/ramen/scene.gltf",           standardShader));
-    _assetRegistry.AddProp("still-life",      machine.LoadProp("assets/still-life/scene.gltf",      standardShader));
-    _assetRegistry.AddProp("fiesta-tea",      machine.LoadProp("assets/fiesta_tea/scene.gltf",      standardShader));
-    _assetRegistry.AddProp("honeydew_melons", machine.LoadProp("assets/honeydew_melons/scene.gltf", standardShader));
-    _assetRegistry.AddProp("hunger_games",    machine.LoadProp("assets/hunger_games/scene.gltf",    standardShader));
-    _assetRegistry.AddProp("pickles",         machine.LoadProp("assets/pickles/scene.gltf",         standardShader));
-    _assetRegistry.AddProp("watermelons",     machine.LoadProp("assets/watermelons/scene.gltf",     standardShader));
-    _assetRegistry.AddProp("apfel",           machine.LoadProp("assets/apfel/scene.gltf",           standardShader));
-    _assetRegistry.AddProp("eggplant",        machine.LoadProp("assets/eggplant/scene.gltf",        standardShader));
-    _assetRegistry.AddProp("tomatoes",        machine.LoadProp("assets/tomatoes/scene.gltf",        standardShader));
-    const auto headset = machine.LoadProp("assets/headset/scene.gltf", standardShader);
-    for (auto& m : headset->Materials) {
+    _assetRegistry.AddProp("ramen",           machine.LoadProp("assets/ramen/scene.gltf",            standardShader));
+    _assetRegistry.AddProp("still-life",      machine.LoadProp("assets/still-life/scene.gltf",       standardShader));
+    _assetRegistry.AddProp("fiesta-tea",      machine.LoadProp("assets/fiesta_tea/scene.gltf",       standardShader));
+    _assetRegistry.AddProp("honeydew_melons", machine.LoadProp("assets/honeydew_melons/scene.gltf",  standardShader));
+    _assetRegistry.AddProp("hunger_games",    machine.LoadProp("assets/hunger_games/scene.gltf",     standardShader));
+    _assetRegistry.AddProp("pickles",         machine.LoadProp("assets/pickles/scene.gltf",          standardShader));
+    _assetRegistry.AddProp("watermelons",     machine.LoadProp("assets/watermelons/scene.gltf",      standardShader));
+    _assetRegistry.AddProp("apfel",           machine.LoadProp("assets/apfel/scene.gltf",            standardShader));
+    _assetRegistry.AddProp("eggplant",        machine.LoadProp("assets/eggplant/scene.gltf",         standardShader));
+    _assetRegistry.AddProp("tomatoes",        machine.LoadProp("assets/tomatoes/scene.gltf",         standardShader));
+    
+    const auto flowerPot = machine.LoadProp("assets/pixel-flower-pot/scene.gltf", standardShader);
+    _assetRegistry.AddProp("flower-pot", flowerPot);
+    for (const auto& m : flowerPot->Materials) {
         m->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
-        //m->SetSampler("InputSampler", BeAssetRegistry::GetSampler("linear-clamp"));
     }
+    
+    const auto headset = machine.LoadProp("assets/headset/scene.gltf", standardShader);
     _assetRegistry.AddProp("headset", headset);
+    for (const auto& m : headset->Materials) {
+        m->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
+    }
 
-    auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
+    const auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
     skycube->Materials[0]->SetFloat3("BaseColor", HexColor("#FAC8CD"));
     skycube->Slices[0].TwoSided = true;
     _assetRegistry.AddProp("skycube", skycube);
@@ -161,6 +167,7 @@ void ShowcaseScene::LoadPasses() {
         const auto pixelMaterial = BeMaterial::Create(pixelScheme, false);
         pixelMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_FXAAOutput"));
         pixelMaterial->SetTexture("DepthTexture", _machine->GetRenderTexture("Showcase_Depth"));
+        pixelMaterial->SetFloat1("PixelSize", _pixelSize);
         pixelMaterial->SetFloat1("EdgeEnabled", _pixelEdgesEnabled ? 1.0f : 0.0f);
         _machine->AddFullscreenPass(_assetRegistry.GetShader("pixelation"), pixelMaterial, { "Showcase_PixelOutput" });
         backbufferInput = "Showcase_PixelOutput";
@@ -193,14 +200,13 @@ void ShowcaseScene::Tick(float deltaTime) {
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_2)) {
         startBrace(GLFW_KEY_2, "still-life",     "#D0D0C4", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(4.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_3)) {
-        //startBrace(GLFW_KEY_3, "fiesta-tea",     "#61636D", TransformComponent { .Position = { 0, -1, 0 }, .Scale = glm::vec3(2.f) });
         startBrace(GLFW_KEY_3, "headset",        "#84DCC6", TransformComponent { .Position = { 0, -0.5, 0 }, .Scale = glm::vec3(2.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_4)) {
         startBrace(GLFW_KEY_4, "honeydew_melons","#855C36", TransformComponent { .Position = { 0.f, 1.f, 0.f } });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_5)) {
         startBrace(GLFW_KEY_5, "hunger_games",   "#39708E", TransformComponent { .Position = { 0.f, 3.f, 0.f }, .Scale = glm::vec3(2.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_6)) {
-        startBrace(GLFW_KEY_6, "pickles",        "#FEC693", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(24.f) });
+        startBrace(GLFW_KEY_6, "flower-pot",     "#E5D372", TransformComponent { .Position = { 0.f, -2.f, 0.f }, .Scale = glm::vec3(2.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_7)) {
         startBrace(GLFW_KEY_7, "watermelons",    "#A3A17B", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(90.f) });
     } else if (GameIns->Input->GetKeyDown(GLFW_KEY_8)) {
@@ -249,6 +255,17 @@ void ShowcaseScene::Tick(float deltaTime) {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_O) && _pixelationEnabled) {
         _pixelEdgesEnabled = !_pixelEdgesEnabled;
         LoadPasses();
+    }
+
+    if (_pixelationEnabled) {
+        if (GameIns->Input->GetKeyDown(GLFW_KEY_MINUS)) {
+            _pixelSize = std::max(1.0f, _pixelSize - 2.0f);
+            LoadPasses();
+        }
+        if (GameIns->Input->GetKeyDown(GLFW_KEY_EQUAL)) {
+            _pixelSize = std::min(64.0f, _pixelSize + 2.0f);
+            LoadPasses();
+        }
     }
 
     if (_useOrbitCamera) {
