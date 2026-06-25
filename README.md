@@ -1,10 +1,11 @@
 
+
+![be engine showcase](.github/media/hero.gif)
+
+
 # this is *be* engine.
 
 yo, this is my c++23 graphics engine i built for myself and for you. its a custom graphics programming workbench: a pass-based renderer, runtime shader compilation, and a batteries-included deferred pipeline you can take apart and rebuild.
-
-<!-- hero: drop a wide showcase gif/mp4 at the path below (~1200px wide looks best) -->
-![be engine showcase](.github/media/hero.gif)
 
 ### what's in it
 
