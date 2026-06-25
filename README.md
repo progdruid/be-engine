@@ -90,17 +90,6 @@ coordinate system is left-handed y-up (depth 0 to 1).
 
 ### gallery
 
-<!--
-  drop the files into .github/media/ at the paths below and they'll show up.
-  gifs/pngs embed inline. for mp4 you can also drag-drop into a github issue and
-  paste the resulting url instead of a local path.
--->
-
-| | |
-|:-:|:-:|
-| ![deferred lighting + shadows](.github/media/lighting.png) | ![bloom + tonemapping](.github/media/bloom.png) |
-| *deferred lighting + shadows* | *bloom + tonemapping* |
-| ![assimp models](.github/media/models.png) | ![post fx](.github/media/postfx.png) |
-| *assimp-loaded models* | *post fx (fxaa/smaa, dof, pixelation)* |
+![pixel art shader](.github/media/plant-pixelation.gif)
 
 ### enjoy!
