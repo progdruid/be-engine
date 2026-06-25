@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-**Linux (active platform)** — uses CMake with Ninja:
+**Linux (active platform)** — uses CMake with Ninja (requires CMake 3.25+):
 ```bash
 # Configure
-cmake --preset linux-debug    # or linux-release
+cmake --preset linux-debug    # or linux-release, or linux-debug-hotreload
 # Build
 cmake --build out/linux-debug
 ```
@@ -24,6 +24,8 @@ msbuild be.sln /p:Configuration=Debug
 ```
 
 No tests or linting. C++23 (`/Zc:__cplusplus /Zc:preprocessor` on MSVC). Build outputs land in `out/<preset>/`.
+
+`example-sakura` is the up-to-date showcase; prefer it as the reference. `example-game-1` is outdated and may not build.
 
 ## Project Structure
 
