@@ -88,8 +88,7 @@ each `.hlsl` file declares its own material scheme and pipeline in a block comme
 
 coordinate system is left-handed y-up (depth 0 to 1).
 
-### gallery
+### enjoy!
 
 ![pixel art shader](.github/media/plant-pixelation.gif)
 
-### enjoy!
