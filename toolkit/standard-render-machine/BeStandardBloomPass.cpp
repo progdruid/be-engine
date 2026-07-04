@@ -4,6 +4,7 @@
 #include <sen-rhi/SenBackend.h>
 
 #include "BeAssetRegistry.h"
+#include "BeShaderLibrary.h"
 #include "BePass.h"
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
@@ -23,10 +24,9 @@ BeStandardBloomPass::BeStandardBloomPass(
     _output(std::move(output)), _dirtTexture(std::move(dirtTexture)), _mipCount(mipCount) {}
 
 auto BeStandardBloomPass::Initialise() -> void {
-    auto& registry = _srm->GetAssetRegistry();
     const SenFormat mipFormat = _bloomTexture->Format;
 
-    const auto  brightShader = registry.GetShader("bloom-bright");
+    const auto  brightShader = BeShaderLibrary::GetShader("bloom-bright");
     be_assert(  brightShader, "BeStandardBloomPass: bloom-bright shader not found");
     const auto& brightScheme = brightShader->GetMaterialScheme("main");
     _brightMaterial = BeMaterial::Create(brightScheme, false);
@@ -34,7 +34,7 @@ auto BeStandardBloomPass::Initialise() -> void {
     _brightPipeline = BePipelineBuilder::Start(*brightShader).SetColorFormats({ mipFormat }).Build();
 
     // Downsample mipTarget i (1..mipCount-1) reads source mip i-1 of the same texture.
-    const auto  downsampleShader = registry.GetShader("bloom-downsample");
+    const auto  downsampleShader = BeShaderLibrary::GetShader("bloom-downsample");
     be_assert(  downsampleShader, "BeStandardBloomPass: bloom-downsample shader not found");
     const auto& downsampleScheme = downsampleShader->GetMaterialScheme("main");
     _downsampleMaterials.resize(_mipCount);
@@ -50,7 +50,7 @@ auto BeStandardBloomPass::Initialise() -> void {
     _downsamplePipeline = BePipelineBuilder::Start(*downsampleShader).SetColorFormats({ mipFormat }).Build();
 
     // Upsample mipTarget i (0..mipCount-2) reads source mip i+1 of the same texture.
-    const auto  upsampleShader = registry.GetShader("bloom-upsample");
+    const auto  upsampleShader = BeShaderLibrary::GetShader("bloom-upsample");
     be_assert(  upsampleShader, "BeStandardBloomPass: bloom-upsample shader not found");
     const auto& upsampleScheme = upsampleShader->GetMaterialScheme("main");
     _upsampleMaterials.resize(_mipCount);
@@ -70,7 +70,7 @@ auto BeStandardBloomPass::Initialise() -> void {
         })
         .SetColorFormats({ mipFormat }).Build();
 
-    const auto addShader = registry.GetShader("bloom-add");
+    const auto addShader = BeShaderLibrary::GetShader("bloom-add");
     be_assert( addShader, "BeStandardBloomPass: bloom-add shader not found");
     const auto addScheme = addShader->GetMaterialScheme("main");
     _addMaterial = BeMaterial::Create(addScheme, false);

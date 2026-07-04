@@ -17,6 +17,7 @@
 #include "Game.h"
 #include "scenes/BeSceneManager.h"
 #include "BeAssetRegistry.h"
+#include "BeShaderLibrary.h"
 #include "BeShader.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
@@ -46,7 +47,7 @@ void ShowcaseScene::Prepare() {
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
 
-    _assetRegistry.IndexShaderFiles({
+    BeShaderLibrary::IndexShaderFiles({
         "assets/shaders/uniform-material.hlsl",
         "assets/shaders/objectMaterial.hlsl",
         "assets/shaders/standard-pbr.hlsl",
@@ -58,7 +59,7 @@ void ShowcaseScene::Prepare() {
         "assets/shaders/test-compute.hlsl",
     });
 
-    const auto& uniformScheme = _assetRegistry.GetMaterialScheme("uniform-material");
+    const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
     _uniformMaterial = BeMaterial::Create(uniformScheme, false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
@@ -82,7 +83,7 @@ void ShowcaseScene::Prepare() {
 }
 
 auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
-    auto standardShader = _assetRegistry.GetShader("standard-pbr");
+    auto standardShader = BeShaderLibrary::GetShader("standard-pbr");
 
     _assetRegistry.AddProp("ramen",           machine.LoadProp("assets/ramen/scene.gltf",            standardShader));
     _assetRegistry.AddProp("still-life",      machine.LoadProp("assets/still-life/scene.gltf",       standardShader));
@@ -98,13 +99,13 @@ auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
     const auto flowerPot = machine.LoadProp("assets/pixel-flower-pot/scene.gltf", standardShader);
     _assetRegistry.AddProp("flower-pot", flowerPot);
     for (const auto& m : flowerPot->Materials) {
-        m->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
+        m->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
     }
     
     const auto headset = machine.LoadProp("assets/headset/scene.gltf", standardShader);
     _assetRegistry.AddProp("headset", headset);
     for (const auto& m : headset->Materials) {
-        m->SetSampler("InputSampler", BeAssetRegistry::GetSampler("point-clamp"));
+        m->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
     }
 
     const auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
@@ -156,20 +157,20 @@ void ShowcaseScene::LoadPasses() {
     _machine->ClearPasses();
     _machine->AddGeometryPass();
 
-    const auto& fxaaScheme = _assetRegistry.GetShader("fxaa")->GetMaterialScheme("main");
+    const auto& fxaaScheme = BeShaderLibrary::GetShader("fxaa")->GetMaterialScheme("main");
     const auto fxaaMaterial = BeMaterial::Create(fxaaScheme, false);
     fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_BaseColor"));
-    _machine->AddFullscreenPass(_assetRegistry.GetShader("fxaa"), fxaaMaterial, { "Showcase_FXAAOutput" });
+    _machine->AddFullscreenPass(BeShaderLibrary::GetShader("fxaa"), fxaaMaterial, { "Showcase_FXAAOutput" });
 
     const char* backbufferInput = "Showcase_FXAAOutput";
     if (_pixelationEnabled) {
-        const auto& pixelScheme = _assetRegistry.GetShader("pixelation")->GetMaterialScheme("main");
+        const auto& pixelScheme = BeShaderLibrary::GetShader("pixelation")->GetMaterialScheme("main");
         const auto pixelMaterial = BeMaterial::Create(pixelScheme, false);
         pixelMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_FXAAOutput"));
         pixelMaterial->SetTexture("DepthTexture", _machine->GetRenderTexture("Showcase_Depth"));
         pixelMaterial->SetFloat1("PixelSize", _pixelSize);
         pixelMaterial->SetFloat1("EdgeEnabled", _pixelEdgesEnabled ? 1.0f : 0.0f);
-        _machine->AddFullscreenPass(_assetRegistry.GetShader("pixelation"), pixelMaterial, { "Showcase_PixelOutput" });
+        _machine->AddFullscreenPass(BeShaderLibrary::GetShader("pixelation"), pixelMaterial, { "Showcase_PixelOutput" });
         backbufferInput = "Showcase_PixelOutput";
     }
 

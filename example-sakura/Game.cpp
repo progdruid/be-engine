@@ -4,6 +4,7 @@
 #include <umbrellas/include-glfw.h>
 
 #include "BeAssetRegistry.h"
+#include "BeShaderLibrary.h"
 #include "BeWindow.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
@@ -30,7 +31,7 @@ auto Game::Run() -> int {
 
     Input = std::make_unique<BeInput>(Window->GetGlfwWindow());
 
-    BeAssetRegistry::RegisterDefaultTexture("white",
+    BeShaderLibrary::RegisterDefaultTexture("white",
         BeTexture::Create("white")
         .SetSize(1, 1)
         .SetUsage(SenTextureUsage::ShaderResource)
@@ -38,7 +39,7 @@ auto Game::Run() -> int {
         .FillWithColor(glm::vec4(1.f))
         .Build()
     );
-    BeAssetRegistry::RegisterDefaultTexture("black",
+    BeShaderLibrary::RegisterDefaultTexture("black",
         BeTexture::Create("black")
         .SetSize(1, 1)
         .SetUsage(SenTextureUsage::ShaderResource)
@@ -46,7 +47,7 @@ auto Game::Run() -> int {
         .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
         .Build()
     );
-    BeAssetRegistry::RegisterDefaultTexture("storage-black",
+    BeShaderLibrary::RegisterDefaultTexture("storage-black",
         BeTexture::Create("storage-black")
         .SetSize(1, 1)
         .SetUsage(SenTextureUsage::ShaderResource | SenTextureUsage::Storage)
@@ -54,7 +55,7 @@ auto Game::Run() -> int {
         .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
         .Build()
     );
-    BeAssetRegistry::RegisterDefaultTexture("black-cube",
+    BeShaderLibrary::RegisterDefaultTexture("black-cube",
         BeTexture::Create("black-cube")
         .SetSize(1, 1)
         .SetCubemap(true)
@@ -63,7 +64,7 @@ auto Game::Run() -> int {
         .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
         .Build()
     );
-    BeAssetRegistry::RegisterDefaultTexture("default-orm",
+    BeShaderLibrary::RegisterDefaultTexture("default-orm",
         BeTexture::Create("default-orm")
         .SetSize(1, 1)
         .SetUsage(SenTextureUsage::ShaderResource)
@@ -71,7 +72,7 @@ auto Game::Run() -> int {
         .FillWithColor(glm::vec4(0.f, 1.f, 1.f, 1.f))
         .Build()
     );
-    BeAssetRegistry::RegisterDefaultTexture("flat-normal",
+    BeShaderLibrary::RegisterDefaultTexture("flat-normal",
         BeTexture::Create("flat-normal")
         .SetSize(1, 1)
         .SetUsage(SenTextureUsage::ShaderResource)
@@ -84,7 +85,7 @@ auto Game::Run() -> int {
 
     MainLoop();
 
-    BeAssetRegistry::StaticShutdown();
+    BeShaderLibrary::Shutdown();
 
     return 0;
 }

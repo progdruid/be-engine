@@ -7,7 +7,7 @@
 
 #include <sen-rhi/SenTypes.h>
 
-#include "BeAssetRegistry.h"
+#include "BeShaderLibrary.h"
 #include "sen-rhi/SenBackend.h"
 
 namespace {
@@ -121,7 +121,7 @@ namespace {
 
 
 uint32_t BeShader::_shaderCount = 0;
-auto BeShader::Create(const std::filesystem::path& filePath, BeAssetRegistry& registry) -> std::unique_ptr<BeShader> {
+auto BeShader::Create(const std::filesystem::path& filePath) -> std::unique_ptr<BeShader> {
     be_assert(
         std::filesystem::exists(filePath),
         "Shader file doesn't exist: " + filePath.string()
@@ -143,7 +143,7 @@ auto BeShader::Create(const std::filesystem::path& filePath, BeAssetRegistry& re
         for (const auto& bind : meta.Binds) {
             auto& entry = shader->_materialSchemes.emplace_back();
             entry.Link   = bind.Link;
-            entry.Scheme = registry.GetMaterialScheme(bind.Scheme);
+            entry.Scheme = BeShaderLibrary::GetMaterialScheme(bind.Scheme);
             entry.Index  = bind.Slot;
 
             shader->_pipelineDesc.BindGroupLayouts[entry.Index] = entry.Scheme.BindGroupLayout;

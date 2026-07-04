@@ -1,6 +1,7 @@
 #include "BeStandardBackbufferPass.h"
 
 #include "BeAssetRegistry.h"
+#include "BeShaderLibrary.h"
 #include "BePass.h"
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
@@ -19,8 +20,7 @@ BeStandardBackbufferPass::BeStandardBackbufferPass(
 , _clearColor(clearColor) {}
 
 auto BeStandardBackbufferPass::Initialise() -> void {
-    auto& registry = _srm->GetAssetRegistry();
-    const auto  shader = registry.GetShader("backbuffer");
+    const auto  shader = BeShaderLibrary::GetShader("backbuffer");
     const auto& scheme = shader->GetMaterialScheme("main");
     _material = BeMaterial::Create(scheme, false);
     _material->SetTexture("InputTexture", _input);

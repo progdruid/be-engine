@@ -4,6 +4,7 @@
 #include <sen-rhi/SenBackend.h>
 
 #include "BeAssetRegistry.h"
+#include "BeShaderLibrary.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
 #include "BeTexture.h"
@@ -134,7 +135,7 @@ auto BeStandardRenderMachine::AddBloomPass(
     auto bloomTexture = DeclareTexture("__standard_bloom", input->Format, false, mipCount);
 
     if (!dirtTexture) {
-        dirtTexture = BeAssetRegistry::GetDefaultTexture("black").lock();
+        dirtTexture = BeShaderLibrary::GetDefaultTexture("black").lock();
     }
 
     auto pass = std::make_unique<BeStandardBloomPass>(this, input, bloomTexture, output, dirtTexture, mipCount);

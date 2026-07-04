@@ -10,6 +10,7 @@
 #include "RigCameraController.h"
 #include "RailGizmo.h"
 #include "BeAssetRegistry.h"
+#include "BeShaderLibrary.h"
 #include "LuaSceneLoader.h"
 #include "BeCamera.h"
 #include "BeInput.h"
@@ -28,7 +29,7 @@ SakuraScene::SakuraScene(Game* game) : BaseScene(game) {}
 SakuraScene::~SakuraScene() = default;
 
 auto SakuraScene::Prepare() -> void {
-    _assetRegistry.IndexShaderFiles({
+    BeShaderLibrary::IndexShaderFiles({
         "assets/shaders/uniform-material.hlsl",
         "assets/shaders/objectMaterial.hlsl",
         "assets/shaders/standard-pbr.hlsl",
@@ -54,9 +55,9 @@ auto SakuraScene::Prepare() -> void {
         "assets/shaders/skybox.hlsl",
     });
 
-    const auto standardShader = _assetRegistry.GetShader("standard-pbr");
-    const auto phongShader = _assetRegistry.GetShader("standard-phong");
-    const auto checkerboardShader = _assetRegistry.GetShader("checkerboard");
+    const auto standardShader = BeShaderLibrary::GetShader("standard-pbr");
+    const auto phongShader = BeShaderLibrary::GetShader("standard-phong");
+    const auto checkerboardShader = BeShaderLibrary::GetShader("checkerboard");
 
     const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
     const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
@@ -79,10 +80,10 @@ auto SakuraScene::Prepare() -> void {
     _moon->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 10.0f);
 
     _anvil = _machine->LoadProp("assets/anvil/scene.gltf", standardShader);
-    _anvil->Materials[0]->SetSampler("InputSampler", _assetRegistry.GetSampler("point-clamp"));
+    _anvil->Materials[0]->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
 
     _sakura = _machine->LoadProp("assets/sakura/scene.gltf", standardShader);
-    _sakura->Materials[0]->SetSampler("InputSampler", _assetRegistry.GetSampler("linear-wrap"));
+    _sakura->Materials[0]->SetSampler("InputSampler", BeShaderLibrary::GetSampler("linear-wrap"));
 
     _sakura2 = _machine->LoadProp("assets/stylized_sakura_tree.glb", standardShader);
 
@@ -93,7 +94,7 @@ auto SakuraScene::Prepare() -> void {
 
     _axe = _machine->LoadProp("assets/pixel_molten_axe/scene.gltf",phongShader,BeSRMLightingModel::Phong);
     for (const auto& material : _axe->Materials) {
-        material->SetSampler("InputSampler", _assetRegistry.GetSampler("point-clamp"));
+        material->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
         material->SetFloat3("EmissiveColor", glm::vec3(6.0f));
     }
 
@@ -119,7 +120,7 @@ auto SakuraScene::Prepare() -> void {
     _assetRegistry.AddProp("katana", _katana);
     _assetRegistry.AddProp("rusty-sphere", _rustySphere);
 
-    const auto& uniformScheme = _assetRegistry.GetMaterialScheme("uniform-material");
+    const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
     _uniformMaterial = BeMaterial::Create(uniformScheme, false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
@@ -215,25 +216,25 @@ auto SakuraScene::RebuildPasses() -> void {
     
     if (_dofEnabled) {
         if (!_dofMaterial) {
-            const auto& dofScheme = _assetRegistry.GetShader("dof")->GetMaterialScheme("main");
+            const auto& dofScheme = BeShaderLibrary::GetShader("dof")->GetMaterialScheme("main");
             _dofMaterial = BeMaterial::Create(dofScheme, false);
         }
         _dofMaterial->SetTexture("ColorInput", _machine->GetRenderTexture("Sakura_Bloom"));
         _dofMaterial->SetTexture("DepthInput", _machine->GetRenderTexture("Sakura_Depth"));
-        _machine->AddFullscreenPass(_assetRegistry.GetShader("dof"), _dofMaterial, { "Sakura_DoF" });
+        _machine->AddFullscreenPass(BeShaderLibrary::GetShader("dof"), _dofMaterial, { "Sakura_DoF" });
         tonemapperInput = "Sakura_DoF";
     }
 
-    const auto& tonemapperScheme = _assetRegistry.GetShader("tonemapper")->GetMaterialScheme("main");
+    const auto& tonemapperScheme = BeShaderLibrary::GetShader("tonemapper")->GetMaterialScheme("main");
     const auto tonemapperMaterial = BeMaterial::Create(tonemapperScheme, false);
     tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture(tonemapperInput));
     //tonemapperMaterial->SetFloat1("Exposure", 1.0f); // -- better use shader default, this way it can be hot-reloaded
-    _machine->AddFullscreenPass(_assetRegistry.GetShader("tonemapper"), tonemapperMaterial, { "Sakura_Tonemapper" });
+    _machine->AddFullscreenPass(BeShaderLibrary::GetShader("tonemapper"), tonemapperMaterial, { "Sakura_Tonemapper" });
 
-    const auto& fxaaScheme = _assetRegistry.GetShader("fxaa")->GetMaterialScheme("main");
+    const auto& fxaaScheme = BeShaderLibrary::GetShader("fxaa")->GetMaterialScheme("main");
     const auto fxaaMaterial = BeMaterial::Create(fxaaScheme, false);
     fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Sakura_Tonemapper"));
-    _machine->AddFullscreenPass(_assetRegistry.GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });
+    _machine->AddFullscreenPass(BeShaderLibrary::GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });
 
     _machine->AddBackbufferPass("Sakura_FXAA", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
     _machine->BuildPasses();

@@ -4,6 +4,7 @@
 #include <sen-rhi/SenBackend.h>
 
 #include "BeAssetRegistry.h"
+#include "BeShaderLibrary.h"
 #include "BePass.h"
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
@@ -24,9 +25,8 @@ BeStandardEnvironmentBakePass::BeStandardEnvironmentBakePass(
     _brdfLutTexture(std::move(brdfLutTexture)) {}
 
 auto BeStandardEnvironmentBakePass::Initialise() -> void {
-    auto& registry = _srm->GetAssetRegistry();
 
-    const auto envShader = registry.GetShader("environment-bake");
+    const auto envShader = BeShaderLibrary::GetShader("environment-bake");
     be_assert(envShader, "BeStandardEnvironmentBakePass: environment-bake shader not found");
 
     const auto& envScheme = envShader->GetMaterialScheme("main");
@@ -38,7 +38,7 @@ auto BeStandardEnvironmentBakePass::Initialise() -> void {
     }
     _envPipeline = BePipelineBuilder::Start(*envShader).SetColorFormats({ _envCubemap->Format }).Build();
 
-    const auto irradianceShader = registry.GetShader("irradiance-bake");
+    const auto irradianceShader = BeShaderLibrary::GetShader("irradiance-bake");
     be_assert(irradianceShader, "BeStandardEnvironmentBakePass: irradiance-bake shader not found");
 
     const auto& irradianceScheme = irradianceShader->GetMaterialScheme("main");
@@ -50,7 +50,7 @@ auto BeStandardEnvironmentBakePass::Initialise() -> void {
     }
     _irradiancePipeline = BePipelineBuilder::Start(*irradianceShader).SetColorFormats({ _irradianceCubemap->Format }).Build();
 
-    const auto prefilterShader = registry.GetShader("prefilter-bake");
+    const auto prefilterShader = BeShaderLibrary::GetShader("prefilter-bake");
     be_assert(prefilterShader, "BeStandardEnvironmentBakePass: prefilter-bake shader not found");
 
     const auto& prefilterScheme = prefilterShader->GetMaterialScheme("main");
@@ -68,7 +68,7 @@ auto BeStandardEnvironmentBakePass::Initialise() -> void {
     }
     _prefilterPipeline = BePipelineBuilder::Start(*prefilterShader).SetColorFormats({ _prefilteredCubemap->Format }).Build();
 
-    const auto brdfLutShader = registry.GetShader("brdf-lut");
+    const auto brdfLutShader = BeShaderLibrary::GetShader("brdf-lut");
     be_assert(brdfLutShader, "BeStandardEnvironmentBakePass: brdf-lut shader not found");
 
     const auto& brdfLutScheme = brdfLutShader->GetMaterialScheme("main");

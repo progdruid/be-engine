@@ -4,6 +4,7 @@
 #include <sen-rhi/SenBackend.h>
 
 #include "BeAssetRegistry.h"
+#include "BeShaderLibrary.h"
 #include "BePass.h"
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
@@ -22,9 +23,8 @@ BeStandardSkyboxPass::BeStandardSkyboxPass(
     _output(std::move(output)), _clampRadiance(clampRadiance) {}
 
 auto BeStandardSkyboxPass::Initialise() -> void {
-    auto& registry = _srm->GetAssetRegistry();
 
-    const auto shader = registry.GetShader("skybox");
+    const auto shader = BeShaderLibrary::GetShader("skybox");
     be_assert(shader, "BeStandardSkyboxPass: skybox shader not found");
 
     const auto& scheme = shader->GetMaterialScheme("main");

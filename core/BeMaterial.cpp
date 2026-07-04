@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "BeAssetRegistry.h"
+#include "BeShaderLibrary.h"
 #include "BeTexture.h"
 #include "sen-rhi/SenBackend.h"
 
@@ -38,14 +39,14 @@ BeMaterial::~BeMaterial() {
 
 auto BeMaterial::InitialiseSlotMaps() -> void {
     for (const auto& property : _scheme.Textures) {
-        auto texWeak = BeAssetRegistry::GetDefaultTexture(property.DefaultTexturePath);
+        auto texWeak = BeShaderLibrary::GetDefaultTexture(property.DefaultTexturePath);
         be_assert(!texWeak.expired(), "Default texture not found: " + property.DefaultTexturePath);
         _textures[property.Name] = {texWeak.lock(), property.SlotIndex, property.IsStorage};
     }
 
     for (const auto& property : _scheme.Samplers) {
-        auto sampler = BeAssetRegistry::GetSampler(property.DefaultSamplerDescString);
-        be_assert(sampler.IsValid(), "Invalid behaviour: BeAssetRegistry::GetSampler returned invalid handle. This should never happen");
+        auto sampler = BeShaderLibrary::GetSampler(property.DefaultSamplerDescString);
+        be_assert(sampler.IsValid(), "Invalid behaviour: BeShaderLibrary::GetSampler returned invalid handle. This should never happen");
         _samplers[property.Name] = { sampler, property.SlotIndex };
     }
 }
