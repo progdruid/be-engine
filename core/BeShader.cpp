@@ -121,13 +121,13 @@ namespace {
 
 
 uint32_t BeShader::_shaderCount = 0;
-auto BeShader::Create(const std::filesystem::path& filePath, BeAssetRegistry& registry) -> std::shared_ptr<BeShader> {
+auto BeShader::Create(const std::filesystem::path& filePath, BeAssetRegistry& registry) -> std::unique_ptr<BeShader> {
     be_assert(
         std::filesystem::exists(filePath),
         "Shader file doesn't exist: " + filePath.string()
     );
 
-    auto shader = std::make_shared<BeShader>();
+    auto shader = std::make_unique<BeShader>();
     shader->ShaderID = ++_shaderCount;
 
     auto src = BeShaderTools::ReadFile(filePath);

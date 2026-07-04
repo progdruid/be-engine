@@ -3,10 +3,10 @@
 #include "BeShader.h"
 #include "BeMaterial.h"
 
-auto BeProp::FromMesh(std::shared_ptr<BeMesh> mesh, std::weak_ptr<BeShader> shader, const std::string& schemeLink) -> std::shared_ptr<BeProp> {
+auto BeProp::FromMesh(std::shared_ptr<BeMesh> mesh, raw_ptr<BeShader> shader, const std::string& schemeLink) -> std::shared_ptr<BeProp> {
     auto prop = std::make_shared<BeProp>();
     prop->Mesh = std::move(mesh);
-    prop->Shader = shader.lock();
+    prop->Shader = shader;
 
     const auto& scheme = prop->Shader->GetMaterialScheme(schemeLink);
     for (size_t i = 0; i < prop->Mesh->Slices.size(); ++i) {

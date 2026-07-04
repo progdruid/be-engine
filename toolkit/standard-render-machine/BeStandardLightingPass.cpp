@@ -28,9 +28,9 @@ BeStandardLightingPass::BeStandardLightingPass(
 
 auto BeStandardLightingPass::Initialise() -> void {
     auto& registry = _srm->GetAssetRegistry();
-    const auto directionalLightShader = registry.GetShader("directional-light").lock();
-    const auto pointLightShader       = registry.GetShader("point-light").lock();
-    const auto emissiveAddShader      = registry.GetShader("emissive-add").lock();
+    const auto directionalLightShader = registry.GetShader("directional-light");
+    const auto pointLightShader       = registry.GetShader("point-light");
+    const auto emissiveAddShader      = registry.GetShader("emissive-add");
 
     constexpr SenBlendState additiveBlend = {
         .Enable = true,
@@ -72,7 +72,7 @@ auto BeStandardLightingPass::Initialise() -> void {
     ;
 
     if (_irradianceCubemap) {
-        const auto ambientShader = registry.GetShader("ambient-ibl").lock();
+        const auto ambientShader = registry.GetShader("ambient-ibl");
         const auto& ambientScheme = ambientShader->GetMaterialScheme("main");
         _ambientMaterial = BeMaterial::Create(ambientScheme, false);
         _ambientMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);

@@ -215,7 +215,7 @@ auto SakuraScene::RebuildPasses() -> void {
     
     if (_dofEnabled) {
         if (!_dofMaterial) {
-            const auto& dofScheme = _assetRegistry.GetShader("dof").lock()->GetMaterialScheme("main");
+            const auto& dofScheme = _assetRegistry.GetShader("dof")->GetMaterialScheme("main");
             _dofMaterial = BeMaterial::Create(dofScheme, false);
         }
         _dofMaterial->SetTexture("ColorInput", _machine->GetRenderTexture("Sakura_Bloom"));
@@ -224,13 +224,13 @@ auto SakuraScene::RebuildPasses() -> void {
         tonemapperInput = "Sakura_DoF";
     }
 
-    const auto& tonemapperScheme = _assetRegistry.GetShader("tonemapper").lock()->GetMaterialScheme("main");
+    const auto& tonemapperScheme = _assetRegistry.GetShader("tonemapper")->GetMaterialScheme("main");
     const auto tonemapperMaterial = BeMaterial::Create(tonemapperScheme, false);
     tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture(tonemapperInput));
     //tonemapperMaterial->SetFloat1("Exposure", 1.0f); // -- better use shader default, this way it can be hot-reloaded
     _machine->AddFullscreenPass(_assetRegistry.GetShader("tonemapper"), tonemapperMaterial, { "Sakura_Tonemapper" });
 
-    const auto& fxaaScheme = _assetRegistry.GetShader("fxaa").lock()->GetMaterialScheme("main");
+    const auto& fxaaScheme = _assetRegistry.GetShader("fxaa")->GetMaterialScheme("main");
     const auto fxaaMaterial = BeMaterial::Create(fxaaScheme, false);
     fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Sakura_Tonemapper"));
     _machine->AddFullscreenPass(_assetRegistry.GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });

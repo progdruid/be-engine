@@ -24,7 +24,7 @@ BeStandardSkyboxPass::BeStandardSkyboxPass(
 auto BeStandardSkyboxPass::Initialise() -> void {
     auto& registry = _srm->GetAssetRegistry();
 
-    const auto shader = registry.GetShader("skybox").lock();
+    const auto shader = registry.GetShader("skybox");
     be_assert(shader, "BeStandardSkyboxPass: skybox shader not found");
 
     const auto& scheme = shader->GetMaterialScheme("main");

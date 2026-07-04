@@ -124,7 +124,7 @@ class BeStandardRenderMachine {
     auto AddGeometryPass() -> void;
     auto AddLightingPass(const std::string& outputName) -> void;
     auto AddBloomPass(uint32_t mipCount, const std::string& inputName, const std::string& outputName, std::shared_ptr<BeTexture> dirtTexture = nullptr) -> void;
-    auto AddFullscreenPass(std::weak_ptr<BeShader> shader, std::shared_ptr<BeMaterial> material, const std::vector<std::string>& outputNames) -> void;
+    auto AddFullscreenPass(raw_ptr<BeShader> shader, std::shared_ptr<BeMaterial> material, const std::vector<std::string>& outputNames) -> void;
     auto AddBackbufferPass(const std::string& inputName, glm::vec3 clearColor = {}) -> void;
     auto AddPass(std::unique_ptr<BeRenderPass> pass) -> void;
 
@@ -162,7 +162,7 @@ class BeStandardRenderMachine {
     // asset loading ---------------------------------------------------------------------------------------------------
     expose auto LoadProp(
         const std::filesystem::path& modelPath, 
-        std::weak_ptr<BeShader> shader, 
+        raw_ptr<BeShader> shader,
         BeSRMLightingModel model = BeSRMLightingModel::PBR
     ) -> std::shared_ptr<BeProp>;
     

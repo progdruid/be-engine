@@ -142,7 +142,7 @@ auto BeStandardRenderMachine::AddBloomPass(
 }
 
 auto BeStandardRenderMachine::AddFullscreenPass(
-    std::weak_ptr<BeShader> shader,
+    raw_ptr<BeShader> shader,
     std::shared_ptr<BeMaterial> material,
     const std::vector<std::string>& outputNames
 ) -> void {
@@ -299,7 +299,7 @@ auto BeStandardRenderMachine::GetPointLightEntries() const -> const std::vector<
 
 auto BeStandardRenderMachine::LoadProp(
     const std::filesystem::path& modelPath,
-    std::weak_ptr<BeShader> shader,
+    raw_ptr<BeShader> shader,
     BeSRMLightingModel model
 ) -> std::shared_ptr<BeProp> {
 
@@ -307,7 +307,7 @@ auto BeStandardRenderMachine::LoadProp(
 
     if (model == BeSRMLightingModel::PBR) {
         materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
-            const auto scheme = shader.lock()->GetMaterialScheme("geometry-main");
+            const auto scheme = shader->GetMaterialScheme("geometry-main");
             auto material = BeMaterial::Create(scheme, true);
 
             aiString texPath;
@@ -333,7 +333,7 @@ auto BeStandardRenderMachine::LoadProp(
         };
     } else {
         materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
-            const auto scheme = shader.lock()->GetMaterialScheme("geometry-main");
+            const auto scheme = shader->GetMaterialScheme("geometry-main");
             auto material = BeMaterial::Create(scheme, true);
 
             aiString texPath;

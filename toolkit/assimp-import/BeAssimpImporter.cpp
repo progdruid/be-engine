@@ -13,7 +13,7 @@ BeAssimpImporter::~BeAssimpImporter() {}
 
 auto BeAssimpImporter::LoadProp(
     const std::filesystem::path& modelPath,
-    std::weak_ptr<BeShader> usedShaderForMaterials,
+    raw_ptr<BeShader> usedShaderForMaterials,
     const std::function<std::shared_ptr<BeMaterial>(aiMaterial const*, aiScene const*, const std::filesystem::path&)>& materialExtractFunction
 ) -> std::shared_ptr<BeProp> {
     constexpr auto flags = (
@@ -32,7 +32,7 @@ auto BeAssimpImporter::LoadProp(
     
     auto prop = std::make_shared<BeProp>();
     prop->Mesh = std::make_shared<BeMesh>();
-    prop->Shader = usedShaderForMaterials.lock();
+    prop->Shader = usedShaderForMaterials;
 
     std::unordered_map<uint32_t, std::shared_ptr<BeMaterial>> assimpIndexToMaterial;
     std::unordered_set<uint32_t> assimpIndexToTwoSided;

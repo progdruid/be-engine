@@ -6,6 +6,7 @@
 
 #include "BeMaterialScheme.h"
 #include "umbrellas/include-libassert.h"
+#include <umbrellas/common.hpp>
 #include <sen-rhi/SenTypes.h>
 
 #ifdef GetProp
@@ -32,7 +33,7 @@ class BeAssetRegistry {
 
     hide
     std::unordered_map<std::filesystem::path, std::string> _shaderSources;
-    std::unordered_map<std::string, std::shared_ptr<BeShader>> _shaders;
+    std::unordered_map<std::string, std::unique_ptr<BeShader>> _shaders;
     std::unordered_map<std::string, BeMaterialScheme> _materialSchemes;
     std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _materials;
     std::unordered_map<std::string, std::shared_ptr<BeTexture>> _textures;
@@ -45,7 +46,7 @@ class BeAssetRegistry {
     expose // Shaders
     auto IndexShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void;
 
-    auto GetShader(std::string_view name) -> std::weak_ptr<BeShader> { be_assert(_shaders.contains(std::string(name)), name); return _shaders.at(std::string(name)); }
+    auto GetShader(std::string_view name) -> raw_ptr<BeShader> { be_assert(_shaders.contains(std::string(name)), name); return _shaders.at(std::string(name)).get(); }
     auto HasShader(std::string_view name) const -> bool { return _shaders.contains(std::string(name)); }
 
     auto GetMaterialScheme(std::string_view name) -> BeMaterialScheme { be_assert(_materialSchemes.contains(std::string(name))); return _materialSchemes.at(std::string(name)); }

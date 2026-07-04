@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "BeMesh.h"
+#include <umbrellas/common.hpp>
 
 class BeShader;
 class BeMaterial;
@@ -15,12 +16,12 @@ struct BePropSlice {
 struct BeProp {
     std::shared_ptr<BeMesh> Mesh;
     std::vector<BePropSlice> Slices;
-    std::shared_ptr<BeShader> Shader;
+    raw_ptr<BeShader> Shader;
     std::vector<std::shared_ptr<BeMaterial>> Materials;
 
     static auto FromMesh(
         std::shared_ptr<BeMesh> mesh,
-        std::weak_ptr<BeShader> shader,
+        raw_ptr<BeShader> shader,
         const std::string& schemeLink
     ) -> std::shared_ptr<BeProp>;
 

@@ -20,7 +20,7 @@ BeStandardBackbufferPass::BeStandardBackbufferPass(
 
 auto BeStandardBackbufferPass::Initialise() -> void {
     auto& registry = _srm->GetAssetRegistry();
-    const auto  shader = registry.GetShader("backbuffer").lock();
+    const auto  shader = registry.GetShader("backbuffer");
     const auto& scheme = shader->GetMaterialScheme("main");
     _material = BeMaterial::Create(scheme, false);
     _material->SetTexture("InputTexture", _input);

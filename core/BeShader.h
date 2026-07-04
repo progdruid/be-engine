@@ -26,7 +26,7 @@ ENABLE_BITMASK(BeShaderType);
 class BeShader {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     hide static uint32_t _shaderCount;
-    expose static auto Create(const std::filesystem::path& filePath, BeAssetRegistry& registry) -> std::shared_ptr<BeShader>;
+    expose static auto Create(const std::filesystem::path& filePath, BeAssetRegistry& registry) -> std::unique_ptr<BeShader>;
     
     
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////

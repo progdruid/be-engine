@@ -66,7 +66,8 @@ auto BeAssetRegistry::IndexShaderFiles(const std::vector<std::filesystem::path>&
             continue;
 
         auto shader = BeShader::Create(path, *this);
-        _shaders[shader->Name] = shader;
+        auto name = shader->Name;
+        _shaders[std::move(name)] = std::move(shader);
     }
 }
 

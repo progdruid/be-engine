@@ -12,17 +12,17 @@
 
 BeStandardFullscreenEffectPass::BeStandardFullscreenEffectPass(
     BeStandardRenderMachine* srm,
-    std::weak_ptr<BeShader> shader,
+    raw_ptr<BeShader> shader,
     std::shared_ptr<BeMaterial> material,
     std::vector<std::shared_ptr<BeTexture>> outputs
 ) 
 : _srm(srm)
-, _shader(std::move(shader))
+, _shader(shader)
 , _material(std::move(material))
 , _outputs(std::move(outputs)) {}
 
 auto BeStandardFullscreenEffectPass::Initialise() -> void {
-    auto shader = _shader.lock();
+    auto shader = _shader;
     be_assert(shader, "BeStandardFullscreenEffectPass: shader not set");
 
     auto pipelineDesc = shader->GetPipelineDesc();

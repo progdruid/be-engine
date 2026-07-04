@@ -23,7 +23,7 @@ class BeAssimpImporter {
     expose
     auto LoadProp (
         const std::filesystem::path& modelPath,
-        std::weak_ptr<BeShader> usedShaderForMaterials,
+        raw_ptr<BeShader> usedShaderForMaterials,
         const std::function<std::shared_ptr<BeMaterial>(aiMaterial const*, aiScene const*, const std::filesystem::path&)>&
         materialExtractFunction
     ) -> std::shared_ptr<BeProp>;

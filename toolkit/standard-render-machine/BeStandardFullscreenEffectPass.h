@@ -16,7 +16,7 @@ class BeStandardFullscreenEffectPass final : public BeRenderPass {
 
     hide
     BeStandardRenderMachine* _srm;
-    std::weak_ptr<BeShader> _shader;
+    raw_ptr<BeShader> _shader;
     std::shared_ptr<BeMaterial> _material;
     std::vector<std::shared_ptr<BeTexture>> _outputs;
     SenPipeline _pipeline;
@@ -24,7 +24,7 @@ class BeStandardFullscreenEffectPass final : public BeRenderPass {
     expose
     explicit BeStandardFullscreenEffectPass(
         BeStandardRenderMachine* srm,
-        std::weak_ptr<BeShader> shader,
+        raw_ptr<BeShader> shader,
         std::shared_ptr<BeMaterial> material,
         std::vector<std::shared_ptr<BeTexture>> outputs
     );
