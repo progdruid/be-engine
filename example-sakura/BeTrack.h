@@ -3,7 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <umbrellas/include-glm.h>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 enum class BeTrackInterp { Hold, Linear, EaseIn, EaseOut, EaseInOut };
 

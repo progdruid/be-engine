@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <umbrellas/include-glm.h>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 class BeRail {
     hide

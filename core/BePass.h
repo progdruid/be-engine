@@ -2,7 +2,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 #include <sen-rhi/SenTypes.h>
 #include <sen-rhi/SenCommandBuffer.h>

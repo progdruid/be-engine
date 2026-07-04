@@ -3,7 +3,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-#include "umbrellas/access-modifiers.hpp"
+#include <umbrellas/common.hpp>
 
 // Khronos validation layer wiring. No-op in release builds.
 class SenVulkanValidation {

@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 
 #include "BeMaterial.h"

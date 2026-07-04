@@ -1,5 +1,18 @@
+// ReSharper disable CppInconsistentNaming
+
 #pragma once
 #include <type_traits>
+
+#ifndef BE_ACCESS_MODIFIERS
+    #define BE_ACCESS_MODIFIERS
+
+    #define expose      private:public:    [[]]
+    #define protect     private:protected: [[]]
+    #define hide        public: private:   [[]]
+#endif
+
+template<typename T>
+using raw_ptr = T*;
 
 template<typename E>
 struct EnableBitmaskOperators : std::false_type {};

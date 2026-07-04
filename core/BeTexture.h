@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 #include <umbrellas/include-glm.h>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 #include <sen-rhi/SenTypes.h>
 
 class BeAssetRegistry;

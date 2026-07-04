@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 #include <string>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 #include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"

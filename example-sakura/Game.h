@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <vector>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 class BeStandardRenderMachine;
 class BeSceneManager;

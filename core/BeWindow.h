@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 // ReSharper disable once CppInconsistentNaming
 struct GLFWwindow;

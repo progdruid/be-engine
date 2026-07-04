@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <memory>
 #include <umbrellas/include-glm.h>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 class BeTexture;
 

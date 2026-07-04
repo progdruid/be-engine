@@ -1,7 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <vector>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 #include "BeShaderTools.h"
 #include "sen-rhi/SenTypes.h"

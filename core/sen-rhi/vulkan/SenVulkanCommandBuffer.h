@@ -3,7 +3,7 @@
 #include <utility>
 #include <vector>
 #include <vulkan/vulkan_core.h>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 #include <sen-rhi/SenTypes.h>
 
 class SenVulkanCommandBuffer {

@@ -1,7 +1,7 @@
 #pragma once
 #include <array>
 #include <unordered_map>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 #include "sen-rhi/SenTypes.h"
 

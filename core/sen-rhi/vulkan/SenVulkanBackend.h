@@ -7,7 +7,7 @@
 
 #include "sen-rhi/SenCommandBuffer.h"
 #include "sen-rhi/SenTypes.h"
-#include "umbrellas/access-modifiers.hpp"
+#include <umbrellas/common.hpp>
 
 
 struct ISlangBlob;

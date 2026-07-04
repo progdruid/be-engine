@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <string>
 
-#include "umbrellas/access-modifiers.hpp"
+#include <umbrellas/common.hpp>
 #include <sen-rhi/SenCommandBuffer.h>
 
 class BeRenderer;

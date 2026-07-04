@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <umbrellas/include-glm.h>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 #include "entt/entt.hpp"
 #include "BaseScene.h"

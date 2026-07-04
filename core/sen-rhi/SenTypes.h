@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include <umbrellas/bitmask.hpp>
+#include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 
 

@@ -4,10 +4,8 @@
 #include <filesystem>
 #include <string>
 #include <unordered_map>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 #include <sen-rhi/SenTypes.h>
-
-#include <umbrellas/bitmask.hpp>
 
 #include "umbrellas/include-libassert.h"
 #include "BeMaterialScheme.h"

@@ -1,7 +1,7 @@
 #pragma once
 #include <vulkan/vulkan_core.h>
 #include <sen-rhi/SenTypes.h>
-#include <umbrellas/bitmask.hpp>
+#include <umbrellas/common.hpp>
 #include <umbrellas/include-libassert.h>
 
 namespace Sen::Vulkan {

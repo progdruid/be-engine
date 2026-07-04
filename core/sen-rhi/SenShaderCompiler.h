@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <string>
 #include <expected>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 class SenShaderCompiler {
     hide static Slang::ComPtr<slang::IGlobalSession> _globalSession;

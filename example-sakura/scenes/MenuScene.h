@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 #include "BaseScene.h"
 

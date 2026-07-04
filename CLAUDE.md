@@ -34,7 +34,7 @@ be-engine/
 ├── core/               # Static lib — rendering engine core
 │   ├── Be*.h/cpp       # Engine classes
 │   ├── sen-rhi/        # RHI abstraction (Vulkan active, DX11 legacy/disabled)
-│   └── umbrellas/      # Config headers (glm, libassert, json, access-modifiers)
+│   └── umbrellas/      # Config headers (glm, libassert, json, common)
 ├── toolkit/            # Static lib — higher-level abstractions; links against core
 │   ├── standard-render-machine/  # Deferred rendering pipeline (SRM)
 │   ├── assimp-import/  # BeAssimpImporter — Assimp-based model loading
@@ -195,7 +195,7 @@ Tessellation: `"topology": "patch-list-3"` + `"hull"` / `"domain"` keys.
 
 ### Access Modifiers Convention
 
-`core/umbrellas/access-modifiers.hpp` — used as section markers **without** a colon:
+`core/umbrellas/common.hpp` — used as section markers **without** a colon:
 - `expose` = `public:`
 - `protect` = `protected:`
 - `hide` = `private:`
@@ -205,7 +205,7 @@ Tessellation: `"topology": "patch-list-3"` + `"hull"` / `"domain"` keys.
 - `include-glm.h` — GLM with `GLM_FORCE_LEFT_HANDED` + `GLM_FORCE_DEPTH_ZERO_TO_ONE`. Defines `_rad` literal (degrees→radians) and `HexColor("#RRGGBB")` → `glm::vec3`.
 - `include-libassert.h` — `be_assert(condition, ...)` wrapping libassert's `DEBUG_ASSERT`.
 - `json.h` — aliases `nlohmann::json` as `Json`.
-- `bitmask.hpp` — `ENABLE_BITMASK(EnumType)` for bitwise ops on scoped enums.
+- `common.hpp` — access-modifier markers (`expose`/`protect`/`hide`) plus `ENABLE_BITMASK(EnumType)` for bitwise ops on scoped enums.
 
 ### Coordinate System
 

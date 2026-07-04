@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 #include <sen-rhi/SenCommandBuffer.h>
 #include <sen-rhi/SenTypes.h>

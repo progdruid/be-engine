@@ -10,7 +10,7 @@
 #include "LuaBridge/LuaBridge.h"
 
 #include "entt/entt.hpp"
-#include "umbrellas/access-modifiers.hpp"
+#include <umbrellas/common.hpp>
 
 using ComponentParserFunc = std::function<
     void(

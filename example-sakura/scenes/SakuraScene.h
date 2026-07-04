@@ -1,6 +1,6 @@
 #pragma once
 #include <filesystem>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 #include "BaseScene.h"
 #include "BeAssetRegistry.h"

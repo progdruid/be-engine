@@ -1,7 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <functional>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 #include <assimp/Importer.hpp>
 
 struct aiMaterial;

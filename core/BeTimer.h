@@ -2,7 +2,7 @@
 
 #include <chrono>
 #include <string>
-#include <umbrellas/access-modifiers.hpp>
+#include <umbrellas/common.hpp>
 
 class BeTimer {
     hide
