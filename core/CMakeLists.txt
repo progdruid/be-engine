@@ -17,3 +17,4 @@ target_link_libraries(core
         slang)
 
 be_apply_defaults(core)
+be_declare_shader_module(core shaders)

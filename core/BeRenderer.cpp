@@ -2,6 +2,7 @@
 
 #include "BeRenderPass.h"
 #include "BeShader.h"
+#include "BeShaderLibrary.h"
 #include <sen-rhi/SenBackend.h>
 
 BeRenderer::BeRenderer(
@@ -32,6 +33,8 @@ auto BeRenderer::LaunchDevice() -> void {
     });
 
     _frameCmd = SenBackend::AllocateCommandBuffer();
+
+    BeShaderLibrary::LoadModuleShaders();
 }
 
 auto BeRenderer::GetSwapchainFormat() const -> SenFormat {

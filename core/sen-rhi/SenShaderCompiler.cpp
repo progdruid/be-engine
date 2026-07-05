@@ -4,8 +4,11 @@
 #include <umbrellas/include-libassert.h>
 
 Slang::ComPtr<slang::IGlobalSession> SenShaderCompiler::_globalSession;
-std::string SenShaderCompiler::AssetShadersPath = "assets/shaders/";
-std::string SenShaderCompiler::StandardShadersPath = "shaders/";
+std::vector<std::filesystem::path> SenShaderCompiler::SearchPaths;
+
+auto SenShaderCompiler::AddSearchPath(std::filesystem::path path) -> void {
+    SearchPaths.push_back(std::move(path));
+}
 
 auto SenShaderCompiler::Launch() -> void {
     SlangResult result = slang::createGlobalSession(_globalSession.writeRef());
@@ -35,13 +38,22 @@ auto SenShaderCompiler::Compile(
         targetDesc.profile = _globalSession->findProfile("sm_5_0");
     }
 
-    const char* searchPaths[] = { AssetShadersPath.c_str(), StandardShadersPath.c_str() };
+    auto searchPathStrings = std::vector<std::string>();
+    searchPathStrings.reserve(SearchPaths.size());
+    for (const auto& path : SearchPaths) {
+        searchPathStrings.push_back(path.string());
+    }
+    auto searchPaths = std::vector<const char*>();
+    searchPaths.reserve(searchPathStrings.size());
+    for (const auto& str : searchPathStrings) {
+        searchPaths.push_back(str.c_str());
+    }
 
     slang::SessionDesc sessionDesc = {};
     sessionDesc.targets = &targetDesc;
     sessionDesc.targetCount = 1;
-    sessionDesc.searchPaths = searchPaths;
-    sessionDesc.searchPathCount = 2;
+    sessionDesc.searchPaths = searchPaths.data();
+    sessionDesc.searchPathCount = static_cast<SlangInt>(searchPaths.size());
 
     Slang::ComPtr<slang::ISession> session;
     _globalSession->createSession(sessionDesc, session.writeRef());

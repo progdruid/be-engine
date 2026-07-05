@@ -29,31 +29,7 @@ SakuraScene::SakuraScene(Game* game) : BaseScene(game) {}
 SakuraScene::~SakuraScene() = default;
 
 auto SakuraScene::Prepare() -> void {
-    BeShaderLibrary::IndexShaderFiles({
-        "assets/shaders/uniform-material.hlsl",
-        "assets/shaders/objectMaterial.hlsl",
-        "assets/shaders/standard-pbr.hlsl",
-        "assets/shaders/standard-phong.hlsl",
-        "assets/shaders/checkerboard.hlsl",
-        "assets/shaders/fullscreen-vertex.hlsl",
-        "assets/shaders/directionalLight.hlsl",
-        "assets/shaders/pointLight.hlsl",
-        "assets/shaders/emissive-add.hlsl",
-        "assets/shaders/bloom-add.hlsl",
-        "assets/shaders/bloom-bright.hlsl",
-        "assets/shaders/bloom-downsample.hlsl",
-        "assets/shaders/bloom-upsample.hlsl",
-        "assets/shaders/tonemapper.hlsl",
-        "assets/shaders/backbuffer.hlsl",
-        "assets/shaders/fxaa.hlsl",
-        "assets/shaders/dof.hlsl",
-        "assets/shaders/environment-bake.hlsl",
-        "assets/shaders/irradiance-bake.hlsl",
-        "assets/shaders/prefilter-bake.hlsl",
-        "assets/shaders/brdf-lut.hlsl",
-        "assets/shaders/ambient-ibl.hlsl",
-        "assets/shaders/skybox.hlsl",
-    });
+    BeShaderLibrary::LoadShaderDirectory("assets/shaders/");
 
     const auto standardShader = BeShaderLibrary::GetShader("standard-pbr");
     const auto phongShader = BeShaderLibrary::GetShader("standard-phong");

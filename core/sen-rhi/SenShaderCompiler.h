@@ -3,6 +3,7 @@
 #include <slang-com-ptr.h>
 #include <filesystem>
 #include <string>
+#include <vector>
 #include <expected>
 #include <umbrellas/common.hpp>
 
@@ -10,8 +11,9 @@ class SenShaderCompiler {
     hide static Slang::ComPtr<slang::IGlobalSession> _globalSession;
 
     expose
-    static std::string AssetShadersPath;
-    static std::string StandardShadersPath;
+    static std::vector<std::filesystem::path> SearchPaths;
+
+    static auto AddSearchPath(std::filesystem::path path) -> void;
 
     static void Launch();
 

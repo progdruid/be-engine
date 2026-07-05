@@ -22,7 +22,7 @@ int main() {
     SenBackend::Init({ .DebugLayer = false });
 
     SenShaderCompiler::Launch();
-    SenShaderCompiler::AssetShadersPath = "assets/shaders/";
+    SenShaderCompiler::AddSearchPath("assets/shaders/");
 
     auto swapchain = SenBackend::CreateSwapchain({
         .NativeWindowHandle = window->GetGlfwWindow(),

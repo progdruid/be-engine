@@ -8,4 +8,5 @@
 
 #define be_assert(condition, ...) \
     DEBUG_ASSERT(condition __VA_OPT__(, BE_FORMAT_FIRST(__VA_ARGS__)))
+//    ASSERT(condition __VA_OPT__(, BE_FORMAT_FIRST(__VA_ARGS__)))
     

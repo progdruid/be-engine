@@ -24,7 +24,9 @@ class BeShaderLibrary {
     static std::unordered_map<std::string, SenSampler> _samplers;
 
     expose // shaders + schemes
-    static auto IndexShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void;
+    static auto LoadShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void;
+    static auto LoadShaderDirectory(const std::filesystem::path& dir) -> void;
+    static auto LoadModuleShaders() -> void { LoadShaderDirectory("module-shaders/"); }
 
     static auto GetShader(std::string_view name) -> raw_ptr<BeShader>;
     static auto HasShader(std::string_view name) -> bool { return _shaders.contains(std::string(name)); }

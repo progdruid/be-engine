@@ -47,17 +47,7 @@ void ShowcaseScene::Prepare() {
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
 
-    BeShaderLibrary::IndexShaderFiles({
-        "assets/shaders/uniform-material.hlsl",
-        "assets/shaders/objectMaterial.hlsl",
-        "assets/shaders/standard-pbr.hlsl",
-        "assets/shaders/standard-phong.hlsl",
-        "assets/shaders/fullscreen-vertex.hlsl",
-        "assets/shaders/backbuffer.hlsl",
-        "assets/shaders/fxaa.hlsl",
-        "assets/shaders/pixelation.hlsl",
-        "assets/shaders/test-compute.hlsl",
-    });
+    BeShaderLibrary::LoadShaderDirectory("assets/shaders/");
 
     const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
     _uniformMaterial = BeMaterial::Create(uniformScheme, false);

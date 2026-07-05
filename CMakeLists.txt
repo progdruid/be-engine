@@ -41,6 +41,60 @@ function(be_symlink_assets target)
     )
 endfunction()
 
+function(be_declare_shader_module module_target subdir)
+    set_property(TARGET ${module_target} APPEND
+        PROPERTY BE_SHADER_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/${subdir}")
+endfunction()
+
+function(_be_link_closure target out_var)
+    set(seen "")
+    set(pending ${target})
+    while(pending)
+        list(POP_FRONT pending cur)
+        get_target_property(libs ${cur} LINK_LIBRARIES)
+        foreach(lib ${libs})
+            if(TARGET ${lib} AND NOT lib IN_LIST seen)
+                list(APPEND seen ${lib})
+                list(APPEND pending ${lib})
+            endif()
+        endforeach()
+    endwhile()
+    set(${out_var} "${seen}" PARENT_SCOPE)
+endfunction()
+
+function(be_deploy_shader_modules exe)
+    _be_link_closure(${exe} closure)
+    list(APPEND closure ${exe})
+
+    set(dirs "")
+    foreach(t ${closure})
+        get_target_property(d ${t} BE_SHADER_DIRS)
+        if(d)
+            list(APPEND dirs ${d})
+        endif()
+    endforeach()
+    if(NOT dirs)
+        return()
+    endif()
+
+    set(patterns "")
+    set(copy_cmds "")
+    set(dst "$<TARGET_FILE_DIR:${exe}>/module-shaders")
+    foreach(d ${dirs})
+        list(APPEND patterns "${d}/*")
+        list(APPEND copy_cmds COMMAND ${CMAKE_COMMAND} -E copy_directory "${d}" "${dst}")
+    endforeach()
+    file(GLOB_RECURSE srcs CONFIGURE_DEPENDS ${patterns})
+
+    set(stamp "${CMAKE_CURRENT_BINARY_DIR}/${exe}_module_shaders.stamp")
+    add_custom_command(OUTPUT "${stamp}" ${copy_cmds}
+        COMMAND ${CMAKE_COMMAND} -E touch "${stamp}"
+        DEPENDS ${srcs}
+        COMMENT "Deploying shader modules for ${exe}")
+    add_custom_target(${exe}_module_shaders ALL DEPENDS "${stamp}")
+    add_dependencies(${exe} ${exe}_module_shaders)
+endfunction()
+
 function(be_copy_runtime_deps target)
     if(WIN32)
         add_custom_command(TARGET ${target} POST_BUILD

@@ -7,6 +7,7 @@
 #include "BeShader.h"
 #include "BeShaderTools.h"
 #include "sen-rhi/SenBackend.h"
+#include "sen-rhi/SenShaderCompiler.h"
 
 std::unordered_map<std::filesystem::path, std::string>          BeShaderLibrary::_shaderSources;
 std::unordered_map<std::string, std::unique_ptr<BeShader>>      BeShaderLibrary::_shaders;
@@ -14,7 +15,7 @@ std::unordered_map<std::string, BeMaterialScheme>              BeShaderLibrary::
 std::unordered_map<std::string, std::shared_ptr<BeTexture>>    BeShaderLibrary::_defaultTextures;
 std::unordered_map<std::string, SenSampler>                    BeShaderLibrary::_samplers;
 
-auto BeShaderLibrary::IndexShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void {
+auto BeShaderLibrary::LoadShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void {
 
     // collect sources
     auto sourcesToIndex = std::vector<std::pair<std::filesystem::path, std::string>>();
@@ -54,6 +55,21 @@ auto BeShaderLibrary::IndexShaderFiles(const std::vector<std::filesystem::path>&
     }
 }
 
+auto BeShaderLibrary::LoadShaderDirectory(const std::filesystem::path& dir) -> void {
+    be_assert(std::filesystem::exists(dir), dir);
+
+    SenShaderCompiler::AddSearchPath(dir);
+
+    auto filePaths = std::vector<std::filesystem::path>();
+    for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".hlsl") {
+            filePaths.push_back(entry.path());
+        }
+    }
+
+    LoadShaderFiles(filePaths);
+}
+
 auto BeShaderLibrary::GetShader(std::string_view name) -> raw_ptr<BeShader> {
     be_assert(_shaders.contains(std::string(name)), name);
     return _shaders.at(std::string(name)).get();
@@ -70,7 +86,7 @@ auto BeShaderLibrary::RegisterDefaultTexture(std::string_view name, std::shared_
 
 auto BeShaderLibrary::GetSampler(std::string_view samplerDescString) -> SenSampler {
 
-    auto key = std::string(samplerDescString);
+    const auto key = std::string(samplerDescString);
 
     if (_samplers.contains(key)) {
         return _samplers[key];
