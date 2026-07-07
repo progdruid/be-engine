@@ -1,0 +1,2 @@
+depends core
+shaders standard-render-machine/shaders

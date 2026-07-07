@@ -7,6 +7,7 @@
 
 # Devtools binaries
 devtools/shader-boilerplate-autogen/shader-boilerplate-autogen
+devtools/bechef/bechef
 
 # Build outputs
 bin/

@@ -11,4 +11,3 @@ target_link_libraries(toolkit
 )
 
 be_apply_defaults(toolkit)
-be_declare_shader_module(toolkit standard-render-machine/shaders)

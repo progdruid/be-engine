@@ -6,5 +6,5 @@ add_executable(example-vulkan ${SOURCES} ${HLSL_FILES})
 target_link_libraries(example-vulkan PRIVATE core)
 
 be_apply_defaults(example-vulkan)
-be_copy_assets(example-vulkan)
+be_deploy_app(example-vulkan)
 be_copy_runtime_deps(example-vulkan)

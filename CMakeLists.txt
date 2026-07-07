@@ -18,81 +18,24 @@ function(be_apply_defaults target)
         $<$<CONFIG:Release>:NDEBUG>)
 endfunction()
 
-function(be_copy_assets target)
-    file(GLOB_RECURSE _assets CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/*")
-    set(_stamp "${CMAKE_CURRENT_BINARY_DIR}/${target}_assets.stamp")
-    add_custom_command(OUTPUT "${_stamp}"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_CURRENT_SOURCE_DIR}/assets"
-            "$<TARGET_FILE_DIR:${target}>/assets"
-        COMMAND ${CMAKE_COMMAND} -E touch "${_stamp}"
-        DEPENDS ${_assets}
-        COMMENT "Copying assets for ${target}")
-    add_custom_target(${target}_assets ALL DEPENDS "${_stamp}")
-    add_dependencies(${target} ${target}_assets)
-endfunction()
-
-function(be_symlink_assets target)
-    set(_src "${CMAKE_CURRENT_SOURCE_DIR}/assets")
-    set(_dst "$<TARGET_FILE_DIR:${target}>/assets")
-    add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E remove_directory "${_dst}"
-        COMMAND ${CMAKE_COMMAND} -E create_symlink "${_src}" "${_dst}"
-    )
-endfunction()
-
-function(be_declare_shader_module module_target subdir)
-    set_property(TARGET ${module_target} APPEND
-        PROPERTY BE_SHADER_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/${subdir}")
-endfunction()
-
-function(_be_link_closure target out_var)
-    set(seen "")
-    set(pending ${target})
-    while(pending)
-        list(POP_FRONT pending cur)
-        get_target_property(libs ${cur} LINK_LIBRARIES)
-        foreach(lib ${libs})
-            if(TARGET ${lib} AND NOT lib IN_LIST seen)
-                list(APPEND seen ${lib})
-                list(APPEND pending ${lib})
-            endif()
-        endforeach()
-    endwhile()
-    set(${out_var} "${seen}" PARENT_SCOPE)
-endfunction()
-
-function(be_deploy_shader_modules exe)
-    _be_link_closure(${exe} closure)
-    list(APPEND closure ${exe})
-
-    set(dirs "")
-    foreach(t ${closure})
-        get_target_property(d ${t} BE_SHADER_DIRS)
-        if(d)
-            list(APPEND dirs ${d})
-        endif()
-    endforeach()
-    if(NOT dirs)
-        return()
+function(be_deploy_app exe)
+    if(BE_SYMLINK_ASSETS)
+        set(mode symlink)
+    else()
+        set(mode copy)
     endif()
-
-    set(patterns "")
-    set(copy_cmds "")
-    set(dst "$<TARGET_FILE_DIR:${exe}>/module-shaders")
-    foreach(d ${dirs})
-        list(APPEND patterns "${d}/*")
-        list(APPEND copy_cmds COMMAND ${CMAKE_COMMAND} -E copy_directory "${d}" "${dst}")
-    endforeach()
-    file(GLOB_RECURSE srcs CONFIGURE_DEPENDS ${patterns})
-
-    set(stamp "${CMAKE_CURRENT_BINARY_DIR}/${exe}_module_shaders.stamp")
-    add_custom_command(OUTPUT "${stamp}" ${copy_cmds}
-        COMMAND ${CMAKE_COMMAND} -E touch "${stamp}"
-        DEPENDS ${srcs}
-        COMMENT "Deploying shader modules for ${exe}")
-    add_custom_target(${exe}_module_shaders ALL DEPENDS "${stamp}")
-    add_dependencies(${exe} ${exe}_module_shaders)
+    set(_stamp "${CMAKE_CURRENT_BINARY_DIR}/${exe}_deploy.stamp")
+    add_custom_command(OUTPUT "${_stamp}"
+        COMMAND $<TARGET_FILE:bechef> deploy
+            --root "${CMAKE_SOURCE_DIR}" --app ${exe}
+            --out "$<TARGET_FILE_DIR:${exe}>" --mode ${mode}
+            --depfile "${_stamp}.d"
+        COMMAND ${CMAKE_COMMAND} -E touch "${_stamp}"
+        DEPFILE "${_stamp}.d"
+        DEPENDS bechef
+        COMMENT "Deploying content for ${exe}")
+    add_custom_target(${exe}_deploy ALL DEPENDS "${_stamp}")
+    add_dependencies(${exe} ${exe}_deploy)
 endfunction()
 
 function(be_copy_runtime_deps target)
@@ -127,6 +70,7 @@ endfunction()
 add_subdirectory(vendor)
 add_subdirectory(core)
 add_subdirectory(toolkit)
+add_subdirectory(devtools/bechef)
 add_subdirectory(example-game-1)
 add_subdirectory(example-sakura)
 add_subdirectory(example-vulkan)

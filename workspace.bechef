@@ -1,0 +1,3 @@
+modules core toolkit
+apps example-sakura example-game-1 example-vulkan
+ignore .tmp_* *.zip *.aseprite
