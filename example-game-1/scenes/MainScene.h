@@ -8,6 +8,7 @@
 
 #include "entt/entt.hpp"
 #include "BaseScene.h"
+#include "BeAssetRegistry.h"
 
 class BeCamera;
 struct BeProp;
@@ -65,8 +66,10 @@ auto CreateEntity(entt::registry& registry, Components&&... components) -> entt:
 
 class MainScene : public BaseScene {
     hide
+    BeAssetRegistry _assetRegistry;
     entt::registry _registry;
     std::shared_ptr<BeCamera> _camera;
+    float _elapsedTime = 0.0f;
 
     std::shared_ptr<BeProp> _plane, _witchItems, _cube, _macintosh, _pagoda, _disks, _anvil;
     std::shared_ptr<BeMaterial> _uniformMaterial;
@@ -77,6 +80,7 @@ class MainScene : public BaseScene {
     ~MainScene() override;
 
     auto Prepare() -> void override;
+    auto LoadPasses() -> void;
     auto OnLoad() -> void override;
     auto Tick(float deltaTime) -> void override;
 };

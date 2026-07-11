@@ -15,58 +15,72 @@
 @be-shader terrain {
     topology patch-list-3
 
-    vertex VertexFunction(position, normal, uv0)
+    vertex VertexFunction(position, uv0)
     hull HullFunction
     domain DomainFunction
     pixel PixelFunction
 
+    bind s0 frame uniform-material
     bind s1 geometry-object object-material-for-geometry-pass
-    bind s2 geometry-main terrain-main-material-for-geometry-pass
+    bind s2 geometry-main terrain-main-material-for-geometry-pass Terrain
 
     target s0 DiffuseRGB float3
     target s1 WorldNormalXYZ_UnusedA float4
     target s2 SpecularRGB_ShininessA float4
+    target s3 EmissiveRGB float3
 }
 
 */
 
-#include <BeUniformBuffer.hlsli>
+/*========================================================*/
+// region @be-auto-boilerplate
+#include "uniform-material.hlsl"
 #include "objectMaterial.hlsl"
 
-cbuffer ModelBuffer: register(b1) {
-    object_material_for_geometry_pass _Object;
+struct terrain_main_material_for_geometry_pass {
+    float3 DiffuseColor;
+    float3 SpecularColor;
+    float Shininess;
+    float TerrainScale;
+    float HeightScale;
+    float NoiseResolution;
+    float Speed;
 };
 
-cbuffer MaterialBuffer: register(b2) {
-    float3 _DiffuseColor;
-    float3 _SpecularColor;
-    float _Shininess;
-    float _TerrainScale;
-    float _HeightScale;
-    float _NoiseResolution;
-    float _Speed;
+cbuffer CBuffer_0 : register(b0, space0) {
+    uniform_material _Frame;
 };
 
-SamplerState DefaultSampler : register(s0);
-Texture2D DiffuseTexture : register(t0);
+cbuffer CBuffer_1 : register(b0, space1) {
+    object_material_for_geometry_pass _GeometryObject;
+};
+
+cbuffer CBuffer_2 : register(b0, space2) {
+    terrain_main_material_for_geometry_pass _Terrain;
+};
+SamplerState InputSampler : register(s1, space2);
+Texture2D DiffuseTexture : register(t2, space2);
 
 struct VertexInput {
     float3 Position : POSITION;
-    float3 Normal : NORMAL;
     float2 UV : TEXCOORD0;
-};
-
-struct Interpolators {
-    float4 Position : SV_POSITION;
-    nointerpolation float3 Normal : NORMAL;
-    float2 UV : TEXCOORD0;
-    float3 WorldPosition : TEXCOORD1;
 };
 
 struct PixelOutput {
     float3 DiffuseRGB : SV_Target0;
     float4 WorldNormalXYZ_UnusedA : SV_Target1;
     float4 SpecularRGB_ShininessA : SV_Target2;
+    float3 EmissiveRGB : SV_Target3;
+};
+
+// endregion
+/*========================================================*/
+
+struct Interpolators {
+    float4 Position : SV_POSITION;
+    nointerpolation float3 Normal : NORMAL;
+    float2 UV : TEXCOORD0;
+    float3 WorldPosition : TEXCOORD1;
 };
 
 //float Hash(float3 p) {
@@ -146,17 +160,17 @@ float terrainFunc (float2 uv, float2 noiseUV) {
 
 Interpolators VertexFunction(VertexInput input) {
     float2 terrainUV = input.UV;
-    terrainUV *= _NoiseResolution;
-    terrainUV += (_Time * _Speed).rr;
+    terrainUV *= _Terrain.NoiseResolution;
+    terrainUV += (_Frame.Time * _Terrain.Speed).rr;
     float terrainHeight = terrainFunc(input.UV, terrainUV) - 0.5;
 
-    float3 displacedPos = input.Position * float3(_TerrainScale, 1.0, _TerrainScale);
-    displacedPos.y += terrainHeight * _HeightScale;
+    float3 displacedPos = input.Position * float3(_Terrain.TerrainScale, 1.0, _Terrain.TerrainScale);
+    displacedPos.y += terrainHeight * _Terrain.HeightScale;
 
-    float4 worldPosition = mul(float4(displacedPos, 1.0), _Object.Model);
+    float4 worldPosition = mul(float4(displacedPos, 1.0), _GeometryObject.Model);
 
     Interpolators output;
-    output.Position = mul(worldPosition, _Object.ProjectionView);
+    output.Position = mul(worldPosition, _GeometryObject.ProjectionView);
     output.Normal = float3(0, 0, 0); // normal is computed in hull
     output.UV = input.UV;
     output.WorldPosition = worldPosition.xyz;
@@ -211,14 +225,15 @@ Interpolators DomainFunction(PatchConstantOutput patchData, float3 barycentric :
 }
 
 PixelOutput PixelFunction(Interpolators input) {
-    float4 diffuseColor = DiffuseTexture.Sample(DefaultSampler, input.UV);
+    float4 diffuseColor = DiffuseTexture.Sample(InputSampler, input.UV);
 
     PixelOutput output;
-    output.DiffuseRGB.rgb = diffuseColor.rgb * _DiffuseColor;
+    output.DiffuseRGB.rgb = diffuseColor.rgb * _Terrain.DiffuseColor;
     output.WorldNormalXYZ_UnusedA.xyz = normalize(input.Normal);
     output.WorldNormalXYZ_UnusedA.w = 1.0;
-    output.SpecularRGB_ShininessA.rgb = _SpecularColor;
-    output.SpecularRGB_ShininessA.a = _Shininess / 2048.0;
+    output.SpecularRGB_ShininessA.rgb = _Terrain.SpecularColor;
+    output.SpecularRGB_ShininessA.a = _Terrain.Shininess / 2048.0;
+    output.EmissiveRGB = float3(0, 0, 0);
 
     return output;
 }

@@ -4,9 +4,11 @@
 #include <umbrellas/include-glfw.h>
 
 #include "BeAssetRegistry.h"
+#include "BeShaderLibrary.h"
 #include "BeWindow.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
+#include "BeTexture.h"
 #include "scenes/BeSceneManager.h"
 #include "scenes/MenuScene.h"
 #include "scenes/MainScene.h"
@@ -26,13 +28,64 @@ auto Game::Run() -> int {
     Renderer->LaunchDevice();
     
     Input = std::make_unique<BeInput>(Window->GetGlfwWindow());
-    
+
+    BeShaderLibrary::RegisterDefaultTexture("white",
+        BeTexture::Create("white")
+        .SetSize(1, 1)
+        .SetUsage(SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::RGBA8_Unorm)
+        .FillWithColor(glm::vec4(1.f))
+        .Build()
+    );
+    BeShaderLibrary::RegisterDefaultTexture("black",
+        BeTexture::Create("black")
+        .SetSize(1, 1)
+        .SetUsage(SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::RGBA8_Unorm)
+        .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
+        .Build()
+    );
+    BeShaderLibrary::RegisterDefaultTexture("storage-black",
+        BeTexture::Create("storage-black")
+        .SetSize(1, 1)
+        .SetUsage(SenTextureUsage::ShaderResource | SenTextureUsage::Storage)
+        .SetFormat(SenFormat::RGBA8_Unorm)
+        .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
+        .Build()
+    );
+    BeShaderLibrary::RegisterDefaultTexture("black-cube",
+        BeTexture::Create("black-cube")
+        .SetSize(1, 1)
+        .SetCubemap(true)
+        .SetUsage(SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::RGBA8_Unorm)
+        .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
+        .Build()
+    );
+    BeShaderLibrary::RegisterDefaultTexture("default-orm",
+        BeTexture::Create("default-orm")
+        .SetSize(1, 1)
+        .SetUsage(SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::RGBA8_Unorm)
+        .FillWithColor(glm::vec4(0.f, 1.f, 1.f, 1.f))
+        .Build()
+    );
+    BeShaderLibrary::RegisterDefaultTexture("flat-normal",
+        BeTexture::Create("flat-normal")
+        .SetSize(1, 1)
+        .SetUsage(SenTextureUsage::ShaderResource)
+        .SetFormat(SenFormat::RGBA8_Unorm)
+        .FillWithColor(glm::vec4(0.5f, 0.5f, 1.0f, 1.0f))
+        .Build()
+    );
+
     SetupScenes();
 
     MainLoop();
 
-    BeAssetRegistry::Shutdown();
-    
+    Renderer->ClearPasses();
+    BeShaderLibrary::Shutdown();
+
     return 0;
 }
 
@@ -68,7 +121,7 @@ auto Game::MainLoop() -> void {
             activeScene->Tick(dt);
         }
 
-        SceneManager->ApplyPendingSceneChange();
         Renderer->Render();
+        SceneManager->ApplyPendingSceneChange();
     }
 }

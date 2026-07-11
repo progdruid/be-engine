@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <umbrellas/common.hpp>
 
 #include "BaseScene.h"

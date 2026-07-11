@@ -10,6 +10,8 @@
 #include "BeMeshPrimitives.h"
 #include "BeProp.h"
 #include "BeRenderer.h"
+#include "BeShader.h"
+#include "BeShaderLibrary.h"
 #include "BeTexture.h"
 #include "BeWindow.h"
 #include "Game.h"
@@ -18,6 +20,23 @@
 MainScene::MainScene(Game* game) : BaseScene(game) {}
 MainScene::~MainScene() = default;
 
+auto MainScene::LoadPasses() -> void {
+    _machine->ClearPasses();
+
+    _machine->AddShadowPass();
+    _machine->AddGeometryPass();
+    _machine->AddLightingPass("HDR");
+    _machine->AddBloomPass(5, "HDR", "BloomOutput", _assetRegistry.GetTexture("MainScene_BloomDirt").lock());
+
+    const auto& tonemapperScheme = BeShaderLibrary::GetShader("tonemapper")->GetMaterialScheme("main");
+    const auto tonemapperMaterial = BeMaterial::Create(tonemapperScheme, false);
+    tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture("BloomOutput"));
+    _machine->AddFullscreenPass(BeShaderLibrary::GetShader("tonemapper"), tonemapperMaterial, { "TonemapperOutput" });
+
+    _machine->AddBackbufferPass("TonemapperOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
+    _machine->BuildPasses();
+}
+
 auto MainScene::Prepare() -> void {
     _camera = std::make_unique<BeCamera>();
     _camera->Width = GameIns->Window->GetReportedLogicalWidth();
@@ -25,67 +44,45 @@ auto MainScene::Prepare() -> void {
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
 
-    BeTexture::Create("white")
-        .SetSize(1, 1)
-        .SetUsage(SenTextureUsage::ShaderResource)
-        .SetFormat(SenFormat::RGBA8_Unorm)
-        .FillWithColor(glm::vec4(1.f))
-        .AddToRegistry()
-        .BuildNoReturn();
+    BeShaderLibrary::LoadShaderDirectory("assets/shaders/");
 
-    BeTexture::Create("black")
-        .SetSize(1, 1)
-        .SetUsage(SenTextureUsage::ShaderResource)
-        .SetFormat(SenFormat::RGBA8_Unorm)
-        .FillWithColor(glm::vec4(0.f, 0.f, 0.f, 1.f))
-        .AddToRegistry()
-        .BuildNoReturn();
+    const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
+    _uniformMaterial = BeMaterial::Create(uniformScheme, false);
+    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
 
-    BeAssetRegistry::IndexShaderFiles({
-        "assets/shaders/uniform-material.hlsl",
-        "assets/shaders/standard.hlsl",
-        "assets/shaders/tessellated.hlsl",
-        "assets/shaders/terrain.hlsl",
-        "assets/shaders/objectMaterial.hlsl",
-        "assets/shaders/fullscreen-vertex.hlsl",
-        "assets/shaders/directionalLight.hlsl",
-        "assets/shaders/pointLight.hlsl",
-        "assets/shaders/emissive-add.hlsl",
-        "assets/shaders/BeBloomAdd.hlsl",
-        "assets/shaders/BeBloomBright.hlsl",
-        "assets/shaders/BeBloomKawase.hlsl",
-        "assets/shaders/tonemapper.hlsl",
-        "assets/shaders/backbuffer.hlsl",
-    });
+    const auto standardShader    = BeShaderLibrary::GetShader("standard-phong");
+    const auto tessellatedShader = BeShaderLibrary::GetShader("tessellated");
+    const auto terrainShader     = BeShaderLibrary::GetShader("terrain");
 
-    const auto standardShader   = BeAssetRegistry::GetShader("standard");
-    const auto tessellatedShader = BeAssetRegistry::GetShader("tessellated");
+    const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
+    const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
 
-    const uint32_t screenWidth  = GameIns->Window->GetReportedPixelWidth();
-    const uint32_t screenHeight = GameIns->Window->GetReportedPixelHeight();
-
-    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, screenWidth, screenHeight);
+    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, _assetRegistry, screenWidth, screenHeight);
 
     {
         auto planeMesh = BeMeshPrimitives::Plane(63);
-        const auto terrainShader = BeAssetRegistry::GetShader("terrain");
         _plane = BeProp::FromMesh(std::move(planeMesh), terrainShader, "geometry-main");
         _plane->Slices[0].Material->SetFloat1("TerrainScale", 200.0f);
         _plane->Slices[0].Material->SetFloat1("HeightScale", 100.0f);
     }
-    _witchItems = _machine->LoadProp("assets/witch_items.glb",    standardShader);
-    _cube       = _machine->LoadProp("assets/cube.glb",           tessellatedShader);
-    _cube->Materials[0]->SetFloat3("BaseColor", glm::vec3(0.28f, 0.39f, 1.0f));
-    _macintosh  = _machine->LoadProp("assets/model.fbx",          standardShader);
-    _pagoda     = _machine->LoadProp("assets/pagoda.glb",         standardShader);
-    _disks      = _machine->LoadProp("assets/floppy-disks.glb",   standardShader);
-    _anvil      = _machine->LoadProp("assets/anvil/anvil.fbx",    standardShader);
-    _anvil->Slices[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
+    _cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), tessellatedShader, "geometry-main");
+    _cube->Slices[0].Material->SetFloat3("DiffuseColor", glm::vec3(0.28f, 0.39f, 1.0f));
 
-    _uniformMaterial = BeMaterial::Create("uniform-material", false);
-    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
+    _witchItems = _machine->LoadProp("assets/witch_items.glb",  standardShader, BeSRMLightingModel::Phong);
+    _macintosh  = _machine->LoadProp("assets/model.fbx",        standardShader, BeSRMLightingModel::Phong);
+    _pagoda     = _machine->LoadProp("assets/pagoda.glb",       standardShader, BeSRMLightingModel::Phong);
+    _disks      = _machine->LoadProp("assets/floppy-disks.glb", standardShader, BeSRMLightingModel::Phong);
+    _anvil      = _machine->LoadProp("assets/anvil/anvil.fbx",  standardShader, BeSRMLightingModel::Phong);
+    _anvil->Materials[0]->SetFloat3("SpecularColor", glm::vec3(1.0f));
+
+    for (const auto& prop : { _anvil, _pagoda, _witchItems }) {
+        for (const auto& material : prop->Materials) {
+            material->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
+        }
+    }
 
     _machine->RegisterMesh(_plane->Mesh);
+    _machine->RegisterMesh(_cube->Mesh);
     _machine->BakeMeshes();
 
     _machine->DeclareGBufferTarget("BaseColor",         SenFormat::R11G11B10_Float);
@@ -97,27 +94,18 @@ auto MainScene::Prepare() -> void {
     _machine->DeclareTexture      ("BloomOutput",       SenFormat::R11G11B10_Float);
     _machine->DeclareTexture      ("TonemapperOutput",  SenFormat::R11G11B10_Float);
 
-    _machine->AddShadowPass();
-    _machine->AddGeometryPass();
-    _machine->AddLightingPass("HDR");
-
-    const auto dirtTexture = BeTexture::Create("MainScene_BloomDirt")
+    _assetRegistry.AddTexture("MainScene_BloomDirt",
+        BeTexture::Create("MainScene_BloomDirt")
         .LoadFromFile("assets/bloom-dirt-mask.png")
-        .Build();
-    _machine->AddBloomPass(5, "HDR", "BloomOutput", dirtTexture);
-
-    const auto tonemapperMaterial = BeMaterial::Create("main-tonemapper-material", false);
-    tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture("BloomOutput"));
-    _machine->AddFullscreenPass(BeAssetRegistry::GetShader("tonemapper"), tonemapperMaterial, { "TonemapperOutput" });
-
-    _machine->AddBackbufferPass("TonemapperOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
+        .Build()
+    );
 }
 
 auto MainScene::OnLoad() -> void {
     _registry.clear();
 
     _machine->UniformMaterial = _uniformMaterial;
-    _machine->Build();
+    LoadPasses();
 
     CreateEntity(_registry
         ,NameComponent { .Name = "Macintosh" }
@@ -181,7 +169,7 @@ auto MainScene::OnLoad() -> void {
                 .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
                 .SetFormat(SenFormat::Depth32)
                 .SetSize(4096, 4096)
-                .AddToRegistry()
+                .AddToRegistry(_assetRegistry)
                 .Build()
         }
     );
@@ -203,7 +191,7 @@ auto MainScene::OnLoad() -> void {
                     .SetFormat(SenFormat::Depth32)
                     .SetCubemap(true)
                     .SetSize(2048, 2048)
-                    .AddToRegistry()
+                    .AddToRegistry(_assetRegistry)
                     .Build()
             }
         );
@@ -257,6 +245,8 @@ auto MainScene::Tick(float deltaTime) -> void {
         _camera->Fov = glm::clamp(_camera->Fov, 20.0f, 90.0f);
     }
 
+    _elapsedTime += deltaTime;
+
     {
         _camera->Update();
         auto& uniformMat = *_uniformMaterial;
@@ -265,6 +255,7 @@ auto MainScene::Tick(float deltaTime) -> void {
         uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));
         uniformMat.SetFloat4("NearFarPlane", { _camera->NearPlane, _camera->FarPlane, 1.0f / _camera->NearPlane, 1.0f / _camera->FarPlane });
         uniformMat.SetFloat3("CameraPosition", _camera->Position);
+        uniformMat.SetFloat1("Time", _elapsedTime);
     }
 
     static const auto GeometryView   = _registry.view<NameComponent, TransformComponent, RenderComponent>();
