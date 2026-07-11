@@ -230,6 +230,11 @@ devtools/shader-boilerplate-autogen --watch assets/shaders/
 
 ### Vendor Libraries
 
+All dependencies are committed as source under `vendor/`. **The build never touches the
+network** — no `FetchContent` `URL`/`GIT_REPOSITORY` may be added. Exact upstream refs,
+update instructions, and the rules are in **`vendor/VENDOR.md`**; keep it in sync when
+changing a vendored tree.
+
 | Library | Purpose |
 |---------|---------|
 | GLFW | Window + input |
@@ -238,9 +243,14 @@ devtools/shader-boilerplate-autogen --watch assets/shaders/
 | Slang | Shader compilation → SPIR-V |
 | nlohmann/json | JSON parsing |
 | libassert + cpptrace | Assertions + stack traces |
+| libdwarf + zstd | Symbolization for cpptrace (transitive) |
 | stb_image | Image loading |
-| scope_guard | RAII guards |
-| entt | ECS |
-| ImGui | Debug/editor UI |
+| Lua + LuaBridge3 | Scripting (`example-sakura` scene loading) |
+| entt | ECS (lives in `toolkit/entt/`) |
+| ImGui | Debug/editor UI (lives in `toolkit/imgui/`) |
 | Vulkan SDK | Graphics API |
 | VMA | Vulkan memory allocator |
+
+Header-only deps expose a `vendor/<dep>/include/` root and are consumed as `INTERFACE`
+targets (`glm`, `nlohmann_json`, `stb_image`, `luabridge3`). Never put `vendor/` itself
+on an include path.
