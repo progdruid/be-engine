@@ -98,8 +98,9 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
 
     // 1.0 features
     VkPhysicalDeviceFeatures enabled10Features {
-        .depthClamp        = VK_TRUE,  // required by rasterizer depthClampEnable
-        .samplerAnisotropy = VK_TRUE,  // required by anisotropic samplers
+        .tessellationShader = VK_TRUE,  // required by hull/domain stages (patch-list topologies)
+        .depthClamp         = VK_TRUE,  // required by rasterizer depthClampEnable
+        .samplerAnisotropy  = VK_TRUE,  // required by anisotropic samplers
     };
     // 1.1 core features
     VkPhysicalDeviceVulkan11Features enabled11Features {
