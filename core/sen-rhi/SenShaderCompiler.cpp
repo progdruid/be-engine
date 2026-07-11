@@ -1,9 +1,28 @@
 #include "SenShaderCompiler.h"
 
+#include <slang.h>
+#include <slang-com-ptr.h>
+
+#include <cstring>
 #include <fstream>
 #include <umbrellas/include-libassert.h>
 
-Slang::ComPtr<slang::IGlobalSession> SenShaderCompiler::_globalSession;
+namespace {
+    Slang::ComPtr<slang::IGlobalSession> globalSession;
+
+    auto ToSlangStage(SenShaderStage stage) -> SlangStage {
+        switch (stage) {
+            case SenShaderStage::Vertex:  return SLANG_STAGE_VERTEX;
+            case SenShaderStage::Hull:    return SLANG_STAGE_HULL;
+            case SenShaderStage::Domain:  return SLANG_STAGE_DOMAIN;
+            case SenShaderStage::Pixel:   return SLANG_STAGE_PIXEL;
+            case SenShaderStage::Compute: return SLANG_STAGE_COMPUTE;
+        }
+        be_assert(false, "SenShaderCompiler: unsupported shader stage");
+        return SLANG_STAGE_NONE;
+    }
+}
+
 std::vector<std::filesystem::path> SenShaderCompiler::SearchPaths;
 
 auto SenShaderCompiler::AddSearchPath(std::filesystem::path path) -> void {
@@ -11,32 +30,29 @@ auto SenShaderCompiler::AddSearchPath(std::filesystem::path path) -> void {
 }
 
 auto SenShaderCompiler::Launch() -> void {
-    SlangResult result = slang::createGlobalSession(_globalSession.writeRef());
+    SlangResult result = slang::createGlobalSession(globalSession.writeRef());
     be_assert(SLANG_SUCCEEDED(result), "Failed to create Slang global session");
 }
 
 auto SenShaderCompiler::Compile(
     const std::filesystem::path& filePath,
     const std::string& entryPoint,
-    SlangStage stage,
-    SlangCompileTarget target
-) -> std::expected<Slang::ComPtr<ISlangBlob>, std::string> {
+    SenShaderStage stage
+) -> std::expected<std::vector<uint32_t>, std::string> {
 
-    be_assert(_globalSession, "SenShaderCompiler was never initialized. Make sure to call Init.");
-    
+    be_assert(globalSession, "SenShaderCompiler was never initialized. Make sure to call Init.");
+
+    const SlangStage slangStage = ToSlangStage(stage);
+
     auto extractDiag = [](ISlangBlob* diag) -> std::string {
         return diag
         ? std::string(static_cast<const char*>(diag->getBufferPointer()), diag->getBufferSize())
         : std::string("(no diagnostics)");
     };
-    
+
     slang::TargetDesc targetDesc = {};
-    targetDesc.format = target;
-    if (target == SLANG_SPIRV) {
-        targetDesc.profile = _globalSession->findProfile("glsl_450");
-    } else {
-        targetDesc.profile = _globalSession->findProfile("sm_5_0");
-    }
+    targetDesc.format = SLANG_SPIRV;
+    targetDesc.profile = globalSession->findProfile("glsl_450");
 
     auto searchPathStrings = std::vector<std::string>();
     searchPathStrings.reserve(SearchPaths.size());
@@ -56,7 +72,7 @@ auto SenShaderCompiler::Compile(
     sessionDesc.searchPathCount = static_cast<SlangInt>(searchPaths.size());
 
     Slang::ComPtr<slang::ISession> session;
-    _globalSession->createSession(sessionDesc, session.writeRef());
+    globalSession->createSession(sessionDesc, session.writeRef());
 
     // loadModule only resolves .slang files, so we read the source ourselves
     auto file = std::ifstream(filePath);
@@ -77,7 +93,7 @@ auto SenShaderCompiler::Compile(
     Slang::ComPtr<slang::IEntryPoint> entryPointObj;
     Slang::ComPtr<ISlangBlob> epDiag;
     SlangResult epResult = module->findAndCheckEntryPoint(
-        entryPoint.c_str(), stage, entryPointObj.writeRef(), epDiag.writeRef()
+        entryPoint.c_str(), slangStage, entryPointObj.writeRef(), epDiag.writeRef()
     );
     if (SLANG_FAILED(epResult)) {
         return std::unexpected(
@@ -104,5 +120,10 @@ auto SenShaderCompiler::Compile(
         return std::unexpected("Code gen error:\n" + extractDiag(codeDiag.get()));
     }
 
-    return code;
+    const size_t byteSize = code->getBufferSize();
+    be_assert(byteSize % sizeof(uint32_t) == 0, "SenShaderCompiler: SPIR-V blob is not word-aligned");
+
+    auto words = std::vector<uint32_t>(byteSize / sizeof(uint32_t));
+    std::memcpy(words.data(), code->getBufferPointer(), byteSize);
+    return words;
 }

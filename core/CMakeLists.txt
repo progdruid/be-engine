@@ -14,6 +14,7 @@ target_link_libraries(core
         glm
         nlohmann_json
         stb_image
+    PRIVATE
         slang)
 
 be_apply_defaults(core)

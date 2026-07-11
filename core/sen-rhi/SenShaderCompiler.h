@@ -1,15 +1,13 @@
 #pragma once
-#include <slang.h>
-#include <slang-com-ptr.h>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <vector>
 #include <expected>
 #include <umbrellas/common.hpp>
+#include "SenTypes.h"
 
 class SenShaderCompiler {
-    hide static Slang::ComPtr<slang::IGlobalSession> _globalSession;
-
     expose
     static std::vector<std::filesystem::path> SearchPaths;
 
@@ -20,7 +18,6 @@ class SenShaderCompiler {
     static auto Compile(
         const std::filesystem::path& filePath,
         const std::string& entryPoint,
-        SlangStage stage,
-        SlangCompileTarget target
-    ) -> std::expected<Slang::ComPtr<ISlangBlob>, std::string>;
+        SenShaderStage stage
+    ) -> std::expected<std::vector<uint32_t>, std::string>;
 };

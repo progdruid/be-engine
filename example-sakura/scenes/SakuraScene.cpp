@@ -1,7 +1,6 @@
 
 #include "SakuraScene.h"
 
-#include <slang.h>
 #include <umbrellas/include-glfw.h>
 
 #include "BeRenderPass.h"
