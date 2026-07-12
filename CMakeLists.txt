@@ -26,6 +26,8 @@ function(be_deploy_app exe)
     endif()
     set(_stamp "${CMAKE_CURRENT_BINARY_DIR}/${exe}_deploy.stamp")
     add_custom_command(OUTPUT "${_stamp}"
+        COMMAND $<TARGET_FILE:bechef> shadergen
+            --root "${CMAKE_SOURCE_DIR}" --check
         COMMAND $<TARGET_FILE:bechef> deploy
             --root "${CMAKE_SOURCE_DIR}" --app ${exe}
             --out "$<TARGET_FILE_DIR:${exe}>" --mode ${mode}
@@ -74,4 +76,3 @@ add_subdirectory(devtools/bechef)
 add_subdirectory(example-game-1)
 add_subdirectory(example-sakura)
 add_subdirectory(example-vulkan)
-add_subdirectory(devtools/shader-boilerplate-autogen)

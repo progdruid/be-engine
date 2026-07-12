@@ -23,8 +23,8 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-Texture2D InputTexture : register(t0);
-SamplerState InputSampler : register(s0);
+SamplerState InputSampler : register(s1, space2);
+Texture2D InputTexture : register(t2, space2);
 
 struct PixelOutput {
     float4 BackbufferColor : SV_Target0;

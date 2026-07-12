@@ -6,12 +6,15 @@
 
 #include "CommandGrammar.h"
 #include "Workspace.h"
-#include "Actions.h"
+#include "Deploy.h"
+#include "Check.h"
+#include "ShaderGen.h"
 
 static auto ErrorPrintUsage() -> void {
     std::println(stderr, "Usage:");
-    std::println(stderr, "  bechef deploy --app <name> --out <dir> [--mode copy|symlink] [--root <dir>] [--depfile <path>]");
-    std::println(stderr, "  bechef check  [--root <dir>]");
+    std::println(stderr, "  bechef deploy    --app <name> --out <dir> [--mode copy|symlink] [--root <dir>] [--depfile <path>]");
+    std::println(stderr, "  bechef check     [--root <dir>]");
+    std::println(stderr, "  bechef shadergen [--project <name>] [--file <path>] [--check] [--watch] [--root <dir>]");
 }
 
 auto main(int argc, char* argv[]) -> int {
@@ -25,8 +28,17 @@ auto main(int argc, char* argv[]) -> int {
                 FlagRule { .Flag = "depfile" },
             } 
         },
-        VerbRule { 
-            .Verb = "check", .Flags = { FlagRule{ .Flag = "root" }, } 
+        VerbRule {
+            .Verb = "check", .Flags = { FlagRule{ .Flag = "root" }, }
+        },
+        VerbRule {
+            .Verb = "shadergen", .Flags = {
+                FlagRule { .Flag = "project" },
+                FlagRule { .Flag = "file" },
+                FlagRule { .Flag = "check", .TakesValue = false },
+                FlagRule { .Flag = "watch", .TakesValue = false },
+                FlagRule { .Flag = "root" },
+            }
         },
     }};
     
@@ -72,6 +84,19 @@ auto main(int argc, char* argv[]) -> int {
         }
 
         result = Deploy(*workspace, app, out, mode, depfile);
+    }
+    else if (command.Verb == "shadergen") {
+        auto options = ShaderGenOptions();
+        if (parsed->Has("project")) {
+            options.Project = parsed->Get("project");
+        }
+        if (parsed->Has("file")) {
+            options.File = std::filesystem::path(parsed->Get("file"));
+        }
+        options.CheckOnly = parsed->Has("check");
+        options.Watch = parsed->Has("watch");
+
+        result = ShaderGen(*workspace, options);
     }
     else {
         result = Check(*workspace);

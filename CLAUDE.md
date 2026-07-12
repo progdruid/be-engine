@@ -45,7 +45,7 @@ be-engine/
 ├── example-sakura/     # Advanced showcase (multi-scene, ECS, SRM)
 ├── example-vulkan/     # Minimal raw Vulkan/RHI example
 ├── devtools/
-│   └── shader-boilerplate-autogen/  # CLI — generates @be-auto-boilerplate in shaders
+│   └── bechef/         # CLI — content deploy, workspace check, shader boilerplate autogen
 └── vendor/             # Third-party libraries
 ```
 
@@ -219,14 +219,21 @@ Left-handed. All geometry (Assimp-loaded and procedural) **negates X** on positi
 
 entt (header-only, `toolkit/entt/entt.hpp`). Components defined per-project. Example in `example-sakura/Components.h`: `TransformComponent`, `RenderComponent`, `NameComponent`, `SunLightComponent`, `PointLightComponent`.
 
-### Devtools: Shader Boilerplate Autogen
+### Devtools: bechef
 
 ```bash
-# Single file
-devtools/shader-boilerplate-autogen --once path/to/shader.hlsl
-# Watch mode (live polling)
-devtools/shader-boilerplate-autogen --watch assets/shaders/
+# Deploy assets and module shaders for an app (invoked by CMake)
+devtools/bechef/bechef deploy --app example-sakura --out out/linux-debug/example-sakura
+# Validate the workspace: manifests, shader metadata, bind resolution, name collisions
+devtools/bechef/bechef check
+# Regenerate @be-auto-boilerplate regions
+devtools/bechef/bechef shadergen [--project <name>] [--file <path>] [--check] [--watch]
 ```
+
+`shadergen` resolves each shader's material schemes against its project's bechef dependency
+closure, so cross-module `bind`s work. Includes are emitted as bare filenames, matching the
+flat `module-shaders/` namespace. A bind naming a scheme outside the closure is an error.
+`be_deploy_app` runs `shadergen --check` before deploying, so a stale region fails the build.
 
 ### Vendor Libraries
 

@@ -1,6 +1,7 @@
 #include "Workspace.h"
 
 #include <format>
+#include <algorithm>
 #include <unordered_set>
 
 #include "BeShaderTools.h"
@@ -71,33 +72,54 @@ auto LoadProject(const Workspace& ws, const std::string& name) -> std::expected<
 
 static auto ResolveInto(
     const Workspace& ws,
-    const std::string& name,
+    const std::string& targetName,
     std::unordered_set<std::string>& done,
     std::unordered_set<std::string>& stack,
     std::vector<Project>& order
 ) -> std::expected<void, std::string> {
-    if (done.contains(name)) return {};
-    if (!ws.IsMember(name)) return std::unexpected(std::format("unknown project '{}'", name));
-    if (stack.contains(name)) return std::unexpected(std::format("dependency cycle at '{}'", name));
+    if (done.contains(targetName)) return {};
+    if (!ws.IsMember(targetName)) return std::unexpected(std::format("unknown project '{}'", targetName));
+    if (stack.contains(targetName)) return std::unexpected(std::format("dependency cycle at '{}'", targetName));
 
-    auto project = LoadProject(ws, name);
+    auto project = LoadProject(ws, targetName);
     if (!project) return std::unexpected(project.error());
 
-    stack.insert(name);
+    stack.insert(targetName);
     for (const auto& dep : project->Depends) {
         if (auto r = ResolveInto(ws, dep, done, stack, order); !r) return r;
     }
-    stack.erase(name);
+    stack.erase(targetName);
 
-    done.insert(name);
+    done.insert(targetName);
     order.push_back(std::move(*project));
     return {};
 }
 
-auto ResolveProjects(const Workspace& ws, const std::string& app) -> std::expected<std::vector<Project>, std::string> {
+auto ResolveProjects(const Workspace& ws, const std::string& targetName) -> std::expected<std::vector<Project>, std::string> {
     auto order = std::vector<Project>();
     auto done = std::unordered_set<std::string>();
     auto stack = std::unordered_set<std::string>();
-    if (auto r = ResolveInto(ws, app, done, stack, order); !r) return std::unexpected(r.error());
+    if (auto r = ResolveInto(ws, targetName, done, stack, order); !r) {
+        return std::unexpected(r.error());
+    }
     return order;
+}
+
+auto CollectProjectFiles(const Workspace& ws, const Project& project, const std::vector<std::string>& dirs) -> std::expected<std::vector<SourceFile>, std::string> {
+    auto files = std::vector<SourceFile>();
+
+    for (const auto& dir : dirs) {
+        const auto srcDir = ws.Root / project.Name / dir;
+        if (!std::filesystem::is_directory(srcDir)) {
+            return std::unexpected(std::format("project '{}': dir '{}' not found", project.Name, srcDir.string()));
+        }
+
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(srcDir)) {
+            if (!entry.is_regular_file()) continue;
+            files.push_back({ srcDir, entry.path() });
+        }
+    }
+
+    std::ranges::sort(files, {}, &SourceFile::Path);
+    return files;
 }

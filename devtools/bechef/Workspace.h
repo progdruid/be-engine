@@ -25,7 +25,13 @@ struct Workspace {
     }
 };
 
+struct SourceFile {
+    std::filesystem::path Dir;
+    std::filesystem::path Path;
+};
+
 auto FindRoot(std::filesystem::path dir) -> std::optional<std::filesystem::path>;
 auto LoadWorkspace(const std::filesystem::path& rootDir) -> std::expected<Workspace, std::string>;
 auto LoadProject(const Workspace& ws, const std::string& name) -> std::expected<Project, std::string>;
-auto ResolveProjects(const Workspace& ws, const std::string& app) -> std::expected<std::vector<Project>, std::string>;
+auto ResolveProjects(const Workspace& ws, const std::string& targetName) -> std::expected<std::vector<Project>, std::string>;
+auto CollectProjectFiles(const Workspace& ws, const Project& project, const std::vector<std::string>& dirs) -> std::expected<std::vector<SourceFile>, std::string>;

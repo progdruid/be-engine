@@ -45,9 +45,9 @@ cbuffer CBuffer_1 : register(b0, space1) {
     dof_material _Main;
 };
 SamplerState LinearSampler : register(s1, space1);
-SamplerState PointSampler  : register(s2, space1);
-Texture2D ColorInput       : register(t3, space1);
-Texture2D DepthInput       : register(t4, space1);
+SamplerState PointSampler : register(s2, space1);
+Texture2D ColorInput : register(t3, space1);
+Texture2D DepthInput : register(t4, space1);
 
 struct PixelOutput {
     float3 DofOutput : SV_Target0;

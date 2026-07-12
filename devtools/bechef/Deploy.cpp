@@ -1,19 +1,13 @@
-#include "Actions.h"
+#include "Deploy.h"
 
 #include <print>
 #include <format>
 #include <fstream>
-#include <vector>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <system_error>
 #include <algorithm>
-
-struct DeployEntry {
-    std::filesystem::path Src;
-    std::filesystem::path DstRel;
-};
 
 static auto MatchGlob(std::string_view pattern, std::string_view text) -> bool {
     constexpr auto none = std::string_view::npos;
@@ -47,53 +41,54 @@ static auto IsIgnored(const Workspace& ws, const std::filesystem::path& rel) -> 
     return false;
 }
 
-static auto CollectAssets(const Workspace& ws, const std::vector<Project>& projects,
-                          std::vector<DeployEntry>& entries, std::vector<std::filesystem::path>& inputs)
-    -> std::expected<std::vector<std::filesystem::path>, std::string> {
-    auto sourceDirs = std::vector<std::filesystem::path>();
-    for (const auto& project : projects) {
-        for (const auto& rel : project.AssetDirs) {
-            const auto srcDir = ws.Root / project.Name / rel;
-            if (!std::filesystem::is_directory(srcDir)) {
-                return std::unexpected(std::format("project '{}': asset dir '{}' not found", project.Name, srcDir.string()));
-            }
-            sourceDirs.push_back(srcDir);
+auto CollectAssets(const Workspace& ws, const std::vector<Project>& projects) -> std::expected<DeployFiles, std::string> {
+    auto collected = DeployFiles();
 
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(srcDir)) {
-                if (!entry.is_regular_file()) continue;
-                const auto dstRel = std::filesystem::relative(entry.path(), srcDir);
-                if (IsIgnored(ws, dstRel)) continue;
-                entries.push_back({ entry.path(), dstRel });
-                inputs.push_back(entry.path());
-            }
+    for (const auto& project : projects) {
+        const auto sources = CollectProjectFiles(ws, project, project.AssetDirs);
+        if (!sources) {
+            return std::unexpected(sources.error());
+        }
+
+        for (const auto& dir : project.AssetDirs) {
+            collected.SourceDirs.push_back(ws.Root / project.Name / dir);
+        }
+
+        for (const auto& source : *sources) {
+            const auto dstRel = std::filesystem::relative(source.Path, source.Dir);
+            if (IsIgnored(ws, dstRel)) continue;
+            collected.Entries.push_back({ source.Path, dstRel });
+            collected.Inputs.push_back(source.Path);
         }
     }
-    return sourceDirs;
+
+    return collected;
 }
 
-static auto CollectModuleShaders(const Workspace& ws, const std::vector<Project>& projects,
-                                 std::vector<DeployEntry>& entries, std::vector<std::filesystem::path>& inputs)
-    -> std::expected<void, std::string> {
+auto CollectModuleShaders(const Workspace& ws, const std::vector<Project>& projects) -> std::expected<DeployFiles, std::string> {
+    auto collected = DeployFiles();
     auto claimed = std::unordered_map<std::string, std::filesystem::path>();
-    for (const auto& project : projects) {
-        for (const auto& rel : project.ShaderDirs) {
-            const auto srcDir = ws.Root / project.Name / rel;
-            if (!std::filesystem::is_directory(srcDir)) return std::unexpected(std::format("project '{}': shader dir '{}' not found", project.Name, srcDir.string()));
 
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(srcDir)) {
-                if (!entry.is_regular_file()) continue;
-                const auto base = entry.path().filename().string();
-                if (const auto it = claimed.find(base); it != claimed.end()) {
-                    return std::unexpected(std::format("module-shader name collision '{}':\n  {}\n  {}",
-                        base, it->second.string(), entry.path().string()));
-                }
-                claimed.emplace(base, entry.path());
-                entries.push_back({ entry.path(), base });
-                inputs.push_back(entry.path());
+    for (const auto& project : projects) {
+        const auto sources = CollectProjectFiles(ws, project, project.ShaderDirs);
+        if (!sources) {
+            return std::unexpected(sources.error());
+        }
+
+        for (const auto& source : *sources) {
+            const auto base = source.Path.filename().string();
+            const auto it = claimed.find(base);
+            if (it != claimed.end()) {
+                return std::unexpected(std::format("module-shader name collision '{}':\n  {}\n  {}",
+                    base, it->second.string(), source.Path.string()));
             }
+            claimed.emplace(base, source.Path);
+            collected.Entries.push_back({ source.Path, base });
+            collected.Inputs.push_back(source.Path);
         }
     }
-    return {};
+
+    return collected;
 }
 
 static auto NeedsCopy(const std::filesystem::path& src, const std::filesystem::path& dst) -> bool {
@@ -200,43 +195,42 @@ auto Deploy(
         return std::unexpected(projects.error());
     }
 
+    const auto assets = CollectAssets(ws, *projects);
+    if (!assets) {
+        return std::unexpected(assets.error());
+    }
+
+    const auto shaders = CollectModuleShaders(ws, *projects);
+    if (!shaders) {
+        return std::unexpected(shaders.error());
+    }
+
     auto inputs = std::vector<std::filesystem::path>{ ws.Root / "workspace.bechef" };
     for (const auto& project : *projects) {
         inputs.push_back(ws.Root / project.Name / "project.bechef");
     }
-
-    auto assetEntries = std::vector<DeployEntry>();
-    auto shaderEntries = std::vector<DeployEntry>();
-
-    const auto assetDirs = CollectAssets(ws, *projects, assetEntries, inputs);
-    if (!assetDirs) {
-        return std::unexpected(assetDirs.error());
-    }
-
-    auto r = CollectModuleShaders(ws, *projects, shaderEntries, inputs);
-    if (!r) {
-        return std::unexpected(r.error());
-    }
+    inputs.insert(inputs.end(), assets->Inputs.begin(), assets->Inputs.end());
+    inputs.insert(inputs.end(), shaders->Inputs.begin(), shaders->Inputs.end());
 
     const auto assetsOut = out / "assets";
-    if (mode == Mode::Symlink && assetDirs->size() == 1) {
-        auto r = SymlinkWholeDir(assetDirs->front(), assetsOut);
+    if (mode == Mode::Symlink && assets->SourceDirs.size() == 1) {
+        auto r = SymlinkWholeDir(assets->SourceDirs.front(), assetsOut);
         if (!r) {
             return r;
         }
     }
     else {
-        if (mode == Mode::Symlink && assetDirs->size() > 1) {
+        if (mode == Mode::Symlink && assets->SourceDirs.size() > 1) {
             std::println(stderr, "bechef: multiple asset dirs for '{}', per-file symlinking", app);
         }
-        auto r = Materialize(assetEntries, assetsOut, mode, true);
+        auto r = Materialize(assets->Entries, assetsOut, mode, true);
         if (!r) {
             return r;
         }
     }
 
-    if (!shaderEntries.empty()) {
-        auto r = Materialize(shaderEntries, out / "module-shaders", mode, true);
+    if (!shaders->Entries.empty()) {
+        auto r = Materialize(shaders->Entries, out / "module-shaders", mode, true);
         if (!r) {
             return r;
         }
@@ -245,44 +239,5 @@ auto Deploy(
     if (depfile) {
         WriteDepfile(*depfile, inputs);
     }
-    return {};
-}
-
-auto Check(const Workspace& ws) -> std::expected<void, std::string> {
-    auto errors = std::vector<std::string>();
-
-    auto members = std::vector<std::string>(ws.Modules.begin(), ws.Modules.end());
-    members.insert(members.end(), ws.Apps.begin(), ws.Apps.end());
-
-    for (const auto& member : members) {
-        const auto project = LoadProject(ws, member);
-        if (!project) { errors.push_back(project.error()); continue; }
-
-        for (const auto& dep : project->Depends) {
-            if (!ws.IsMember(dep)) errors.push_back(std::format("project '{}': depends on unknown '{}'", member, dep));
-        }
-        for (const auto& shaderDir : project->ShaderDirs) {
-            if (!std::filesystem::is_directory(ws.Root / member / shaderDir)) errors.push_back(std::format("project '{}': shader dir '{}' not found", member, shaderDir));
-        }
-        for (const auto& assetDir : project->AssetDirs) {
-            if (!std::filesystem::is_directory(ws.Root / member / assetDir)) errors.push_back(std::format("project '{}': asset dir '{}' not found", member, assetDir));
-        }
-    }
-
-    for (const auto& app : ws.Apps) {
-        const auto projects = ResolveProjects(ws, app);
-        if (!projects) { errors.push_back(projects.error()); continue; }
-
-        auto entries = std::vector<DeployEntry>();
-        auto inputs = std::vector<std::filesystem::path>();
-        if (auto r = CollectModuleShaders(ws, *projects, entries, inputs); !r) errors.push_back(r.error());
-    }
-
-    if (!errors.empty()) {
-        auto joined = std::string();
-        for (const auto& e : errors) joined += "\n  " + e;
-        return std::unexpected(std::format("workspace has {} problem(s):{}", errors.size(), joined));
-    }
-    std::println("bechef: workspace OK ({} projects)", members.size());
     return {};
 }
