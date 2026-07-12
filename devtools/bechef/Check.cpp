@@ -33,7 +33,7 @@ auto Check(const Workspace& ws) -> std::expected<void, std::string> {
         const auto projects = ResolveProjects(ws, app);
         if (!projects) { errors.push_back(projects.error()); continue; }
 
-        const auto shaders = CollectModuleShaders(ws, *projects);
+        const auto shaders = CollectShaders(ws, *projects);
         if (!shaders) errors.push_back(shaders.error());
     }
 

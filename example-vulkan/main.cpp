@@ -22,7 +22,7 @@ int main() {
     SenBackend::Init({ .DebugLayer = false });
 
     SenShaderCompiler::Launch();
-    SenShaderCompiler::AddSearchPath("assets/shaders/");
+    SenShaderCompiler::AddSearchPath("shaders/");
 
     auto swapchain = SenBackend::CreateSwapchain({
         .NativeWindowHandle = window->GetGlfwWindow(),
@@ -46,13 +46,13 @@ int main() {
     });
 
     auto vertexShader = SenBackend::CreateShader({
-        .SourcePath   = "assets/shaders/triangle.hlsl",
+        .SourcePath   = "shaders/triangle.hlsl",
         .FunctionName = "VSMain",
         .Stage        = SenShaderStage::Vertex,
     });
 
     auto pixelShader = SenBackend::CreateShader({
-        .SourcePath   = "assets/shaders/triangle.hlsl",
+        .SourcePath   = "shaders/triangle.hlsl",
         .FunctionName = "PSMain",
         .Stage        = SenShaderStage::Pixel,
     });

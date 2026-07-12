@@ -222,7 +222,7 @@ entt (header-only, `toolkit/entt/entt.hpp`). Components defined per-project. Exa
 ### Devtools: bechef
 
 ```bash
-# Deploy assets and module shaders for an app (invoked by CMake)
+# Deploy assets and shaders for an app (invoked by CMake)
 devtools/bechef/bechef deploy --app example-sakura --out out/linux-debug/example-sakura
 # Validate the workspace: manifests, shader metadata, bind resolution, name collisions
 devtools/bechef/bechef check
@@ -232,8 +232,14 @@ devtools/bechef/bechef shadergen [--project <name>] [--file <path>] [--check] [-
 
 `shadergen` resolves each shader's material schemes against its project's bechef dependency
 closure, so cross-module `bind`s work. Includes are emitted as bare filenames, matching the
-flat `module-shaders/` namespace. A bind naming a scheme outside the closure is an error.
+flat `shaders/` namespace. A bind naming a scheme outside the closure is an error.
 `be_deploy_app` runs `shadergen --check` before deploying, so a stale region fails the build.
+
+Each project declares its dirs in `project.bechef` (`shaders <dir>`, `assets <dir>`). Deploy
+flattens the shader dirs of the app and its whole dependency closure into a single runtime
+`shaders/`, so shader filenames must be unique across that closure. Asset dirs are copied to
+`assets/` preserving their tree. `BeRenderer` loads every deployed shader at init via
+`BeShaderLibrary::LoadShaders()`; apps do not load shader dirs themselves.
 
 ### Vendor Libraries
 

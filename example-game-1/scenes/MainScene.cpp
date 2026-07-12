@@ -44,8 +44,6 @@ auto MainScene::Prepare() -> void {
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
 
-    BeShaderLibrary::LoadShaderDirectory("assets/shaders/");
-
     const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
     _uniformMaterial = BeMaterial::Create(uniformScheme, false);
     _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));

@@ -22,7 +22,7 @@ struct DeployFiles {
 };
 
 auto CollectAssets(const Workspace& ws, const std::vector<Project>& projects) -> std::expected<DeployFiles, std::string>;
-auto CollectModuleShaders(const Workspace& ws, const std::vector<Project>& projects) -> std::expected<DeployFiles, std::string>;
+auto CollectShaders(const Workspace& ws, const std::vector<Project>& projects) -> std::expected<DeployFiles, std::string>;
 
 auto Deploy(
     const Workspace& ws,

@@ -28,8 +28,6 @@ SakuraScene::SakuraScene(Game* game) : BaseScene(game) {}
 SakuraScene::~SakuraScene() = default;
 
 auto SakuraScene::Prepare() -> void {
-    BeShaderLibrary::LoadShaderDirectory("assets/shaders/");
-
     const auto standardShader = BeShaderLibrary::GetShader("standard-pbr");
     const auto phongShader = BeShaderLibrary::GetShader("standard-phong");
     const auto checkerboardShader = BeShaderLibrary::GetShader("checkerboard");

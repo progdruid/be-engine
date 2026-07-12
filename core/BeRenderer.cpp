@@ -34,7 +34,7 @@ auto BeRenderer::LaunchDevice() -> void {
 
     _frameCmd = SenBackend::AllocateCommandBuffer();
 
-    BeShaderLibrary::LoadModuleShaders();
+    BeShaderLibrary::LoadShaders();
 }
 
 auto BeRenderer::GetSwapchainFormat() const -> SenFormat {

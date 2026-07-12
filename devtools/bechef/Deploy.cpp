@@ -65,7 +65,7 @@ auto CollectAssets(const Workspace& ws, const std::vector<Project>& projects) ->
     return collected;
 }
 
-auto CollectModuleShaders(const Workspace& ws, const std::vector<Project>& projects) -> std::expected<DeployFiles, std::string> {
+auto CollectShaders(const Workspace& ws, const std::vector<Project>& projects) -> std::expected<DeployFiles, std::string> {
     auto collected = DeployFiles();
     auto claimed = std::unordered_map<std::string, std::filesystem::path>();
 
@@ -76,10 +76,12 @@ auto CollectModuleShaders(const Workspace& ws, const std::vector<Project>& proje
         }
 
         for (const auto& source : *sources) {
+            if (IsIgnored(ws, std::filesystem::relative(source.Path, source.Dir))) continue;
+
             const auto base = source.Path.filename().string();
             const auto it = claimed.find(base);
             if (it != claimed.end()) {
-                return std::unexpected(std::format("module-shader name collision '{}':\n  {}\n  {}",
+                return std::unexpected(std::format("shader name collision '{}':\n  {}\n  {}",
                     base, it->second.string(), source.Path.string()));
             }
             claimed.emplace(base, source.Path);
@@ -200,7 +202,7 @@ auto Deploy(
         return std::unexpected(assets.error());
     }
 
-    const auto shaders = CollectModuleShaders(ws, *projects);
+    const auto shaders = CollectShaders(ws, *projects);
     if (!shaders) {
         return std::unexpected(shaders.error());
     }
@@ -219,8 +221,8 @@ auto Deploy(
             return r;
         }
     }
-    else {
-        if (mode == Mode::Symlink && assets->SourceDirs.size() > 1) {
+    else if (!assets->SourceDirs.empty()) {
+        if (mode == Mode::Symlink) {
             std::println(stderr, "bechef: multiple asset dirs for '{}', per-file symlinking", app);
         }
         auto r = Materialize(assets->Entries, assetsOut, mode, true);
@@ -230,7 +232,7 @@ auto Deploy(
     }
 
     if (!shaders->Entries.empty()) {
-        auto r = Materialize(shaders->Entries, out / "module-shaders", mode, true);
+        auto r = Materialize(shaders->Entries, out / "shaders", mode, true);
         if (!r) {
             return r;
         }

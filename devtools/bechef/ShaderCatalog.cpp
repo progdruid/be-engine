@@ -39,10 +39,7 @@ auto BuildShaderCatalog(const Workspace& ws) -> std::expected<ShaderCatalog, std
             return std::unexpected(project.error());
         }
 
-        auto collectDirs = std::vector<std::string>(project->ShaderDirs);
-        collectDirs.insert(collectDirs.end(), project->AssetDirs.begin(), project->AssetDirs.end()); // todo: shaders may be separated from assets, then remove this
-
-        const auto sources = CollectProjectFiles(ws, *project, collectDirs);
+        const auto sources = CollectProjectFiles(ws, *project, project->ShaderDirs);
         if (!sources) {
             return std::unexpected(sources.error());
         }
