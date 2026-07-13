@@ -18,26 +18,26 @@ function(be_apply_defaults target)
         $<$<CONFIG:Release>:NDEBUG>)
 endfunction()
 
-function(be_deploy_app exe)
+function(be_cook_app exe)
     if(BE_SYMLINK_ASSETS)
         set(mode symlink)
     else()
         set(mode copy)
     endif()
-    set(_stamp "${CMAKE_CURRENT_BINARY_DIR}/${exe}_deploy.stamp")
+    set(_stamp "${CMAKE_CURRENT_BINARY_DIR}/${exe}_cook.stamp")
     add_custom_command(OUTPUT "${_stamp}"
         COMMAND $<TARGET_FILE:bechef> shadergen
             --root "${CMAKE_SOURCE_DIR}" --check
-        COMMAND $<TARGET_FILE:bechef> deploy
+        COMMAND $<TARGET_FILE:bechef> cook
             --root "${CMAKE_SOURCE_DIR}" --app ${exe}
             --out "$<TARGET_FILE_DIR:${exe}>" --mode ${mode}
             --depfile "${_stamp}.d"
         COMMAND ${CMAKE_COMMAND} -E touch "${_stamp}"
         DEPFILE "${_stamp}.d"
         DEPENDS bechef
-        COMMENT "Deploying content for ${exe}")
-    add_custom_target(${exe}_deploy ALL DEPENDS "${_stamp}")
-    add_dependencies(${exe} ${exe}_deploy)
+        COMMENT "Cooking content for ${exe}")
+    add_custom_target(${exe}_cook ALL DEPENDS "${_stamp}")
+    add_dependencies(${exe} ${exe}_cook)
 endfunction()
 
 function(be_copy_runtime_deps target)

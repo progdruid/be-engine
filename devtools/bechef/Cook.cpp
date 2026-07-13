@@ -1,62 +1,38 @@
-#include "Deploy.h"
+#include "Cook.h"
 
 #include <print>
 #include <format>
 #include <fstream>
-#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <system_error>
 #include <algorithm>
 
-static auto MatchGlob(std::string_view pattern, std::string_view text) -> bool {
-    constexpr auto none = std::string_view::npos;
-    size_t pi = 0, si = 0, star = none, mark = 0;
-    while (si < text.size()) {
-        if (pi < pattern.size() && (pattern[pi] == '?' || pattern[pi] == text[si])) {
-            pi++;
-            si++;
-        } else if (pi < pattern.size() && pattern[pi] == '*') {
-            star = pi++;
-            mark = si;
-        } else if (star != none) {
-            pi = star + 1;
-            si = ++mark;
-        } else {
-            return false;
-        }
-    }
-    while (pi < pattern.size() && pattern[pi] == '*') {
-        pi++;
-    }
-    return pi == pattern.size();
-}
+#include "Workspace.h"
+#include "Verify.h"
+#include "Try.h"
 
-static auto IsIgnored(const Workspace& ws, const std::filesystem::path& rel) -> bool {
-    for (const auto& component : rel) {
-        for (const auto& pattern : ws.Ignore) {
-            if (MatchGlob(pattern, component.string())) return true;
-        }
-    }
-    return false;
-}
+struct CookEntry {
+    std::filesystem::path Src;
+    std::filesystem::path DstRel;
+};
 
-auto CollectAssets(const Workspace& ws, const std::vector<Project>& projects) -> std::expected<DeployFiles, std::string> {
-    auto collected = DeployFiles();
+struct CookFiles {
+    std::vector<CookEntry> Entries;
+    std::vector<std::filesystem::path> Inputs;
+    std::vector<std::filesystem::path> SourceDirs;
+};
 
-    for (const auto& project : projects) {
-        const auto sources = CollectProjectFiles(ws, project, project.AssetDirs);
-        if (!sources) {
-            return std::unexpected(sources.error());
+static auto CollectAssets(const std::vector<const Project*>& projects) -> CookFiles {
+    auto collected = CookFiles();
+
+    for (const auto* project : projects) {
+        for (const auto& dir : project->LocalAssetDirs) {
+            collected.SourceDirs.push_back(project->Dir / dir);
         }
 
-        for (const auto& dir : project.AssetDirs) {
-            collected.SourceDirs.push_back(ws.Root / project.Name / dir);
-        }
-
-        for (const auto& source : *sources) {
+        for (const auto& source : project->LocalAssetFiles) {
             const auto dstRel = std::filesystem::relative(source.Path, source.Dir);
-            if (IsIgnored(ws, dstRel)) continue;
             collected.Entries.push_back({ source.Path, dstRel });
             collected.Inputs.push_back(source.Path);
         }
@@ -65,29 +41,12 @@ auto CollectAssets(const Workspace& ws, const std::vector<Project>& projects) ->
     return collected;
 }
 
-auto CollectShaders(const Workspace& ws, const std::vector<Project>& projects) -> std::expected<DeployFiles, std::string> {
-    auto collected = DeployFiles();
-    auto claimed = std::unordered_map<std::string, std::filesystem::path>();
+static auto CollectShaders(const std::vector<const ShaderFile*>& flatShaders) -> CookFiles {
+    auto collected = CookFiles();
 
-    for (const auto& project : projects) {
-        const auto sources = CollectProjectFiles(ws, project, project.ShaderDirs);
-        if (!sources) {
-            return std::unexpected(sources.error());
-        }
-
-        for (const auto& source : *sources) {
-            if (IsIgnored(ws, std::filesystem::relative(source.Path, source.Dir))) continue;
-
-            const auto base = source.Path.filename().string();
-            const auto it = claimed.find(base);
-            if (it != claimed.end()) {
-                return std::unexpected(std::format("shader name collision '{}':\n  {}\n  {}",
-                    base, it->second.string(), source.Path.string()));
-            }
-            claimed.emplace(base, source.Path);
-            collected.Entries.push_back({ source.Path, base });
-            collected.Inputs.push_back(source.Path);
-        }
+    for (const auto* shader : flatShaders) {
+        collected.Entries.push_back({ shader->Path, shader->Path.filename() });
+        collected.Inputs.push_back(shader->Path);
     }
 
     return collected;
@@ -121,7 +80,7 @@ static auto Prune(const std::filesystem::path& destRoot, const std::unordered_se
     }
 }
 
-static auto Materialize(const std::vector<DeployEntry>& entries, const std::filesystem::path& destRoot, Mode mode, bool prune) -> std::expected<void, std::string> {
+static auto Materialize(const std::vector<CookEntry>& entries, const std::filesystem::path& destRoot, Mode mode, bool prune) -> std::expected<void, std::string> {
     auto ec = std::error_code();
     if (mode == Mode::Copy && std::filesystem::is_symlink(destRoot, ec)) std::filesystem::remove(destRoot, ec);
     std::filesystem::create_directories(destRoot, ec);
@@ -180,59 +139,46 @@ static auto WriteDepfile(const std::filesystem::path& depfile, const std::vector
     os << "\n";
 }
 
-auto Deploy(
-    const Workspace& ws,
+auto Cook(
     const std::string& app,
     const std::filesystem::path& out,
     Mode mode,
     const std::optional<std::filesystem::path>& depfile
 ) -> std::expected<void, std::string> {
 
-    if (!ws.Apps.contains(app)) {
-        return std::unexpected(std::format("'{}' is not an app in workspace.bechef", app));
-    }
+    bechef_try(const auto* project, VerifyApp(app));
+    bechef_try(const auto& flatShaders, project->FlatShaders);
 
-    const auto projects = ResolveProjects(ws, app);
-    if (!projects) {
-        return std::unexpected(projects.error());
-    }
+    const auto& closure = *project->Scope;
+    const auto assets = CollectAssets(closure);
+    const auto shaders = CollectShaders(flatShaders);
 
-    const auto assets = CollectAssets(ws, *projects);
-    if (!assets) {
-        return std::unexpected(assets.error());
+    auto inputs = std::vector<std::filesystem::path>{ Workspace::Get().Config.Root / "workspace.bechef" };
+    for (const auto* dependency : closure) {
+        inputs.push_back(dependency->Dir / "project.bechef");
     }
-
-    const auto shaders = CollectShaders(ws, *projects);
-    if (!shaders) {
-        return std::unexpected(shaders.error());
-    }
-
-    auto inputs = std::vector<std::filesystem::path>{ ws.Root / "workspace.bechef" };
-    for (const auto& project : *projects) {
-        inputs.push_back(ws.Root / project.Name / "project.bechef");
-    }
-    inputs.insert(inputs.end(), assets->Inputs.begin(), assets->Inputs.end());
-    inputs.insert(inputs.end(), shaders->Inputs.begin(), shaders->Inputs.end());
+    inputs.insert(inputs.end(), assets.Inputs.begin(), assets.Inputs.end());
+    inputs.insert(inputs.end(), shaders.Inputs.begin(), shaders.Inputs.end());
 
     const auto assetsOut = out / "assets";
-    if (mode == Mode::Symlink && assets->SourceDirs.size() == 1) {
-        auto r = SymlinkWholeDir(assets->SourceDirs.front(), assetsOut);
+    if (mode == Mode::Symlink && assets.SourceDirs.size() == 1) {
+        auto r = SymlinkWholeDir(assets.SourceDirs.front(), assetsOut);
         if (!r) {
             return r;
         }
     }
-    else if (!assets->SourceDirs.empty()) {
+    else if (!assets.SourceDirs.empty()) {
         if (mode == Mode::Symlink) {
             std::println(stderr, "bechef: multiple asset dirs for '{}', per-file symlinking", app);
         }
-        auto r = Materialize(assets->Entries, assetsOut, mode, true);
+        auto r = Materialize(assets.Entries, assetsOut, mode, true);
         if (!r) {
             return r;
         }
     }
 
-    if (!shaders->Entries.empty()) {
-        auto r = Materialize(shaders->Entries, out / "shaders", mode, true);
+    if (!shaders.Entries.empty()) {
+        auto r = Materialize(shaders.Entries, out / "shaders", mode, true);
         if (!r) {
             return r;
         }

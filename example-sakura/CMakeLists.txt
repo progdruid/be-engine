@@ -7,5 +7,5 @@ target_include_directories(example-sakura PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(example-sakura PRIVATE core toolkit lua luabridge3)
 
 be_apply_defaults(example-sakura)
-be_deploy_app(example-sakura)
+be_cook_app(example-sakura)
 be_copy_runtime_deps(example-sakura)

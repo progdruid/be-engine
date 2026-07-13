@@ -1,4 +1,5 @@
 #include <print>
+#include <format>
 #include <string>
 #include <filesystem>
 #include <optional>
@@ -6,13 +7,14 @@
 
 #include "CommandGrammar.h"
 #include "Workspace.h"
-#include "Deploy.h"
-#include "Check.h"
+#include "Load.h"
+#include "Cook.h"
+#include "Verify.h"
 #include "ShaderGen.h"
 
 static auto ErrorPrintUsage() -> void {
     std::println(stderr, "Usage:");
-    std::println(stderr, "  bechef deploy    --app <name> --out <dir> [--mode copy|symlink] [--root <dir>] [--depfile <path>]");
+    std::println(stderr, "  bechef cook      --app <name> --out <dir> [--mode copy|symlink] [--root <dir>] [--depfile <path>]");
     std::println(stderr, "  bechef check     [--root <dir>]");
     std::println(stderr, "  bechef shadergen [--project <name>] [--file <path>] [--check] [--watch] [--root <dir>]");
 }
@@ -20,7 +22,7 @@ static auto ErrorPrintUsage() -> void {
 auto main(int argc, char* argv[]) -> int {
     static const auto cliGrammar = CommandGrammar{ .Rules = { 
         VerbRule { 
-            .Verb = "deploy", .Flags = {
+            .Verb = "cook", .Flags = {
                 FlagRule { .Flag = "app", .Required = true },
                 FlagRule { .Flag = "out", .Required = true },
                 FlagRule { .Flag = "mode" },
@@ -66,9 +68,9 @@ auto main(int argc, char* argv[]) -> int {
     }
 
 
-    const auto workspace = LoadWorkspace(rootDir);
-    if (!workspace) {
-        std::println(stderr, "bechef: {}", workspace.error());
+    const auto loaded = LoadWorkspace(rootDir);
+    if (!loaded) {
+        std::println(stderr, "bechef: {}", loaded.error());
         return 1;
     }
 
@@ -77,13 +79,13 @@ auto main(int argc, char* argv[]) -> int {
     const auto out  = std::filesystem::path(parsed->Get("out"));
 
     auto result = std::expected<void, std::string>();
-    if (command.Verb == "deploy") {
+    if (command.Verb == "cook") {
         auto depfile = std::optional<std::filesystem::path>();
         if (parsed->Has("depfile")) {
             depfile = parsed->Get("depfile");
         }
 
-        result = Deploy(*workspace, app, out, mode, depfile);
+        result = Cook(app, out, mode, depfile);
     }
     else if (command.Verb == "shadergen") {
         auto options = ShaderGenOptions();
@@ -96,10 +98,16 @@ auto main(int argc, char* argv[]) -> int {
         options.CheckOnly = parsed->Has("check");
         options.Watch = parsed->Has("watch");
 
-        result = ShaderGen(*workspace, options);
+        result = ShaderGen(options);
     }
     else {
-        result = Check(*workspace);
+        const auto verified = VerifyWorkspace();
+        if (verified) {
+            std::println("bechef: workspace OK ({} projects)", Workspace::Get().Projects.size());
+        }
+        else {
+            result = std::unexpected(std::format("workspace has {}", verified.error()));
+        }
     }
 
     if (!result) {

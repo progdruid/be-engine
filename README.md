@@ -55,7 +55,7 @@ then per frame: `ClearFrame()`, submit geometry + lights, and let the renderer r
 * `example-sakura/`. the up-to-date showcase: multi-scene, ecs, full deferred pipeline.
 * `example-vulkan/`. minimal raw vulkan/rhi example.
 * `example-game-1/`. old simple example (outdated, may not build).
-* `devtools/bechef`. cli that deploys content, checks the workspace, and generates shader boilerplate (`shadergen`, with a `--watch` mode).
+* `devtools/bechef`. cli that cooks content, checks the workspace, and generates shader boilerplate (`shadergen`, with a `--watch` mode).
 
 ### shaders
 

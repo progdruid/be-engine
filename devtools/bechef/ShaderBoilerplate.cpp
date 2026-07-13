@@ -1,6 +1,5 @@
 #include "ShaderBoilerplate.h"
 
-#include <format>
 #include <vector>
 #include <optional>
 #include <algorithm>
@@ -83,31 +82,8 @@ static auto IsTexture(const std::string& type) -> bool {
     return type == "texture2d" || type == "textureCube" || type == "storage texture2d";
 }
 
-struct ResolvedBind {
-    BeShaderTools::ParsedBind Bind;
-    const SchemeEntry* Scheme = nullptr;
-};
-
-static auto ResolveBinds(const ShaderFile& file, const SchemeScope& scope) -> std::expected<std::vector<ResolvedBind>, std::string> {
-    auto resolved = std::vector<ResolvedBind>();
-    if (!file.Shader) {
-        return resolved;
-    }
-
-    for (const auto& bind : file.Shader->Binds) {
-        const auto it = scope.Schemes.find(bind.Scheme);
-        if (it == scope.Schemes.end()) {
-            return std::unexpected(std::format("bind '{}': scheme '{}' is not declared in the dependency closure", bind.Link, bind.Scheme));
-        }
-        resolved.push_back({ bind, &it->second });
-    }
-
-    std::ranges::sort(resolved, {}, [](const ResolvedBind& resolvedBind) { return resolvedBind.Bind.Slot; });
-    return resolved;
-}
-
-static auto GenerateIncludes(const ShaderFile& file, const std::vector<ResolvedBind>& binds) -> std::vector<std::string> {
-    const auto ownFile = file.Path.filename().string();
+static auto GenerateIncludes(const std::filesystem::path& path, const std::vector<ResolvedBind>& binds) -> std::vector<std::string> {
+    const auto ownFile = path.filename().string();
 
     auto includes = std::vector<std::string>();
     for (const auto& bind : binds) {
@@ -210,39 +186,34 @@ static auto GeneratePixelOutput(const std::vector<BeShaderTools::ParsedTarget>& 
     return text;
 }
 
-static auto GenerateBoilerplate(const ShaderFile& file, const SchemeScope& scope) -> std::expected<std::vector<std::string>, std::string> {
-    const auto binds = ResolveBinds(file, scope);
-    if (!binds) {
-        return std::unexpected(binds.error());
-    }
-
+static auto GenerateBoilerplate(const std::filesystem::path& path, const ShaderData& data, const std::vector<ResolvedBind>& binds) -> std::vector<std::string> {
     auto parts = std::vector<std::string>();
 
-    const auto includes = GenerateIncludes(file, *binds);
+    const auto includes = GenerateIncludes(path, binds);
     if (!includes.empty()) {
         parts.push_back(JoinLines(includes));
     }
 
-    for (const auto& material : file.Materials) {
+    for (const auto& material : data.Materials) {
         auto text = GenerateMaterialStruct(material);
         if (text) {
             parts.push_back(std::move(*text));
         }
     }
 
-    for (const auto& bind : *binds) {
+    for (const auto& bind : binds) {
         auto text = GenerateBindings(bind);
         if (text) {
             parts.push_back(std::move(*text));
         }
     }
 
-    if (file.Shader && !file.Shader->VertexLayout.empty()) {
-        parts.push_back(GenerateVertexInput(file.Shader->VertexLayout));
+    if (data.Shader && !data.Shader->VertexLayout.empty()) {
+        parts.push_back(GenerateVertexInput(data.Shader->VertexLayout));
     }
 
-    if (file.Shader && !file.Shader->Targets.empty()) {
-        parts.push_back(GeneratePixelOutput(file.Shader->Targets));
+    if (data.Shader && !data.Shader->Targets.empty()) {
+        parts.push_back(GeneratePixelOutput(data.Shader->Targets));
     }
 
     auto block = std::vector<std::string>{ Decorator, RegionBegin };
@@ -293,35 +264,23 @@ static auto FindRegionSpan(const std::vector<std::string>& lines) -> std::option
     return span;
 }
 
-auto ValidateShaderFile(
-    const ShaderFile& file,
-    const SchemeScope& scope
-) -> std::expected<void, std::string> {
-    const auto binds = ResolveBinds(file, scope);
-    if (!binds) {
-        return std::unexpected(binds.error());
+auto GenerateShaderSource(const ShaderFile& shader) -> std::optional<std::string> {
+    if (!shader.Data || !shader.Binds) {
+        return std::nullopt;
     }
-    return {};
-}
 
-auto GenerateShaderSource(
-    const ShaderFile& file,
-    const SchemeScope& scope
-) -> std::expected<ShaderGenerationResult, std::string> {
-    auto lines = SplitLines(file.Source);
+    const auto& data = *shader.Data;
+    auto lines = SplitLines(data.Source);
 
     const auto span = FindRegionSpan(lines);
     if (!span) {
-        return ShaderGenerationResult{ .Skipped = true };
+        return std::nullopt;
     }
 
-    const auto block = GenerateBoilerplate(file, scope);
-    if (!block) {
-        return std::unexpected(block.error());
-    }
+    const auto block = GenerateBoilerplate(shader.Path, data, *shader.Binds);
 
     lines.erase(lines.begin() + span->First, lines.begin() + span->Last + 1);
-    lines.insert(lines.begin() + span->First, block->begin(), block->end());
+    lines.insert(lines.begin() + span->First, block.begin(), block.end());
 
-    return ShaderGenerationResult{ .NewSource = JoinLines(lines) };
+    return JoinLines(lines);
 }

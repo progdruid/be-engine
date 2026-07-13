@@ -45,7 +45,7 @@ be-engine/
 ├── example-sakura/     # Advanced showcase (multi-scene, ECS, SRM)
 ├── example-vulkan/     # Minimal raw Vulkan/RHI example
 ├── devtools/
-│   └── bechef/         # CLI — content deploy, workspace check, shader boilerplate autogen
+│   └── bechef/         # CLI — content cook, workspace check, shader boilerplate autogen
 └── vendor/             # Third-party libraries
 ```
 
@@ -222,8 +222,8 @@ entt (header-only, `toolkit/entt/entt.hpp`). Components defined per-project. Exa
 ### Devtools: bechef
 
 ```bash
-# Deploy assets and shaders for an app (invoked by CMake)
-devtools/bechef/bechef deploy --app example-sakura --out out/linux-debug/example-sakura
+# Cook assets and shaders for an app (invoked by CMake)
+devtools/bechef/bechef cook --app example-sakura --out out/linux-debug/example-sakura
 # Validate the workspace: manifests, shader metadata, bind resolution, name collisions
 devtools/bechef/bechef check
 # Regenerate @be-auto-boilerplate regions
@@ -233,12 +233,12 @@ devtools/bechef/bechef shadergen [--project <name>] [--file <path>] [--check] [-
 `shadergen` resolves each shader's material schemes against its project's bechef dependency
 closure, so cross-module `bind`s work. Includes are emitted as bare filenames, matching the
 flat `shaders/` namespace. A bind naming a scheme outside the closure is an error.
-`be_deploy_app` runs `shadergen --check` before deploying, so a stale region fails the build.
+`be_cook_app` runs `shadergen --check` before cooking, so a stale region fails the build.
 
-Each project declares its dirs in `project.bechef` (`shaders <dir>`, `assets <dir>`). Deploy
+Each project declares its dirs in `project.bechef` (`shaders <dir>`, `assets <dir>`). Cook
 flattens the shader dirs of the app and its whole dependency closure into a single runtime
 `shaders/`, so shader filenames must be unique across that closure. Asset dirs are copied to
-`assets/` preserving their tree. `BeRenderer` loads every deployed shader at init via
+`assets/` preserving their tree. `BeRenderer` loads every cooked shader at init via
 `BeShaderLibrary::LoadShaders()`; apps do not load shader dirs themselves.
 
 ### Vendor Libraries

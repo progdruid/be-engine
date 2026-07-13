@@ -5,8 +5,6 @@
 #include <optional>
 #include <expected>
 
-#include "Workspace.h"
-
 struct ShaderGenOptions {
     std::optional<std::string> Project;
     std::optional<std::filesystem::path> File;
@@ -14,4 +12,4 @@ struct ShaderGenOptions {
     bool Watch = false;
 };
 
-auto ShaderGen(const Workspace& ws, const ShaderGenOptions& options) -> std::expected<void, std::string>;
+auto ShaderGen(const ShaderGenOptions& options) -> std::expected<void, std::string>;
