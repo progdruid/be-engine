@@ -10,6 +10,7 @@ class FreeCameraController {
     expose
     float MoveSpeed = 5.0f;
     float MouseSensitivity = 0.1f;
+    //float MouseSensitivity = 0.05f;
     float GamepadCameraSensitivity = 100.0f;
     float MinFov = 20.0f;
     float MaxFov = 90.0f;
@@ -19,7 +20,8 @@ class FreeCameraController {
 
     // Exponential smoothing sharpness (higher = snappier, lower = floatier).
     float PositionSmoothing = 12.0f;
-    float RotationSmoothing = 18.0f;
+    //float RotationSmoothing = 18.0f;
+    float RotationSmoothing = 8.0f;
 
     explicit FreeCameraController(BeCamera* camera);
 

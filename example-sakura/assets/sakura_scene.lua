@@ -7,14 +7,6 @@ function makeScene()
 
     local scene = {}
 
-    scene.Cube = {
-        transform = { position = {0, -15, 0}, scale = {30, 30, 30} },
-        render = { prop = "cube", castShadows = true }
-    }
-    scene.Anvil = {
-        transform = { position = {0, 0, 0}, scale = {0.2, 0.2, 0.2} },
-        render = { prop = "anvil", castShadows = true }
-    }
 --     scene.PBR_TestSphere = {
 --         transform = { position = {8, 1, 0}, scale = {1.5, 1.5, 1.5} },
 --         render = { prop = "testSphere", castShadows = true }
@@ -25,6 +17,15 @@ function makeScene()
 --         pointLight = { radius = 12.0, color = {1.0, 0.95, 0.85}, power = 3.0, castsShadows = false },
 --         static = true
 --     }
+
+    scene.Cube = {
+        transform = { position = {0, -15, 0}, scale = {30, 30, 30} },
+        render = { prop = "cube", castShadows = true }
+    }
+    scene.Anvil = {
+        transform = { position = {0, 0, 0}, scale = {0.2, 0.2, 0.2} },
+        render = { prop = "anvil", castShadows = true }
+    }
     scene.Phong_Axe = {
         transform = { position = {-1.5, 1.4, 1.3}, rotation = {200, 170, 0}, scale = {0.007, 0.007, 0.007} },
         render = { prop = "axe", castShadows = true }
@@ -48,6 +49,7 @@ function makeScene()
         },
         static = true
     }
+    
 --     scene.Sakura2 = {
 --         transform = { position = {-3.0, -5.5, 2}, rotation = {0, 45, 0}, scale = {5.0, 5.0, 5.0} },
 --         render = { prop = "sakura2", castShadows = true }
@@ -56,10 +58,13 @@ function makeScene()
 --         transform = { position = {10, 2.5, 0}, rotation = {30, -20, -100}, scale = {1.4, 1.4, 1.4} },
 --         render = { prop = "katana", castShadows = true }
 --     }
-    scene.RustySphere = {
-        transform = { position = {10, 2.5, -3}, scale = {0.01, 0.01, 0.01} },
-        render = { prop = "rusty-sphere", castShadows = true }
-    }
+
+    --scene.RustySphere = {
+    --    --transform = { position = {10, 2.5, -3}, scale = {0.01, 0.01, 0.01} },
+    --    transform = { position = {0, 0, 0}, scale = {0.01, 0.01, 0.01} },
+    --    render = { prop = "rusty-sphere", castShadows = true }
+    --}
+
     scene.Moon = {
         transform = { position = {100, 150, 100}, scale = {6.0, 6.0, 6.0} },
         render = { prop = "moon", castShadows = false },
