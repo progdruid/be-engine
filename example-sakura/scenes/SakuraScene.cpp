@@ -128,6 +128,22 @@ auto SakuraScene::Prepare() -> void {
     _machine->AddEnvironmentBakePass(skyTexture);
     _machine->BakeEnvironment();
 
+    _machine->Settings = BeSRMSettings {
+        .Shadow = {
+            .Bias = 8.f / 100000.f,
+        },
+        .Bloom = {
+            .Threshold = 2.5f,
+            .Knee = 0.7f,
+            .Intensity = 0.7f,
+            .Clamp = 4.0f,
+        },
+        .Tonemapper = {
+            .Exposure = 0.25f,
+            .Contrast = 1.70f,
+        },
+    };
+    
     _sceneLoader = std::make_unique<LuaSceneLoader>();
     RegisterComponentParsers(*_sceneLoader, _assetRegistry);
 
@@ -181,8 +197,8 @@ auto SakuraScene::RebuildPasses() -> void {
     _machine->AddShadowPass();
     _machine->AddGeometryPass();
     _machine->AddLightingPass("Sakura_HDR");
-    _machine->AddSkyboxPass("Sakura_HDR", 0.0f);
-    _machine->AddBloomPass(4, "Sakura_HDR", "Sakura_Bloom", _assetRegistry.GetTexture("Sakura_BloomDirtTexture").lock());
+    _machine->AddSkyboxPass("Sakura_HDR");
+    _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_Bloom", _assetRegistry.GetTexture("Sakura_BloomDirtTexture").lock());
 
     std::string tonemapperInput = "Sakura_Bloom";
     //std::string tonemapperInput = "Sakura_HDR"; 
@@ -198,11 +214,7 @@ auto SakuraScene::RebuildPasses() -> void {
         tonemapperInput = "Sakura_DoF";
     }
 
-    const auto& tonemapperScheme = BeShaderLibrary::GetShader("tonemapper")->GetMaterialScheme("main");
-    const auto tonemapperMaterial = BeMaterial::Create(tonemapperScheme, false);
-    tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture(tonemapperInput));
-    //tonemapperMaterial->SetFloat1("Exposure", 1.0f); // -- better use shader default, this way it can be hot-reloaded
-    _machine->AddFullscreenPass(BeShaderLibrary::GetShader("tonemapper"), tonemapperMaterial, { "Sakura_Tonemapper" });
+    _machine->AddTonemapperPass(tonemapperInput, "Sakura_Tonemapper");
 
     const auto& fxaaScheme = BeShaderLibrary::GetShader("fxaa")->GetMaterialScheme("main");
     const auto fxaaMaterial = BeMaterial::Create(fxaaScheme, false);

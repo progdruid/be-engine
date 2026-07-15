@@ -7,6 +7,7 @@
     Power: float = 0
     ProjectionView: matrix
     TexelSize: float = 0
+    ShadowBias: float = 0.001
     Depth: texture2d = black
     Albedo_RGB: texture2d = black
     WorldNormal_XYZ: texture2d = black
@@ -46,6 +47,7 @@ struct directional_light_material {
     float Power;
     float4x4 ProjectionView;
     float TexelSize;
+    float ShadowBias;
 };
 
 cbuffer CBuffer_0 : register(b0, space0) {
@@ -70,7 +72,7 @@ struct PixelOutput {
 /*========================================================*/
 
 
-float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float texelSize, float currentDepth) {
+float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float texelSize, float currentDepth, float bias) {
     float shadow = 0.0;
 
     // 3x3 PCF filter
@@ -78,7 +80,7 @@ float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float t
         for (int y = -1; y <= 1; y++) {
             float2 sampleUV = uv + float2(x, y) * texelSize;
             float shadowmapDepth = shadowMap.Sample(pcfSampler, sampleUV).r;
-            shadow += (currentDepth < shadowmapDepth + 0.001) ? 1.0 : 0.0;
+            shadow += (currentDepth < shadowmapDepth + bias) ? 1.0 : 0.0;
         }
     }
 
@@ -98,7 +100,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     float2 shadowUV = lightSpacePos.xy * 0.5 + 0.5;
     shadowUV.y = 1.0 - shadowUV.y;
     float currentShadowDepth = lightSpacePos.z;
-    float shadowAbsenceFactor = PCFShadow(ShadowMap, InputSampler, shadowUV, _DirectionalLight.TexelSize, currentShadowDepth);
+    float shadowAbsenceFactor = PCFShadow(ShadowMap, InputSampler, shadowUV, _DirectionalLight.TexelSize, currentShadowDepth, _DirectionalLight.ShadowBias);
 
     float3 viewVec = _Frame.CameraPosition - worldPos;
     float3 lit;

@@ -20,15 +20,13 @@ class BeStandardSkyboxPass final : public BeRenderPass {
 
     std::shared_ptr<BeMaterial> _material;
     SenPipeline _pipeline;
-    float _clampRadiance;
 
     expose
     explicit BeStandardSkyboxPass(
         BeStandardRenderMachine* srm,
         std::shared_ptr<BeTexture> depth,
         std::shared_ptr<BeTexture> envCubemap,
-        std::shared_ptr<BeTexture> output,
-        float clampRadiance
+        std::shared_ptr<BeTexture> output
     );
     ~BeStandardSkyboxPass() override = default;
 

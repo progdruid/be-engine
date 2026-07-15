@@ -28,10 +28,7 @@ auto MainScene::LoadPasses() -> void {
     _machine->AddLightingPass("HDR");
     _machine->AddBloomPass(5, "HDR", "BloomOutput", _assetRegistry.GetTexture("MainScene_BloomDirt").lock());
 
-    const auto& tonemapperScheme = BeShaderLibrary::GetShader("tonemapper")->GetMaterialScheme("main");
-    const auto tonemapperMaterial = BeMaterial::Create(tonemapperScheme, false);
-    tonemapperMaterial->SetTexture("HDRInput", _machine->GetRenderTexture("BloomOutput"));
-    _machine->AddFullscreenPass(BeShaderLibrary::GetShader("tonemapper"), tonemapperMaterial, { "TonemapperOutput" });
+    _machine->AddTonemapperPass("BloomOutput", "TonemapperOutput");
 
     _machine->AddBackbufferPass("TonemapperOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
     _machine->BuildPasses();

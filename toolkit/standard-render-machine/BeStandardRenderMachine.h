@@ -23,6 +23,37 @@ class BeAssetRegistry;
 enum class BeSRMLightingModel { PBR, Phong };
 
 // =====================================================================================================================
+// Centralized tunables
+// =====================================================================================================================
+
+struct BeSRMSettings {
+    struct {
+        float Bias = 0.001f;
+    } Shadow;
+
+    struct {
+        float MaxSampleRadiance = 100.0f;
+    } IBL;
+
+    struct {
+        float ClampRadiance = 0.0f;
+    } Skybox;
+
+    struct {
+        float Threshold = 1.f;
+        float Knee = 0.7f;
+        float Intensity = 1.f;
+        float Clamp = 16.0f;
+        float UpsampleRadius = 1.0f;
+    } Bloom;
+
+    struct {
+        float Exposure = 1.f;
+        float Contrast = 1.f;
+    } Tonemapper;
+};
+
+// =====================================================================================================================
 // Frame submission entries
 // =====================================================================================================================
 
@@ -103,8 +134,11 @@ class BeStandardRenderMachine {
     std::vector<std::shared_ptr<BeMaterial>> _objectMaterialPool;
     size_t _objectMaterialCursor = 0;
 
+    std::shared_ptr<BeMaterial> _tonemapperMaterial;
+
     expose
     std::weak_ptr<BeMaterial> UniformMaterial;
+    BeSRMSettings Settings;
 
     // lifetime --------------------------------------------------------------------------------------------------------
     expose
@@ -125,6 +159,7 @@ class BeStandardRenderMachine {
     auto AddLightingPass(const std::string& outputName) -> void;
     auto AddBloomPass(uint32_t mipCount, const std::string& inputName, const std::string& outputName, std::shared_ptr<BeTexture> dirtTexture = nullptr) -> void;
     auto AddFullscreenPass(raw_ptr<BeShader> shader, std::shared_ptr<BeMaterial> material, const std::vector<std::string>& outputNames) -> void;
+    auto AddTonemapperPass(const std::string& inputName, const std::string& outputName) -> void;
     auto AddBackbufferPass(const std::string& inputName, glm::vec3 clearColor = {}) -> void;
     auto AddPass(std::unique_ptr<BeRenderPass> pass) -> void;
 
@@ -135,7 +170,7 @@ class BeStandardRenderMachine {
     auto GetPrefilteredCubemap() const -> std::shared_ptr<BeTexture> { return _prefilteredCubemap; }
     auto GetBrdfLutTexture() const -> std::shared_ptr<BeTexture> { return _brdfLutTexture; }
 
-    auto AddSkyboxPass(const std::string& outputName, float clampRadiance = 0.0f) -> void;
+    auto AddSkyboxPass(const std::string& outputName) -> void;
 
     expose
     auto ClearPasses() -> void;

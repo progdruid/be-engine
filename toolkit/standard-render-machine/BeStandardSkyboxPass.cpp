@@ -17,10 +17,9 @@ BeStandardSkyboxPass::BeStandardSkyboxPass(
     BeStandardRenderMachine* srm,
     std::shared_ptr<BeTexture> depth,
     std::shared_ptr<BeTexture> envCubemap,
-    std::shared_ptr<BeTexture> output,
-    float clampRadiance
+    std::shared_ptr<BeTexture> output
 ) : _srm(srm), _depth(std::move(depth)), _envCubemap(std::move(envCubemap)),
-    _output(std::move(output)), _clampRadiance(clampRadiance) {}
+    _output(std::move(output)) {}
 
 auto BeStandardSkyboxPass::Initialise() -> void {
 
@@ -29,7 +28,6 @@ auto BeStandardSkyboxPass::Initialise() -> void {
 
     const auto& scheme = shader->GetMaterialScheme("main");
     _material = BeMaterial::Create(scheme, false);
-    _material->SetFloat1("ClampRadiance", _clampRadiance);
     _material->SetTexture("Depth", _depth);
     _material->SetTexture("EnvCubemap", _envCubemap);
 
@@ -37,6 +35,8 @@ auto BeStandardSkyboxPass::Initialise() -> void {
 }
 
 auto BeStandardSkyboxPass::Render(SenCommandBuffer& cmd) -> void {
+    _material->SetFloat1("ClampRadiance", _srm->Settings.Skybox.ClampRadiance);
+
     cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
 
     BePass pass(cmd);

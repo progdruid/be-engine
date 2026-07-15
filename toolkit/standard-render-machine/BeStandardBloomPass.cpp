@@ -58,7 +58,6 @@ auto BeStandardBloomPass::Initialise() -> void {
         const auto& source = _bloomTexture->GetMipViewport(mipTarget + 1);
         const auto  mat = BeMaterial::Create(upsampleScheme, false);
         mat->SetFloat2("TexelSize", glm::vec2(1.0f / source.Width, 1.0f / source.Height));
-        mat->SetFloat1("Radius", 1.0f);
         mat->SetTexture("BloomMipInput", _bloomTexture, mipTarget + 1);
         _upsampleMaterials[mipTarget] = mat;
     }
@@ -81,6 +80,15 @@ auto BeStandardBloomPass::Initialise() -> void {
 }
 
 auto BeStandardBloomPass::Render(SenCommandBuffer& cmd) -> void {
+    const auto& settings = _srm->Settings.Bloom;
+    _brightMaterial->SetFloat1("Threshold", settings.Threshold);
+    _brightMaterial->SetFloat1("Knee", settings.Knee);
+    _brightMaterial->SetFloat1("Intensity", settings.Intensity);
+    _brightMaterial->SetFloat1("Clamp", settings.Clamp);
+    for (uint32_t mipTarget = 0; mipTarget < _mipCount - 1; ++mipTarget) {
+        _upsampleMaterials[mipTarget]->SetFloat1("Radius", settings.UpsampleRadius);
+    }
+
     cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
     RenderBrightPass(cmd);
     RenderDownsamplePasses(cmd);

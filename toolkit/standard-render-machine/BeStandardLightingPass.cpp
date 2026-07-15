@@ -133,6 +133,7 @@ auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {
     _directionalLightMaterial->SetFloat1("Power",          sunLight.Power);
     _directionalLightMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
     _directionalLightMaterial->SetFloat1("TexelSize",      1.0f / sunLight.ShadowMapResolution);
+    _directionalLightMaterial->SetFloat1("ShadowBias",     srm.Settings.Shadow.Bias);
     if (sunLight.CastsShadows) {
         _directionalLightMaterial->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
     }

@@ -159,6 +159,17 @@ auto BeStandardRenderMachine::AddFullscreenPass(
     _passes.push_back(std::move(pass));
 }
 
+auto BeStandardRenderMachine::AddTonemapperPass(const std::string& inputName, const std::string& outputName) -> void {
+    const auto shader = BeShaderLibrary::GetShader("tonemapper");
+    be_assert(shader, "AddTonemapperPass: tonemapper shader not found");
+
+    const auto& scheme = shader->GetMaterialScheme("main");
+    _tonemapperMaterial = BeMaterial::Create(scheme, false);
+    _tonemapperMaterial->SetTexture("HDRInput", GetRenderTexture(inputName));
+
+    AddFullscreenPass(shader, _tonemapperMaterial, { outputName });
+}
+
 auto BeStandardRenderMachine::AddBackbufferPass(const std::string& inputName, glm::vec3 clearColor) -> void {
     auto input = GetRenderTexture(inputName);
     be_assert(input, "AddBackbufferPass: input texture not found: " + inputName);
@@ -216,14 +227,14 @@ auto BeStandardRenderMachine::BakeEnvironment() -> void {
     _renderer.lock()->RenderOnce({ _environmentBakePass.get() });
 }
 
-auto BeStandardRenderMachine::AddSkyboxPass(const std::string& outputName, float clampRadiance) -> void {
+auto BeStandardRenderMachine::AddSkyboxPass(const std::string& outputName) -> void {
     be_assert(_envCubemap, "AddSkyboxPass: AddEnvironmentBakePass must be called first");
     be_assert(_depthTarget, "AddSkyboxPass: no depth target declared");
 
     auto output = GetRenderTexture(outputName);
     be_assert(output, "AddSkyboxPass: output texture not found: " + outputName);
 
-    _passes.push_back(std::make_unique<BeStandardSkyboxPass>(this, _depthTarget, _envCubemap, output, clampRadiance));
+    _passes.push_back(std::make_unique<BeStandardSkyboxPass>(this, _depthTarget, _envCubemap, output));
 }
 
 // =====================================================================================================================
@@ -268,6 +279,11 @@ auto BeStandardRenderMachine::ClearFrame() -> void {
     _geometryEntries.clear();
     _sunLightEntries.clear();
     _pointLightEntries.clear();
+
+    if (_tonemapperMaterial) {
+        _tonemapperMaterial->SetFloat1("Exposure", Settings.Tonemapper.Exposure);
+        _tonemapperMaterial->SetFloat1("Contrast", Settings.Tonemapper.Contrast);
+    }
 }
 
 auto BeStandardRenderMachine::AddGeometry(const BeSRMGeometryEntry& entry) -> void {

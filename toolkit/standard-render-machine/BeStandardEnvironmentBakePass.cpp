@@ -45,6 +45,7 @@ auto BeStandardEnvironmentBakePass::Initialise() -> void {
     for (uint32_t face = 0; face < FaceCount; ++face) {
         const auto mat = BeMaterial::Create(irradianceScheme, false);
         mat->SetFloat1("FaceIndex", static_cast<float>(face));
+        mat->SetFloat1("MaxSampleRadiance", _srm->Settings.IBL.MaxSampleRadiance);
         mat->SetTexture("EnvCubemap", _envCubemap);
         _irradianceFaceMaterials[face] = mat;
     }
@@ -62,6 +63,7 @@ auto BeStandardEnvironmentBakePass::Initialise() -> void {
             const auto mat = BeMaterial::Create(prefilterScheme, false);
             mat->SetFloat1("FaceIndex", static_cast<float>(face));
             mat->SetFloat1("Roughness", roughness);
+            mat->SetFloat1("MaxSampleRadiance", _srm->Settings.IBL.MaxSampleRadiance);
             mat->SetTexture("EnvCubemap", _envCubemap);
             _prefilterFaceMaterials[mip][face] = mat;
         }
