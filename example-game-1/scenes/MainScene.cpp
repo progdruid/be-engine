@@ -43,7 +43,7 @@ auto MainScene::Prepare() -> void {
 
     const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
     _uniformMaterial = BeMaterial::Create(uniformScheme, false);
-    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
+    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.0f));
 
     const auto standardShader    = BeShaderLibrary::GetShader("standard-phong");
     const auto tessellatedShader = BeShaderLibrary::GetShader("tessellated");

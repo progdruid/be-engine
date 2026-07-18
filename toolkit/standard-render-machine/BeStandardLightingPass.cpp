@@ -71,28 +71,28 @@ auto BeStandardLightingPass::Initialise() -> void {
         .Build()
     ;
 
+    const auto ambientShader = BeShaderLibrary::GetShader("ambient-ibl");
+    const auto& ambientScheme = ambientShader->GetMaterialScheme("main");
+    _ambientMaterial = BeMaterial::Create(ambientScheme, false);
+    _ambientMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
+    _ambientMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
+    _ambientMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
+    _ambientMaterial->SetTexture("Depth_Tex", _depthInput);
     if (_irradianceCubemap) {
-        const auto ambientShader = BeShaderLibrary::GetShader("ambient-ibl");
-        const auto& ambientScheme = ambientShader->GetMaterialScheme("main");
-        _ambientMaterial = BeMaterial::Create(ambientScheme, false);
-        _ambientMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
-        _ambientMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
-        _ambientMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
-        _ambientMaterial->SetTexture("Depth_Tex", _depthInput);
         _ambientMaterial->SetTexture("IrradianceCubemap", _irradianceCubemap);
-        if (_prefilteredCubemap) {
-            _ambientMaterial->SetTexture("PrefilteredCubemap", _prefilteredCubemap);
-            _ambientMaterial->SetFloat1("MaxMipLevel", static_cast<float>(_prefilteredCubemap->Mips - 1));
-        }
-        if (_brdfLutTexture) {
-            _ambientMaterial->SetTexture("BrdfLut", _brdfLutTexture);
-        }
-        _ambientPipeline = BePipelineBuilder::Start(*ambientShader)
-            .SetBlend(additiveBlend)
-            .SetColorFormats({ outputFormat })
-            .Build()
-        ;
     }
+    if (_prefilteredCubemap) {
+        _ambientMaterial->SetTexture("PrefilteredCubemap", _prefilteredCubemap);
+        _ambientMaterial->SetFloat1("MaxMipLevel", static_cast<float>(_prefilteredCubemap->Mips - 1));
+    }
+    if (_brdfLutTexture) {
+        _ambientMaterial->SetTexture("BrdfLut", _brdfLutTexture);
+    }
+    _ambientPipeline = BePipelineBuilder::Start(*ambientShader)
+        .SetBlend(additiveBlend)
+        .SetColorFormats({ outputFormat })
+        .Build()
+    ;
 }
 
 auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {

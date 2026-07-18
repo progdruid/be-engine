@@ -95,7 +95,7 @@ auto SakuraScene::Prepare() -> void {
 
     const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
     _uniformMaterial = BeMaterial::Create(uniformScheme, false);
-    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.1f));
+    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.0f));
 
     _machine->RegisterMesh(_cube->Mesh);
     _machine->RegisterMesh(_emissiveCube->Mesh);
@@ -130,7 +130,8 @@ auto SakuraScene::Prepare() -> void {
 
     _machine->Settings = BeSRMSettings {
         .Shadow = {
-            .Bias = 8.f / 100000.f,
+            //.Bias = 8.f / 100000.f,
+            .Bias = 16.f / 100000.f,
         },
         .Bloom = {
             .Threshold = 2.5f,

@@ -73,7 +73,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
 
     PixelOutput output;
     if (normalLength < 0.001) {
-        output.AmbientHDR = float3(0.0, 0.0, 0.0);
+        output.AmbientHDR = _Frame.AmbientColor;
         return output;
     }
 
@@ -103,6 +103,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 specular = prefilteredRadiance * (F * brdf.x + brdf.y);
 
     float3 ambient = (diffuse + specular) * ao;
+    ambient += albedo * _Frame.AmbientColor;
     output.AmbientHDR = ambient;
     return output;
 }
