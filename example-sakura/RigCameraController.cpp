@@ -72,15 +72,16 @@ auto RigCameraController::Update(float deltaTime) -> void {
     const float len = glm::length(sample.LookDir);
     if (len > 1e-5f) {
         const glm::vec3 d = sample.LookDir / len;
-        const float yaw   = glm::degrees(std::atan2(d.z, d.x));
+        const float yaw   = glm::degrees(std::atan2(d.x, d.z));
         const float pitch = glm::degrees(std::asin(glm::clamp(d.y, -1.0f, 1.0f)));
         if (AimDamping > 0.0f) {
+            const glm::vec3 euler = _camera->GetEuler();
             const float alpha = 1.0f - std::exp(-AimDamping * deltaTime);
-            _camera->Yaw   += ShortestAngle(_camera->Yaw, yaw) * alpha;
-            _camera->Pitch += (pitch - _camera->Pitch) * alpha;
+            const float newYaw   = euler.x + ShortestAngle(euler.x, yaw) * alpha;
+            const float newPitch = euler.y + (pitch - euler.y) * alpha;
+            _camera->SetEuler(newYaw, newPitch);
         } else {
-            _camera->Yaw   = yaw;
-            _camera->Pitch = pitch;
+            _camera->SetEuler(yaw, pitch);
         }
     }
 

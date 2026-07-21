@@ -11,9 +11,8 @@ class BeCamera {
 
     //fields////////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
-    glm::vec3 Position{0.0f, 2.0f, 6.0f};
-    float Yaw{-90.0f};         // degrees, -Z forward
-    float Pitch{0.0f};         // degrees
+    glm::vec3 Position{0.0f, 0.0f, 0.0f};
+    glm::quat Orientation{1.0f, 0.0f, 0.0f, 0.0f};
     float Fov{90.0f};          // degrees
 
     float NearPlane{0.1f};
@@ -23,7 +22,7 @@ class BeCamera {
     uint32_t Height = 0;
     
     hide
-    glm::vec3 _front{0.0f, 0.0f, -1.0f};
+    glm::vec3 _front{0.0f, 0.0f, 1.0f};
     glm::vec3 _right{1.0f, 0.0f, 0.0f};
     glm::vec3 _up{0.0f, 1.0f, 0.0f};
 
@@ -45,6 +44,15 @@ class BeCamera {
 
     [[nodiscard]] glm::mat4 GetViewMatrix() const { return _viewMatrix; }
     [[nodiscard]] glm::mat4 GetProjectionMatrix() const { return _projectionMatrix; }
+
+    [[nodiscard]] glm::quat GetOrientation() const { return Orientation; }
+    void SetOrientation(const glm::quat& orientation) { Orientation = glm::normalize(orientation); }
+
+    void SetEuler(float yaw, float pitch, float roll = 0.0f);
+    [[nodiscard]] glm::vec3 GetEuler() const;
+
+    void LookIn(const glm::vec3& front, const glm::vec3& worldUp = glm::vec3(0.0f, 1.0f, 0.0f));
+    void RotateLocal(float pitchDegrees, float yawDegrees, float rollDegrees);
 
     void Update();
 };

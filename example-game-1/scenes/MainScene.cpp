@@ -201,38 +201,41 @@ auto MainScene::Tick(float deltaTime) -> void {
     }
     if (GameIns->Input->GetKey(GLFW_KEY_W)) { _camera->Position += _camera->GetFront() * speed; }
     if (GameIns->Input->GetKey(GLFW_KEY_S)) { _camera->Position -= _camera->GetFront() * speed; }
-    if (GameIns->Input->GetKey(GLFW_KEY_D)) { _camera->Position -= _camera->GetRight() * speed; }
-    if (GameIns->Input->GetKey(GLFW_KEY_A)) { _camera->Position += _camera->GetRight() * speed; }
+    if (GameIns->Input->GetKey(GLFW_KEY_D)) { _camera->Position += _camera->GetRight() * speed; }
+    if (GameIns->Input->GetKey(GLFW_KEY_A)) { _camera->Position -= _camera->GetRight() * speed; }
     if (GameIns->Input->GetKey(GLFW_KEY_E)) { _camera->Position += glm::vec3(0, 1, 0) * speed; }
     if (GameIns->Input->GetKey(GLFW_KEY_Q)) { _camera->Position -= glm::vec3(0, 1, 0) * speed; }
 
     if (GameIns->Input->IsGamepadConnected()) {
         const glm::vec2 leftStick = GameIns->Input->GetGamepadLeftStick();
         _camera->Position += _camera->GetFront() * (leftStick.y * speed);
-        _camera->Position -= _camera->GetRight() * (leftStick.x * speed);
+        _camera->Position += _camera->GetRight() * (leftStick.x * speed);
 
         const float verticalInput = GameIns->Input->GetGamepadRightTrigger() - GameIns->Input->GetGamepadLeftTrigger();
         _camera->Position += glm::vec3(0, 1, 0) * (verticalInput * speed);
     }
+
+    glm::vec3 euler = _camera->GetEuler();
 
     bool captureMouse = false;
     if (GameIns->Input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
         constexpr float mouseSens = 0.1f;
         captureMouse = true;
         const glm::vec2 mouseDelta = GameIns->Input->GetMouseDelta();
-        _camera->Yaw   -= mouseDelta.x * mouseSens;
-        _camera->Pitch -= mouseDelta.y * mouseSens;
-        _camera->Pitch = glm::clamp(_camera->Pitch, -89.0f, 89.0f);
+        euler.x += mouseDelta.x * mouseSens;
+        euler.y -= mouseDelta.y * mouseSens;
     }
     GameIns->Input->SetMouseCapture(captureMouse);
 
     if (GameIns->Input->IsGamepadConnected()) {
         const glm::vec2 rightStick = GameIns->Input->GetGamepadRightStick();
         constexpr float gamepadCameraSens = 100.0f;
-        _camera->Yaw   -= rightStick.x * gamepadCameraSens * deltaTime;
-        _camera->Pitch += rightStick.y * gamepadCameraSens * deltaTime;
-        _camera->Pitch = glm::clamp(_camera->Pitch, -89.0f, 89.0f);
+        euler.x += rightStick.x * gamepadCameraSens * deltaTime;
+        euler.y += rightStick.y * gamepadCameraSens * deltaTime;
     }
+
+    euler.y = glm::clamp(euler.y, -89.0f, 89.0f);
+    _camera->SetEuler(euler.x, euler.y);
 
     const glm::vec2 scrollDelta = GameIns->Input->GetScrollDelta();
     if (scrollDelta.y != 0.0f) {

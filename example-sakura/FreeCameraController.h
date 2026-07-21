@@ -33,5 +33,7 @@ class FreeCameraController {
     glm::vec3 _targetPosition{0.0f};
     float _targetYaw = 0.0f;
     float _targetPitch = 0.0f;
+    float _yaw = 0.0f;
+    float _pitch = 0.0f;
     bool _initialised = false;
 };

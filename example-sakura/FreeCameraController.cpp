@@ -15,9 +15,12 @@ auto FreeCameraController::Update(float deltaTime, BeInput* input) -> void {
     // Seed the smoothing targets from the camera's current state on first use,
     // so we don't lerp from an uninitialised origin.
     if (!_initialised) {
+        const glm::vec3 euler = _camera->GetEuler();
         _targetPosition = _camera->Position;
-        _targetYaw      = _camera->Yaw;
-        _targetPitch    = _camera->Pitch;
+        _targetYaw      = euler.x;
+        _targetPitch    = euler.y;
+        _yaw            = euler.x;
+        _pitch          = euler.y;
         _initialised    = true;
     }
 
@@ -25,8 +28,8 @@ auto FreeCameraController::Update(float deltaTime, BeInput* input) -> void {
     if (input->GetKey(GLFW_KEY_LEFT_SHIFT) || (input->IsGamepadConnected() && input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) speed *= 2.0f;
     if (input->GetKey(GLFW_KEY_W)) _targetPosition += _camera->GetFront() * speed;
     if (input->GetKey(GLFW_KEY_S)) _targetPosition -= _camera->GetFront() * speed;
-    if (input->GetKey(GLFW_KEY_D)) _targetPosition -= _camera->GetRight() * speed;
-    if (input->GetKey(GLFW_KEY_A)) _targetPosition += _camera->GetRight() * speed;
+    if (input->GetKey(GLFW_KEY_D)) _targetPosition += _camera->GetRight() * speed;
+    if (input->GetKey(GLFW_KEY_A)) _targetPosition -= _camera->GetRight() * speed;
     if (input->GetKey(GLFW_KEY_E)) _targetPosition += glm::vec3(0, 1, 0) * speed;
     if (input->GetKey(GLFW_KEY_Q)) _targetPosition -= glm::vec3(0, 1, 0) * speed;
 
@@ -34,7 +37,7 @@ auto FreeCameraController::Update(float deltaTime, BeInput* input) -> void {
     if (input->IsGamepadConnected()) {
         const glm::vec2 leftStick = input->GetGamepadLeftStick();
         _targetPosition += _camera->GetFront() * (leftStick.y * speed);
-        _targetPosition -= _camera->GetRight() * (leftStick.x * speed);
+        _targetPosition += _camera->GetRight() * (leftStick.x * speed);
 
         const float verticalInput = input->GetGamepadRightTrigger() - input->GetGamepadLeftTrigger();
         _targetPosition += glm::vec3(0, 1, 0) * (verticalInput * speed);
@@ -44,7 +47,7 @@ auto FreeCameraController::Update(float deltaTime, BeInput* input) -> void {
     if (input->GetMouseButton(GLFW_MOUSE_BUTTON_LEFT)) {
         captureMouse = true;
         const glm::vec2 mouseDelta = input->GetMouseDelta();
-        _targetYaw   -= mouseDelta.x * MouseSensitivity;
+        _targetYaw   += mouseDelta.x * MouseSensitivity;
         _targetPitch -= mouseDelta.y * MouseSensitivity;
         _targetPitch = glm::clamp(_targetPitch, -89.0f, 89.0f);
     }
@@ -53,7 +56,7 @@ auto FreeCameraController::Update(float deltaTime, BeInput* input) -> void {
     // Gamepad camera look
     if (input->IsGamepadConnected()) {
         const glm::vec2 rightStick = input->GetGamepadRightStick();
-        _targetYaw   -= rightStick.x * GamepadCameraSensitivity * deltaTime;
+        _targetYaw   += rightStick.x * GamepadCameraSensitivity * deltaTime;
         _targetPitch += rightStick.y * GamepadCameraSensitivity * deltaTime;
         _targetPitch = glm::clamp(_targetPitch, -89.0f, 89.0f);
     }
@@ -71,8 +74,9 @@ auto FreeCameraController::Update(float deltaTime, BeInput* input) -> void {
     const float posAlpha = 1.0f - std::exp(-PositionSmoothing * deltaTime);
     const float rotAlpha = 1.0f - std::exp(-RotationSmoothing * deltaTime);
     _camera->Position += (_targetPosition - _camera->Position) * posAlpha;
-    _camera->Yaw      += (_targetYaw - _camera->Yaw) * rotAlpha;
-    _camera->Pitch    += (_targetPitch - _camera->Pitch) * rotAlpha;
+    _yaw   += (_targetYaw - _yaw) * rotAlpha;
+    _pitch += (_targetPitch - _pitch) * rotAlpha;
+    _camera->SetEuler(_yaw, _pitch);
 
     _camera->Update();
 }

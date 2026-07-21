@@ -49,8 +49,7 @@ auto OrbitCameraController::Update(float deltaTime, BeInput* input) -> void {
     );
 
     const glm::vec3 lookDir = glm::normalize(_lookTarget - _camera->Position);
-    _camera->Yaw   = glm::degrees(glm::atan(lookDir.z, lookDir.x));
-    _camera->Pitch = glm::degrees(glm::asin(lookDir.y));
+    _camera->LookIn(lookDir);
 
     _camera->Update();
 }
