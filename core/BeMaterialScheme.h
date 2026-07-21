@@ -17,6 +17,7 @@ struct BeMaterialPropertyDescriptor {
 
     std::string Name;
     Type PropertyType;
+    uint32_t ArrayLength = 1;
     std::vector<float> DefaultValue;
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <ranges>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <umbrellas/common.hpp>
@@ -33,6 +34,7 @@ class BeMaterial {
     std::unordered_map<std::string, TextureBinding> _textures;
     std::unordered_map<std::string, std::pair<SenSampler, uint8_t>> _samplers;
     std::unordered_map<std::string, uint32_t> _propertyOffsets;
+    std::unordered_map<std::string, uint32_t> _propertyArrayLengths;
     std::vector<float> _bufferData;
     SenBuffer _cbuffer;
     bool _cbufferDirty = false;
@@ -73,6 +75,26 @@ class BeMaterial {
     auto GetFloat3 (const std::string& propertyName) const -> glm::vec3;
     auto GetFloat4 (const std::string& propertyName) const -> glm::vec4;
     auto GetMatrix (const std::string& propertyName) const -> glm::mat4x4;
+
+    auto SetFloat1At (const std::string& propertyName, uint32_t index, float value) -> void;
+    auto SetFloat2At (const std::string& propertyName, uint32_t index, glm::vec2 value) -> void;
+    auto SetFloat3At (const std::string& propertyName, uint32_t index, glm::vec3 value) -> void;
+    auto SetFloat4At (const std::string& propertyName, uint32_t index, glm::vec4 value) -> void;
+
+    auto SetFloat1Array (const std::string& propertyName, std::span<const float> values) -> void;
+    auto SetFloat2Array (const std::string& propertyName, std::span<const glm::vec2> values) -> void;
+    auto SetFloat3Array (const std::string& propertyName, std::span<const glm::vec3> values) -> void;
+    auto SetFloat4Array (const std::string& propertyName, std::span<const glm::vec4> values) -> void;
+
+    auto GetFloat1At (const std::string& propertyName, uint32_t index) const -> float;
+    auto GetFloat2At (const std::string& propertyName, uint32_t index) const -> glm::vec2;
+    auto GetFloat3At (const std::string& propertyName, uint32_t index) const -> glm::vec3;
+    auto GetFloat4At (const std::string& propertyName, uint32_t index) const -> glm::vec4;
+
+    auto GetFloat1Array (const std::string& propertyName) const -> std::vector<float>;
+    auto GetFloat2Array (const std::string& propertyName) const -> std::vector<glm::vec2>;
+    auto GetFloat3Array (const std::string& propertyName) const -> std::vector<glm::vec3>;
+    auto GetFloat4Array (const std::string& propertyName) const -> std::vector<glm::vec4>;
     
     auto SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture, uint32_t mip = SEN_FULL_MIPS) -> void;
     auto GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture>;

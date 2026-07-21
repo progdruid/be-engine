@@ -43,6 +43,22 @@ auto BeShaderTools::ParseMaterialProperty(const std::string& text) -> std::expec
         result.Type = std::string(Trim(rest, " \t\r\n"));
     }
 
+    if (const auto lb = result.Type.find('['); lb != std::string::npos) {
+        const auto rb = result.Type.find(']', lb);
+        if (rb == std::string::npos) {
+            return std::unexpected("unclosed '[' in type -> " + text);
+        }
+        try {
+            result.ArrayLength = std::stoul(std::string(Trim(Take(result.Type, lb + 1, rb), " \t")));
+        } catch (const std::exception&) {
+            return std::unexpected("invalid array length -> " + text);
+        }
+        if (result.ArrayLength == 0) {
+            return std::unexpected("array length must be > 0 -> " + text);
+        }
+        result.Type = std::string(Trim(std::string_view(result.Type).substr(0, lb), " \t"));
+    }
+
     return result;
 }
 
@@ -189,6 +205,54 @@ auto BeShaderTools::ParseFloatList(const std::string& text) -> std::expected<std
         } catch (const std::exception&) {
             return std::unexpected("invalid float '" + std::string(tok) + "' -> " + text);
         }
+    }
+    return result;
+}
+
+auto BeShaderTools::ParseFloatArray(const std::string& text, const uint32_t componentCount) -> std::expected<std::vector<float>, std::string> {
+    const auto open  = text.find('[');
+    const auto close = text.rfind(']');
+    if (open == std::string::npos || close == std::string::npos || close < open) {
+        return std::unexpected("expected a '[...]' array -> " + text);
+    }
+    const auto inner = Take(text, open + 1, close);
+
+    auto result = std::vector<float>();
+
+    if (componentCount <= 1) {
+        for (const auto tokView : Split(inner, ",")) {
+            const auto tok = Trim(tokView, " \t\r\n");
+            if (tok.empty()) {
+                continue;
+            }
+            try {
+                result.push_back(std::stof(std::string(tok)));
+            } catch (const std::exception&) {
+                return std::unexpected("invalid float '" + std::string(tok) + "' -> " + text);
+            }
+        }
+        return result;
+    }
+
+    auto pos = size_t(0);
+    while (true) {
+        const auto groupStart = inner.find('(', pos);
+        if (groupStart == std::string_view::npos) {
+            break;
+        }
+        const auto groupEnd = inner.find(')', groupStart);
+        if (groupEnd == std::string_view::npos) {
+            return std::unexpected("unclosed '(' in array -> " + text);
+        }
+        auto group = ParseFloatList(std::string(inner.substr(groupStart, groupEnd - groupStart + 1)));
+        if (!group) {
+            return std::unexpected(group.error());
+        }
+        if (group->size() != componentCount) {
+            return std::unexpected("array element has wrong component count -> " + text);
+        }
+        result.insert(result.end(), group->begin(), group->end());
+        pos = groupEnd + 1;
     }
     return result;
 }

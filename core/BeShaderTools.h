@@ -14,11 +14,12 @@ class BeShaderTools {
 
     struct ParsedMaterialProperty {
         std::string Name;
-        std::string Type;     // "float".."float4", "matrix", "texture2d", "textureCube", "storage texture2d", "sampler"
-        std::string Default;  // raw default token(s); empty when omitted
+        std::string Type;         // "float".."float4", "matrix", "texture2d", "textureCube", "storage texture2d", "sampler"
+        uint32_t    ArrayLength = 1; // element count; a trailing "[N]" on the type is stripped into this
+        std::string Default;      // raw default token(s); empty when omitted
     };
     static auto ParseMaterialProperty (const std::string& text) -> std::expected<ParsedMaterialProperty, std::string>;
-    // Parses a single "Name: type = default" property line.
+    // Parses a single "Name: type[ [N] ] = default" property line.
 
     struct ParsedMaterial {
         std::string Name;
@@ -67,6 +68,10 @@ class BeShaderTools {
     static auto FindBlock (const std::string& src, const std::string& tag, size_t from = 0) -> std::optional<Block>;
 
     static auto ParseFloatList (const std::string& text) -> std::expected<std::vector<float>, std::string>;
+    // Parses a single "(a, b, c)" tuple into a flat list.
+
+    static auto ParseFloatArray (const std::string& text, uint32_t componentCount) -> std::expected<std::vector<float>, std::string>;
+    // Parses "[a, b, ...]" (componentCount == 1) or "[(a,b,c), (a,b,c), ...]" (componentCount > 1) into a flat list.
 
     static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
     static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;

@@ -102,7 +102,8 @@ static auto GenerateMaterialStruct(const BeShaderTools::ParsedMaterial& material
     for (const auto& property : material.Properties) {
         if (IsSampler(property.Type) || IsTexture(property.Type)) continue;
         const auto type = property.Type == "matrix" ? std::string("float4x4") : property.Type;
-        fields += "    " + type + " " + property.Name + ";\n";
+        const auto suffix = property.ArrayLength > 1 ? "[" + std::to_string(property.ArrayLength) + "]" : std::string();
+        fields += "    " + type + " " + property.Name + suffix + ";\n";
     }
 
     if (fields.empty()) {

@@ -11,6 +11,8 @@
     FogEnd: float = 45.0
     FogColor: float3 = (0.2, 0.3, 0.5)
     Enabled: float = 1.0
+    PaletteCount: float = 6.0
+    Palette: float3[8] = [(0.180, 0.263, 0.447), (0.910, 0.569, 0.157), (0.969, 0.941, 0.322), (0.827, 0.306, 0.141), (0.549, 0.200, 0.094), (0.122, 0.173, 0.278)]
 }
 
 @be-shader posterize {
@@ -41,6 +43,8 @@ struct posterize_material {
     float FogEnd;
     float3 FogColor;
     float Enabled;
+    float PaletteCount;
+    float3 Palette[8];
 };
 
 cbuffer CBuffer_0 : register(b0, space0) {
@@ -76,35 +80,6 @@ static const float BAYER8[64] = {
     63, 31, 55, 23, 61, 29, 53, 21
 };
 
-//static const int PALETTE_COUNT = 4;
-//static const float3 PALETTE[PALETTE_COUNT] = {
-//    float3(0.05, 0.06, 0.20),
-//    float3(0.35, 0.15, 0.55),
-//    float3(0.90, 0.35, 0.60),
-//    float3(1.00, 0.92, 0.80)
-//};
-
-//static const int PALETTE_COUNT = 5;
-//static const float3 PALETTE[PALETTE_COUNT] = {
-//    float3(34./255., 34./255., 34./255.),
-//    float3(1., 1., 1.),
-//    float3(28./255., 93./255., 153./255.),
-//    float3(99./255., 159./255., 171./255.),
-//    float3(187./255., 205./255., 229./255.)
-//};
-
-static const int PALETTE_COUNT = 6;
-static const float3 PALETTE[PALETTE_COUNT] = {
-    float3(46., 67., 114.) / 255.,
-    float3(232., 145., 40.) / 255.,
-    float3(247., 240., 82.) / 255.,
-    float3(211., 78., 36.) / 255.,
-    float3(140, 51, 24) / 255.,
-    float3(31., 44., 71.) / 255.
-};
-
-
-
 PixelOutput PS(FullscreenVSOutput input) {
     if (_Main.Enabled < 0.5) {
         float3 scene = ColorTexture.SampleLevel(PointSampler, input.UV, 0).rgb;
@@ -133,22 +108,24 @@ PixelOutput PS(FullscreenVSOutput input) {
     int2 blockIndex = int2(floor(input.UV / blockUV));
     float threshold = (BAYER8[(blockIndex.y & 7) * 8 + (blockIndex.x & 7)] + 0.5) / 64.0;
 
-    float3 best = PALETTE[0];
-    float3 second = PALETTE[0];
+    int paletteCount = int(_Main.PaletteCount);
+    float3 best = _Main.Palette[0];
+    float3 second = _Main.Palette[0];
     float bestDist = 1e9;
     float secondDist = 1e9;
     [unroll]
-    for (int i = 0; i < PALETTE_COUNT; i++) {
-        float3 delta = color - PALETTE[i];
+    for (int i = 0; i < 8; i++) {
+        if (i >= paletteCount) break;
+        float3 delta = color - _Main.Palette[i];
         float dist = dot(delta, delta);
         if (dist < bestDist) {
             secondDist = bestDist;
             second = best;
             bestDist = dist;
-            best = PALETTE[i];
+            best = _Main.Palette[i];
         } else if (dist < secondDist) {
             secondDist = dist;
-            second = PALETTE[i];
+            second = _Main.Palette[i];
         }
     }
 
