@@ -17,7 +17,13 @@ BeImGuiPass::BeImGuiPass(const std::shared_ptr<BeWindow>& window)
     : _window(window) {
 }
 
+static int s_backendRefCount = 0;
+
 BeImGuiPass::~BeImGuiPass() {
+    if (!_holdsBackendRef) return;
+    _holdsBackendRef = false;
+    if (--s_backendRefCount > 0) return;
+
     SenBackend::WaitIdle();
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -25,6 +31,9 @@ BeImGuiPass::~BeImGuiPass() {
 }
 
 auto BeImGuiPass::Initialise() -> void {
+    _holdsBackendRef = true;
+    if (s_backendRefCount++ > 0) return;
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();

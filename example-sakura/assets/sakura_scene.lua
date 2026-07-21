@@ -76,7 +76,7 @@ function makeScene()
             castsShadows = true,
             shadowMapResolution = 4096,
             shadowCameraDistance = 100.0,
-            shadowMapWorldSize = 60.0,
+            shadowMapWorldSize = 100.0,
             shadowNearPlane = 0.1,
             shadowFarPlane = 400.0
         }

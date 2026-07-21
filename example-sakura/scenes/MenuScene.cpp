@@ -78,6 +78,13 @@ auto MenuScene::RunUI() -> void {
         GameIns->SceneManager->RequestSceneChange("showcase");
     }
 
+    ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
+    ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.7f);
+
+    if (ImGui::Button("Rift", ImVec2(buttonWidth, buttonHeight))) {
+        GameIns->SceneManager->RequestSceneChange("rift");
+    }
+
     ImGui::PopStyleVar();
     ImGui::PopStyleColor(4);
 

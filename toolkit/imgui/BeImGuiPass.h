@@ -11,6 +11,7 @@ class BeImGuiPass final : public BeRenderPass {
     hide
     std::shared_ptr<BeWindow> _window = nullptr;
     std::function<void()> _uiCallback = nullptr;
+    bool _holdsBackendRef = false;
     
     expose
     explicit BeImGuiPass(const std::shared_ptr<BeWindow>& window);
