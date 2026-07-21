@@ -231,6 +231,8 @@ void RiftScene::LoadPasses() {
     _posterizeMaterial->SetFloat1("FogStart", Settings.Posterize.FogStart);
     _posterizeMaterial->SetFloat1("FogEnd", Settings.Posterize.FogEnd);
     _posterizeMaterial->SetFloat3("FogColor", Settings.Posterize.FogColor);
+    _posterizeMaterial->SetFloat3Array("Palette", Settings.Posterize.Palette);
+    _posterizeMaterial->SetFloat1("PaletteCount", static_cast<float>(Settings.Posterize.Palette.size()));
     _posterizeMaterial->SetFloat1("Enabled", Settings.Posterize.Enabled ? 1.0f : 0.0f);
     _posterizeMaterial->SetTexture("UITexture", _machine->GetRenderTexture("Rift_UI"));
 

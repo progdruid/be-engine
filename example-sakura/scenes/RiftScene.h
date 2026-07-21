@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <vector>
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 
@@ -18,7 +19,7 @@ class BeImGuiPass;
 
 struct RiftSceneSettings {
     struct {
-        float NearPlane = 0.1f;
+        float NearPlane = 0.01f;
         float FarPlane = 300.0f;
     } Camera;
 
@@ -44,6 +45,14 @@ struct RiftSceneSettings {
         float FogEnd = 200.0f;
         glm::vec3 FogColor = HexColor("#2E4372");
         bool Enabled = true;
+        std::vector<glm::vec3> Palette = {
+            HexColor("#2E4372"),
+            HexColor("#E89128"),
+            HexColor("#F7F052"),
+            HexColor("#D34E24"),
+            HexColor("#8C3318"),
+            HexColor("#1F2C47"),
+        };
     } Posterize;
 
     struct {
