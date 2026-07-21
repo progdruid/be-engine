@@ -37,43 +37,46 @@ auto BeMaterialScheme::Create(
             materialScheme.Samplers.push_back(descriptor);
         }
         else if (parsedProperty.Type == "float" && parsedProperty.ArrayLength == 1) {
+            auto value = BeShaderTools::ParseFloat(parsedProperty.Default);
+            be_assert(value.has_value(), parsedProperty.Name + " -> " + (value ? std::string() : value.error()));
+
             auto descriptor = BeMaterialPropertyDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float;
-            descriptor.DefaultValue.push_back(std::stof(parsedProperty.Default));
+            descriptor.DefaultValue = { *value };
             materialScheme.Properties.push_back(descriptor);
         }
         else if (parsedProperty.Type == "float2" && parsedProperty.ArrayLength == 1) {
-            auto vec = BeShaderTools::ParseFloatList(parsedProperty.Default);
-            be_assert(vec.has_value(), parsedProperty.Name + " -> " + vec.error());
+            auto vec = BeShaderTools::ParseTuple(parsedProperty.Default);
+            be_assert(vec.has_value(), parsedProperty.Name + " -> " + (vec ? std::string() : vec.error()));
             be_assert(vec->size() == 2, parsedProperty.Name);
 
             auto descriptor = BeMaterialPropertyDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float2;
-            descriptor.DefaultValue = *vec;
+            descriptor.DefaultValue = std::move(*vec);
             materialScheme.Properties.push_back(descriptor);
         }
         else if (parsedProperty.Type == "float3" && parsedProperty.ArrayLength == 1) {
-            auto vec = BeShaderTools::ParseFloatList(parsedProperty.Default);
-            be_assert(vec.has_value(), parsedProperty.Name + " -> " + vec.error());
+            auto vec = BeShaderTools::ParseTuple(parsedProperty.Default);
+            be_assert(vec.has_value(), parsedProperty.Name + " -> " + (vec ? std::string() : vec.error()));
             be_assert(vec->size() == 3, parsedProperty.Name);
 
             auto descriptor = BeMaterialPropertyDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float3;
-            descriptor.DefaultValue = *vec;
+            descriptor.DefaultValue = std::move(*vec);
             materialScheme.Properties.push_back(descriptor);
         }
         else if (parsedProperty.Type == "float4" && parsedProperty.ArrayLength == 1) {
-            auto vec = BeShaderTools::ParseFloatList(parsedProperty.Default);
-            be_assert(vec.has_value(), parsedProperty.Name + " -> " + vec.error());
+            auto vec = BeShaderTools::ParseTuple(parsedProperty.Default);
+            be_assert(vec.has_value(), parsedProperty.Name + " -> " + (vec ? std::string() : vec.error()));
             be_assert(vec->size() == 4, parsedProperty.Name);
 
             auto descriptor = BeMaterialPropertyDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Float4;
-            descriptor.DefaultValue = *vec;
+            descriptor.DefaultValue = std::move(*vec);
             materialScheme.Properties.push_back(descriptor);
         }
         else if (parsedProperty.Type == "float" && parsedProperty.ArrayLength > 1) {

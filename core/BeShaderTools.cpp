@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 
+#include "umbrellas/include-glm.h"
 #include "umbrellas/include-libassert.h"
 
 namespace {
@@ -187,11 +188,39 @@ auto BeShaderTools::FindBlock(const std::string& src, const std::string& tag, si
     return block;
 }
 
-auto BeShaderTools::ParseFloatList(const std::string& text) -> std::expected<std::vector<float>, std::string> {
+auto BeShaderTools::ParseFloat(const std::string& text) -> std::expected<float, std::string> {
+    const auto tok = Trim(text, " \t\r\n");
+    try {
+        return std::stof(std::string(tok));
+    } catch (const std::exception&) {
+        return std::unexpected("invalid float -> " + text);
+    }
+}
+
+auto BeShaderTools::ParseTuple(const std::string& text) -> std::expected<std::vector<float>, std::string> {
+    const auto trimmed = Trim(text, " \t\r\n");
+
+    if (!trimmed.empty() && trimmed.front() == '#') {
+        const auto digits = trimmed.size() - 1;
+        if (digits != 6 && digits != 8) {
+            return std::unexpected("hex colour must have 6 or 8 digits -> " + text);
+        }
+        if (trimmed.find_first_not_of("0123456789abcdefABCDEF", 1) != std::string_view::npos) {
+            return std::unexpected("invalid hex digit -> " + text);
+        }
+        const auto hex = std::string(trimmed);
+        if (digits == 6) {
+            const glm::vec3 color = HexColor(hex.c_str());
+            return std::vector<float>{ color.x, color.y, color.z };
+        }
+        const glm::vec4 color = HexColorRGBA(hex.c_str());
+        return std::vector<float>{ color.x, color.y, color.z, color.w };
+    }
+
     const auto open  = text.find('(');
     const auto close = text.rfind(')');
     if (open == std::string::npos || close == std::string::npos || close < open) {
-        return std::unexpected("expected a '(...)' float list -> " + text);
+        return std::unexpected("expected a '(...)' tuple or '#RRGGBB' -> " + text);
     }
 
     auto result = std::vector<float>();
@@ -200,11 +229,11 @@ auto BeShaderTools::ParseFloatList(const std::string& text) -> std::expected<std
         if (tok.empty()) {
             continue;
         }
-        try {
-            result.push_back(std::stof(std::string(tok)));
-        } catch (const std::exception&) {
-            return std::unexpected("invalid float '" + std::string(tok) + "' -> " + text);
+        auto value = ParseFloat(std::string(tok));
+        if (!value) {
+            return std::unexpected(value.error());
         }
+        result.push_back(*value);
     }
     return result;
 }
@@ -217,42 +246,45 @@ auto BeShaderTools::ParseFloatArray(const std::string& text, const uint32_t comp
     }
     const auto inner = Take(text, open + 1, close);
 
-    auto result = std::vector<float>();
-
-    if (componentCount <= 1) {
-        for (const auto tokView : Split(inner, ",")) {
-            const auto tok = Trim(tokView, " \t\r\n");
-            if (tok.empty()) {
-                continue;
+    auto elements = std::vector<std::string>();
+    auto pos = size_t(0);
+    while (pos < inner.size()) {
+        const auto c = inner[pos];
+        if (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == ',') {
+            pos++;
+            continue;
+        }
+        const auto start = pos;
+        if (c == '(') {
+            const auto groupEnd = inner.find(')', pos);
+            if (groupEnd == std::string_view::npos) {
+                return std::unexpected("unclosed '(' in array -> " + text);
             }
-            try {
-                result.push_back(std::stof(std::string(tok)));
-            } catch (const std::exception&) {
-                return std::unexpected("invalid float '" + std::string(tok) + "' -> " + text);
+            pos = groupEnd + 1;
+        }
+        else {
+            while (pos < inner.size() && inner[pos] != ',') {
+                pos++;
             }
         }
-        return result;
+        elements.push_back(std::string(Trim(inner.substr(start, pos - start), " \t\r\n")));
     }
 
-    auto pos = size_t(0);
-    while (true) {
-        const auto groupStart = inner.find('(', pos);
-        if (groupStart == std::string_view::npos) {
-            break;
+    auto result = std::vector<float>();
+    for (const auto& element : elements) {
+        if (componentCount <= 1) {
+            auto value = ParseFloat(element);
+            if (!value) return std::unexpected(value.error());
+            result.push_back(*value);
+            continue;
         }
-        const auto groupEnd = inner.find(')', groupStart);
-        if (groupEnd == std::string_view::npos) {
-            return std::unexpected("unclosed '(' in array -> " + text);
-        }
-        auto group = ParseFloatList(std::string(inner.substr(groupStart, groupEnd - groupStart + 1)));
-        if (!group) {
-            return std::unexpected(group.error());
-        }
-        if (group->size() != componentCount) {
+
+        auto tuple = ParseTuple(element);
+        if (!tuple) return std::unexpected(tuple.error());
+        if (tuple->size() != componentCount) {
             return std::unexpected("array element has wrong component count -> " + text);
         }
-        result.insert(result.end(), group->begin(), group->end());
-        pos = groupEnd + 1;
+        result.insert(result.end(), tuple->begin(), tuple->end());
     }
     return result;
 }

@@ -9,10 +9,10 @@
     DitherSpread: float = 0.5
     FogStart: float = 6.0
     FogEnd: float = 45.0
-    FogColor: float3 = (0.2, 0.3, 0.5)
+    FogColor: float3 = #334D80
     Enabled: float = 1.0
     PaletteCount: float = 6.0
-    Palette: float3[8] = [(0.180, 0.263, 0.447), (0.910, 0.569, 0.157), (0.969, 0.941, 0.322), (0.827, 0.306, 0.141), (0.549, 0.200, 0.094), (0.122, 0.173, 0.278)]
+    Palette: float3[8] = [#2E4372, #E89128, #F7F052, #D34E24, #8C3318, #1F2C47]
 }
 
 @be-shader posterize {

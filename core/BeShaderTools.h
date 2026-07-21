@@ -67,11 +67,14 @@ class BeShaderTools {
     };
     static auto FindBlock (const std::string& src, const std::string& tag, size_t from = 0) -> std::optional<Block>;
 
-    static auto ParseFloatList (const std::string& text) -> std::expected<std::vector<float>, std::string>;
-    // Parses a single "(a, b, c)" tuple into a flat list.
+    static auto ParseFloat (const std::string& text) -> std::expected<float, std::string>;
+    // Parses a single scalar "0.5".
+
+    static auto ParseTuple (const std::string& text) -> std::expected<std::vector<float>, std::string>;
+    // Parses "(a, b, c)", "#RRGGBB", or "#RRGGBBAA" into a flat list of components.
 
     static auto ParseFloatArray (const std::string& text, uint32_t componentCount) -> std::expected<std::vector<float>, std::string>;
-    // Parses "[a, b, ...]" (componentCount == 1) or "[(a,b,c), (a,b,c), ...]" (componentCount > 1) into a flat list.
+    // Parses "[e, e, ...]"; each element is a scalar (componentCount == 1) or a ParseTuple element.
 
     static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
     static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;

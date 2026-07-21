@@ -27,7 +27,7 @@ struct RiftSceneSettings {
         //glm::vec3 Color = HexColor("#222222");
         //glm::vec3 Color = HexColor("#FF7F11");
         glm::vec3 Color = HexColor("#000000");
-        //glm::vec3 Color = HexColor("#2E4372");a
+        //glm::vec3 Color = HexColor("#2E4372");
     } Ambient;
 
     struct { 
