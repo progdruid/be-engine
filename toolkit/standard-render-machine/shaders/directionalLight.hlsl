@@ -95,12 +95,20 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
 
     float3 worldPos = ReconstructWorldPosition(input.UV, depth, _Frame.CameraInverseProjectionView);
 
-    float4 lightSpacePos = mul(float4(worldPos, 1.0), _DirectionalLight.ProjectionView);
-    lightSpacePos /= lightSpacePos.w;
-    float2 shadowUV = lightSpacePos.xy * 0.5 + 0.5;
-    shadowUV.y = 1.0 - shadowUV.y;
-    float currentShadowDepth = lightSpacePos.z;
-    float shadowAbsenceFactor = PCFShadow(ShadowMap, InputSampler, shadowUV, _DirectionalLight.TexelSize, currentShadowDepth, _DirectionalLight.ShadowBias);
+    float shadowAbsenceFactor = 1.0;
+    if (_DirectionalLight.HasShadowMap > 0.5) {
+        float4 lightSpacePos = mul(float4(worldPos, 1.0), _DirectionalLight.ProjectionView);
+        lightSpacePos /= lightSpacePos.w;
+        float2 shadowUV = lightSpacePos.xy * 0.5 + 0.5;
+        shadowUV.y = 1.0 - shadowUV.y;
+        float currentShadowDepth = lightSpacePos.z;
+        bool insideShadowMap =
+            all(shadowUV >= 0.0) && all(shadowUV <= 1.0) &&
+            currentShadowDepth >= 0.0 && currentShadowDepth <= 1.0;
+        if (insideShadowMap) {
+            shadowAbsenceFactor = PCFShadow(ShadowMap, InputSampler, shadowUV, _DirectionalLight.TexelSize, currentShadowDepth, _DirectionalLight.ShadowBias);
+        }
+    }
 
     float3 viewVec = _Frame.CameraPosition - worldPos;
     float3 lit;
