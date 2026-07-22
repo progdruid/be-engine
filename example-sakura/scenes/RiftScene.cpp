@@ -195,18 +195,18 @@ auto RiftScene::CreateObjects() -> void {
             .Direction = Settings.Sun.Direction,
             .Color = Settings.Sun.Color,
             .Power = Settings.Sun.Power,
-            .CastsShadows = true,
+            .CastsShadows = false,
             .ShadowMapResolution = Settings.Sun.ShadowMapResolution,
             .ShadowCameraDistance = Settings.Sun.ShadowCameraDistance,
             .ShadowMapWorldSize = Settings.Sun.ShadowMapWorldSize,
             .ShadowNearPlane = Settings.Sun.ShadowNearPlane,
             .ShadowFarPlane = Settings.Sun.ShadowFarPlane,
-            .ShadowMap = BeTexture::Create("Rift_SunShadowMap")
-                .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
-                .SetFormat(SenFormat::Depth32)
-                .SetSize(Settings.Sun.ShadowMapResolution, Settings.Sun.ShadowMapResolution)
-                .Build()
-            ,
+            //.ShadowMap = BeTexture::Create("Rift_SunShadowMap")
+            //    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+            //    .SetFormat(SenFormat::Depth32)
+            //    .SetSize(Settings.Sun.ShadowMapResolution, Settings.Sun.ShadowMapResolution)
+            //    .Build()
+            //,
         }
     );
 }
@@ -258,8 +258,11 @@ void RiftScene::LoadPasses() {
 
 void RiftScene::Tick(float deltaTime) {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        GameIns->Input->SetMouseCapture(false);
         GameIns->SceneManager->RequestSceneChange("menu");
+        return;
     }
+    
 
     if (GameIns->Input->GetKeyDown(GLFW_KEY_ENTER)) {
         Settings.Posterize.Enabled = !Settings.Posterize.Enabled;

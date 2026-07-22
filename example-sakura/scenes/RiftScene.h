@@ -19,7 +19,7 @@ class BeImGuiPass;
 
 struct RiftSceneSettings {
     struct {
-        float NearPlane = 0.01f;
+        float NearPlane = 0.5f;
         float FarPlane = 300.0f;
     } Camera;
 
