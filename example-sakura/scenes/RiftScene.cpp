@@ -1,7 +1,6 @@
 #include "RiftScene.h"
 
 #include <cmath>
-#include <cstdint>
 #include <string>
 
 #include <umbrellas/include-glfw.h>
@@ -11,7 +10,6 @@
 
 #include "ShipCameraController.h"
 #include "BeCamera.h"
-#include "BeWindow.h"
 #include "imgui/BeImGuiPass.h"
 #include "BeInput.h"
 #include "BeMaterial.h"

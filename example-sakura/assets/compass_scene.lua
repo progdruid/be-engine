@@ -1,3 +1,15 @@
+function sakuraDefaults()
+	local defaults = {}
+
+	defaults.circlingLightsOrigin = {0.0, 6.0, 3.0}
+	defaults.circlingLightsAddY = 0
+	defaults.circlingLightsRadius = 1
+
+	defaults.orbitCameraOrigin = {0.0, 0.0, 3.0}
+
+	return defaults
+end
+
 function makeScene()
     math.randomseed(os.time())
 
@@ -42,7 +54,7 @@ function makeScene()
 
     for i = 0, 3 do
         scene["PointLight_" .. i] = {
-            transform = { scale = { 1.0, 1.0, 1.0 } },
+            transform = { scale = { 0.2, 0.2, 0.2 } },
             render = { prop = "emissiveCube", castShadows = false },
             pointLight = { 
                 radius = 15.0, 

@@ -168,7 +168,9 @@ void ShowcaseScene::LoadPasses() {
 
 void ShowcaseScene::Tick(float deltaTime) {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        GameIns->Input->SetMouseCapture(false);
         GameIns->SceneManager->RequestSceneChange("menu");
+        return;
     }
 
     auto startBrace = [&](int key, const char* model, const char* color, TransformComponent t) {
