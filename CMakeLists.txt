@@ -24,19 +24,14 @@ function(be_cook_app exe)
     else()
         set(mode copy)
     endif()
-    set(_stamp "${CMAKE_CURRENT_BINARY_DIR}/${exe}_cook.stamp")
-    add_custom_command(OUTPUT "${_stamp}"
+    add_custom_target(${exe}_cook ALL
         COMMAND $<TARGET_FILE:bechef> shadergen
             --root "${CMAKE_SOURCE_DIR}" --check
         COMMAND $<TARGET_FILE:bechef> cook
             --root "${CMAKE_SOURCE_DIR}" --app ${exe}
             --out "$<TARGET_FILE_DIR:${exe}>" --mode ${mode}
-            --depfile "${_stamp}.d"
-        COMMAND ${CMAKE_COMMAND} -E touch "${_stamp}"
-        DEPFILE "${_stamp}.d"
         DEPENDS bechef
         COMMENT "Cooking content for ${exe}")
-    add_custom_target(${exe}_cook ALL DEPENDS "${_stamp}")
     add_dependencies(${exe} ${exe}_cook)
 endfunction()
 

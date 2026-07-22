@@ -3,7 +3,7 @@
 Content pipeline CLI. Cooks assets and shaders, validates the workspace, generates shader boilerplate.
 
 ```bash
-bechef cook      --app <name> --out <dir> [--mode copy|symlink] [--root <dir>] [--depfile <path>]
+bechef cook      --app <name> --out <dir> [--mode copy|symlink] [--root <dir>]
 bechef check     [--root <dir>]
 bechef shadergen [--project <name>] [--file <path>] [--check] [--watch] [--root <dir>]
 ```
@@ -35,7 +35,7 @@ filename in one scope collide exactly like two shaders would.
 
 Something earns a place on the wall when it is derived purely from workspace contents *and* has a
 failure mode. The cook plan does not qualify: it is output layout parameterized by the
-invocation (`--out`, `--mode`, `--depfile`), so it stays in `Cook.cpp`. The flat shader
+invocation (`--out`, `--mode`), so it stays in `Cook.cpp`. The flat shader
 namespace does qualify, and its failure mode is the name collision.
 
 ## The invariant
@@ -58,7 +58,7 @@ errors. `GenerateShaderSource` reads a `ShaderFile` and cannot fail. `Cook` prop
 | `Verify` | walks the wall, collects errors |
 | `ShaderBoilerplate` | generates the `@be-auto-boilerplate` region text |
 | `ShaderGen` | writes regions, `--check` fails on stale, `--watch` regenerates on save |
-| `Cook` | flattens shaders, copies assets, writes the depfile |
+| `Cook` | flattens shaders, copies assets, prunes stale outputs |
 | `Try.h` | `bechef_try` |
 
 ## Error handling

@@ -14,7 +14,7 @@
 
 static auto ErrorPrintUsage() -> void {
     std::println(stderr, "Usage:");
-    std::println(stderr, "  bechef cook      --app <name> --out <dir> [--mode copy|symlink] [--root <dir>] [--depfile <path>]");
+    std::println(stderr, "  bechef cook      --app <name> --out <dir> [--mode copy|symlink] [--root <dir>]");
     std::println(stderr, "  bechef check     [--root <dir>]");
     std::println(stderr, "  bechef shadergen [--project <name>] [--file <path>] [--check] [--watch] [--root <dir>]");
 }
@@ -27,8 +27,7 @@ auto main(int argc, char* argv[]) -> int {
                 FlagRule { .Flag = "out", .Required = true },
                 FlagRule { .Flag = "mode" },
                 FlagRule { .Flag = "root" },
-                FlagRule { .Flag = "depfile" },
-            } 
+            }
         },
         VerbRule {
             .Verb = "check", .Flags = { FlagRule{ .Flag = "root" }, }
@@ -80,12 +79,7 @@ auto main(int argc, char* argv[]) -> int {
 
     auto result = std::expected<void, std::string>();
     if (command.Verb == "cook") {
-        auto depfile = std::optional<std::filesystem::path>();
-        if (parsed->Has("depfile")) {
-            depfile = parsed->Get("depfile");
-        }
-
-        result = Cook(app, out, mode, depfile);
+        result = Cook(app, out, mode);
     }
     else if (command.Verb == "shadergen") {
         auto options = ShaderGenOptions();

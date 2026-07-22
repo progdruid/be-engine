@@ -2,7 +2,6 @@
 
 #include <print>
 #include <format>
-#include <fstream>
 #include <unordered_map>
 #include <unordered_set>
 #include <system_error>
@@ -19,7 +18,6 @@ struct CookEntry {
 
 struct CookFiles {
     std::vector<CookEntry> Entries;
-    std::vector<std::filesystem::path> Inputs;
     std::vector<std::filesystem::path> SourceDirs;
 };
 
@@ -34,7 +32,6 @@ static auto CollectAssets(const std::vector<const Project*>& projects) -> CookFi
         for (const auto& source : project->LocalAssetFiles) {
             const auto dstRel = std::filesystem::relative(source.Path, source.Dir);
             collected.Entries.push_back({ source.Path, dstRel });
-            collected.Inputs.push_back(source.Path);
         }
     }
 
@@ -46,7 +43,6 @@ static auto CollectShaders(const std::vector<const ShaderFile*>& flatShaders) ->
 
     for (const auto* shader : flatShaders) {
         collected.Entries.push_back({ shader->Path, shader->Path.filename() });
-        collected.Inputs.push_back(shader->Path);
     }
 
     return collected;
@@ -120,30 +116,10 @@ static auto SymlinkWholeDir(const std::filesystem::path& src, const std::filesys
     return {};
 }
 
-static auto EscapeMake(const std::string& path) -> std::string {
-    auto out = std::string();
-    for (const auto c : path) {
-        if (c == ' ' || c == ':') out.push_back('\\');
-        out.push_back(c);
-    }
-    return out;
-}
-
-static auto WriteDepfile(const std::filesystem::path& depfile, const std::vector<std::filesystem::path>& inputs) -> void {
-    auto target = depfile.string();
-    if (target.ends_with(".d")) target.resize(target.size() - 2);
-
-    auto os = std::ofstream(depfile);
-    os << EscapeMake(target) << ":";
-    for (const auto& input : inputs) os << " \\\n  " << EscapeMake(input.string());
-    os << "\n";
-}
-
 auto Cook(
     const std::string& app,
     const std::filesystem::path& out,
-    Mode mode,
-    const std::optional<std::filesystem::path>& depfile
+    Mode mode
 ) -> std::expected<void, std::string> {
 
     bechef_try(const auto* project, VerifyApp(app));
@@ -152,13 +128,6 @@ auto Cook(
     const auto& closure = *project->Scope;
     const auto assets = CollectAssets(closure);
     const auto shaders = CollectShaders(flatShaders);
-
-    auto inputs = std::vector<std::filesystem::path>{ Workspace::Get().Config.Root / "workspace.bechef" };
-    for (const auto* dependency : closure) {
-        inputs.push_back(dependency->Dir / "project.bechef");
-    }
-    inputs.insert(inputs.end(), assets.Inputs.begin(), assets.Inputs.end());
-    inputs.insert(inputs.end(), shaders.Inputs.begin(), shaders.Inputs.end());
 
     const auto assetsOut = out / "assets";
     if (mode == Mode::Symlink && assets.SourceDirs.size() == 1) {
@@ -184,8 +153,5 @@ auto Cook(
         }
     }
 
-    if (depfile) {
-        WriteDepfile(*depfile, inputs);
-    }
     return {};
 }
