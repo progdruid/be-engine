@@ -39,6 +39,7 @@ be-engine/
 │   ├── standard-render-machine/  # Deferred rendering pipeline (SRM)
 │   ├── assimp-import/  # BeAssimpImporter — Assimp-based model loading
 │   ├── scenes/         # BeScene base + BeSceneManager
+│   ├── lua/            # BeLuaState + BeLuaValue — Lua data reading
 │   ├── imgui/          # ImGui source + BeImGuiPass + backends
 │   └── entt/           # ECS header-only library
 ├── example-game-1/     # Simple game example
@@ -142,6 +143,22 @@ Passes (all in `toolkit/standard-render-machine/`):
 - **`BeSceneManager`** — named registry. `RequestSceneChange()` / `ApplyPendingSceneChange()` for deferred transitions. Typed accessors: `GetActiveScene<T>()`, `GetScene<T>()`.
 
 Project-level scenes typically subclass a local `BaseScene` that extends `BeScene` with `Prepare()` and `Tick(float deltaTime)` (see `example-sakura/scenes/BaseScene.h`).
+
+### Lua Data Reading (`toolkit/lua/`)
+
+`BeLuaState` owns a `lua_State`. `DoFile(path)` runs a chunk (call it repeatedly to layer a shared prelude under a data file), `Global(name)` and `Call(name, args...)` return a `BeLuaValue`.
+
+`BeLuaValue` is a nil-safe view. Indexing a missing or non-table value yields a nil value that keeps chaining. `Get<T>()` returns `std::optional<T>`, `GetOr(fallback)` deduces `T` from the fallback. A missing key is silent, a type mismatch logs the dotted path. `Pairs()` and `Array()` return eager vectors.
+
+```cpp
+BeLuaState lua;
+lua.DoFile(path);
+for (const auto& [name, entityTable] : lua.Call("makeScene").Pairs()) {
+    comp.Power = entityTable["sunLight"]["power"].GetOr(comp.Power);
+}
+```
+
+Conversions cover arithmetic types, `bool`, `std::string`, `glm::vec2/3/4` (Lua arrays) and `glm::quat` (euler degrees). `glm::vec3`/`vec4` also accept a hex string, `#` required: `color = "#FFAA33"`. Six digits or eight, where the extra pair is alpha for `vec4` and ignored for `vec3`; a six-digit `vec4` gets alpha 1. Add types by specialising `BeLuaConverter`. Values are views: never outlive the `BeLuaState`. See `SakuraScene::LoadSceneFile()` for scene loading built on it.
 
 ### Shader Format (.hlsl)
 
