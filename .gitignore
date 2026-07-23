@@ -21,6 +21,9 @@ out/
 # archives in asset folders
 **/assets/**/*.zip
 
+# packaged build archives
+/*.zip
+
 # solution files
 *.sln
 *.vcxproj
