@@ -18,6 +18,9 @@ out/
 *.lib
 *.pdb
 
+# archives in asset folders
+**/assets/**/*.zip
+
 # solution files
 *.sln
 *.vcxproj
