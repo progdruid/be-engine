@@ -1,9 +1,9 @@
 
 
-![be engine showcase](.github/media/compass.gif)
+![be engine showcase](.github/media/compass_1.gif)
 
 
-# this is *be* engine.
+# this is *be* engine. `//pre-alpha`
 
 yo, this is my c++23 graphics engine i built for myself and for you. its a custom graphics programming workbench: a pass-based renderer, runtime shader compilation, and a batteries-included deferred pipeline you can take apart and rebuild.
 
@@ -42,7 +42,8 @@ SRM->AddShadowPass();
 SRM->AddGeometryPass();
 SRM->AddLightingPass("hdr");
 SRM->AddBloomPass(5, "hdr", "hdr-bloomed");
-SRM->AddBackbufferPass("hdr-bloomed");
+SRM->AddTonemapperPass("hdr-bloomed", "sdr-tonemapped");
+SRM->AddBackbufferPass("sdr-tonemapped");
 SRM->Build();
 ```
 
@@ -54,7 +55,7 @@ then per frame: `ClearFrame()`, submit geometry + lights, and let the renderer r
 * `toolkit/`. higher-level abstractions (static lib, links core): the srm deferred pipeline, scenes, assimp import, imgui, entt.
 * `example-sakura/`. the up-to-date showcase: multi-scene, ecs, full deferred pipeline.
 * `example-vulkan/`. minimal raw vulkan/rhi example.
-* `example-game-1/`. old simple example (outdated, may not build).
+* `example-game-1/`. old simple example (may be a bit outdated at times).
 * `devtools/bechef`. cli that cooks content, checks the workspace, and generates shader boilerplate (`shadergen`, with a `--watch` mode).
 
 ### shaders
