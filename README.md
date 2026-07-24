@@ -1,6 +1,6 @@
 
 
-![be engine showcase](.github/media/hero.gif)
+![be engine showcase](.github/media/compass.gif)
 
 
 # this is *be* engine.
