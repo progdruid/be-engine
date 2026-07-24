@@ -32,13 +32,10 @@ class SakuraScene : public BaseScene {
     std::shared_ptr<BeMaterial> _dofMaterial; bool _dofEnabled = false;
     std::unique_ptr<BeStandardRenderMachine> _machine;
     std::filesystem::file_time_type _sceneLastWriteTime{};
-    //std::string _scenePath = "assets/sakura_scene.lua";
-    std::string _scenePath = "assets/compass_scene.lua";
+    std::string _scenePath = "assets/sakura_scene.lua";
 
-    glm::vec3 _circlingLightsOrigin = glm::vec3(0.0f, 4.0f, 0.0f);
-    float _circlingLightsAddY = 4.0f;
-    float _circlingLightsRadius = 13.0f;
-    
+    float _time = 0.0f;
+
     expose
     explicit SakuraScene(Game* game);
     ~SakuraScene() override;

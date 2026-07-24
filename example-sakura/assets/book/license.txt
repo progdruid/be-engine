@@ -1,0 +1,11 @@
+Model Information:
+* title:	Magic Book [Stylized]
+* source:	https://sketchfab.com/3d-models/magic-book-stylized-6aa861a786824ff0b9553b851422f09a
+* author:	MAR.COS. (https://sketchfab.com/mar.cos.)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Magic Book [Stylized]" (https://sketchfab.com/3d-models/magic-book-stylized-6aa861a786824ff0b9553b851422f09a) by MAR.COS. (https://sketchfab.com/mar.cos.) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

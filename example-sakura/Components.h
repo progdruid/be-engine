@@ -15,6 +15,15 @@ struct TransformComponent {
     glm::vec3 Scale = {1.f, 1.f, 1.f};
 };
 
+struct CirclingComponent {
+    glm::vec3 Origin = {0.f, 0.f, 0.f};
+    glm::vec3 Axis = {0.f, 1.f, 0.f};
+    float Radius = 1.f;
+    float Speed = 15.f;
+    float Phase = 0.f;
+    bool Rotate = false;
+};
+
 struct RenderComponent {
     std::shared_ptr<BeProp> Prop;
     bool CastShadows = true;

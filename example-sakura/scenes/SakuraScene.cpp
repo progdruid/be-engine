@@ -195,6 +195,10 @@ auto SakuraScene::LoadProps() -> void {
     const auto compass = _machine->LoadProp("assets/stylized_magic_compass/scene.gltf", pbrShader);
     _assetRegistry.AddProp("compass", compass);
     
+    const auto book = _machine->LoadProp("assets/book/scene.gltf", pbrShader);
+    _assetRegistry.AddProp("book", book);
+    
+    
     _machine->BakeMeshes();
 }
 
@@ -214,7 +218,9 @@ auto SakuraScene::LoadSceneFile() -> void {
         return;
     }
 
-    for (const auto& [name, entityTable] : lua.Call("makeScene").Pairs()) {
+    const auto& data = lua.Call("makeData");
+    
+    for (const auto& [name, entityTable] : data["Objects"].Pairs()) {
         const auto entity = _registry.create();
         _registry.emplace<NameComponent>(entity, NameComponent{ .Name = name });
 
@@ -238,10 +244,21 @@ auto SakuraScene::LoadSceneFile() -> void {
             }
         }
 
+        if (const auto table = entityTable["circling"]; table.Exists()) {
+            CirclingComponent comp;
+            comp.Origin = table["origin"].GetOr(comp.Origin);
+            comp.Axis = glm::normalize(table["axis"].GetOr(comp.Axis));
+            comp.Radius = table["radius"].GetOr(comp.Radius);
+            comp.Speed = table["speed"].GetOr(comp.Speed);
+            comp.Phase = table["phase"].GetOr(comp.Phase);
+            comp.Rotate = table["rotate"].GetOr(comp.Rotate);
+            _registry.emplace<CirclingComponent>(entity, comp);
+        }
+
         if (entityTable["static"].Exists()) {
             _registry.emplace<StaticTag>(entity);
         }
-
+        
         if (const auto table = entityTable["sunLight"]; table.Exists()) {
             SunLightComponent comp;
             comp.Direction = glm::normalize(table["direction"].GetOr(comp.Direction));
@@ -283,14 +300,7 @@ auto SakuraScene::LoadSceneFile() -> void {
             }
             _registry.emplace<PointLightComponent>(entity, comp);
         }
-    }
-    
-    const auto sakuraDefaults = lua.Call("sakuraDefaults");
-    if (sakuraDefaults.Exists()) {
-        _circlingLightsOrigin = sakuraDefaults["circlingLightsOrigin"].GetOr(_circlingLightsOrigin);
-        _circlingLightsAddY = sakuraDefaults["circlingLightsAddY"].GetOr(_circlingLightsAddY);
-        _circlingLightsRadius = sakuraDefaults["circlingLightsRadius"].GetOr(_circlingLightsRadius);
-    }
+    } // end of for loop
 }
 
 auto SakuraScene::RebuildPasses() -> void {
@@ -349,8 +359,10 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
     static const auto SunView = _registry.view<SunLightComponent>();
     static const auto PointLightView = _registry.view<NameComponent, TransformComponent, PointLightComponent>();
-    static const auto OrbitingLightView = _registry.view<NameComponent, TransformComponent, PointLightComponent>(entt::exclude<StaticTag>);
+    static const auto CirclingView = _registry.view<TransformComponent, CirclingComponent>();
 
+    _time += deltaTime;
+    
     if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
         _cameraMode = (_cameraMode + 1) % 3;
         if (_cameraMode == 2) _rigCameraController->Play("flythrough", /*loop*/ true);
@@ -395,24 +407,15 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     uniformMat.SetFloat4("NearFarPlane", { _camera->NearPlane, _camera->FarPlane, 1.0f / _camera->NearPlane, 1.0f / _camera->FarPlane });
     uniformMat.SetFloat3("CameraPosition", _camera->Position);
 
-    {
-        static float angle = 0.0f;
-        angle += deltaTime * glm::radians(15.0f);
-        if (angle > glm::two_pi<float>()) {
-            angle -= glm::two_pi<float>();
-        }
+    for (const auto [_, transform, circling] : CirclingView.each()) {
+        const auto reference = std::abs(circling.Axis.y) > 0.999f ? glm::vec3(0.f, 0.f, 1.f) : glm::vec3(0.f, 1.f, 0.f);
+        const auto start = glm::normalize(glm::cross(circling.Axis, reference)) * circling.Radius;
+        const auto angle = glm::radians(circling.Phase + circling.Speed * _time);
+        const auto rotation = glm::angleAxis(angle, circling.Axis);
 
-        auto i = size_t(0);
-        const auto orbitNumber = float(std::ranges::distance(OrbitingLightView));
-        for (const auto [entity, name, transform, _] : OrbitingLightView.each()) {
-            const auto add = glm::two_pi<float>() * (float(i) / orbitNumber);
-            const auto rad = _circlingLightsRadius * (0.7f + 0.3f * ((i + 1) % 2));
-            transform.Position = _circlingLightsOrigin + glm::vec3(
-                cos(angle + add) * rad, 
-                _circlingLightsAddY * (i % 2), 
-                sin(angle + add) * rad
-            );
-            i++;
+        transform.Position = circling.Origin + rotation * start;
+        if (circling.Rotate) {
+            transform.Rotation = rotation;
         }
     }
 
