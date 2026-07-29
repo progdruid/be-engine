@@ -43,12 +43,7 @@ auto BeStandardLightingPass::Initialise() -> void {
     };
     const SenFormat outputFormat = _output->Format;
 
-    const auto& directionalScheme = directionalLightShader->GetMaterialScheme("main");
-    _directionalLightMaterial = BeMaterial::Create(directionalScheme, true);
-    _directionalLightMaterial->SetTexture("Depth", _depthInput);
-    _directionalLightMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
-    _directionalLightMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
-    _directionalLightMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
+    _directionalLightScheme = directionalLightShader->GetMaterialScheme("main");
     _directionalLightPipeline = BePipelineBuilder::Start(*directionalLightShader)
         .SetBlend(additiveBlend)
         .SetColorFormats({ outputFormat })
@@ -97,7 +92,7 @@ auto BeStandardLightingPass::Initialise() -> void {
 
 auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {
     const auto& srm = *_srm;
-    const auto& sunLight = srm.GetSunLightEntries()[0];
+    const auto& sunLights = srm.GetSunLightEntries();
     const auto& pointLights = srm.GetPointLightEntries();
 
     cmd.SetBindGroup(srm.UniformMaterial.lock()->GetBindGroup(), 0);
@@ -105,8 +100,10 @@ auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {
     BePass pass(cmd);
     pass.UseTextures(_gbufferInputs);
     pass.UseTexture(_depthInput);
-    if (sunLight.CastsShadows) {
-        pass.UseTexture(sunLight.ShadowMap.lock());
+    for (const auto& sunLight : sunLights) {
+        if (sunLight.CastsShadows) {
+            pass.UseTexture(sunLight.ShadowMap.lock());
+        }
     }
     for (const auto& pointLight : pointLights) {
         if (pointLight.CastsShadows) {
@@ -126,20 +123,32 @@ auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {
     pass.SetViewport(_renderer->GetViewport());
     pass.Begin();
 
-    // Directional light
-    _directionalLightMaterial->SetFloat1("HasShadowMap",   sunLight.CastsShadows ? 1.0f : 0.0f);
-    _directionalLightMaterial->SetFloat3("Direction",      sunLight.Direction);
-    _directionalLightMaterial->SetFloat3("Color",          sunLight.Color);
-    _directionalLightMaterial->SetFloat1("Power",          sunLight.Power);
-    _directionalLightMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
-    _directionalLightMaterial->SetFloat1("TexelSize",      1.0f / sunLight.ShadowMapResolution);
-    _directionalLightMaterial->SetFloat1("ShadowBias",     srm.Settings.Shadow.Bias);
-    if (sunLight.CastsShadows) {
-        _directionalLightMaterial->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
+    // Directional lights
+    for (size_t i = 0; i < sunLights.size(); ++i) {
+        const auto& sunLight = sunLights[i];
+        if (i >= _directionalLightMaterials.size()) {
+            auto mat = BeMaterial::Create(_directionalLightScheme, true);
+            mat->SetTexture("Depth", _depthInput);
+            mat->SetTexture("Albedo_RGB", _gbufferInputs[0]);
+            mat->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
+            mat->SetTexture("ORM_RGB", _gbufferInputs[2]);
+            _directionalLightMaterials.push_back(std::move(mat));
+        }
+        const auto& mat = _directionalLightMaterials[i];
+        mat->SetFloat1("HasShadowMap",   sunLight.CastsShadows ? 1.0f : 0.0f);
+        mat->SetFloat3("Direction",      sunLight.Direction);
+        mat->SetFloat3("Color",          sunLight.Color);
+        mat->SetFloat1("Power",          sunLight.Power);
+        mat->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
+        mat->SetFloat1("TexelSize",      1.0f / sunLight.ShadowMapResolution);
+        mat->SetFloat1("ShadowBias",     srm.Settings.Shadow.Bias);
+        if (sunLight.CastsShadows) {
+            mat->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
+        }
+        cmd.SetPipeline(_directionalLightPipeline);
+        cmd.SetBindGroup(mat->GetBindGroup(), 1);
+        cmd.Draw(4, 0);
     }
-    cmd.SetPipeline(_directionalLightPipeline);
-    cmd.SetBindGroup(_directionalLightMaterial->GetBindGroup(), 1);
-    cmd.Draw(4, 0);
 
     // Point lights
     for (const auto& pointLight : pointLights) {

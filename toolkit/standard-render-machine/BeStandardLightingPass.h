@@ -24,7 +24,8 @@ class BeStandardLightingPass final : public BeRenderPass {
     std::shared_ptr<BeTexture> _brdfLutTexture;
     std::shared_ptr<BeTexture> _output;
 
-    std::shared_ptr<BeMaterial> _directionalLightMaterial;
+    BeMaterialScheme _directionalLightScheme;
+    std::vector<std::shared_ptr<BeMaterial>> _directionalLightMaterials;
     SenPipeline _directionalLightPipeline;
     BeMaterialScheme _pointLightScheme;
     std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _pointLightMaterials;
