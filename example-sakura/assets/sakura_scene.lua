@@ -10,6 +10,16 @@ function makeBase(objects)
         render = { prop = "cube", castShadows = true }
     }
 
+    for i = 0, 99 do
+        objects["Star_" .. i] = {
+            transform = { position = { randFloat(-50, 50), randFloat(30, 60), randFloat(-50, 50) }, scale = { 0.2, 0.2, 0.2 } },
+            render = { prop = "emissiveCube", castShadows = false }
+        }
+    end
+end
+
+
+function makeStandardContent (objects)
     objects.Moon = {
         transform = { position = {100, 150, 100}, scale = {6.0, 6.0, 6.0} },
         render = { prop = "moon", castShadows = false },
@@ -26,17 +36,7 @@ function makeBase(objects)
             shadowFarPlane = 400.0
         }
     }   
-
-    for i = 0, 99 do
-        objects["Star_" .. i] = {
-            transform = { position = { randFloat(-50, 50), randFloat(30, 60), randFloat(-50, 50) }, scale = { 0.2, 0.2, 0.2 } },
-            render = { prop = "emissiveCube", castShadows = false }
-        }
-    end
-end
-
-
-function makeStandardContent (objects)
+    
     --objects.RustySphere = {
     --    --transform = { position = {10, 2.5, -3}, scale = {0.01, 0.01, 0.01} },
     --    transform = { position = {0, 0, 0}, scale = {0.01, 0.01, 0.01} },
@@ -92,16 +92,25 @@ function makeStandardContent (objects)
     end
 end
 
-function makeStandardContent2 (objects)
-    objects.Anvil = {
-        transform = { position = {0, 0, 0}, scale = {0.2, 0.2, 0.2} },
-        render = { prop = "anvil", castShadows = true }
-    }
-    
-end
-
 
 function makeShowcaseContent(objects)
+    objects.Moon = {
+        transform = { position = {100, 150, 100}, scale = {6.0, 6.0, 6.0} },
+        render = { prop = "moon", castShadows = false },
+        static = true,
+        sunLight = {
+            direction = {-1, -1, -1},
+            color = {0.7, 0.7, 0.99},
+            power = 0.0,
+            castsShadows = true,
+            shadowMapResolution = 4096,
+            shadowCameraDistance = 100.0,
+            shadowMapWorldSize = 100.0,
+            shadowNearPlane = 0.1,
+            shadowFarPlane = 400.0
+        }
+    }
+    
     objects.Compass = {
         transform = { rotation = {0, 0, 0}, scale = {30, 30, 30} },
         render = { prop = "compass", castShadows = true },
@@ -160,9 +169,32 @@ function makeShowcaseContent(objects)
             },
             circling = {
                 origin = {0.0, 2.0, 0.0},
-                axis = {0, 1, 0},
+                axis = {0, 1, 1},
                 radius = 8.0,
                 speed = -15.0,
+                phase = 360.0 * i / lightCount,
+            },
+        }
+    end
+end
+
+function makeSpinningLights(objects)
+    local lightCount = 4
+    for i = 0, lightCount - 1 do
+        objects["CirclingLight_" .. i] = {
+            transform = { scale = { 1.0, 1.0, 1.0 } },
+            render = { prop = "emissiveCube", castShadows = false },
+            pointLight = {
+                radius = 20.0,
+                color = {1.0, 0.95, 0.85},
+                power = 4.0,
+                castsShadows = false,
+            },
+            circling = {
+                origin = {0.0, 0.0, 0.0},
+                axis = {0, 0, 1},
+                radius = 6.0,
+                speed = 15.0,
                 phase = 360.0 * i / lightCount,
             },
         }
@@ -176,6 +208,7 @@ function makeData ()
     makeBase(data.Objects)
     --makeStandardContent(data.Objects)
     makeShowcaseContent(data.Objects)
+    --makeSpinningLights(data.Objects)
 
     return data
 end

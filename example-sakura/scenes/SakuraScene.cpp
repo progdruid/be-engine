@@ -47,46 +47,28 @@ auto SakuraScene::Prepare() -> void {
     _machine->DeclareTexture      ("Sakura_Tonemapper",      SenFormat::R11G11B10_Float);
     _machine->DeclareTexture      ("Sakura_FXAA",            SenFormat::R11G11B10_Float);
 
-    const auto dirtTexture = BeTexture::Create("Sakura_BloomDirtTexture")
-        .LoadFromFile("assets/bloom-dirt-mask.png")
+    BeTexture::Create("Sakura_BloomDirtTexture")
+        .LoadFromFile(Settings.Bloom.DirtTexturePath)
         .AddToRegistry(_assetRegistry)
         .Build();
 
-    const auto skyTexture = BeTexture::Create("Sakura_Sky")
-        .LoadFromFileHdr("assets/moonrise_puresky.hdr")
-        //.LoadFromFileHdr("assets/kloofendal_puresky.hdr")
-        .AddToRegistry(_assetRegistry)
-        .Build();
+    _machine->Settings = Settings.SRM;
 
-    _machine->AddEnvironmentBakePass(skyTexture);
-    _machine->BakeEnvironment();
-
-    
-    // srm settings
-    _machine->Settings = BeSRMSettings {
-        .Shadow = {
-            //.Bias = 8.f / 100000.f,
-            .Bias = 16.f / 100000.f,
-        },
-        .Bloom = {
-            .Threshold = 2.5f,
-            .Knee = 0.7f,
-            .Intensity = 0.7f,
-            .Clamp = 4.0f,
-        },
-        .Tonemapper = {
-            .Exposure = 0.25f,
-            .Contrast = 1.70f,
-        },
-    };
-    
+    if (Settings.Skybox.Enabled) {
+        const auto skyTexture = BeTexture::Create("Sakura_Sky")
+            .LoadFromFileHdr(Settings.Skybox.HdrPath)
+            .AddToRegistry(_assetRegistry)
+            .Build();
+        _machine->AddEnvironmentBakePass(skyTexture);
+        _machine->BakeEnvironment();
+    }
 
     // camera
     _camera = std::make_unique<BeCamera>();
     _camera->Width = GameIns->Renderer->GetSwapchainPixelWidth();
     _camera->Height = GameIns->Renderer->GetSwapchainPixelHeight();
-    _camera->NearPlane = 0.1f;
-    _camera->FarPlane = 250.0f;
+    _camera->NearPlane = Settings.Camera.NearPlane;
+    _camera->FarPlane = Settings.Camera.FarPlane;
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
 
@@ -136,7 +118,7 @@ auto SakuraScene::LoadProps() -> void {
 
 
     const auto emissiveCube = BeProp::FromMesh(BeMeshPrimitives::Cube(), pbrShader, "geometry-main");
-    emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(1.f) * 5.0f);
+    emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(1.f) * 4.0f);
     _assetRegistry.AddProp("emissiveCube", emissiveCube);
     _machine->RegisterMesh(emissiveCube->Mesh);
 
@@ -207,14 +189,14 @@ auto SakuraScene::OnLoad() -> void {
     RebuildPasses();
 
     LoadSceneFile();
-    _sceneLastWriteTime = std::filesystem::last_write_time(_scenePath);
+    _sceneLastWriteTime = std::filesystem::last_write_time(Settings.SceneFile.Path);
 }
 
 auto SakuraScene::LoadSceneFile() -> void {
     _registry.clear();
 
     BeLuaState lua;
-    if (!lua.DoFile(_scenePath)) {
+    if (!lua.DoFile(Settings.SceneFile.Path)) {
         return;
     }
 
@@ -307,7 +289,7 @@ auto SakuraScene::RebuildPasses() -> void {
     if (!_uniformMaterial) {
         const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
         _uniformMaterial = BeMaterial::Create(uniformScheme, false);
-        _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.0f));
+        _uniformMaterial->SetFloat3("AmbientColor", Settings.Ambient.Color);
         _machine->UniformMaterial = _uniformMaterial;
     }
     
@@ -315,13 +297,20 @@ auto SakuraScene::RebuildPasses() -> void {
     _machine->AddShadowPass();
     _machine->AddGeometryPass();
     _machine->AddLightingPass("Sakura_HDR");
-    _machine->AddSkyboxPass("Sakura_HDR");
-    _machine->AddBloomPass(5, "Sakura_HDR", "Sakura_Bloom", _assetRegistry.GetTexture("Sakura_BloomDirtTexture").lock());
+    if (Settings.Skybox.Enabled) {
+        _machine->AddSkyboxPass("Sakura_HDR");
+    }
+    _machine->AddBloomPass(
+        Settings.Bloom.MipCount,
+        "Sakura_HDR",
+        "Sakura_Bloom",
+        _assetRegistry.GetTexture("Sakura_BloomDirtTexture").lock()
+    );
 
     std::string tonemapperInput = "Sakura_Bloom";
-    //std::string tonemapperInput = "Sakura_HDR"; 
-    
-    if (_dofEnabled) {
+    //std::string tonemapperInput = "Sakura_HDR";
+
+    if (Settings.DepthOfField.Enabled) {
         if (!_dofMaterial) {
             const auto& dofScheme = BeShaderLibrary::GetShader("dof")->GetMaterialScheme("main");
             _dofMaterial = BeMaterial::Create(dofScheme, false);
@@ -339,7 +328,7 @@ auto SakuraScene::RebuildPasses() -> void {
     fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Sakura_Tonemapper"));
     _machine->AddFullscreenPass(BeShaderLibrary::GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });
 
-    _machine->AddBackbufferPass("Sakura_FXAA", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
+    _machine->AddBackbufferPass("Sakura_FXAA", Settings.Background.ClearColor);
     _machine->BuildPasses();
 }
 
@@ -350,7 +339,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         return;
     }
 
-    const auto writeTime = std::filesystem::last_write_time(_scenePath);
+    const auto writeTime = std::filesystem::last_write_time(Settings.SceneFile.Path);
     if (writeTime > _sceneLastWriteTime) {
         LoadSceneFile();
         _sceneLastWriteTime = writeTime;
@@ -375,17 +364,18 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_F4))   _machine->SetDebugChannel(3);   // emissive
 
     if (GameIns->Input->GetKeyDown(GLFW_KEY_F5)) {
-        _dofEnabled = !_dofEnabled;
+        Settings.DepthOfField.Enabled = !Settings.DepthOfField.Enabled;
         RebuildPasses();
     }
 
-    if (_dofEnabled) {
+    if (Settings.DepthOfField.Enabled) {
+        const float focusStep = Settings.DepthOfField.FocusSpeed * deltaTime;
         float dofFocalDistance = _dofMaterial->GetFloat("FocalDistance");
-        
+
         if (GameIns->Input->GetKey(GLFW_KEY_LEFT_BRACKET))
-            dofFocalDistance = std::max(0.5f, dofFocalDistance - 5.0f * deltaTime);
+            dofFocalDistance = std::max(Settings.DepthOfField.MinFocalDistance, dofFocalDistance - focusStep);
         if (GameIns->Input->GetKey(GLFW_KEY_RIGHT_BRACKET))
-            dofFocalDistance += 5.0f * deltaTime;
+            dofFocalDistance += focusStep;
 
         _dofMaterial->SetFloat1("FocalDistance",  dofFocalDistance);
     }

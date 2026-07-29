@@ -1,11 +1,13 @@
 #pragma once
 #include <filesystem>
-#include <glm/vec3.hpp>
+#include <string>
 #include <umbrellas/common.hpp>
+#include <umbrellas/include-glm.h>
+#include <entt/entt.hpp>
 
 #include "BaseScene.h"
 #include "BeAssetRegistry.h"
-#include "entt/entt.hpp"
+#include "standard-render-machine/BeStandardRenderMachine.h"
 
 struct BeProp;
 class BeInput;
@@ -15,10 +17,65 @@ class FreeCameraController;
 class RigCameraController;
 class BeWindow;
 class BeRenderer;
-class BeStandardRenderMachine;
 class BeMaterial;
 
+struct SakuraSceneSettings {
+    BeSRMSettings SRM = {
+        .Shadow = {
+            //.Bias = 8.f / 100000.f,
+            .Bias = 16.f / 100000.f,
+        },
+        .Bloom = {
+            .Threshold = 2.5f,
+            .Knee = 0.7f,
+            .Intensity = 0.7f,
+            .Clamp = 4.0f,
+        },
+        .Tonemapper = {
+            .Exposure = 0.25f,
+            .Contrast = 1.70f,
+        },
+    };
+
+    struct {
+        std::string Path = "assets/sakura_scene.lua";
+    } SceneFile;
+
+    struct {
+        float NearPlane = 0.1f;
+        float FarPlane = 250.0f;
+    } Camera;
+
+    struct {
+        glm::vec3 Color = glm::vec3(0.0f);
+    } Ambient;
+
+    struct {
+        bool Enabled = true;
+        std::string HdrPath = "assets/moonrise_puresky.hdr";
+        //std::string HdrPath = "assets/kloofendal_puresky.hdr";
+    } Skybox;
+
+    struct {
+        uint32_t MipCount = 5;
+        std::string DirtTexturePath = "assets/bloom-dirt-mask.png";
+    } Bloom;
+
+    struct {
+        bool Enabled = false;
+        float MinFocalDistance = 0.5f;
+        float FocusSpeed = 5.0f;
+    } DepthOfField;
+
+    struct {
+        glm::vec3 ClearColor = { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f };
+    } Background;
+};
+
 class SakuraScene : public BaseScene {
+    expose
+    SakuraSceneSettings Settings;
+
     hide
     BeAssetRegistry _assetRegistry;
     entt::registry _registry;
@@ -29,13 +86,12 @@ class SakuraScene : public BaseScene {
     int _cameraMode = 0;   // 0 = free, 1 = orbit, 2 = rig
 
     std::shared_ptr<BeMaterial> _uniformMaterial;
-    std::shared_ptr<BeMaterial> _dofMaterial; bool _dofEnabled = false;
+    std::shared_ptr<BeMaterial> _dofMaterial;
     std::unique_ptr<BeStandardRenderMachine> _machine;
     std::filesystem::file_time_type _sceneLastWriteTime{};
-    std::string _scenePath = "assets/sakura_scene.lua";
 
     float _time = 0.0f;
-
+    
     expose
     explicit SakuraScene(Game* game);
     ~SakuraScene() override;
