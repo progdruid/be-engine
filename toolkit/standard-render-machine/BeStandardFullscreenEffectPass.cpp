@@ -21,7 +21,7 @@ BeStandardFullscreenEffectPass::BeStandardFullscreenEffectPass(
 , _material(std::move(material))
 , _outputs(std::move(outputs)) {}
 
-auto BeStandardFullscreenEffectPass::Initialise() -> void {
+auto BeStandardFullscreenEffectPass::Initialise(BeRenderer& renderer) -> void {
     auto shader = _shader;
     be_assert(shader, "BeStandardFullscreenEffectPass: shader not set");
 
@@ -33,16 +33,16 @@ auto BeStandardFullscreenEffectPass::Initialise() -> void {
     be_assert(_pipeline.IsValid(), "BeStandardFullscreenEffectPass: failed to create pipeline");
 }
 
-auto BeStandardFullscreenEffectPass::Render(SenCommandBuffer& cmd) -> void {
+auto BeStandardFullscreenEffectPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
     BePass pass(cmd);
     if (_material) {
         pass.UseMaterial(*_material);
     }
     pass.AddColorTargets(_outputs, SenLoadOp::Load);
-    pass.SetViewport(_renderer->GetViewport());
+    pass.SetViewport(renderer.GetViewport());
     pass.Begin();
 
-    cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
+    cmd.SetBindGroup(_srm->UniformMaterial->GetBindGroup(), 0);
     cmd.SetPipeline(_pipeline);
     if (_material) {
         cmd.SetBindGroup(_material->GetBindGroup(), 1);

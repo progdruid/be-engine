@@ -37,7 +37,7 @@ class BeRenderer {
     
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
     expose
-    auto AddRenderPass(BeRenderPass* renderPass) -> void;
+    auto SetPasses(std::vector<BeRenderPass*> passes) -> void;
     auto ClearPasses() -> void;
     auto Render() -> void;
     auto RenderOnce(const std::vector<BeRenderPass*>& passes) -> void;

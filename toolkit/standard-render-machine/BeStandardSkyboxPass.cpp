@@ -21,7 +21,7 @@ BeStandardSkyboxPass::BeStandardSkyboxPass(
 ) : _srm(srm), _depth(std::move(depth)), _envCubemap(std::move(envCubemap)),
     _output(std::move(output)) {}
 
-auto BeStandardSkyboxPass::Initialise() -> void {
+auto BeStandardSkyboxPass::Initialise(BeRenderer& renderer) -> void {
 
     const auto shader = BeShaderLibrary::GetShader("skybox");
     be_assert(shader, "BeStandardSkyboxPass: skybox shader not found");
@@ -34,16 +34,16 @@ auto BeStandardSkyboxPass::Initialise() -> void {
     _pipeline = BePipelineBuilder::Start(*shader).SetColorFormats({ _output->Format }).Build();
 }
 
-auto BeStandardSkyboxPass::Render(SenCommandBuffer& cmd) -> void {
+auto BeStandardSkyboxPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
     _material->SetFloat1("ClampRadiance", _srm->Settings.Skybox.ClampRadiance);
 
-    cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
+    cmd.SetBindGroup(_srm->UniformMaterial->GetBindGroup(), 0);
 
     BePass pass(cmd);
     pass.UseTexture(_depth);
     pass.UseTexture(_envCubemap);
     pass.AddColorTarget(_output, SenLoadOp::Load);
-    pass.SetViewport(_renderer->GetViewport());
+    pass.SetViewport(renderer.GetViewport());
     pass.Begin();
     cmd.SetPipeline(_pipeline);
     cmd.SetBindGroup(_material->GetBindGroup(), 1);

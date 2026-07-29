@@ -47,10 +47,6 @@ void ShowcaseScene::Prepare() {
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
 
-    const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
-    _uniformMaterial = BeMaterial::Create(uniformScheme, false);
-    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.0f));
-
     const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
     const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
 
@@ -137,7 +133,7 @@ auto ShowcaseScene::CreateObjects() -> void {
 }
 
 void ShowcaseScene::OnLoad() {
-    _machine->UniformMaterial = _uniformMaterial;
+    _machine->UniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.0f));
     LoadPasses();
 }
 
@@ -164,6 +160,7 @@ void ShowcaseScene::LoadPasses() {
 
     _machine->AddBackbufferPass(backbufferInput, { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
     _machine->BuildPasses();
+    _machine->Activate();
 }
 
 void ShowcaseScene::Tick(float deltaTime) {
@@ -266,7 +263,7 @@ void ShowcaseScene::Tick(float deltaTime) {
         _freeCameraController->Update(deltaTime, GameIns->Input.get());
     }
 
-    auto& uniformMat = *_uniformMaterial;
+    auto& uniformMat = *_machine->UniformMaterial;
     const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
     uniformMat.SetMatrix("CameraProjectionView", projView);
     uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));

@@ -24,7 +24,7 @@ BeStandardEnvironmentBakePass::BeStandardEnvironmentBakePass(
     _irradianceCubemap(std::move(irradianceCubemap)), _prefilteredCubemap(std::move(prefilteredCubemap)),
     _brdfLutTexture(std::move(brdfLutTexture)) {}
 
-auto BeStandardEnvironmentBakePass::Initialise() -> void {
+auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
 
     const auto envShader = BeShaderLibrary::GetShader("environment-bake");
     be_assert(envShader, "BeStandardEnvironmentBakePass: environment-bake shader not found");
@@ -78,7 +78,7 @@ auto BeStandardEnvironmentBakePass::Initialise() -> void {
     _brdfLutPipeline = BePipelineBuilder::Start(*brdfLutShader).SetColorFormats({ _brdfLutTexture->Format }).Build();
 }
 
-auto BeStandardEnvironmentBakePass::Render(SenCommandBuffer& cmd) -> void {
+auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
     cmd.SetPipeline(_envPipeline);
     for (uint32_t face = 0; face < FaceCount; ++face) {
         BePass pass(cmd);

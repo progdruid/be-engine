@@ -30,7 +30,7 @@ BeImGuiPass::~BeImGuiPass() {
     ImGui::DestroyContext();
 }
 
-auto BeImGuiPass::Initialise() -> void {
+auto BeImGuiPass::Initialise(BeRenderer& renderer) -> void {
     _holdsBackendRef = true;
     if (s_backendRefCount++ > 0) return;
 
@@ -40,7 +40,7 @@ auto BeImGuiPass::Initialise() -> void {
 
     ImGui_ImplGlfw_InitForVulkan(_window->GetGlfwWindow(), true);
 
-    VkFormat colorFormat = Sen::Vulkan::ToFormat(_renderer->GetSwapchainFormat());
+    VkFormat colorFormat = Sen::Vulkan::ToFormat(renderer.GetSwapchainFormat());
 
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.ApiVersion      = VK_API_VERSION_1_3;
@@ -62,7 +62,7 @@ auto BeImGuiPass::Initialise() -> void {
     ImGui_ImplVulkan_Init(&init_info);
 }
 
-auto BeImGuiPass::Render(SenCommandBuffer& cmd) -> void {
+auto BeImGuiPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -74,7 +74,7 @@ auto BeImGuiPass::Render(SenCommandBuffer& cmd) -> void {
     //         "[ImGui] DisplaySize=%.0fx%.0f  FramebufferScale=%.2fx%.2f  rendererW=%u  rendererH=%u\n",
     //         io.DisplaySize.x, io.DisplaySize.y,
     //         io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y,
-    //         _renderer->GetWidth(), _renderer->GetHeight());
+    //         renderer.GetWidth(), renderer.GetHeight());
     // }
 
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
@@ -87,8 +87,8 @@ auto BeImGuiPass::Render(SenCommandBuffer& cmd) -> void {
     ImGui::Render();
 
     BePass pass(cmd);
-    pass.AddColorTarget(_renderer->GetBackbufferTexture(), SenLoadOp::Load);
-    pass.SetViewport(_renderer->GetViewport());
+    pass.AddColorTarget(renderer.GetBackbufferTexture(), SenLoadOp::Load);
+    pass.SetViewport(renderer.GetViewport());
     pass.Begin();
 
     ImGui_ImplVulkan_RenderDrawData(

@@ -30,7 +30,7 @@ class BeStandardSkyboxPass final : public BeRenderPass {
     );
     ~BeStandardSkyboxPass() override = default;
 
-    auto Initialise() -> void override;
-    auto Render(SenCommandBuffer& cmd) -> void override;
+    auto Initialise(BeRenderer& renderer) -> void override;
+    auto Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void override;
     auto GetPassName() const -> const std::string override { return "Standard Skybox Pass"; }
 };

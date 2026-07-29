@@ -19,26 +19,26 @@ BeStandardBackbufferPass::BeStandardBackbufferPass(
 , _input(std::move(input))
 , _clearColor(clearColor) {}
 
-auto BeStandardBackbufferPass::Initialise() -> void {
+auto BeStandardBackbufferPass::Initialise(BeRenderer& renderer) -> void {
     const auto  shader = BeShaderLibrary::GetShader("backbuffer");
     const auto& scheme = shader->GetMaterialScheme("main");
     _material = BeMaterial::Create(scheme, false);
     _material->SetTexture("InputTexture", _input);
     _activeInput = _input;
     _pipeline = BePipelineBuilder::Start(*shader)
-        .SetColorFormats({ _renderer->GetSwapchainFormat() })
+        .SetColorFormats({ renderer.GetSwapchainFormat() })
         .Build()
     ;
 }
 
-auto BeStandardBackbufferPass::Render(SenCommandBuffer& cmd) -> void {
+auto BeStandardBackbufferPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
     BePass pass(cmd);
     pass.UseMaterial(*_material);
-    pass.AddColorTarget(_renderer->GetBackbufferTexture(), SenLoadOp::Clear, glm::vec4(_clearColor, 1.0f));
-    pass.SetViewport(_renderer->GetViewport());
+    pass.AddColorTarget(renderer.GetBackbufferTexture(), SenLoadOp::Clear, glm::vec4(_clearColor, 1.0f));
+    pass.SetViewport(renderer.GetViewport());
     pass.Begin();
     cmd.SetPipeline(_pipeline);
-    cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
+    cmd.SetBindGroup(_srm->UniformMaterial->GetBindGroup(), 0);
     cmd.SetBindGroup(_material->GetBindGroup(), 1);
     cmd.Draw(4, 0);
     pass.End();

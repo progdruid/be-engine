@@ -21,8 +21,8 @@ class BeStandardShadowPass final : public BeRenderPass {
     ~BeStandardShadowPass() override = default;
 
     expose
-    auto Initialise() -> void override;
-    auto Render(SenCommandBuffer& cmd) -> void override;
+    auto Initialise(BeRenderer& renderer) -> void override;
+    auto Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void override;
     auto GetPassName() const -> const std::string override { return "Standard Shadow Pass"; }
 
     hide

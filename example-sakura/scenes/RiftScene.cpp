@@ -129,10 +129,6 @@ void RiftScene::Prepare() {
     _camera->FarPlane = Settings.Camera.FarPlane;
     _shipCameraController = std::make_unique<ShipCameraController>(_camera.get());
 
-    const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
-    _uniformMaterial = BeMaterial::Create(uniformScheme, false);
-    _uniformMaterial->SetFloat3("AmbientColor", Settings.Ambient.Color);
-
     const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
     const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
 
@@ -210,7 +206,7 @@ auto RiftScene::CreateObjects() -> void {
 }
 
 void RiftScene::OnLoad() {
-    _machine->UniformMaterial = _uniformMaterial;
+    _machine->UniformMaterial->SetFloat3("AmbientColor", Settings.Ambient.Color);
     LoadPasses();
 }
 
@@ -246,12 +242,13 @@ void RiftScene::LoadPasses() {
     _machine->AddFullscreenPass(BeShaderLibrary::GetShader("posterize"), _posterizeMaterial, { "Rift_Post" });
 
     _machine->AddBackbufferPass("Rift_Post", Settings.Background.ClearColor);
-    _machine->BuildPasses();
 
-    _imguiPass = std::make_unique<BeImGuiPass>(GameIns->Window);
-    GameIns->Renderer->AddRenderPass(_imguiPass.get());
-    _imguiPass->SetUICallback([this]() { _shipCameraController->DrawDebugUI(); });
-    _imguiPass->Initialise();
+    auto imguiPass = std::make_unique<BeImGuiPass>(GameIns->Window);
+    imguiPass->SetUICallback([this]() { _shipCameraController->DrawDebugUI(); });
+    _machine->AddPass(std::move(imguiPass));
+
+    _machine->BuildPasses();
+    _machine->Activate();
 }
 
 void RiftScene::Tick(float deltaTime) {
@@ -281,7 +278,7 @@ void RiftScene::Tick(float deltaTime) {
         }
     }
 
-    auto& uniformMat = *_uniformMaterial;
+    auto& uniformMat = *_machine->UniformMaterial;
     const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
     uniformMat.SetMatrix("CameraProjectionView", projView);
     uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));

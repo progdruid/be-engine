@@ -42,7 +42,9 @@ auto BeSRMSunLightEntry::CalculateViewProj(
 }
 
 BeStandardRenderMachine::BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, BeAssetRegistry& assetRegistry, uint32_t width, uint32_t height)
-    : _renderer(std::move(renderer)), _assetRegistry(assetRegistry), _width(width), _height(height) {}
+    : _renderer(std::move(renderer)), _assetRegistry(assetRegistry), _width(width), _height(height) {
+    UniformMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("uniform-material"), false);
+}
 
 BeStandardRenderMachine::~BeStandardRenderMachine() = default;
 
@@ -223,8 +225,9 @@ auto BeStandardRenderMachine::AddEnvironmentBakePass(std::shared_ptr<BeTexture> 
 
 auto BeStandardRenderMachine::BakeEnvironment() -> void {
     be_assert(_environmentBakePass, "BakeEnvironment: AddEnvironmentBakePass was not called");
-    _environmentBakePass->Initialise();
-    _renderer.lock()->RenderOnce({ _environmentBakePass.get() });
+    auto renderer = _renderer.lock();
+    _environmentBakePass->Initialise(*renderer);
+    renderer->RenderOnce({ _environmentBakePass.get() });
 }
 
 auto BeStandardRenderMachine::AddSkyboxPass(const std::string& outputName) -> void {
@@ -249,9 +252,16 @@ auto BeStandardRenderMachine::ClearPasses() -> void {
 auto BeStandardRenderMachine::BuildPasses() -> void {
     auto renderer = _renderer.lock();
     for (auto& pass : _passes)
-        renderer->AddRenderPass(pass.get());
-    for (auto& pass : _passes)
-        pass->Initialise();
+        pass->Initialise(*renderer);
+}
+
+auto BeStandardRenderMachine::Activate() -> void {
+    std::vector<BeRenderPass*> passes;
+    passes.reserve(_passes.size());
+    for (const auto& pass : _passes)
+        passes.push_back(pass.get());
+
+    _renderer.lock()->SetPasses(std::move(passes));
 }
 
 

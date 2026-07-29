@@ -27,7 +27,7 @@ BeStandardLightingPass::BeStandardLightingPass(
 , _brdfLutTexture(std::move(brdfLutTexture))
 , _output(std::move(output)) {}
 
-auto BeStandardLightingPass::Initialise() -> void {
+auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
     const auto directionalLightShader = BeShaderLibrary::GetShader("directional-light");
     const auto pointLightShader       = BeShaderLibrary::GetShader("point-light");
     const auto emissiveAddShader      = BeShaderLibrary::GetShader("emissive-add");
@@ -90,12 +90,12 @@ auto BeStandardLightingPass::Initialise() -> void {
     ;
 }
 
-auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {
+auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
     const auto& srm = *_srm;
     const auto& sunLights = srm.GetSunLightEntries();
     const auto& pointLights = srm.GetPointLightEntries();
 
-    cmd.SetBindGroup(srm.UniformMaterial.lock()->GetBindGroup(), 0);
+    cmd.SetBindGroup(srm.UniformMaterial->GetBindGroup(), 0);
     
     BePass pass(cmd);
     pass.UseTextures(_gbufferInputs);
@@ -120,7 +120,7 @@ auto BeStandardLightingPass::Render(SenCommandBuffer& cmd) -> void {
         pass.UseTexture(_brdfLutTexture);
     }
     pass.AddColorTarget(_output, SenLoadOp::Clear);
-    pass.SetViewport(_renderer->GetViewport());
+    pass.SetViewport(renderer.GetViewport());
     pass.Begin();
 
     // Directional lights

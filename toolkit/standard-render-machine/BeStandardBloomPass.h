@@ -41,13 +41,13 @@ class BeStandardBloomPass final : public BeRenderPass {
     );
     ~BeStandardBloomPass() override = default;
 
-    auto Initialise() -> void override;
-    auto Render(SenCommandBuffer& cmd) -> void override;
+    auto Initialise(BeRenderer& renderer) -> void override;
+    auto Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void override;
     auto GetPassName() const -> const std::string override { return "Standard Bloom Pass"; }
 
     hide
     auto RenderBrightPass(SenCommandBuffer& cmd) const -> void;
     auto RenderDownsamplePasses(SenCommandBuffer& cmd) const -> void;
     auto RenderUpsamplePasses(SenCommandBuffer& cmd) const -> void;
-    auto RenderAddPass(SenCommandBuffer& cmd) const -> void;
+    auto RenderAddPass(BeRenderer& renderer, SenCommandBuffer& cmd) const -> void;
 };

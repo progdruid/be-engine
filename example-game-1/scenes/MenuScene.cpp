@@ -13,12 +13,10 @@ MenuScene::~MenuScene() = default;
 
 auto MenuScene::OnLoad() -> void {
 
-    GameIns->Renderer->ClearPasses();
-
     _imguiPass = std::make_unique<BeImGuiPass>(GameIns->Window);
-    GameIns->Renderer->AddRenderPass(_imguiPass.get());
     _imguiPass->SetUICallback([this](){RunUI();});
-    _imguiPass->Initialise();
+    _imguiPass->Initialise(*GameIns->Renderer);
+    GameIns->Renderer->SetPasses({ _imguiPass.get() });
 }
 
 auto MenuScene::RunUI() -> void {

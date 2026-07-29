@@ -19,10 +19,10 @@ BeStandardGeometryPass::BeStandardGeometryPass(
 , _colorTargets(std::move(colorTargets))
 , _depthTarget(std::move(depthTarget)) {}
 
-auto BeStandardGeometryPass::Initialise() -> void {}
+auto BeStandardGeometryPass::Initialise(BeRenderer& renderer) -> void {}
 
-auto BeStandardGeometryPass::Render(SenCommandBuffer& cmd) -> void {
-    const auto uniformMat = _srm->UniformMaterial.lock();
+auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
+    const auto uniformMat = _srm->UniformMaterial;
     const auto& entries = _srm->GetGeometryEntries();
 
     std::vector<SenFormat> colorFormats;
@@ -36,7 +36,7 @@ auto BeStandardGeometryPass::Render(SenCommandBuffer& cmd) -> void {
     BePass pass(cmd);
     pass.AddColorTargets(_colorTargets);
     pass.SetDepthTarget(_depthTarget);
-    pass.SetViewport(_renderer->GetViewport());
+    pass.SetViewport(renderer.GetViewport());
     pass.Begin();
 
     cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());

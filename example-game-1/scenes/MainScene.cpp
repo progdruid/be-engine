@@ -32,6 +32,7 @@ auto MainScene::LoadPasses() -> void {
 
     _machine->AddBackbufferPass("TonemapperOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
     _machine->BuildPasses();
+    _machine->Activate();
 }
 
 auto MainScene::Prepare() -> void {

@@ -23,7 +23,7 @@ BeStandardBloomPass::BeStandardBloomPass(
 ) : _srm(srm), _inputHDR(std::move(inputHDR)), _bloomTexture(std::move(bloomTexture)),
     _output(std::move(output)), _dirtTexture(std::move(dirtTexture)), _mipCount(mipCount) {}
 
-auto BeStandardBloomPass::Initialise() -> void {
+auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
     const SenFormat mipFormat = _bloomTexture->Format;
 
     const auto  brightShader = BeShaderLibrary::GetShader("bloom-bright");
@@ -79,7 +79,7 @@ auto BeStandardBloomPass::Initialise() -> void {
     _addPipeline = BePipelineBuilder::Start(*addShader).SetColorFormats({ mipFormat }).Build();
 }
 
-auto BeStandardBloomPass::Render(SenCommandBuffer& cmd) -> void {
+auto BeStandardBloomPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
     const auto& settings = _srm->Settings.Bloom;
     _brightMaterial->SetFloat1("Threshold", settings.Threshold);
     _brightMaterial->SetFloat1("Knee", settings.Knee);
@@ -89,11 +89,11 @@ auto BeStandardBloomPass::Render(SenCommandBuffer& cmd) -> void {
         _upsampleMaterials[mipTarget]->SetFloat1("Radius", settings.UpsampleRadius);
     }
 
-    cmd.SetBindGroup(_srm->UniformMaterial.lock()->GetBindGroup(), 0);
+    cmd.SetBindGroup(_srm->UniformMaterial->GetBindGroup(), 0);
     RenderBrightPass(cmd);
     RenderDownsamplePasses(cmd);
     RenderUpsamplePasses(cmd);
-    RenderAddPass(cmd);
+    RenderAddPass(renderer, cmd);
 }
 
 auto BeStandardBloomPass::RenderBrightPass(SenCommandBuffer& cmd) const -> void {
@@ -137,11 +137,11 @@ auto BeStandardBloomPass::RenderUpsamplePasses(SenCommandBuffer& cmd) const -> v
     }
 }
 
-auto BeStandardBloomPass::RenderAddPass(SenCommandBuffer& cmd) const -> void {
+auto BeStandardBloomPass::RenderAddPass(BeRenderer& renderer, SenCommandBuffer& cmd) const -> void {
     BePass pass(cmd);
     pass.UseMaterial(*_addMaterial);
     pass.AddColorTarget(_output, SenLoadOp::Load);
-    pass.SetViewport(_renderer->GetViewport());
+    pass.SetViewport(renderer.GetViewport());
     pass.Begin();
     cmd.SetPipeline(_addPipeline);
     cmd.SetBindGroup(_addMaterial->GetBindGroup(), 1);

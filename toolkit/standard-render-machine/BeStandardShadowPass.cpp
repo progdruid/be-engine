@@ -13,9 +13,9 @@
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
 BeStandardShadowPass::BeStandardShadowPass(BeStandardRenderMachine* srm) : _srm(srm) {}
-auto BeStandardShadowPass::Initialise() -> void {}
+auto BeStandardShadowPass::Initialise(BeRenderer& renderer) -> void {}
 
-auto BeStandardShadowPass::Render(SenCommandBuffer& cmd) -> void {
+auto BeStandardShadowPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
     for (const auto& sunLight : _srm->GetSunLightEntries()) {
         if (sunLight.CastsShadows) {
             RenderDirectionalShadows(cmd, sunLight);
@@ -29,7 +29,7 @@ auto BeStandardShadowPass::Render(SenCommandBuffer& cmd) -> void {
 }
 
 auto BeStandardShadowPass::RenderDirectionalShadows(SenCommandBuffer& cmd, const BeSRMSunLightEntry& sunLight) const -> void {
-    const auto uniformMat = _srm->UniformMaterial.lock();
+    const auto uniformMat = _srm->UniformMaterial;
     const auto& entries = _srm->GetGeometryEntries();
 
     cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
@@ -74,7 +74,7 @@ auto BeStandardShadowPass::RenderDirectionalShadows(SenCommandBuffer& cmd, const
 }
 
 auto BeStandardShadowPass::RenderPointLightShadows(SenCommandBuffer& cmd, const BeSRMPointLightEntry& pointLight) const -> void {
-    const auto  uniformMat = _srm->UniformMaterial.lock();
+    const auto  uniformMat = _srm->UniformMaterial;
     const auto& entries = _srm->GetGeometryEntries();
     const auto  shadowMap = pointLight.ShadowMap.lock();
 

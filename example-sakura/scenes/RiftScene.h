@@ -76,10 +76,8 @@ class RiftScene : public BaseScene {
     BeAssetRegistry _assetRegistry;
     entt::registry _registry;
     std::shared_ptr<BeCamera> _camera;
-    std::shared_ptr<BeMaterial> _uniformMaterial;
     std::unique_ptr<BeStandardRenderMachine> _machine;
     std::unique_ptr<ShipCameraController> _shipCameraController;
-    std::unique_ptr<BeImGuiPass> _imguiPass;
     std::array<entt::entity, 9> _terrainTiles;
     std::shared_ptr<BeMaterial> _posterizeMaterial;
     std::shared_ptr<BeMaterial> _hudMaterial;

@@ -53,9 +53,9 @@ auto BeRenderer::GetViewport() const -> SenViewport {
     return { 0, 0, float(GetSwapchainPixelWidth()), float(GetSwapchainPixelHeight()), 0, 1 };
 }
 
-auto BeRenderer::AddRenderPass(BeRenderPass* renderPass) -> void {
-    _passes.push_back(renderPass);
-    renderPass->InjectRenderer(this);
+auto BeRenderer::SetPasses(std::vector<BeRenderPass*> passes) -> void {
+    SenBackend::WaitIdle();
+    _passes = std::move(passes);
 }
 
 auto BeRenderer::ClearPasses() -> void {
@@ -72,7 +72,7 @@ auto BeRenderer::Render() -> void {
 
     for (const auto& pass : _passes) {
         SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
-        pass->Render(_frameCmd);
+        pass->Render(*this, _frameCmd);
         SenBackend::EndDebugEvent();
     }
 
@@ -89,9 +89,8 @@ auto BeRenderer::RenderOnce(const std::vector<BeRenderPass*>& passes) -> void {
     _frameCmd.Begin();
 
     for (const auto& pass : passes) {
-        pass->InjectRenderer(this);
         SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
-        pass->Render(_frameCmd);
+        pass->Render(*this, _frameCmd);
         SenBackend::EndDebugEvent();
     }
 

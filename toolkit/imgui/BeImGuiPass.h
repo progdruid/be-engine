@@ -17,8 +17,8 @@ class BeImGuiPass final : public BeRenderPass {
     explicit BeImGuiPass(const std::shared_ptr<BeWindow>& window);
     ~BeImGuiPass() override;
 
-    auto Initialise() -> void override;
-    auto Render(SenCommandBuffer& cmd) -> void override;
+    auto Initialise(BeRenderer& renderer) -> void override;
+    auto Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void override;
     auto GetPassName() const -> const std::string override { return "ImGui Pass"; }
 
     auto SetUICallback(const std::function<void()>& callback) -> void;

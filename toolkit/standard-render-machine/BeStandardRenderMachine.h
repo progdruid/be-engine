@@ -137,7 +137,7 @@ class BeStandardRenderMachine {
     std::shared_ptr<BeMaterial> _tonemapperMaterial;
 
     expose
-    std::weak_ptr<BeMaterial> UniformMaterial;
+    std::shared_ptr<BeMaterial> UniformMaterial;
     BeSRMSettings Settings;
 
     // lifetime --------------------------------------------------------------------------------------------------------
@@ -175,6 +175,7 @@ class BeStandardRenderMachine {
     expose
     auto ClearPasses() -> void;
     auto BuildPasses() -> void;
+    auto Activate() -> void;
 
     // debug channel (−1 = normal, 0..N = G-buffer targets in declaration order) ----------------------------------------
     expose
