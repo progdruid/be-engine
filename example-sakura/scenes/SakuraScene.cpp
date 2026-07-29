@@ -31,8 +31,8 @@ auto SakuraScene::Prepare() -> void {
     const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
     const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
 
-    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, _assetRegistry, screenWidth, screenHeight); 
-    
+    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, _assetRegistry, screenWidth, screenHeight);
+
     LoadProps();
 
     // srm textures
@@ -47,32 +47,19 @@ auto SakuraScene::Prepare() -> void {
     _machine->DeclareTexture      ("Sakura_Tonemapper",      SenFormat::R11G11B10_Float);
     _machine->DeclareTexture      ("Sakura_FXAA",            SenFormat::R11G11B10_Float);
 
-    BeTexture::Create("Sakura_BloomDirtTexture")
-        .LoadFromFile(Settings.Bloom.DirtTexturePath)
-        .AddToRegistry(_assetRegistry)
-        .Build();
-
-    _machine->Settings = Settings.SRM;
-
-    if (Settings.Skybox.Enabled) {
-        const auto skyTexture = BeTexture::Create("Sakura_Sky")
-            .LoadFromFileHdr(Settings.Skybox.HdrPath)
-            .AddToRegistry(_assetRegistry)
-            .Build();
-        _machine->AddEnvironmentBakePass(skyTexture);
-        _machine->BakeEnvironment();
-    }
-
     // camera
     _camera = std::make_unique<BeCamera>();
     _camera->Width = GameIns->Renderer->GetSwapchainPixelWidth();
     _camera->Height = GameIns->Renderer->GetSwapchainPixelHeight();
-    _camera->NearPlane = Settings.Camera.NearPlane;
-    _camera->FarPlane = Settings.Camera.FarPlane;
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
 
-    
+    LoadSceneFile();
+    _sceneLastWriteTime = std::filesystem::last_write_time(Settings.SceneFile.Path);
+
+    RebuildPasses();
+
+
     // rig
     _rigCameraController = std::make_unique<RigCameraController>(_camera.get());
     BeCameraShot& flythrough = _rigCameraController->AddShot("flythrough");
@@ -186,22 +173,63 @@ auto SakuraScene::LoadProps() -> void {
 
 
 auto SakuraScene::OnLoad() -> void {
-    RebuildPasses();
-
-    LoadSceneFile();
-    _sceneLastWriteTime = std::filesystem::last_write_time(Settings.SceneFile.Path);
+    _machine->Activate();
 }
 
 auto SakuraScene::LoadSceneFile() -> void {
-    _registry.clear();
-
     BeLuaState lua;
     if (!lua.DoFile(Settings.SceneFile.Path)) {
         return;
     }
 
-    const auto& data = lua.Call("makeData");
+    const auto data = lua.Call("makeData");
+
+    const auto settings = data["Settings"];
+    const auto srm = settings["srm"];
+    Settings.SRM.Shadow.Bias = srm["shadow"]["bias"].GetOr(Settings.SRM.Shadow.Bias);
+    Settings.SRM.IBL.MaxSampleRadiance = srm["ibl"]["maxSampleRadiance"].GetOr(Settings.SRM.IBL.MaxSampleRadiance);
+    Settings.SRM.Skybox.ClampRadiance = srm["skybox"]["clampRadiance"].GetOr(Settings.SRM.Skybox.ClampRadiance);
+
+    const auto srmBloom = srm["bloom"];
+    Settings.SRM.Bloom.Threshold = srmBloom["threshold"].GetOr(Settings.SRM.Bloom.Threshold);
+    Settings.SRM.Bloom.Knee = srmBloom["knee"].GetOr(Settings.SRM.Bloom.Knee);
+    Settings.SRM.Bloom.Intensity = srmBloom["intensity"].GetOr(Settings.SRM.Bloom.Intensity);
+    Settings.SRM.Bloom.Clamp = srmBloom["clamp"].GetOr(Settings.SRM.Bloom.Clamp);
+    Settings.SRM.Bloom.UpsampleRadius = srmBloom["upsampleRadius"].GetOr(Settings.SRM.Bloom.UpsampleRadius);
+
+    const auto tonemapper = srm["tonemapper"];
+    Settings.SRM.Tonemapper.Exposure = tonemapper["exposure"].GetOr(Settings.SRM.Tonemapper.Exposure);
+    Settings.SRM.Tonemapper.Contrast = tonemapper["contrast"].GetOr(Settings.SRM.Tonemapper.Contrast);
+
+    const auto camera = settings["camera"];
+    Settings.Camera.NearPlane = camera["nearPlane"].GetOr(Settings.Camera.NearPlane);
+    Settings.Camera.FarPlane = camera["farPlane"].GetOr(Settings.Camera.FarPlane);
+
+    Settings.Ambient.Color = settings["ambient"]["color"].GetOr(Settings.Ambient.Color);
+
+    const auto skybox = settings["skybox"];
+    Settings.Skybox.Enabled = skybox["enabled"].GetOr(Settings.Skybox.Enabled);
+    Settings.Skybox.HdrPath = skybox["hdrPath"].GetOr(Settings.Skybox.HdrPath);
+
+    const auto bloom = settings["bloom"];
+    Settings.Bloom.MipCount = bloom["mipCount"].GetOr(Settings.Bloom.MipCount);
+    Settings.Bloom.DirtTexturePath = bloom["dirtTexturePath"].GetOr(Settings.Bloom.DirtTexturePath);
+
+    const auto depthOfField = settings["depthOfField"];
+    Settings.DepthOfField.Enabled = depthOfField["enabled"].GetOr(Settings.DepthOfField.Enabled);
+    Settings.DepthOfField.MinFocalDistance = depthOfField["minFocalDistance"].GetOr(Settings.DepthOfField.MinFocalDistance);
+    Settings.DepthOfField.FocusSpeed = depthOfField["focusSpeed"].GetOr(Settings.DepthOfField.FocusSpeed);
+
+    Settings.Background.ClearColor = settings["background"]["clearColor"].GetOr(Settings.Background.ClearColor);
     
+    be_assert(_camera, "LoadSceneFile: camera must be created before the scene file is loaded");
+    _machine->Settings = Settings.SRM;
+    _camera->NearPlane = Settings.Camera.NearPlane;
+    _camera->FarPlane = Settings.Camera.FarPlane;
+    _machine->UniformMaterial->SetFloat3("AmbientColor", Settings.Ambient.Color);
+
+    _registry.clear();
+
     for (const auto& [name, entityTable] : data["Objects"].Pairs()) {
         const auto entity = _registry.create();
         _registry.emplace<NameComponent>(entity, NameComponent{ .Name = name });
@@ -286,14 +314,22 @@ auto SakuraScene::LoadSceneFile() -> void {
 }
 
 auto SakuraScene::RebuildPasses() -> void {
-    if (!_uniformMaterial) {
-        const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
-        _uniformMaterial = BeMaterial::Create(uniformScheme, false);
-        _uniformMaterial->SetFloat3("AmbientColor", Settings.Ambient.Color);
-        _machine->UniformMaterial = _uniformMaterial;
-    }
-    
     _machine->ClearPasses();
+
+    BeTexture::Create("Sakura_BloomDirtTexture")
+        .LoadFromFile(Settings.Bloom.DirtTexturePath)
+        .AddToRegistry(_assetRegistry)
+        .Build();
+
+    if (Settings.Skybox.Enabled) {
+        const auto skyTexture = BeTexture::Create("Sakura_Sky")
+            .LoadFromFileHdr(Settings.Skybox.HdrPath)
+            .AddToRegistry(_assetRegistry)
+            .Build();
+        _machine->AddEnvironmentBakePass(skyTexture);
+        _machine->BakeEnvironment();
+    }
+
     _machine->AddShadowPass();
     _machine->AddGeometryPass();
     _machine->AddLightingPass("Sakura_HDR");
@@ -342,6 +378,8 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     const auto writeTime = std::filesystem::last_write_time(Settings.SceneFile.Path);
     if (writeTime > _sceneLastWriteTime) {
         LoadSceneFile();
+        RebuildPasses();
+        _machine->Activate();
         _sceneLastWriteTime = writeTime;
     }
 
@@ -366,6 +404,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     if (GameIns->Input->GetKeyDown(GLFW_KEY_F5)) {
         Settings.DepthOfField.Enabled = !Settings.DepthOfField.Enabled;
         RebuildPasses();
+        _machine->Activate();
     }
 
     if (Settings.DepthOfField.Enabled) {
@@ -390,7 +429,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         _freeCameraController->Update(deltaTime, GameIns->Input.get());
     }
 
-    auto& uniformMat = *_uniformMaterial;
+    auto& uniformMat = *_machine->UniformMaterial;
     const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
     uniformMat.SetMatrix("CameraProjectionView", projView);
     uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));

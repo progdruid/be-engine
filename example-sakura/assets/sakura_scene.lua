@@ -1,3 +1,32 @@
+function makeSettings()
+    return {
+        srm = {
+            shadow     = { bias = 16.0 / 100000.0 },
+            ibl        = { maxSampleRadiance = 100.0 },
+            skybox     = { clampRadiance = 0.0 },
+            bloom      = { threshold = 2.5, knee = 0.7, intensity = 0.7, clamp = 4.0, upsampleRadius = 1.0 },
+            tonemapper = { exposure = 0.25, contrast = 1.70 },
+        },
+
+        camera = { nearPlane = 0.1, farPlane = 250.0 },
+
+        ambient = { color = "#000000" },
+
+        skybox = {
+            enabled = true,
+            hdrPath = "assets/moonrise_puresky.hdr",
+            --hdrPath = "assets/kloofendal_puresky.hdr",
+        },
+
+        bloom = { mipCount = 5, dirtTexturePath = "assets/bloom-dirt-mask.png" },
+
+        depthOfField = { enabled = false, minFocalDistance = 0.5, focusSpeed = 5.0 },
+
+        background = { clearColor = { 0.0 / 255.0, 23.0 / 255.0, 31.0 / 255.0 } },
+    }
+end
+
+
 function makeBase(objects)
     math.randomseed(os.time())
 
@@ -203,8 +232,9 @@ end
 
 function makeData ()
     local data = {}
+    data.Settings = makeSettings()
     data.Objects = {}
-    
+
     makeBase(data.Objects)
     --makeStandardContent(data.Objects)
     makeShowcaseContent(data.Objects)

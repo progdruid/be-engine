@@ -22,7 +22,6 @@ class BeMaterial;
 struct SakuraSceneSettings {
     BeSRMSettings SRM = {
         .Shadow = {
-            //.Bias = 8.f / 100000.f,
             .Bias = 16.f / 100000.f,
         },
         .Bloom = {
@@ -53,7 +52,6 @@ struct SakuraSceneSettings {
     struct {
         bool Enabled = true;
         std::string HdrPath = "assets/moonrise_puresky.hdr";
-        //std::string HdrPath = "assets/kloofendal_puresky.hdr";
     } Skybox;
 
     struct {
@@ -85,7 +83,6 @@ class SakuraScene : public BaseScene {
     std::unique_ptr<RigCameraController> _rigCameraController;
     int _cameraMode = 0;   // 0 = free, 1 = orbit, 2 = rig
 
-    std::shared_ptr<BeMaterial> _uniformMaterial;
     std::shared_ptr<BeMaterial> _dofMaterial;
     std::unique_ptr<BeStandardRenderMachine> _machine;
     std::filesystem::file_time_type _sceneLastWriteTime{};
