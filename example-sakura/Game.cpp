@@ -15,6 +15,7 @@
 #include "scenes/MenuScene.h"
 #include "scenes/SakuraScene.h"
 #include "scenes/RiftScene.h"
+#include "scenes/OldScene.h"
 
 Game::Game() = default;
 Game::~Game() = default;
@@ -98,16 +99,19 @@ auto Game::SetupScenes() -> void {
     auto mainScene = std::make_unique<SakuraScene>(this);
     auto showcase  = std::make_unique<ShowcaseScene>(this);
     auto rift      = std::make_unique<RiftScene>(this);
+    auto oldScene  = std::make_unique<OldScene>(this);
 
     SceneManager->RegisterScene("menu", std::move(menuScene));
     SceneManager->RegisterScene("sakura", std::move(mainScene));
     SceneManager->RegisterScene("showcase", std::move(showcase));
     SceneManager->RegisterScene("rift", std::move(rift));
+    SceneManager->RegisterScene("old", std::move(oldScene));
 
     SceneManager->GetScene<BaseScene>("menu")->Prepare();
     SceneManager->GetScene<BaseScene>("sakura")->Prepare();
     SceneManager->GetScene<BaseScene>("showcase")->Prepare();
     SceneManager->GetScene<BaseScene>("rift")->Prepare();
+    SceneManager->GetScene<BaseScene>("old")->Prepare();
 
     SceneManager->RequestSceneChange("menu");
     SceneManager->ApplyPendingSceneChange();

@@ -83,11 +83,18 @@ auto MenuScene::RunUI() -> void {
         GameIns->SceneManager->RequestSceneChange("rift");
     }
 
+    ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
+    ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.8f);
+
+    if (ImGui::Button("Old", ImVec2(buttonWidth, buttonHeight))) {
+        GameIns->SceneManager->RequestSceneChange("old");
+    }
+
     ImGui::PopStyleVar();
     ImGui::PopStyleColor(4);
 
     ImGui::SetWindowFontScale(1.0);
-    ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.85f);
+    ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.9f);
 
     auto creditsText = "by @progdruid";
     auto creditsWidth = ImGui::CalcTextSize(creditsText).x;

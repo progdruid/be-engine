@@ -25,7 +25,7 @@ msbuild be.sln /p:Configuration=Debug
 
 No tests or linting. C++23 (`/Zc:__cplusplus /Zc:preprocessor` on MSVC). Build outputs land in `out/<preset>/`.
 
-`example-sakura` is the up-to-date showcase; prefer it as the reference. `example-game-1` is outdated and may not build.
+`example-sakura` is the up-to-date showcase; prefer it as the reference.
 
 ## Project Structure
 
@@ -42,7 +42,6 @@ be-engine/
 │   ├── lua/            # BeLuaState + BeLuaValue — Lua data reading
 │   ├── imgui/          # ImGui source + BeImGuiPass + backends
 │   └── entt/           # ECS header-only library
-├── example-game-1/     # Simple game example
 ├── example-sakura/     # Advanced showcase (multi-scene, ECS, SRM)
 ├── example-vulkan/     # Minimal raw Vulkan/RHI example
 ├── devtools/

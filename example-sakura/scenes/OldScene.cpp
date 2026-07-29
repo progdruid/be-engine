@@ -1,5 +1,5 @@
 
-#include "MainScene.h"
+#include "OldScene.h"
 
 #include <umbrellas/include-glfw.h>
 
@@ -15,36 +15,33 @@
 #include "BeTexture.h"
 #include "BeWindow.h"
 #include "Game.h"
+#include "scenes/BeSceneManager.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
-MainScene::MainScene(Game* game) : BaseScene(game) {}
-MainScene::~MainScene() = default;
+OldScene::OldScene(Game* game) : BaseScene(game) {}
+OldScene::~OldScene() = default;
 
-auto MainScene::LoadPasses() -> void {
+auto OldScene::LoadPasses() -> void {
     _machine->ClearPasses();
 
     _machine->AddShadowPass();
     _machine->AddGeometryPass();
-    _machine->AddLightingPass("HDR");
-    _machine->AddBloomPass(5, "HDR", "BloomOutput", _assetRegistry.GetTexture("MainScene_BloomDirt").lock());
+    _machine->AddLightingPass("Old_HDR");
+    _machine->AddBloomPass(5, "Old_HDR", "Old_BloomOutput", _assetRegistry.GetTexture("Old_BloomDirt").lock());
 
-    _machine->AddTonemapperPass("BloomOutput", "TonemapperOutput");
+    _machine->AddTonemapperPass("Old_BloomOutput", "Old_TonemapperOutput");
 
-    _machine->AddBackbufferPass("TonemapperOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
+    _machine->AddBackbufferPass("Old_TonemapperOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
     _machine->BuildPasses();
     _machine->Activate();
 }
 
-auto MainScene::Prepare() -> void {
-    _camera = std::make_unique<BeCamera>();
+auto OldScene::Prepare() -> void {
+    _camera = std::make_shared<BeCamera>();
     _camera->Width = GameIns->Window->GetReportedLogicalWidth();
     _camera->Height = GameIns->Window->GetReportedLogicalHeight();
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
-
-    const auto& uniformScheme = BeShaderLibrary::GetMaterialScheme("uniform-material");
-    _uniformMaterial = BeMaterial::Create(uniformScheme, false);
-    _uniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.0f));
 
     const auto standardShader    = BeShaderLibrary::GetShader("standard-phong");
     const auto tessellatedShader = BeShaderLibrary::GetShader("tessellated");
@@ -64,11 +61,11 @@ auto MainScene::Prepare() -> void {
     _cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), tessellatedShader, "geometry-main");
     _cube->Slices[0].Material->SetFloat3("DiffuseColor", glm::vec3(0.28f, 0.39f, 1.0f));
 
-    _witchItems = _machine->LoadProp("assets/witch_items.glb",  standardShader, BeSRMLightingModel::Phong);
-    _macintosh  = _machine->LoadProp("assets/model.fbx",        standardShader, BeSRMLightingModel::Phong);
-    _pagoda     = _machine->LoadProp("assets/pagoda.glb",       standardShader, BeSRMLightingModel::Phong);
-    _disks      = _machine->LoadProp("assets/floppy-disks.glb", standardShader, BeSRMLightingModel::Phong);
-    _anvil      = _machine->LoadProp("assets/anvil/anvil.fbx",  standardShader, BeSRMLightingModel::Phong);
+    _witchItems = _machine->LoadProp("assets/witch_items.glb",          standardShader, BeSRMLightingModel::Phong);
+    _macintosh  = _machine->LoadProp("assets/model.fbx",                standardShader, BeSRMLightingModel::Phong);
+    _pagoda     = _machine->LoadProp("assets/pagoda.glb",               standardShader, BeSRMLightingModel::Phong);
+    _disks      = _machine->LoadProp("assets/floppy-disks.glb",         standardShader, BeSRMLightingModel::Phong);
+    _anvil      = _machine->LoadProp("assets/anvil-lowpoly/anvil.fbx",  standardShader, BeSRMLightingModel::Phong);
     _anvil->Materials[0]->SetFloat3("SpecularColor", glm::vec3(1.0f));
 
     for (const auto& prop : { _anvil, _pagoda, _witchItems }) {
@@ -81,26 +78,26 @@ auto MainScene::Prepare() -> void {
     _machine->RegisterMesh(_cube->Mesh);
     _machine->BakeMeshes();
 
-    _machine->DeclareGBufferTarget("BaseColor",         SenFormat::R11G11B10_Float);
-    _machine->DeclareGBufferTarget("WorldNormal",       SenFormat::RGBA16_Float);
-    _machine->DeclareGBufferTarget("SpecularShininess", SenFormat::RGBA8_Unorm);
-    _machine->DeclareGBufferTarget("Emissive",          SenFormat::R11G11B10_Float);
-    _machine->DeclareDepth        ("Depth",             SenFormat::Depth32);
-    _machine->DeclareTexture      ("HDR",               SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("BloomOutput",       SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("TonemapperOutput",  SenFormat::R11G11B10_Float);
+    _machine->DeclareGBufferTarget("Old_BaseColor",         SenFormat::R11G11B10_Float);
+    _machine->DeclareGBufferTarget("Old_WorldNormal",       SenFormat::RGBA16_Float);
+    _machine->DeclareGBufferTarget("Old_SpecularShininess", SenFormat::RGBA8_Unorm);
+    _machine->DeclareGBufferTarget("Old_Emissive",          SenFormat::R11G11B10_Float);
+    _machine->DeclareDepth        ("Old_Depth",             SenFormat::Depth32);
+    _machine->DeclareTexture      ("Old_HDR",               SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Old_BloomOutput",       SenFormat::R11G11B10_Float);
+    _machine->DeclareTexture      ("Old_TonemapperOutput",  SenFormat::R11G11B10_Float);
 
-    _assetRegistry.AddTexture("MainScene_BloomDirt",
-        BeTexture::Create("MainScene_BloomDirt")
+    _assetRegistry.AddTexture("Old_BloomDirt",
+        BeTexture::Create("Old_BloomDirt")
         .LoadFromFile("assets/bloom-dirt-mask.png")
         .Build()
     );
 }
 
-auto MainScene::OnLoad() -> void {
+auto OldScene::OnLoad() -> void {
     _registry.clear();
 
-    _machine->UniformMaterial = _uniformMaterial;
+    _machine->UniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.0f));
     LoadPasses();
 
     CreateEntity(_registry
@@ -161,7 +158,7 @@ auto MainScene::OnLoad() -> void {
             .ShadowMapWorldSize = 60.0f,
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
-            .ShadowMap = BeTexture::Create("MainScene_SunShadowMap")
+            .ShadowMap = BeTexture::Create("Old_SunShadowMap")
                 .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
                 .SetFormat(SenFormat::Depth32)
                 .SetSize(4096, 4096)
@@ -182,7 +179,7 @@ auto MainScene::OnLoad() -> void {
                 .ShadowMapResolution = 2048,
                 .ShadowNearPlane = 0.1f,
                 .ShadowMap =
-                    BeTexture::Create("MainScene_PointLight" + std::to_string(i) + "_ShadowMap")
+                    BeTexture::Create("Old_PointLight" + std::to_string(i) + "_ShadowMap")
                     .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
                     .SetFormat(SenFormat::Depth32)
                     .SetCubemap(true)
@@ -194,7 +191,13 @@ auto MainScene::OnLoad() -> void {
     }
 }
 
-auto MainScene::Tick(float deltaTime) -> void {
+auto OldScene::Tick(float deltaTime) -> void {
+    if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        GameIns->Input->SetMouseCapture(false);
+        GameIns->SceneManager->RequestSceneChange("menu");
+        return;
+    }
+
     constexpr float moveSpeed = 5.0f;
     float speed = moveSpeed * deltaTime;
     if (GameIns->Input->GetKey(GLFW_KEY_LEFT_SHIFT) || (GameIns->Input->IsGamepadConnected() && GameIns->Input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) {
@@ -248,7 +251,7 @@ auto MainScene::Tick(float deltaTime) -> void {
 
     {
         _camera->Update();
-        auto& uniformMat = *_uniformMaterial;
+        auto& uniformMat = *_machine->UniformMaterial;
         const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
         uniformMat.SetMatrix("CameraProjectionView", projView);
         uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));
