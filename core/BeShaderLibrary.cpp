@@ -6,6 +6,7 @@
 
 #include "BeShader.h"
 #include "BeShaderTools.h"
+#include "BeTexture.h"
 #include "sen-rhi/SenBackend.h"
 #include "sen-rhi/SenShaderCompiler.h"
 
@@ -78,6 +79,38 @@ auto BeShaderLibrary::GetShader(std::string_view name) -> raw_ptr<BeShader> {
 auto BeShaderLibrary::GetMaterialScheme(std::string_view name) -> const BeMaterialScheme& {
     be_assert(_materialSchemes.contains(std::string(name)), name);
     return _materialSchemes.at(std::string(name));
+}
+
+auto BeShaderLibrary::RegisterBuiltinDefaultTextures() -> void {
+
+    struct BuiltinDefaultTexture {
+        std::string_view Name;
+        glm::vec4 Color;
+        SenTextureUsage Usage = SenTextureUsage::ShaderResource;
+        bool Cubemap = false;
+    };
+
+    const BuiltinDefaultTexture builtins[] = {
+        { "white", glm::vec4(1.f) },
+        { "black", glm::vec4(0.f, 0.f, 0.f, 1.f) },
+        { "storage-black", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::ShaderResource | SenTextureUsage::Storage },
+        { "black-cube", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::ShaderResource, true },
+        { "default-orm", glm::vec4(0.f, 1.f, 1.f, 1.f) },
+        { "flat-normal", glm::vec4(0.5f, 0.5f, 1.f, 1.f) },
+    };
+
+    for (const auto& builtin : builtins) {
+        RegisterDefaultTexture(
+            builtin.Name,
+            BeTexture::Create(std::string(builtin.Name))
+            .SetSize(1, 1)
+            .SetCubemap(builtin.Cubemap)
+            .SetUsage(builtin.Usage)
+            .SetFormat(SenFormat::RGBA8_Unorm)
+            .FillWithColor(builtin.Color)
+            .Build()
+        );
+    }
 }
 
 auto BeShaderLibrary::RegisterDefaultTexture(std::string_view name, std::shared_ptr<BeTexture> texture) -> void {

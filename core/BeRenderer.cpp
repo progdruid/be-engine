@@ -34,6 +34,7 @@ auto BeRenderer::LaunchDevice() -> void {
 
     _frameCmd = SenBackend::AllocateCommandBuffer();
 
+    BeShaderLibrary::RegisterBuiltinDefaultTextures();
     BeShaderLibrary::LoadShaders();
 }
 
