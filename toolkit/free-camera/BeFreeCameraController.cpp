@@ -1,4 +1,4 @@
-#include "FreeCameraController.h"
+#include "BeFreeCameraController.h"
 
 #include <cmath>
 
@@ -7,11 +7,11 @@
 #include "BeCamera.h"
 #include "BeInput.h"
 
-FreeCameraController::FreeCameraController(BeCamera* camera)
+BeFreeCameraController::BeFreeCameraController(BeCamera* camera)
     : _camera(camera)
 {}
 
-auto FreeCameraController::Update(float deltaTime, BeInput* input) -> void {
+auto BeFreeCameraController::Update(float deltaTime, BeInput* input) -> void {
     // Seed the smoothing targets from the camera's current state on first use,
     // so we don't lerp from an uninitialised origin.
     if (!_initialised) {

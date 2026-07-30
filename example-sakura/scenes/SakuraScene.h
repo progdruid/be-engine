@@ -13,7 +13,7 @@ struct BeProp;
 class BeInput;
 class BeCamera;
 class OrbitCameraController;
-class FreeCameraController;
+class BeFreeCameraController;
 class RigCameraController;
 class BeWindow;
 class BeRenderer;
@@ -79,7 +79,7 @@ class SakuraScene : public BaseScene {
     entt::registry _registry;
     std::shared_ptr<BeCamera> _camera;
     std::unique_ptr<OrbitCameraController> _orbitCameraController;
-    std::unique_ptr<FreeCameraController> _freeCameraController;
+    std::unique_ptr<BeFreeCameraController> _freeCameraController;
     std::unique_ptr<RigCameraController> _rigCameraController;
     int _cameraMode = 0;   // 0 = free, 1 = orbit, 2 = rig
 
