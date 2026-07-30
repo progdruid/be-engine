@@ -247,6 +247,11 @@ auto BeStandardRenderMachine::AddSkyboxPass(const std::string& outputName) -> vo
 auto BeStandardRenderMachine::ClearPasses() -> void {
     _renderer.lock()->ClearPasses();
     _passes.clear();
+    _environmentBakePass.reset();
+    _envCubemap.reset();
+    _irradianceCubemap.reset();
+    _prefilteredCubemap.reset();
+    _brdfLutTexture.reset();
 }
 
 auto BeStandardRenderMachine::BuildPasses() -> void {

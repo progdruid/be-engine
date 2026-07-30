@@ -27,7 +27,10 @@ function makeSettings()
 end
 
 
-function makeBase(objects)
+function makeBase(data)
+    local objects = data.Objects
+    local settings = data.Settings
+
     math.randomseed(os.time())
 
     local function randFloat(min, max)
@@ -48,7 +51,10 @@ function makeBase(objects)
 end
 
 
-function makeStandardContent (objects)
+function makeStandardContent (data)
+    local objects = data.Objects
+    local settings = data.Settings
+
     objects.Moon = {
         transform = { position = {100, 150, 100}, scale = {6.0, 6.0, 6.0} },
         render = { prop = "moon", castShadows = false },
@@ -122,7 +128,10 @@ function makeStandardContent (objects)
 end
 
 
-function makeShowcaseContent(objects)
+function makeShowcaseContent(data)
+    local objects = data.Objects
+    local settings = data.Settings
+
     objects.Moon = {
         transform = { position = {100, 150, 100}, scale = {6.0, 6.0, 6.0} },
         render = { prop = "moon", castShadows = false },
@@ -207,26 +216,68 @@ function makeShowcaseContent(objects)
     end
 end
 
-function makeSpinningLights(objects)
+function makeSpinningLights(data)
+    local objects = data.Objects
+    local settings = data.Settings
+
+    settings.skybox.enabled = false
+    settings.bloom.mipCount = 4
+
+    objects.Cube.transform.scale = {60, 30, 60}
+
+    local clusterCount = 3
+    local clusterSpacing = 10.0
     local lightCount = 4
-    for i = 0, lightCount - 1 do
-        objects["CirclingLight_" .. i] = {
-            transform = { scale = { 1.0, 1.0, 1.0 } },
-            render = { prop = "emissiveCube", castShadows = false },
-            pointLight = {
-                radius = 20.0,
-                color = {1.0, 0.95, 0.85},
-                power = 4.0,
-                castsShadows = false,
-            },
-            circling = {
-                origin = {0.0, 0.0, 0.0},
-                axis = {0, 0, 1},
-                radius = 6.0,
-                speed = 15.0,
-                phase = 360.0 * i / lightCount,
-            },
+    local saturation = 0.8
+
+    local function randFloat(min, max)
+        return min + math.random() * (max - min)
+    end
+
+    local function hueColor(hue)
+        local function channel(offset)
+            local value = math.abs(((hue + offset) % 1.0) * 6.0 - 3.0) - 1.0
+            return math.max(0.0, math.min(1.0, value))
+        end
+        local r, g, b = channel(0.0), channel(2.0 / 3.0), channel(1.0 / 3.0)
+        return {
+            1.0 - saturation + saturation * r,
+            1.0 - saturation + saturation * g,
+            1.0 - saturation + saturation * b,
         }
+    end
+
+    for cx = 0, clusterCount - 1 do
+        for cz = 0, clusterCount - 1 do
+            local cluster = cx * clusterCount + cz
+            local originX = (cx - (clusterCount - 1) * 0.5) * clusterSpacing + randFloat(-2.0, 2.0)
+            local originZ = (cz - (clusterCount - 1) * 0.5) * clusterSpacing + randFloat(-2.0, 2.0)
+            local yaw = math.random() * 2.0 * math.pi
+            local phaseOffset = math.random() * 360.0
+            local color = hueColor(cluster / (clusterCount * clusterCount) + randFloat(-0.03, 0.03))
+            local orbitRadius = randFloat(5.0, 8.0)
+            local speed = randFloat(10.0, 20.0) * (cluster % 2 == 0 and 1.0 or -1.0)
+
+            for i = 0, lightCount - 1 do
+                objects["CirclingLight_" .. cx .. "_" .. cz .. "_" .. i] = {
+                    transform = { scale = { 0.1, 0.1, 0.1 } },
+                    render = { prop = "emissiveCube", castShadows = false },
+                    pointLight = {
+                        radius = 20.0,
+                        color = color,
+                        power = 4.0,
+                        castsShadows = false,
+                    },
+                    circling = {
+                        origin = { originX, 0.0, originZ },
+                        axis = { math.sin(yaw), 0, math.cos(yaw) },
+                        radius = orbitRadius,
+                        speed = speed,
+                        phase = phaseOffset + 360.0 * i / lightCount,
+                    },
+                }
+            end
+        end
     end
 end
 
@@ -235,10 +286,10 @@ function makeData ()
     data.Settings = makeSettings()
     data.Objects = {}
 
-    makeBase(data.Objects)
-    --makeStandardContent(data.Objects)
-    makeShowcaseContent(data.Objects)
-    --makeSpinningLights(data.Objects)
+    makeBase(data)
+    --makeStandardContent(data)
+    --makeShowcaseContent(data)
+    makeSpinningLights(data)
 
     return data
 end
