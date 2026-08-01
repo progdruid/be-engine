@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <string>
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
@@ -6,6 +7,7 @@
 
 #include "BeRenderPass.h"
 
+class BeMaterial;
 class BeShader;
 class BeStandardRenderMachine;
 struct BeSRMSunLightEntry;
@@ -15,6 +17,7 @@ class BeStandardShadowPass final : public BeRenderPass {
 
     hide
     BeStandardRenderMachine* _srm;
+    std::shared_ptr<BeMaterial> _objectMaterial;
 
     expose
     explicit BeStandardShadowPass(BeStandardRenderMachine* srm);

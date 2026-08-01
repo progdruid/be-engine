@@ -131,9 +131,6 @@ class BeStandardRenderMachine {
     std::unordered_map<BeMesh*, std::vector<BeMeshSlice>> _meshSlices;
     std::vector<std::shared_ptr<BeMesh>> _registeredMeshes;
 
-    std::vector<std::shared_ptr<BeMaterial>> _objectMaterialPool;
-    size_t _objectMaterialCursor = 0;
-
     std::shared_ptr<BeMaterial> _tonemapperMaterial;
 
     expose
@@ -213,5 +210,4 @@ class BeStandardRenderMachine {
     // internal use by passes ------------------------------------------------------------------------------------------
     expose
     auto GetAssetRegistry() const -> BeAssetRegistry& { return _assetRegistry; }
-    auto AcquireNewObjectMaterial(const BeMaterialScheme& scheme) -> std::shared_ptr<BeMaterial>;
 };

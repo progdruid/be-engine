@@ -290,7 +290,6 @@ auto BeStandardRenderMachine::GetDebugChannelTexture() const -> std::shared_ptr<
 // =====================================================================================================================
 
 auto BeStandardRenderMachine::ClearFrame() -> void {
-    _objectMaterialCursor = 0;
     _geometryEntries.clear();
     _sunLightEntries.clear();
     _pointLightEntries.clear();
@@ -461,26 +460,3 @@ auto BeStandardRenderMachine::BakeMeshes() -> void {
     });
 }
 
-// =====================================================================================================================
-// BeStandardRenderMachine — internal
-// =====================================================================================================================
-
-/* TODO: this is wrong and needs to be fixed. 
- * 
- * basically geometry passes like `BeStandardGeometryPass` or `BeStandardShadowPass`
- * all need a dedicated object material per each object they render.
- * therefore, this pooling was added to mitigate perf impact at least a bit.
- * 
- * practically, this has to be solved on `sen-rhi` level.
- * possible solutions that i see: 
- *      ring buffer option for `SenBuffer` with bump on every write;
- *      structured buffer option for `SenBuffer` with enough slots for every object
- */
-auto BeStandardRenderMachine::AcquireNewObjectMaterial(const BeMaterialScheme& scheme) -> std::shared_ptr<BeMaterial> {
-    if (_objectMaterialCursor >= _objectMaterialPool.size()) {
-        _objectMaterialPool.push_back(BeMaterial::Create(scheme, true));
-    } else if (_objectMaterialPool[_objectMaterialCursor]->GetSchemeName() != scheme.Name) {
-        _objectMaterialPool[_objectMaterialCursor] = BeMaterial::Create(scheme, true);
-    }
-    return _objectMaterialPool[_objectMaterialCursor++];
-}

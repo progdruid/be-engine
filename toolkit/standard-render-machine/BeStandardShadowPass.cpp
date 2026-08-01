@@ -9,11 +9,15 @@
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
+#include "BeShaderLibrary.h"
 #include "BeTexture.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
 BeStandardShadowPass::BeStandardShadowPass(BeStandardRenderMachine* srm) : _srm(srm) {}
-auto BeStandardShadowPass::Initialise(BeRenderer& renderer) -> void {}
+
+auto BeStandardShadowPass::Initialise(BeRenderer& renderer) -> void {
+    _objectMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("object-material-for-geometry-pass"), true);
+}
 
 auto BeStandardShadowPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
     for (const auto& sunLight : _srm->GetSunLightEntries()) {
@@ -47,12 +51,10 @@ auto BeStandardShadowPass::RenderDirectionalShadows(SenCommandBuffer& cmd, const
             continue;
         }
 
-        const auto& scheme = entry.Prop->Shader->GetMaterialScheme("geometry-object");
-        const auto mat = _srm->AcquireNewObjectMaterial(scheme);
-        mat->SetMatrix("Model", entry.ModelMatrix);
-        mat->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
-        mat->SetFloat3("ViewerPosition", glm::vec3(0.f));
-        cmd.SetBindGroup(mat->GetBindGroup(), 1);
+        _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
+        _objectMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
+        _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
+        cmd.SetBindGroup(_objectMaterial->GetBindGroup(), 1);
 
         const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
         for (size_t j = 0; j < meshSlices.size(); ++j) {
@@ -96,11 +98,10 @@ auto BeStandardShadowPass::RenderPointLightShadows(SenCommandBuffer& cmd, const 
                 continue;
             }
 
-            const auto mat = _srm->AcquireNewObjectMaterial(entry.Prop->Shader->GetMaterialScheme("geometry-object"));
-            mat->SetMatrix("Model", entry.ModelMatrix);
-            mat->SetMatrix("ProjectionView", faceViewProj);
-            mat->SetFloat3("ViewerPosition", pointLight.Position);
-            cmd.SetBindGroup(mat->GetBindGroup(), 1);
+            _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
+            _objectMaterial->SetMatrix("ProjectionView", faceViewProj);
+            _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
+            cmd.SetBindGroup(_objectMaterial->GetBindGroup(), 1);
 
             const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
             for (size_t j = 0; j < meshSlices.size(); ++j) {

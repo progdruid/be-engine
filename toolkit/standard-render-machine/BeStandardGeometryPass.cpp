@@ -7,6 +7,7 @@
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
+#include "BeShaderLibrary.h"
 #include "BeTexture.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
@@ -19,7 +20,9 @@ BeStandardGeometryPass::BeStandardGeometryPass(
 , _colorTargets(std::move(colorTargets))
 , _depthTarget(std::move(depthTarget)) {}
 
-auto BeStandardGeometryPass::Initialise(BeRenderer& renderer) -> void {}
+auto BeStandardGeometryPass::Initialise(BeRenderer& renderer) -> void {
+    _objectMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("object-material-for-geometry-pass"), true);
+}
 
 auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
     const auto uniformMat = _srm->UniformMaterial;
@@ -45,12 +48,10 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     for (const auto& entry : entries) {
         be_assert(entry.Prop->Shader);
 
-        const auto& scheme = entry.Prop->Shader->GetMaterialScheme("geometry-object");
-        const auto  mat = _srm->AcquireNewObjectMaterial(scheme);
-        mat->SetMatrix("Model", entry.ModelMatrix);
-        mat->SetMatrix("ProjectionView", uniformMat->GetMatrix("CameraProjectionView"));
-        mat->SetFloat3("ViewerPosition", uniformMat->GetFloat3("CameraPosition"));
-        cmd.SetBindGroup(mat->GetBindGroup(), 1);
+        _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
+        _objectMaterial->SetMatrix("ProjectionView", uniformMat->GetMatrix("CameraProjectionView"));
+        _objectMaterial->SetFloat3("ViewerPosition", uniformMat->GetFloat3("CameraPosition"));
+        cmd.SetBindGroup(_objectMaterial->GetBindGroup(), 1);
 
         const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
         for (size_t j = 0; j < meshSlices.size(); ++j) {

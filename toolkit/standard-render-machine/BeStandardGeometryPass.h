@@ -7,6 +7,7 @@
 
 #include "BeRenderPass.h"
 
+class BeMaterial;
 class BeTexture;
 class BeStandardRenderMachine;
 
@@ -16,6 +17,7 @@ class BeStandardGeometryPass final : public BeRenderPass {
     BeStandardRenderMachine* _srm;
     std::vector<std::shared_ptr<BeTexture>> _colorTargets;
     std::shared_ptr<BeTexture> _depthTarget;
+    std::shared_ptr<BeMaterial> _objectMaterial;
 
     expose
     explicit BeStandardGeometryPass(
