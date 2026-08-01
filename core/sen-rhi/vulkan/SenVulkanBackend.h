@@ -69,16 +69,21 @@ struct SenVulkanSwapchainEntry {
     std::vector<VkImageView> ImageViews;
     std::vector<SenTexture>  Textures;   // SenTexture handle per swapchain image
 
-    // per-frame sync
-    VkSemaphore ImageAvailableSemaphore = VK_NULL_HANDLE;
-    VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;
-    VkFence     InFlightFence           = VK_NULL_HANDLE;
-    uint32_t    CurrentImageIndex       = 0;
+    // per frame slot
+    std::vector<VkSemaphore> ImageAvailableSemaphores;
+    std::vector<VkFence>     InFlightFences;
+
+    // per swapchain image
+    std::vector<VkSemaphore> RenderFinishedSemaphores;
+    std::vector<VkFence>     ImagesInFlight;
+
+    uint32_t CurrentImageIndex = 0;
 
     void* NativeWindowHandle;
     uint32_t Width = 0;
     uint32_t Height = 0;
     uint32_t BufferCount;
+    uint32_t FramesInFlight = 2;
     SenFormat Format;
     SenPresentMode PresentMode;
 };
@@ -117,8 +122,8 @@ class SenVulkanBackend {
     static auto CreateSwapchain       (const SenSwapchainDesc& desc) -> SenSwapchain;
     static auto DestroySwapchain      (SenSwapchain handle) -> void;
     static auto ResizeSwapchain       (SenSwapchain& handle, uint32_t width, uint32_t height) -> void;
-    static auto BeginFrame            (SenSwapchain handle) -> SenTexture;
-    static auto EndFrame              (SenSwapchain handle, SenVulkanCommandBuffer& cmd) -> void;
+    static auto BeginFrame            (SenSwapchain handle, uint32_t frameSlot) -> SenTexture;
+    static auto EndFrame              (SenSwapchain handle, SenVulkanCommandBuffer& cmd, uint32_t frameSlot) -> void;
     static auto GetSwapchainFormat    (SenSwapchain handle) -> SenFormat;
     static auto GetSwapchainWidth     (SenSwapchain handle) -> uint32_t;
     static auto GetSwapchainHeight    (SenSwapchain handle) -> uint32_t;

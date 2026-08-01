@@ -194,7 +194,7 @@ function makeShowcaseContent(data)
         }
     end
 
-    local lightCount = 4
+    local lightCount = 20
     for i = 0, lightCount - 1 do
         objects["CirclingLight_" .. i] = {
             transform = { scale = { 1.0, 1.0, 1.0 } },

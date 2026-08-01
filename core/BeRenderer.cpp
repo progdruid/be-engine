@@ -34,9 +34,13 @@ auto BeRenderer::LaunchDevice() -> void {
         .NativeWindowHandle = _nativeWindow,
         .Width = _desiredWidth,
         .Height = _desiredHeight,
+        .FramesInFlight = FramesInFlight,
     });
 
-    _frameCmd = SenBackend::AllocateCommandBuffer();
+    for (auto& cmd : _frameCmds) {
+        cmd = SenBackend::AllocateCommandBuffer();
+    }
+    _immediateCmd = SenBackend::AllocateCommandBuffer();
 
     BeShaderLibrary::RegisterBuiltinDefaultTextures();
     BeShaderLibrary::LoadShaders();
@@ -71,40 +75,44 @@ auto BeRenderer::ClearPasses() -> void {
 auto BeRenderer::Render() -> void {
     SenBackend::BeginDebugEvent("Frame");
 
-    _backbufferTexture = SenBackend::BeginFrame(_swapchain);
+    const uint32_t slot = _currentFrame % FramesInFlight;
+    _backbufferTexture = SenBackend::BeginFrame(_swapchain, slot);
 
-    // Safe here and not earlier: BeginFrame waits on the fence, so the GPU is done with this slot.
-    ++_currentFrame;
+    // safe here, not earlier: BeginFrame waits on this slot's fence, so the GPU is done with
+    // both the command buffer and the arena chunks about to be reused.
     BeMaterialArena::ResetForFrame(_currentFrame);
 
-    _frameCmd.Begin();
+    auto& cmd = _frameCmds[slot];
+    cmd.Begin();
 
     for (const auto& pass : _passes) {
         SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
-        pass->Render(*this, _frameCmd);
+        pass->Render(*this, cmd);
         SenBackend::EndDebugEvent();
     }
 
-    _frameCmd.TransitionTextures({ { _backbufferTexture, SenResourceState::Present } });
-    _frameCmd.End();
+    cmd.TransitionTextures({ { _backbufferTexture, SenResourceState::Present } });
+    cmd.End();
 
-    SenBackend::EndFrame(_swapchain, _frameCmd);
+    SenBackend::EndFrame(_swapchain, cmd, slot);
     SenBackend::EndDebugEvent();
+
+    ++_currentFrame;
 }
 
 auto BeRenderer::RenderOnce(const std::vector<BeRenderPass*>& passes) -> void {
     SenBackend::BeginDebugEvent("RenderOnce");
 
-    _frameCmd.Begin();
+    _immediateCmd.Begin();
 
     for (const auto& pass : passes) {
         SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
-        pass->Render(*this, _frameCmd);
+        pass->Render(*this, _immediateCmd);
         SenBackend::EndDebugEvent();
     }
 
-    _frameCmd.End();
+    _immediateCmd.End();
 
-    SenBackend::SubmitImmediate(_frameCmd);
+    SenBackend::SubmitImmediate(_immediateCmd);
     SenBackend::EndDebugEvent();
 }

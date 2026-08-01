@@ -148,12 +148,23 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,  // start signaled so first frame doesn't wait forever
     };
-    result = vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &entry.ImageAvailableSemaphore);
-    be_assert(result == VK_SUCCESS, "Failed to create semaphore!");
-    result = vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &entry.RenderFinishedSemaphore);
-    be_assert(result == VK_SUCCESS, "Failed to create semaphore!");
-    result = vkCreateFence(_device, &fenceInfo, nullptr, &entry.InFlightFence);
-    be_assert(result == VK_SUCCESS, "Failed to create fence!");
+
+    entry.FramesInFlight = desc.FramesInFlight;
+    entry.ImageAvailableSemaphores.resize(entry.FramesInFlight);
+    entry.InFlightFences.resize(entry.FramesInFlight);
+    for (uint32_t i = 0; i < entry.FramesInFlight; ++i) {
+        result = vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &entry.ImageAvailableSemaphores[i]);
+        be_assert(result == VK_SUCCESS, "Failed to create semaphore!");
+        result = vkCreateFence(_device, &fenceInfo, nullptr, &entry.InFlightFences[i]);
+        be_assert(result == VK_SUCCESS, "Failed to create fence!");
+    }
+
+    entry.RenderFinishedSemaphores.resize(imageCount);
+    for (uint32_t i = 0; i < imageCount; ++i) {
+        result = vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &entry.RenderFinishedSemaphores[i]);
+        be_assert(result == VK_SUCCESS, "Failed to create semaphore!");
+    }
+    entry.ImagesInFlight.assign(imageCount, VK_NULL_HANDLE);
 
     const SenSwapchain handle { _nextSwapchainId++ };
     _swapchains[handle.ID] = std::move(entry);
@@ -170,9 +181,9 @@ auto SenVulkanBackend::DestroySwapchain(SenSwapchain handle) -> void {
             _textures.erase(tex.ID);
         }
 
-        if (entry.InFlightFence)           { vkDestroyFence(_device, entry.InFlightFence, nullptr); }
-        if (entry.ImageAvailableSemaphore) { vkDestroySemaphore(_device, entry.ImageAvailableSemaphore, nullptr); }
-        if (entry.RenderFinishedSemaphore) { vkDestroySemaphore(_device, entry.RenderFinishedSemaphore, nullptr); }
+        for (auto fence : entry.InFlightFences)               { vkDestroyFence(_device, fence, nullptr); }
+        for (auto semaphore : entry.ImageAvailableSemaphores) { vkDestroySemaphore(_device, semaphore, nullptr); }
+        for (auto semaphore : entry.RenderFinishedSemaphores) { vkDestroySemaphore(_device, semaphore, nullptr); }
         for (auto imageView : entry.ImageViews) {
             vkDestroyImageView(_device, imageView, nullptr);
         }
@@ -192,6 +203,7 @@ auto SenVulkanBackend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uin
         .Width = width,
         .Height = height,
         .BufferCount = entry.BufferCount,
+        .FramesInFlight = entry.FramesInFlight,
         .Format = entry.Format,
         .PresentMode = entry.PresentMode,
     });
@@ -209,27 +221,31 @@ auto SenVulkanBackend::GetSwapchainHeight(SenSwapchain handle) -> uint32_t {
     return _swapchains.at(handle.ID).Height;
 }
 
-auto SenVulkanBackend::BeginFrame(SenSwapchain handle) -> SenTexture {
+auto SenVulkanBackend::BeginFrame(SenSwapchain handle, uint32_t frameSlot) -> SenTexture {
     auto& entry = _swapchains.at(handle.ID);
+    be_assert(frameSlot < entry.FramesInFlight, "BeginFrame: frame slot out of range");
 
-    // Wait for GPU to finish the previous frame
-    vkWaitForFences(_device, 1, &entry.InFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(_device, 1, &entry.InFlightFence);
+    vkWaitForFences(_device, 1, &entry.InFlightFences[frameSlot], VK_TRUE, UINT64_MAX);
 
-    // Acquire the next swapchain image. The backbuffer's layout transitions are handled
-    // generically: a pass moves it to COLOR_ATTACHMENT as a render target, and the caller
-    // transitions it back to Present before submitting.
     vkAcquireNextImageKHR(
         _device, entry.Swapchain, UINT64_MAX,
-        entry.ImageAvailableSemaphore, VK_NULL_HANDLE,
+        entry.ImageAvailableSemaphores[frameSlot], VK_NULL_HANDLE,
         &entry.CurrentImageIndex
     );
+
+    if (entry.ImagesInFlight[entry.CurrentImageIndex] != VK_NULL_HANDLE) {
+        vkWaitForFences(_device, 1, &entry.ImagesInFlight[entry.CurrentImageIndex], VK_TRUE, UINT64_MAX);
+    }
+    entry.ImagesInFlight[entry.CurrentImageIndex] = entry.InFlightFences[frameSlot];
+
+    vkResetFences(_device, 1, &entry.InFlightFences[frameSlot]);
 
     return entry.Textures[entry.CurrentImageIndex];
 }
 
-auto SenVulkanBackend::EndFrame(SenSwapchain handle, SenVulkanCommandBuffer& cmd) -> void {
+auto SenVulkanBackend::EndFrame(SenSwapchain handle, SenVulkanCommandBuffer& cmd, uint32_t frameSlot) -> void {
     auto& entry = _swapchains.at(handle.ID);
+    be_assert(frameSlot < entry.FramesInFlight, "EndFrame: frame slot out of range");
 
     const VkCommandBuffer vkCmd = cmd.GetNativeHandle();
 
@@ -238,20 +254,20 @@ auto SenVulkanBackend::EndFrame(SenSwapchain handle, SenVulkanCommandBuffer& cmd
     VkSubmitInfo submitInfo {
         .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .waitSemaphoreCount   = 1,
-        .pWaitSemaphores      = &entry.ImageAvailableSemaphore,
+        .pWaitSemaphores      = &entry.ImageAvailableSemaphores[frameSlot],
         .pWaitDstStageMask    = &waitStage,
         .commandBufferCount   = 1,
         .pCommandBuffers      = &vkCmd,
         .signalSemaphoreCount = 1,
-        .pSignalSemaphores    = &entry.RenderFinishedSemaphore,
+        .pSignalSemaphores    = &entry.RenderFinishedSemaphores[entry.CurrentImageIndex],
     };
-    vkQueueSubmit(_queue, 1, &submitInfo, entry.InFlightFence);
+    vkQueueSubmit(_queue, 1, &submitInfo, entry.InFlightFences[frameSlot]);
 
     // Present: wait on renderFinished
     VkPresentInfoKHR presentInfo {
         .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores    = &entry.RenderFinishedSemaphore,
+        .pWaitSemaphores    = &entry.RenderFinishedSemaphores[entry.CurrentImageIndex],
         .swapchainCount     = 1,
         .pSwapchains        = &entry.Swapchain,
         .pImageIndices      = &entry.CurrentImageIndex,

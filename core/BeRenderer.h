@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <vector>
 #include <umbrellas/common.hpp>
 
@@ -29,7 +30,8 @@ class BeRenderer {
     SenSwapchain _swapchain;
 
     SenTexture _backbufferTexture;
-    SenCommandBuffer _frameCmd;
+    std::array<SenCommandBuffer, FramesInFlight> _frameCmds;
+    SenCommandBuffer _immediateCmd;
 
     std::vector<BeRenderPass*> _passes;
 

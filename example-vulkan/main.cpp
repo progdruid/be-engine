@@ -28,6 +28,7 @@ int main() {
         .NativeWindowHandle = window->GetGlfwWindow(),
         .Width  = uint32_t(window->GetReportedLogicalWidth()),
         .Height = uint32_t(window->GetReportedLogicalHeight()),
+        .FramesInFlight = 1,
     });
 
     const SenFormat swapchainFormat = SenBackend::GetSwapchainFormat(swapchain);
@@ -75,7 +76,7 @@ int main() {
     while (!window->ShouldClose()) {
         window->PollEvents();
 
-        auto backbuffer = SenBackend::BeginFrame(swapchain);
+        auto backbuffer = SenBackend::BeginFrame(swapchain, 0);
 
         cmd.Begin();
 
@@ -93,7 +94,7 @@ int main() {
         cmd.TransitionTextures({ { backbuffer, SenResourceState::Present } });
         cmd.End();
 
-        SenBackend::EndFrame(swapchain, cmd);
+        SenBackend::EndFrame(swapchain, cmd, 0);
     }
 
     SenBackend::WaitIdle();
