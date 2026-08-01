@@ -156,17 +156,17 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     // A material needs one descriptor set per arena chain it has landed in, so counts scale
     // with FramesInFlight rather than with the material count alone.
     std::array<VkDescriptorPoolSize, 6> poolSizes {
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          16384 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER,                16384 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,          4096 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 16384 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,           1024 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,          1024 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          8192 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER,                8192 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         4096 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 8192 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          2048 },
+        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         2048 },
     };
     VkDescriptorPoolCreateInfo descPoolInfo {
         .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-        .maxSets       = 16384,
+        .maxSets       = 8192,
         .poolSizeCount = uint32_t(poolSizes.size()),
         .pPoolSizes    = poolSizes.data(),
     };
