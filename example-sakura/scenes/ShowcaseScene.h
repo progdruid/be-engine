@@ -11,7 +11,7 @@
 class BeInput;
 class BeCamera;
 class OrbitCameraController;
-class BeFreeCameraController;
+class FreeCameraController;
 class BeWindow;
 class BeRenderer;
 class BeStandardRenderMachine;
@@ -24,7 +24,7 @@ class ShowcaseScene : public BaseScene {
     std::shared_ptr<BeCamera> _camera;
     std::unique_ptr<BeStandardRenderMachine> _machine;
     std::unique_ptr<OrbitCameraController> _orbitCameraController;
-    std::unique_ptr<BeFreeCameraController> _freeCameraController;
+    std::unique_ptr<FreeCameraController> _freeCameraController;
     bool _useOrbitCamera = true;
     bool _animatedTransitions = true;
     bool _pixelationEnabled = true;

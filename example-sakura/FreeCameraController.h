@@ -6,7 +6,7 @@
 class BeCamera;
 class BeInput;
 
-class BeFreeCameraController {
+class FreeCameraController {
     expose
     float MoveSpeed = 5.0f;
     float MouseSensitivity = 0.1f;
@@ -23,7 +23,7 @@ class BeFreeCameraController {
     //float RotationSmoothing = 18.0f;
     float RotationSmoothing = 8.0f;
 
-    explicit BeFreeCameraController(BeCamera* camera);
+    explicit FreeCameraController(BeCamera* camera);
 
     auto Update(float deltaTime, BeInput* input) -> void;
 

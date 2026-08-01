@@ -4,7 +4,7 @@
 
 #include "BeRenderPass.h"
 #include "OrbitCameraController.h"
-#include <free-camera/BeFreeCameraController.h>
+#include "FreeCameraController.h"
 #include "BeCamera.h"
 #include "BeInput.h"
 #include "BeMaterial.h"
@@ -45,7 +45,7 @@ void ShowcaseScene::Prepare() {
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
-    _freeCameraController = std::make_unique<BeFreeCameraController>(_camera.get());
+    _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
 
     const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
     const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();

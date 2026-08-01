@@ -5,7 +5,7 @@
 
 #include "BeRenderPass.h"
 #include "OrbitCameraController.h"
-#include <free-camera/BeFreeCameraController.h>
+#include "FreeCameraController.h"
 #include "RigCameraController.h"
 #include "RailGizmo.h"
 #include "BeAssetRegistry.h"
@@ -52,7 +52,7 @@ auto SakuraScene::Prepare() -> void {
     _camera->Width = GameIns->Renderer->GetSwapchainPixelWidth();
     _camera->Height = GameIns->Renderer->GetSwapchainPixelHeight();
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
-    _freeCameraController = std::make_unique<BeFreeCameraController>(_camera.get());
+    _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
 
     LoadSceneFile();
     _sceneLastWriteTime = std::filesystem::last_write_time(Settings.SceneFile.Path);

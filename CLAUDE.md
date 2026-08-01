@@ -37,15 +37,12 @@ be-engine/
 │   └── umbrellas/      # Config headers (glm, libassert, json, common)
 ├── toolkit/            # Static lib — higher-level abstractions; links against core
 │   ├── standard-render-machine/  # Deferred rendering pipeline (SRM)
-│   ├── quickstart/     # BeQuickstart — batteries-included app harness
-│   ├── free-camera/    # BeFreeCameraController — WASD + mouse + gamepad flycam
 │   ├── assimp-import/  # BeAssimpImporter — Assimp-based model loading
 │   ├── scenes/         # BeScene base + BeSceneManager
 │   ├── lua/            # BeLuaState + BeLuaValue — Lua data reading
 │   ├── imgui/          # ImGui source + BeImGuiPass + backends
 │   └── entt/           # ECS header-only library
 ├── example-sakura/     # Advanced showcase (multi-scene, ECS, SRM)
-├── example-quickstart/ # Smallest possible app, built on BeQuickstart
 ├── example-vulkan/     # Minimal raw Vulkan/RHI example
 ├── devtools/
 │   └── bechef/         # CLI — content cook, workspace check, shader boilerplate autogen
@@ -116,38 +113,6 @@ Passes (all in `toolkit/standard-render-machine/`):
 - **`BeStandardBackbufferPass`** — final composite + tonemapping to swapchain.
 
 `BeImGuiPass` lives in `toolkit/imgui/`.
-
-### Quickstart (`toolkit/quickstart/`)
-
-`BeQuickstart` owns window, renderer, input, camera, free-camera controller, an `SRM` with the
-standard deferred chain, and the frame loop. It is the shortest path to something on screen;
-`example-quickstart` is the reference.
-
-```cpp
-BeQuickstart quickstart;
-std::shared_ptr<BeProp> cube;
-
-quickstart.OnStart = [&] { cube = quickstart.CreateProp(BeMeshPrimitives::Cube()); };
-quickstart.OnTick = [&](float deltaTime) {
-    quickstart.RenderProp("cube", cube, { 0, 0, 0 });
-    quickstart.RenderSunLight({ .Direction = { -0.5f, -1.0f, 0.3f } });
-};
-
-return quickstart.Run();
-```
-
-`CreateProp` / `LoadProp` wrap prop construction and `RegisterMesh`, so they must be called from
-`OnStart`: meshes are baked into the shared buffer once, before the first frame. `RenderSunLight`
-and `RenderPointLight` allocate and cache shadow maps, keyed by call order and by `Name`
-respectively.
-
-Setting `SkyHdrPath` to an equirect HDR turns on image-based lighting: the default chain bakes the
-environment before `AddLightingPass` (which captures the irradiance, prefiltered and BRDF LUT
-textures at call time, so the order is load-bearing) and appends a skybox pass after it. IBL ambient
-is additive with `AmbientColor`, so zero that out when a sky is set.
-
-`Window`, `Renderer`, `Input`, `Camera` and `SRM` are public; reach through them for anything the
-defaults do not cover. Setting `ConfigurePipeline` replaces the default pass chain outright.
 
 #### G-Buffer Layout
 
