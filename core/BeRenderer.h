@@ -44,7 +44,7 @@ class BeRenderer {
     );
     ~BeRenderer();
 
-    auto LaunchDevice () -> void;
+    auto LaunchDevice (SenPresentMode presentMode = SenPresentMode::VSync) -> void;
     
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
     expose

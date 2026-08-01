@@ -23,7 +23,7 @@ BeRenderer::~BeRenderer() {
     SenBackend::Shutdown();
 }
 
-auto BeRenderer::LaunchDevice() -> void {
+auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
     SenBackend::Init({
         #if defined(_DEBUG)
         .DebugLayer = true,
@@ -35,6 +35,7 @@ auto BeRenderer::LaunchDevice() -> void {
         .Width = _desiredWidth,
         .Height = _desiredHeight,
         .FramesInFlight = FramesInFlight,
+        .PresentMode = presentMode,
     });
 
     for (auto& cmd : _frameCmds) {
