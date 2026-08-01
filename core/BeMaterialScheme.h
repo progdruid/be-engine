@@ -1,5 +1,6 @@
 #pragma once
 #include <filesystem>
+#include <unordered_map>
 #include <vector>
 #include <umbrellas/common.hpp>
 
@@ -40,10 +41,14 @@ class BeMaterialScheme {
         const std::vector<BeShaderTools::ParsedMaterialProperty>& properties
     ) -> BeMaterialScheme;
     
-    expose 
+    expose
     std::string Name;
     std::vector<BeMaterialPropertyDescriptor> Properties;
     std::vector<BeMaterialTextureDescriptor> Textures;
     std::vector<BeMaterialSamplerDescriptor> Samplers;
     SenBindGroupDesc BindGroupLayout;
+
+    std::unordered_map<std::string, uint32_t> PropertyOffsets;      // in floats
+    std::unordered_map<std::string, uint32_t> PropertyArrayLengths;
+    uint32_t CbufferSize = 0;                                       // in bytes, padded
 };

@@ -33,8 +33,6 @@ class BeMaterial {
     };
     std::unordered_map<std::string, TextureBinding> _textures;
     std::unordered_map<std::string, std::pair<SenSampler, uint8_t>> _samplers;
-    std::unordered_map<std::string, uint32_t> _propertyOffsets;
-    std::unordered_map<std::string, uint32_t> _propertyArrayLengths;
     std::vector<float> _bufferData;
     SenBuffer _cbuffer;
     bool _cbufferDirty = false;

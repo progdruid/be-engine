@@ -5,6 +5,25 @@
 #include "sen-rhi/SenBackend.h"
 #include "umbrellas/include-libassert.h"
 
+// std140 layout, matches Vulkan UBOs, WebGPU/WGSL, and Slang's HLSL output.
+static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> SizeMap = {
+    {BeMaterialPropertyDescriptor::Type::Float,  uint32_t(1 * sizeof(float))},
+    {BeMaterialPropertyDescriptor::Type::Float2, uint32_t(2 * sizeof(float))},
+    {BeMaterialPropertyDescriptor::Type::Float3, uint32_t(3 * sizeof(float))},
+    {BeMaterialPropertyDescriptor::Type::Float4, uint32_t(4 * sizeof(float))},
+    {BeMaterialPropertyDescriptor::Type::Matrix, uint32_t(16 * sizeof(float))},
+};
+static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> AlignMap = {
+    {BeMaterialPropertyDescriptor::Type::Float,  4},
+    {BeMaterialPropertyDescriptor::Type::Float2, 8},
+    {BeMaterialPropertyDescriptor::Type::Float3, 16},
+    {BeMaterialPropertyDescriptor::Type::Float4, 16},
+    {BeMaterialPropertyDescriptor::Type::Matrix, 16},
+};
+
+// std140 array rule: every element starts on a 16-byte boundary, so the stride is 16 bytes.
+static constexpr uint32_t ArrayElementStride = 16;
+
 
 auto BeMaterialScheme::Create(
     const std::string& name,
@@ -147,6 +166,20 @@ auto BeMaterialScheme::Create(
         }
     }
     
+    uint32_t offsetBytes = 0;
+    for (const auto& property : materialScheme.Properties) {
+        const bool isArray = property.ArrayLength > 1;
+        const uint32_t size  = isArray ? ArrayElementStride * property.ArrayLength : SizeMap.at(property.PropertyType);
+        const uint32_t align = isArray ? ArrayElementStride : AlignMap.at(property.PropertyType);
+
+        offsetBytes = (offsetBytes + align - 1) / align * align;
+
+        materialScheme.PropertyOffsets[property.Name] = offsetBytes / sizeof(float);
+        materialScheme.PropertyArrayLengths[property.Name] = property.ArrayLength;
+        offsetBytes += size;
+    }
+    materialScheme.CbufferSize = (offsetBytes + 15) / 16 * 16;
+
     SenBindGroupDesc desc = {};
     desc.Stages = SenShaderStageFlags::AllGraphics | SenShaderStageFlags::Compute;
 
