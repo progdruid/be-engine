@@ -12,6 +12,15 @@ class BeShader;
 
 
 class BeRenderer {
+    // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose
+    static constexpr uint32_t FramesInFlight = 2;
+
+    static auto GetCurrentFrame () -> uint64_t { return _currentFrame; }
+
+    hide
+    static uint64_t _currentFrame;
+
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide
     uint32_t _desiredWidth;

@@ -1,9 +1,12 @@
 #include "BeRenderer.h"
 
+#include "BeMaterialArena.h"
 #include "BeRenderPass.h"
 #include "BeShader.h"
 #include "BeShaderLibrary.h"
 #include <sen-rhi/SenBackend.h>
+
+uint64_t BeRenderer::_currentFrame = 0;
 
 BeRenderer::BeRenderer(
     uint32_t desiredWidth,
@@ -16,6 +19,7 @@ BeRenderer::BeRenderer(
 {}
 
 BeRenderer::~BeRenderer() {
+    BeMaterialArena::DestroyAll();
     SenBackend::Shutdown();
 }
 
@@ -68,6 +72,10 @@ auto BeRenderer::Render() -> void {
     SenBackend::BeginDebugEvent("Frame");
 
     _backbufferTexture = SenBackend::BeginFrame(_swapchain);
+
+    // Safe here and not earlier: BeginFrame waits on the fence, so the GPU is done with this slot.
+    ++_currentFrame;
+    BeMaterialArena::ResetForFrame(_currentFrame);
 
     _frameCmd.Begin();
 
