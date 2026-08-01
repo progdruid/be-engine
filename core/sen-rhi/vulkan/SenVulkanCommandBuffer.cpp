@@ -191,10 +191,11 @@ auto SenVulkanCommandBuffer::SetPipeline(SenPipeline pipeline) -> void {
     _pipelineDirty = true;
 }
 
-auto SenVulkanCommandBuffer::SetBindGroup(SenBindGroup group, uint8_t index) -> void {
-    be_assert(group.IsValid(), "SetBindGroup: invalid SenBindGroup handle (index={})", index);
+auto SenVulkanCommandBuffer::SetBindGroup(const SenBindGroupBinding& binding, uint8_t index) -> void {
+    be_assert(binding.Group.IsValid(), "SetBindGroup: invalid SenBindGroup handle (index={})", index);
 
-    _boundGroups[index] = group;
+    _boundGroups[index] = binding.Group;
+    _boundGroupOffsets[index].assign(binding.DynamicOffsets.begin(), binding.DynamicOffsets.end());
     _boundGroupsDirtyFlags[index] = true;
 }
 
@@ -210,13 +211,14 @@ auto SenVulkanCommandBuffer::FlushState() -> void {
             continue;
         }
         auto& groupEntry = SenVulkanBackend::LookupBindGroup(_boundGroups[i]);
+        const auto& offsets = _boundGroupOffsets[i];
         vkCmdBindDescriptorSets(
             _cmd,
             _boundBindPoint,
             _boundPipelineLayout,
             i,
             1, &groupEntry.Set,
-            0, nullptr
+            uint32_t(offsets.size()), offsets.empty() ? nullptr : offsets.data()
         );
         _boundGroupsDirtyFlags[i] = false;
     }

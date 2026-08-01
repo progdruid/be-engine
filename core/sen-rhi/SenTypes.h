@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 #include <umbrellas/common.hpp>
@@ -154,12 +155,22 @@ struct SenBindGroupDesc {
     std::vector<uint8_t> TextureSlots;
     std::vector<uint8_t> StorageTextureSlots;
     std::vector<uint8_t> StorageBufferSlots;
+    std::vector<uint32_t> BufferDynamicRanges = {}; // parallel to BufferSlots; 0 = whole buffer, else dynamic with that range
     std::vector<SenBuffer> Buffers = {};
     std::vector<SenSampler> Samplers = {};
     std::vector<SenTexture> Textures = {};
     std::vector<uint32_t> TextureMips = {}; // parallel to Textures; UINT32_MAX = use full-mip SRV
     std::vector<SenTexture> StorageTextures = {};
     std::vector<SenBuffer> StorageBuffers = {};
+};
+
+struct SenBindGroupBinding {
+    SenBindGroup Group;
+    std::span<const uint32_t> DynamicOffsets;
+
+    SenBindGroupBinding(SenBindGroup group) : Group(group) {}
+    SenBindGroupBinding(SenBindGroup group, std::span<const uint32_t> dynamicOffsets)
+        : Group(group), DynamicOffsets(dynamicOffsets) {}
 };
 
 

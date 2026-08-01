@@ -75,11 +75,13 @@ auto SenVulkanBackend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindG
         const auto& buffer = desc.Buffers[i];
         const auto& bufferEntry = LookupBuffer(buffer);
         const uint8_t binding = desc.BufferSlots[i];
+        const bool isDynamic = i < desc.BufferDynamicRanges.size() && desc.BufferDynamicRanges[i] != 0;
+        const uint32_t range = isDynamic ? desc.BufferDynamicRanges[i] : bufferEntry.Size;
 
         bufferInfos[i] = VkDescriptorBufferInfo {
             .buffer = bufferEntry.Buffer,
             .offset = 0,
-            .range  = bufferEntry.Size,
+            .range  = range,
         };
         writes.push_back(VkWriteDescriptorSet {
             .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -87,7 +89,7 @@ auto SenVulkanBackend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindG
             .dstBinding      = binding,
             .dstArrayElement = 0,
             .descriptorCount = 1,
-            .descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorType  = isDynamic ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .pBufferInfo     = &bufferInfos[i],
         });
     }
@@ -163,45 +165,46 @@ auto SenVulkanBackend::LookupBindGroup(SenBindGroup handle) -> SenVulkanBindGrou
 auto SenVulkanBackend::CreateDescriptorSetLayoutFromDesc(const SenBindGroupDesc& desc) -> VkDescriptorSetLayout {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
 
-    for (const auto& slot : desc.TextureSlots) {
+    for (size_t i = 0; i < desc.TextureSlots.size(); ++i) {
         bindings.push_back(VkDescriptorSetLayoutBinding {
-            .binding         = slot,
+            .binding         = desc.TextureSlots[i],
             .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .descriptorCount = 1,
             .stageFlags      = Sen::Vulkan::ToShaderStageFlags(desc.Stages),
         });
     }
 
-    for (const auto& slot : desc.SamplerSlots) {
+    for (size_t i = 0; i < desc.SamplerSlots.size(); ++i) {
         bindings.push_back(VkDescriptorSetLayoutBinding {
-            .binding         = slot,
+            .binding         = desc.SamplerSlots[i],
             .descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER,
             .descriptorCount = 1,
             .stageFlags      = Sen::Vulkan::ToShaderStageFlags(desc.Stages),
         });
     }
 
-    for (const auto& slot : desc.BufferSlots) {
+    for (size_t i = 0; i < desc.BufferSlots.size(); ++i) {
+        const bool isDynamic = i < desc.BufferDynamicRanges.size() && desc.BufferDynamicRanges[i] != 0;
         bindings.push_back(VkDescriptorSetLayoutBinding {
-            .binding         = slot,
-            .descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .binding         = desc.BufferSlots[i],
+            .descriptorType  = isDynamic ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
             .stageFlags      = Sen::Vulkan::ToShaderStageFlags(desc.Stages),
         });
     }
 
-    for (const auto& slot : desc.StorageTextureSlots) {
+    for (size_t i = 0; i < desc.StorageTextureSlots.size(); ++i) {
         bindings.push_back(VkDescriptorSetLayoutBinding {
-            .binding         = slot,
+            .binding         = desc.StorageTextureSlots[i],
             .descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             .descriptorCount = 1,
             .stageFlags      = Sen::Vulkan::ToShaderStageFlags(desc.Stages),
         });
     }
 
-    for (const auto& slot : desc.StorageBufferSlots) {
+    for (size_t i = 0; i < desc.StorageBufferSlots.size(); ++i) {
         bindings.push_back(VkDescriptorSetLayoutBinding {
-            .binding         = slot,
+            .binding         = desc.StorageBufferSlots[i],
             .descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 1,
             .stageFlags      = Sen::Vulkan::ToShaderStageFlags(desc.Stages),

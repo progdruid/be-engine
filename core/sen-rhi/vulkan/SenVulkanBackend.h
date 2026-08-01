@@ -92,6 +92,7 @@ class SenVulkanBackend {
     static VkDevice _device;
     static VkQueue _queue;
     static uint32_t _queueFamilyIndex;
+    static uint32_t _minUniformBufferOffsetAlignment;
     static VkCommandPool _commandPool;
     static VkDescriptorPool _descriptorPool;
     static VmaAllocator _allocator;
@@ -109,6 +110,8 @@ class SenVulkanBackend {
     static auto Init      (const SenDeviceDesc& desc) -> void;
     static auto Shutdown  () -> void;
     static auto WaitIdle  () -> void;
+
+    static auto GetMinUniformBufferOffsetAlignment () -> uint32_t { return _minUniformBufferOffsetAlignment; }
     
     expose // swapchain lifecycle
     static auto CreateSwapchain       (const SenSwapchainDesc& desc) -> SenSwapchain;
@@ -152,8 +155,8 @@ class SenVulkanBackend {
     static auto CreateBuffer  (const SenBufferDesc& desc) -> SenBuffer;
     static auto DestroyBuffer (SenBuffer handle) -> void;
     static auto LookupBuffer  (SenBuffer handle) -> SenVulkanBufferEntry&;
-    static auto WriteBuffer   (SenBuffer handle, const void* data, uint32_t size) -> void;
-    hide static auto UploadToDeviceBuffer(VkBuffer dst, const void* data, uint32_t size) -> void;
+    static auto WriteBuffer   (SenBuffer handle, const void* data, uint32_t size, uint32_t dstOffset = 0) -> void;
+    hide static auto UploadToDeviceBuffer(VkBuffer dst, const void* data, uint32_t size, uint32_t dstOffset) -> void;
 
     expose // samplers
     static auto CreateSampler  (const SenSamplerDesc& desc) -> SenSampler;

@@ -17,6 +17,7 @@ class SenVulkanCommandBuffer {
     static constexpr uint8_t MaxBindGroups = 8;
     std::array<SenBindGroup, MaxBindGroups> _boundGroups           = {};
     std::array<bool,         MaxBindGroups> _boundGroupsDirtyFlags = {};
+    std::array<std::vector<uint32_t>, MaxBindGroups> _boundGroupOffsets = {};
 
 
     expose
@@ -46,7 +47,7 @@ class SenVulkanCommandBuffer {
 
     expose
     auto SetPipeline     (SenPipeline pipeline) -> void;
-    auto SetBindGroup    (SenBindGroup group, uint8_t index) -> void;
+    auto SetBindGroup    (const SenBindGroupBinding& binding, uint8_t index) -> void;
     auto SetVertexBuffer (SenBuffer buffer) -> void;
     auto SetIndexBuffer  (SenBuffer buffer) -> void;
 

@@ -49,7 +49,7 @@ auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
         be_assert(result == VK_SUCCESS, "Failed to create device-local buffer!");
 
         if (desc.Data) {
-            UploadToDeviceBuffer(entry.Buffer, desc.Data, desc.Size);
+            UploadToDeviceBuffer(entry.Buffer, desc.Data, desc.Size, 0);
         }
     }
 
@@ -69,14 +69,15 @@ auto SenVulkanBackend::LookupBuffer(SenBuffer handle) -> SenVulkanBufferEntry& {
     return _buffers.at(handle.ID);
 }
 
-auto SenVulkanBackend::WriteBuffer(SenBuffer handle, const void* data, uint32_t size) -> void {
+auto SenVulkanBackend::WriteBuffer(SenBuffer handle, const void* data, uint32_t size, uint32_t dstOffset) -> void {
     auto& entry = _buffers.at(handle.ID);
     be_assert(entry.Access != SenBufferAccess::Immutable, "Cannot write to an Immutable buffer");
+    be_assert(dstOffset + size <= entry.Size, "WriteBuffer: write runs past the end of the buffer");
 
     if (entry.Access == SenBufferAccess::Dynamic) {
-        memcpy(entry.MappedPtr, data, size);
+        memcpy(static_cast<uint8_t*>(entry.MappedPtr) + dstOffset, data, size);
     } else {
-        UploadToDeviceBuffer(entry.Buffer, data, size);
+        UploadToDeviceBuffer(entry.Buffer, data, size, dstOffset);
     }
 }
 
@@ -86,7 +87,7 @@ auto SenVulkanBackend::WriteBuffer(SenBuffer handle, const void* data, uint32_t 
 //   2. Record a one-time command buffer that does vkCmdCopyBuffer staging → dst.
 //   3. Submit it, wait (fence), then destroy the staging buffer.
 // This is a synchronous stall, but only happens at resource-creation time (or rarely for Default).
-auto SenVulkanBackend::UploadToDeviceBuffer(VkBuffer dst, const void* data, uint32_t size) -> void {
+auto SenVulkanBackend::UploadToDeviceBuffer(VkBuffer dst, const void* data, uint32_t size, uint32_t dstOffset) -> void {
     VkBufferCreateInfo stagingInfo {
         .sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size        = size,
@@ -120,7 +121,7 @@ auto SenVulkanBackend::UploadToDeviceBuffer(VkBuffer dst, const void* data, uint
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
     vkBeginCommandBuffer(cmd, &beginInfo);
-    VkBufferCopy copyRegion { .size = size };
+    VkBufferCopy copyRegion { .dstOffset = dstOffset, .size = size };
     vkCmdCopyBuffer(cmd, stagingBuffer, dst, 1, &copyRegion);
     vkEndCommandBuffer(cmd);
 
