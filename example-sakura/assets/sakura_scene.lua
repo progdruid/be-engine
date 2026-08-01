@@ -288,8 +288,8 @@ function makeData ()
 
     makeBase(data)
     --makeStandardContent(data)
-    --makeShowcaseContent(data)
-    makeSpinningLights(data)
+    makeShowcaseContent(data)
+    --makeSpinningLights(data)
 
     return data
 end

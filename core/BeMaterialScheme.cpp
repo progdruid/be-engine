@@ -185,6 +185,7 @@ auto BeMaterialScheme::Create(
 
     if (!materialScheme.Properties.empty()) {
         desc.BufferSlots = { 0 };
+        desc.BufferDynamicRanges = { materialScheme.CbufferSize };
     }
 
     uint8_t textureSlotsStart = 1 + materialScheme.Samplers.size();

@@ -13,7 +13,6 @@ static constexpr uint32_t ArrayStrideFloats = 4;
 auto BeMaterial::Create(const BeMaterialScheme& scheme, bool frequentlyUsed) -> std::shared_ptr<BeMaterial> {
     auto material = std::make_shared<BeMaterial>(scheme, frequentlyUsed);
     material->InitialiseSlotMaps();
-    material->RebuildBindGroup();
     return material;
 }
 
@@ -23,20 +22,15 @@ BeMaterial::BeMaterial(BeMaterialScheme scheme, const bool frequentlyUsed) : _is
 
     if (!_scheme.Properties.empty()) {
         AssembleData();
-
-        const uint32_t sizeInBytes = static_cast<uint32_t>(_bufferData.size() * sizeof(float));
-        _cbuffer = SenBackend::CreateBuffer({
-            .Usage  = SenBufferUsage::Constant,
-            .Access = _isFrequentlyUsed ? SenBufferAccess::Dynamic : SenBufferAccess::Static,
-            .Size   = sizeInBytes,
-            .Data   = _bufferData.data(),
-        });
+        _arena = BeMaterialArena::Acquire(_scheme);
+        _dynamicOffsets.resize(1);
+        _cbufferDirty = true;
     }
 }
 
 BeMaterial::~BeMaterial() {
-    if (_bindGroup.IsValid()) {
-        SenBackend::DestroyBindGroup(_bindGroup);
+    for (const auto& [_, group] : _bindGroups) {
+        SenBackend::DestroyBindGroup(group);
     }
 }
 
@@ -55,36 +49,58 @@ auto BeMaterial::InitialiseSlotMaps() -> void {
 }
 
 
-auto BeMaterial::FlushBuffer() -> void {
-    if (!_cbufferDirty) 
-        return;
-    
-    SenBackend::WriteBuffer(_cbuffer, _bufferData.data(), static_cast<uint32_t>(_bufferData.size() * sizeof(float)));
-    _cbufferDirty = false;
-}
-
 auto BeMaterial::GetBindGroupLayout() const -> SenBindGroupDesc {
     return _scheme.BindGroupLayout;
 }
 
 // rename to RetrieveBindGroup
-auto BeMaterial::GetBindGroup() -> SenBindGroup {
-    FlushBuffer();
+auto BeMaterial::GetBindGroup() -> SenBindGroupBinding {
     if (_bindGroupDirty) {
-        RebuildBindGroup();
+        for (const auto& [_, group] : _bindGroups) {
+            SenBackend::DestroyBindGroup(group);
+        }
+        _bindGroups.clear();
+        _bindGroupDirty = false;
     }
-    return _bindGroup;
+
+    if (_arena == nullptr) {
+        return AcquireBindGroup({});
+    }
+
+    CommitChunk();
+    return { AcquireBindGroup(_arena->GetBuffer(_chunk)), _dynamicOffsets };
 }
 
-auto BeMaterial::RebuildBindGroup() -> void {
-    if (_bindGroup.IsValid()) {
-        SenBackend::DestroyBindGroup(_bindGroup);
+auto BeMaterial::CommitChunk() -> void {
+    const uint64_t frame = BeRenderer::GetCurrentFrame();
+    const bool rewound = !_chunk.IsValid() || frame - _chunk.Frame >= BeRenderer::FramesInFlight;
+
+    if (!rewound && !_cbufferDirty) {
+        return;
     }
-    _bindGroup = SenBackend::CreateBindGroup(BuildBindGroupDesc());
-    _bindGroupDirty = false;
+
+    _chunk = _arena->Allocate(frame);
+    _dynamicOffsets[0] = _arena->GetOffset(_chunk);
+    SenBackend::WriteBuffer(
+        _arena->GetBuffer(_chunk),
+        _bufferData.data(),
+        uint32_t(_bufferData.size() * sizeof(float)),
+        _dynamicOffsets[0]
+    );
+    _cbufferDirty = false;
 }
 
-auto BeMaterial::BuildBindGroupDesc() const -> SenBindGroupDesc {
+auto BeMaterial::AcquireBindGroup(SenBuffer cbuffer) -> SenBindGroup {
+    const auto it = _bindGroups.find(cbuffer.ID);
+    if (it != _bindGroups.end()) {
+        return it->second;
+    }
+    const SenBindGroup group = SenBackend::CreateBindGroup(BuildBindGroupDesc(cbuffer));
+    _bindGroups[cbuffer.ID] = group;
+    return group;
+}
+
+auto BeMaterial::BuildBindGroupDesc(SenBuffer cbuffer) const -> SenBindGroupDesc {
     SenBindGroupDesc desc = _scheme.BindGroupLayout;
 
     desc.Textures.clear();
@@ -125,8 +141,8 @@ auto BeMaterial::BuildBindGroupDesc() const -> SenBindGroupDesc {
     }
 
     desc.Buffers.clear();
-    if (_cbuffer.IsValid()) {
-        desc.Buffers.push_back(_cbuffer);
+    if (cbuffer.IsValid()) {
+        desc.Buffers.push_back(cbuffer);
     }
 
     return desc;

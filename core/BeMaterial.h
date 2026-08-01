@@ -7,6 +7,7 @@
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 
+#include "BeMaterialArena.h"
 #include "BeMaterialScheme.h"
 #include "sen-rhi/SenTypes.h"
 
@@ -22,8 +23,8 @@ class BeMaterial {
     hide bool _isFrequentlyUsed;
     
     BeMaterialScheme _scheme;
-    SenBindGroup _bindGroup;
-    bool _bindGroupDirty;
+    std::unordered_map<uint32_t, SenBindGroup> _bindGroups; // keyed by the arena block's SenBuffer.ID, 0 when the scheme has no cbuffer
+    bool _bindGroupDirty = false;
 
     struct TextureBinding {
         std::shared_ptr<BeTexture> Texture;
@@ -34,8 +35,11 @@ class BeMaterial {
     std::unordered_map<std::string, TextureBinding> _textures;
     std::unordered_map<std::string, std::pair<SenSampler, uint8_t>> _samplers;
     std::vector<float> _bufferData;
-    SenBuffer _cbuffer;
     bool _cbufferDirty = false;
+
+    BeMaterialArena* _arena = nullptr; // null when the scheme has no cbuffer
+    BeMaterialArena::Chunk _chunk;
+    std::vector<uint32_t> _dynamicOffsets;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
@@ -56,8 +60,7 @@ class BeMaterial {
     auto GetSchemeName () const -> std::string { return _scheme.Name; }
     auto GetUniqueID () const -> uint32_t { return _uniqueID; }
 
-    auto FlushBuffer () -> void;
-    auto GetBindGroup () -> SenBindGroup;
+    auto GetBindGroup () -> SenBindGroupBinding;
     auto GetBindGroupLayout () const -> SenBindGroupDesc;
 
     auto Print() const -> std::string;
@@ -104,6 +107,7 @@ class BeMaterial {
     // internal ////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide
     auto AssembleData        () -> void;
-    auto BuildBindGroupDesc  () const -> SenBindGroupDesc;
-    auto RebuildBindGroup    () -> void;
+    auto CommitChunk         () -> void;
+    auto AcquireBindGroup    (SenBuffer cbuffer) -> SenBindGroup;
+    auto BuildBindGroupDesc  (SenBuffer cbuffer) const -> SenBindGroupDesc;
 };
