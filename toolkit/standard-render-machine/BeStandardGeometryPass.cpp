@@ -21,7 +21,7 @@ BeStandardGeometryPass::BeStandardGeometryPass(
 , _depthTarget(std::move(depthTarget)) {}
 
 auto BeStandardGeometryPass::Initialise(BeRenderer& renderer) -> void {
-    _objectMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("object-material-for-geometry-pass"), true);
+    _objectMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("object-material-for-geometry-pass"));
 }
 
 auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {

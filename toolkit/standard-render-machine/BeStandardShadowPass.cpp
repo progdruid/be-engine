@@ -16,7 +16,7 @@
 BeStandardShadowPass::BeStandardShadowPass(BeStandardRenderMachine* srm) : _srm(srm) {}
 
 auto BeStandardShadowPass::Initialise(BeRenderer& renderer) -> void {
-    _objectMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("object-material-for-geometry-pass"), true);
+    _objectMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("object-material-for-geometry-pass"));
 }
 
 auto BeStandardShadowPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {

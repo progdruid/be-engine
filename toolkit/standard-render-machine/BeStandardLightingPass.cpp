@@ -58,7 +58,7 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
     ;
 
     const auto& emissiveAddScheme = emissiveAddShader->GetMaterialScheme("main");
-    _emissiveMaterial = BeMaterial::Create(emissiveAddScheme, false);
+    _emissiveMaterial = BeMaterial::Create(emissiveAddScheme);
     _emissiveMaterial->SetTexture("InputEmissive", _gbufferInputs[3]);
     _emissivePipeline = BePipelineBuilder::Start(*emissiveAddShader)
         .SetBlend(additiveBlend)
@@ -68,7 +68,7 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
 
     const auto ambientShader = BeShaderLibrary::GetShader("ambient-ibl");
     const auto& ambientScheme = ambientShader->GetMaterialScheme("main");
-    _ambientMaterial = BeMaterial::Create(ambientScheme, false);
+    _ambientMaterial = BeMaterial::Create(ambientScheme);
     _ambientMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
     _ambientMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
     _ambientMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
@@ -127,7 +127,7 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     for (size_t i = 0; i < sunLights.size(); ++i) {
         const auto& sunLight = sunLights[i];
         if (i >= _directionalLightMaterials.size()) {
-            auto mat = BeMaterial::Create(_directionalLightScheme, true);
+            auto mat = BeMaterial::Create(_directionalLightScheme);
             mat->SetTexture("Depth", _depthInput);
             mat->SetTexture("Albedo_RGB", _gbufferInputs[0]);
             mat->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
@@ -153,7 +153,7 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     // Point lights
     for (const auto& pointLight : pointLights) {
         if (!_pointLightMaterials.contains(pointLight.Name)) {
-            auto mat = BeMaterial::Create(_pointLightScheme, true);
+            auto mat = BeMaterial::Create(_pointLightScheme);
             mat->SetTexture("Depth", _depthInput);
             mat->SetTexture("Albedo_RGB", _gbufferInputs[0]);
             mat->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);

@@ -217,7 +217,7 @@ void RiftScene::LoadPasses() {
     _machine->AddLightingPass("Rift_HDR");
 
     const auto& posterizeScheme = BeShaderLibrary::GetShader("posterize")->GetMaterialScheme("main");
-    _posterizeMaterial = BeMaterial::Create(posterizeScheme, false);
+    _posterizeMaterial = BeMaterial::Create(posterizeScheme);
     _posterizeMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Rift_HDR"));
     _posterizeMaterial->SetTexture("DepthTexture", _machine->GetRenderTexture("Rift_Depth"));
     _posterizeMaterial->SetFloat1("PixelSize", Settings.Posterize.PixelSize);
@@ -233,7 +233,7 @@ void RiftScene::LoadPasses() {
     const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
     const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
     const auto& hudScheme = BeShaderLibrary::GetShader("ship-hud")->GetMaterialScheme("main");
-    _hudMaterial = BeMaterial::Create(hudScheme, false);
+    _hudMaterial = BeMaterial::Create(hudScheme);
     _hudMaterial->SetFloat2("ScreenSize", { static_cast<float>(screenWidth), static_cast<float>(screenHeight) });
     _hudMaterial->SetFloat1("AimRadius", _shipCameraController->AimRadius);
     _hudMaterial->SetFloat1("PixelSize", Settings.Posterize.PixelSize);

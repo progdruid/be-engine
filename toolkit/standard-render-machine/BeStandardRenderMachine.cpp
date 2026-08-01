@@ -43,7 +43,7 @@ auto BeSRMSunLightEntry::CalculateViewProj(
 
 BeStandardRenderMachine::BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, BeAssetRegistry& assetRegistry, uint32_t width, uint32_t height)
     : _renderer(std::move(renderer)), _assetRegistry(assetRegistry), _width(width), _height(height) {
-    UniformMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("uniform-material"), false);
+    UniformMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("uniform-material"));
 }
 
 BeStandardRenderMachine::~BeStandardRenderMachine() = default;
@@ -166,7 +166,7 @@ auto BeStandardRenderMachine::AddTonemapperPass(const std::string& inputName, co
     be_assert(shader, "AddTonemapperPass: tonemapper shader not found");
 
     const auto& scheme = shader->GetMaterialScheme("main");
-    _tonemapperMaterial = BeMaterial::Create(scheme, false);
+    _tonemapperMaterial = BeMaterial::Create(scheme);
     _tonemapperMaterial->SetTexture("HDRInput", GetRenderTexture(inputName));
 
     AddFullscreenPass(shader, _tonemapperMaterial, { outputName });
@@ -339,7 +339,7 @@ auto BeStandardRenderMachine::LoadProp(
     if (model == BeSRMLightingModel::PBR) {
         materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
             const auto scheme = shader->GetMaterialScheme("geometry-main");
-            auto material = BeMaterial::Create(scheme, true);
+            auto material = BeMaterial::Create(scheme);
 
             aiString texPath;
             if (mat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) == AI_SUCCESS ||
@@ -365,7 +365,7 @@ auto BeStandardRenderMachine::LoadProp(
     } else {
         materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
             const auto scheme = shader->GetMaterialScheme("geometry-main");
-            auto material = BeMaterial::Create(scheme, true);
+            auto material = BeMaterial::Create(scheme);
 
             aiString texPath;
             if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {

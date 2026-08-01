@@ -10,13 +10,13 @@
 // std140 array stride is 16 bytes = 4 floats per element.
 static constexpr uint32_t ArrayStrideFloats = 4;
 
-auto BeMaterial::Create(const BeMaterialScheme& scheme, bool frequentlyUsed) -> std::shared_ptr<BeMaterial> {
-    auto material = std::make_shared<BeMaterial>(scheme, frequentlyUsed);
+auto BeMaterial::Create(const BeMaterialScheme& scheme) -> std::shared_ptr<BeMaterial> {
+    auto material = std::make_shared<BeMaterial>(scheme);
     material->InitialiseSlotMaps();
     return material;
 }
 
-BeMaterial::BeMaterial(BeMaterialScheme scheme, const bool frequentlyUsed) : _isFrequentlyUsed(frequentlyUsed), _scheme(std::move(scheme)) {
+BeMaterial::BeMaterial(BeMaterialScheme scheme) : _scheme(std::move(scheme)) {
     static uint32_t materialCount = 0;
     _uniqueID = ++materialCount;
 

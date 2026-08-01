@@ -27,7 +27,7 @@ auto BeStandardSkyboxPass::Initialise(BeRenderer& renderer) -> void {
     be_assert(shader, "BeStandardSkyboxPass: skybox shader not found");
 
     const auto& scheme = shader->GetMaterialScheme("main");
-    _material = BeMaterial::Create(scheme, false);
+    _material = BeMaterial::Create(scheme);
     _material->SetTexture("Depth", _depth);
     _material->SetTexture("EnvCubemap", _envCubemap);
 

@@ -31,7 +31,7 @@ auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
 
     const auto& envScheme = envShader->GetMaterialScheme("main");
     for (uint32_t face = 0; face < FaceCount; ++face) {
-        const auto mat = BeMaterial::Create(envScheme, false);
+        const auto mat = BeMaterial::Create(envScheme);
         mat->SetFloat1("FaceIndex", static_cast<float>(face));
         mat->SetTexture("Equirect", _equirect);
         _envFaceMaterials[face] = mat;
@@ -43,7 +43,7 @@ auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
 
     const auto& irradianceScheme = irradianceShader->GetMaterialScheme("main");
     for (uint32_t face = 0; face < FaceCount; ++face) {
-        const auto mat = BeMaterial::Create(irradianceScheme, false);
+        const auto mat = BeMaterial::Create(irradianceScheme);
         mat->SetFloat1("FaceIndex", static_cast<float>(face));
         mat->SetFloat1("MaxSampleRadiance", _srm->Settings.IBL.MaxSampleRadiance);
         mat->SetTexture("EnvCubemap", _envCubemap);
@@ -60,7 +60,7 @@ auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
     for (uint32_t mip = 0; mip < mipCount; ++mip) {
         const float roughness = mipCount > 1 ? static_cast<float>(mip) / static_cast<float>(mipCount - 1) : 0.0f;
         for (uint32_t face = 0; face < FaceCount; ++face) {
-            const auto mat = BeMaterial::Create(prefilterScheme, false);
+            const auto mat = BeMaterial::Create(prefilterScheme);
             mat->SetFloat1("FaceIndex", static_cast<float>(face));
             mat->SetFloat1("Roughness", roughness);
             mat->SetFloat1("MaxSampleRadiance", _srm->Settings.IBL.MaxSampleRadiance);
@@ -74,7 +74,7 @@ auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
     be_assert(brdfLutShader, "BeStandardEnvironmentBakePass: brdf-lut shader not found");
 
     const auto& brdfLutScheme = brdfLutShader->GetMaterialScheme("main");
-    _brdfLutMaterial = BeMaterial::Create(brdfLutScheme, false);
+    _brdfLutMaterial = BeMaterial::Create(brdfLutScheme);
     _brdfLutPipeline = BePipelineBuilder::Start(*brdfLutShader).SetColorFormats({ _brdfLutTexture->Format }).Build();
 }
 

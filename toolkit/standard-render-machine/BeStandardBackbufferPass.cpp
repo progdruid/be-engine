@@ -22,7 +22,7 @@ BeStandardBackbufferPass::BeStandardBackbufferPass(
 auto BeStandardBackbufferPass::Initialise(BeRenderer& renderer) -> void {
     const auto  shader = BeShaderLibrary::GetShader("backbuffer");
     const auto& scheme = shader->GetMaterialScheme("main");
-    _material = BeMaterial::Create(scheme, false);
+    _material = BeMaterial::Create(scheme);
     _material->SetTexture("InputTexture", _input);
     _activeInput = _input;
     _pipeline = BePipelineBuilder::Start(*shader)

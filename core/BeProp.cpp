@@ -10,7 +10,7 @@ auto BeProp::FromMesh(std::shared_ptr<BeMesh> mesh, raw_ptr<BeShader> shader, co
 
     const auto& scheme = prop->Shader->GetMaterialScheme(schemeLink);
     for (size_t i = 0; i < prop->Mesh->Slices.size(); ++i) {
-        auto material = BeMaterial::Create(scheme, true);
+        auto material = BeMaterial::Create(scheme);
         prop->Materials.push_back(material);
         prop->Slices.push_back({
             .Material = material,

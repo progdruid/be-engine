@@ -16,12 +16,11 @@ class BeTexture;
 class BeMaterial {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
-    static auto Create(const BeMaterialScheme& scheme, bool frequentlyUsed) -> std::shared_ptr<BeMaterial>;
+    static auto Create(const BeMaterialScheme& scheme) -> std::shared_ptr<BeMaterial>;
 
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide uint32_t _uniqueID;
-    hide bool _isFrequentlyUsed;
-    
+
     BeMaterialScheme _scheme;
     std::unordered_map<uint32_t, SenBindGroup> _bindGroups; // keyed by the arena block's SenBuffer.ID, 0 when the scheme has no cbuffer
     bool _bindGroupDirty = false;
@@ -50,7 +49,7 @@ class BeMaterial {
     BeMaterial& operator=(const BeMaterial& other) = default;
     BeMaterial& operator=(BeMaterial&& other) noexcept = default;
     
-    explicit BeMaterial(BeMaterialScheme scheme, const bool frequentlyUsed);
+    explicit BeMaterial(BeMaterialScheme scheme);
 
     hide
     auto InitialiseSlotMaps() -> void;

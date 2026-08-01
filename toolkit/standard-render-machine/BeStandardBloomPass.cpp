@@ -29,7 +29,7 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
     const auto  brightShader = BeShaderLibrary::GetShader("bloom-bright");
     be_assert(  brightShader, "BeStandardBloomPass: bloom-bright shader not found");
     const auto& brightScheme = brightShader->GetMaterialScheme("main");
-    _brightMaterial = BeMaterial::Create(brightScheme, false);
+    _brightMaterial = BeMaterial::Create(brightScheme);
     _brightMaterial->SetTexture("HDRInput", _inputHDR);
     _brightPipeline = BePipelineBuilder::Start(*brightShader).SetColorFormats({ mipFormat }).Build();
 
@@ -40,7 +40,7 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
     _downsampleMaterials.resize(_mipCount);
     for (uint32_t mipTarget = 1; mipTarget < _mipCount; ++mipTarget) {
         const auto& source = _bloomTexture->GetMipViewport(mipTarget - 1);
-        const auto  mat    = BeMaterial::Create(downsampleScheme, false);
+        const auto  mat    = BeMaterial::Create(downsampleScheme);
         mat->SetFloat2("TexelSize", glm::vec2(1.0f / source.Width, 1.0f / source.Height));
         mat->SetFloat1("UseKaris", mipTarget == 1 ? 1.0f : 0.0f);
         mat->SetTexture("BloomMipInput", _bloomTexture, mipTarget - 1);
@@ -56,7 +56,7 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
     _upsampleMaterials.resize(_mipCount);
     for (uint32_t mipTarget = 0; mipTarget < _mipCount - 1; ++mipTarget) {
         const auto& source = _bloomTexture->GetMipViewport(mipTarget + 1);
-        const auto  mat = BeMaterial::Create(upsampleScheme, false);
+        const auto  mat = BeMaterial::Create(upsampleScheme);
         mat->SetFloat2("TexelSize", glm::vec2(1.0f / source.Width, 1.0f / source.Height));
         mat->SetTexture("BloomMipInput", _bloomTexture, mipTarget + 1);
         _upsampleMaterials[mipTarget] = mat;
@@ -72,7 +72,7 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
     const auto addShader = BeShaderLibrary::GetShader("bloom-add");
     be_assert( addShader, "BeStandardBloomPass: bloom-add shader not found");
     const auto addScheme = addShader->GetMaterialScheme("main");
-    _addMaterial = BeMaterial::Create(addScheme, false);
+    _addMaterial = BeMaterial::Create(addScheme);
     _addMaterial->SetTexture("HDRInput", _inputHDR);
     _addMaterial->SetTexture("BloomInput", _bloomTexture);
     _addMaterial->SetTexture("DirtTexture", _dirtTexture);
