@@ -70,10 +70,35 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
     std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
-    _physicalDevice = devices[0];  // Pick first for now
+    be_assert(deviceCount > 0, "Vulkan: no physical devices found");
+
+    _physicalDevice = VK_NULL_HANDLE;
+    int bestRank = -1;
+    for (uint32_t i = 0; i < deviceCount; ++i) {
+        VkPhysicalDeviceProperties props;
+        vkGetPhysicalDeviceProperties(devices[i], &props);
+
+        int rank = 0;
+        const char* type = "other";
+        switch (props.deviceType) {
+            case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: rank = 4; type = "discrete"; break;
+            case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: rank = 3; type = "integrated"; break;
+            case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: rank = 2; type = "virtual"; break;
+            case VK_PHYSICAL_DEVICE_TYPE_CPU: rank = 1; type = "cpu"; break;
+            default: break;
+        }
+        std::fprintf(stderr, "[vulkan] device %u: %s (%s)\n", i, props.deviceName, type);
+
+        if (rank > bestRank) {
+            bestRank = rank;
+            _physicalDevice = devices[i];
+        }
+    }
 
     VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(_physicalDevice, &deviceProperties);
+    std::fprintf(stderr, "[vulkan] selected: %s\n", deviceProperties.deviceName);
+
     _minUniformBufferOffsetAlignment = uint32_t(deviceProperties.limits.minUniformBufferOffsetAlignment);
 
     // graphics queue family
