@@ -54,6 +54,27 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
         }
     }
 
+    {
+        static const auto ModeName = [](VkPresentModeKHR mode) -> const char* {
+            switch (mode) {
+                case VK_PRESENT_MODE_IMMEDIATE_KHR:    return "IMMEDIATE";
+                case VK_PRESENT_MODE_MAILBOX_KHR:      return "MAILBOX";
+                case VK_PRESENT_MODE_FIFO_KHR:         return "FIFO";
+                case VK_PRESENT_MODE_FIFO_RELAXED_KHR: return "FIFO_RELAXED";
+                default:                               return "?";
+            }
+        };
+        const char* requested = "FIFO";
+        if (desc.PresentMode == SenPresentMode::Immediate) { requested = "IMMEDIATE"; }
+        if (desc.PresentMode == SenPresentMode::Mailbox)   { requested = "MAILBOX"; }
+
+        std::fprintf(stderr, "[vulkan] present mode requested=%s chosen=%s   supported:", requested, ModeName(chosenPresentMode));
+        for (const auto& mode : presentModes) {
+            std::fprintf(stderr, " %s", ModeName(mode));
+        }
+        std::fprintf(stderr, "\n");
+    }
+
     // 3. Create swapchain
     uint32_t minImageCount = desc.BufferCount;
     if (minImageCount < capabilities.minImageCount) { minImageCount = capabilities.minImageCount; }
@@ -93,6 +114,9 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     vkGetSwapchainImagesKHR(_device, entry.Swapchain, &imageCount, nullptr);
     entry.Images.resize(imageCount);
     vkGetSwapchainImagesKHR(_device, entry.Swapchain, &imageCount, entry.Images.data());
+
+    std::fprintf(stderr, "[vulkan] swapchain images requested=%u actual=%u  extent=%ux%u\n",
+        minImageCount, imageCount, imageExtent.width, imageExtent.height);
 
     // 5. Create image views
     entry.ImageViews.resize(imageCount);
