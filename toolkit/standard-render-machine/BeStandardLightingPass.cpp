@@ -1,5 +1,9 @@
 #include "BeStandardLightingPass.h"
 
+#include <algorithm>
+#include <span>
+#include <umbrellas/include-libassert.h>
+
 #include "BeAssetRegistry.h"
 #include "BeShaderLibrary.h"
 #include "BePass.h"
@@ -42,6 +46,24 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
         .BlendOpAlpha = SenBlendOp::Add,
     };
     const SenFormat outputFormat = _output->Format;
+
+    const auto batchedShader = BeShaderLibrary::GetShader("batched-lights");
+    _batchedScheme = batchedShader->GetMaterialScheme("main");
+    _batchedCapacity = _batchedScheme.PropertyArrayLengths.at("LightPositionRadius");
+    be_assert(
+        _batchedCapacity == _batchedScheme.PropertyArrayLengths.at("LightColorPower"),
+        "batched-lights: LightPositionRadius and LightColorPower must have the same array length"
+    );
+    _batchedMaterial = BeMaterial::Create(_batchedScheme);
+    _batchedMaterial->SetTexture("Depth", _depthInput);
+    _batchedMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
+    _batchedMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
+    _batchedMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
+    _batchedPipeline = BePipelineBuilder::Start(*batchedShader)
+        .SetBlend(additiveBlend)
+        .SetColorFormats({ outputFormat })
+        .Build()
+    ;
 
     _directionalLightScheme = directionalLightShader->GetMaterialScheme("main");
     _directionalLightPipeline = BePipelineBuilder::Start(*directionalLightShader)
@@ -123,9 +145,45 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     pass.SetViewport(renderer.GetViewport());
     pass.Begin();
 
-    // Directional lights
-    for (size_t i = 0; i < sunLights.size(); ++i) {
-        const auto& sunLight = sunLights[i];
+    // Unshadowed lights, batched into one looping draw per capacity-sized chunk
+    _batchedPositionRadius.clear();
+    _batchedColorPower.clear();
+    for (const auto& sunLight : sunLights) {
+        if (sunLight.CastsShadows) {
+            continue;
+        }
+        _batchedPositionRadius.emplace_back(sunLight.Direction, -1.0f);
+        _batchedColorPower.emplace_back(sunLight.Color, sunLight.Power);
+    }
+    for (const auto& pointLight : pointLights) {
+        if (pointLight.CastsShadows) {
+            continue;
+        }
+        _batchedPositionRadius.emplace_back(pointLight.Position, pointLight.Radius);
+        _batchedColorPower.emplace_back(pointLight.Color, pointLight.Power);
+    }
+
+    const auto totalBatched = _batchedPositionRadius.size();
+    for (size_t first = 0; first < totalBatched; first += _batchedCapacity) {
+        const size_t chunkSize = std::min<size_t>(_batchedCapacity, totalBatched - first);
+        const auto positionRadiusChunk = std::span(_batchedPositionRadius).subspan(first, chunkSize);
+        const auto colorPowerChunk = std::span(_batchedColorPower).subspan(first, chunkSize);
+
+        _batchedMaterial->SetFloat4Array("LightPositionRadius", positionRadiusChunk);
+        _batchedMaterial->SetFloat4Array("LightColorPower", colorPowerChunk);
+        _batchedMaterial->SetFloat1("LightCount", static_cast<float>(chunkSize));
+        cmd.SetPipeline(_batchedPipeline);
+        cmd.SetBindGroup(_batchedMaterial->GetBindGroup(), 1);
+        cmd.Draw(4, 0);
+    }
+
+    // Shadowed directional lights
+    size_t shadowedSunIndex = 0;
+    for (const auto& sunLight : sunLights) {
+        if (!sunLight.CastsShadows) {
+            continue;
+        }
+        const size_t i = shadowedSunIndex++;
         if (i >= _directionalLightMaterials.size()) {
             auto mat = BeMaterial::Create(_directionalLightScheme);
             mat->SetTexture("Depth", _depthInput);
@@ -135,23 +193,24 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
             _directionalLightMaterials.push_back(std::move(mat));
         }
         const auto& mat = _directionalLightMaterials[i];
-        mat->SetFloat1("HasShadowMap",   sunLight.CastsShadows ? 1.0f : 0.0f);
-        mat->SetFloat3("Direction",      sunLight.Direction);
-        mat->SetFloat3("Color",          sunLight.Color);
-        mat->SetFloat1("Power",          sunLight.Power);
+        mat->SetFloat1("HasShadowMap", 1.0f);
+        mat->SetFloat3("Direction", sunLight.Direction);
+        mat->SetFloat3("Color", sunLight.Color);
+        mat->SetFloat1("Power", sunLight.Power);
         mat->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
-        mat->SetFloat1("TexelSize",      1.0f / sunLight.ShadowMapResolution);
-        mat->SetFloat1("ShadowBias",     srm.Settings.Shadow.Bias);
-        if (sunLight.CastsShadows) {
-            mat->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
-        }
+        mat->SetFloat1("TexelSize", 1.0f / sunLight.ShadowMapResolution);
+        mat->SetFloat1("ShadowBias", srm.Settings.Shadow.Bias);
+        mat->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
         cmd.SetPipeline(_directionalLightPipeline);
         cmd.SetBindGroup(mat->GetBindGroup(), 1);
         cmd.Draw(4, 0);
     }
 
-    // Point lights
+    // Shadowed point lights
     for (const auto& pointLight : pointLights) {
+        if (!pointLight.CastsShadows) {
+            continue;
+        }
         if (!_pointLightMaterials.contains(pointLight.Name)) {
             auto mat = BeMaterial::Create(_pointLightScheme);
             mat->SetTexture("Depth", _depthInput);
@@ -161,16 +220,14 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
             _pointLightMaterials[pointLight.Name] = std::move(mat);
         }
         const auto& mat = _pointLightMaterials[pointLight.Name];
-        mat->SetFloat3("Position",            pointLight.Position);
-        mat->SetFloat1("Radius",              pointLight.Radius);
-        mat->SetFloat3("Color",               pointLight.Color);
-        mat->SetFloat1("Power",               pointLight.Power);
-        mat->SetFloat1("HasShadowMap",        pointLight.CastsShadows ? 1.0f : 0.0f);
+        mat->SetFloat3("Position", pointLight.Position);
+        mat->SetFloat1("Radius", pointLight.Radius);
+        mat->SetFloat3("Color", pointLight.Color);
+        mat->SetFloat1("Power", pointLight.Power);
+        mat->SetFloat1("HasShadowMap", 1.0f);
         mat->SetFloat1("ShadowMapResolution", static_cast<float>(pointLight.ShadowMapResolution));
-        mat->SetFloat1("ShadowNearPlane",     pointLight.ShadowNearPlane);
-        if (pointLight.CastsShadows) {
-            mat->SetTexture("PointLightShadowMap", pointLight.ShadowMap.lock());
-        }
+        mat->SetFloat1("ShadowNearPlane", pointLight.ShadowNearPlane);
+        mat->SetTexture("PointLightShadowMap", pointLight.ShadowMap.lock());
         cmd.SetPipeline(_pointLightPipeline);
         cmd.SetBindGroup(mat->GetBindGroup(), 1);
         cmd.Draw(4, 0);

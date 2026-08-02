@@ -33,7 +33,7 @@
 
 */
 
-#include "BeFunctions.hlsli"
+#include "light-common.hlsli"
 #include "fullscreen-vertex.hlsl"
 
 /*========================================================*/
@@ -110,21 +110,11 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
         }
     }
 
-    float3 viewVec = _Frame.CameraPosition - worldPos;
-    float3 lit;
-    if (normalAndFlag.w > 0.5) {
-        lit = StandardLambertBlinnPhong(
-            normalAndFlag.xyz, viewVec, -_DirectionalLight.Direction,
-            _DirectionalLight.Color, _DirectionalLight.Power,
-            albedo, surface.rgb, surface.a
-        );
-    } else {
-        lit = StandardPBR(
-            normalAndFlag.xyz, viewVec, -_DirectionalLight.Direction,
-            _DirectionalLight.Color * _DirectionalLight.Power,
-            albedo, surface.rgb
-        );
-    }
+    BeSurfacePoint surfacePoint = MakeSurfacePoint(worldPos, _Frame.CameraPosition, normalAndFlag, albedo, surface);
+    float3 lit = ShadeDirectionalLight(
+        surfacePoint, _DirectionalLight.Direction,
+        _DirectionalLight.Color, _DirectionalLight.Power
+    );
 
     PixelOutput output;
     output.LightHDR = lit * shadowAbsenceFactor;

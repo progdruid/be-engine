@@ -68,7 +68,7 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include <BeFunctions.hlsli>
+#include "light-common.hlsli"
 #include "fullscreen-vertex.hlsl"
 
 float SamplePointLightShadow(float3 worldPos) {
@@ -103,9 +103,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     float4 surface       = ORM_RGB.Sample(InputSampler, input.UV);
 
     float3 worldPos = ReconstructWorldPosition(input.UV, depth, _Frame.CameraInverseProjectionView);
-    float3 lightDir = _PointLight.Position - worldPos;
-    float distanceToLight = length(lightDir);
-    if (distanceToLight > _PointLight.Radius) {
+    if (length(_PointLight.Position - worldPos) > _PointLight.Radius) {
         discard;
     }
 
@@ -114,24 +112,11 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
         shadowAbsenceFactor = SamplePointLightShadow(worldPos);
     }
 
-    float attenuation = saturate(1.0 - (distanceToLight / _PointLight.Radius));
-    attenuation *= attenuation;
-
-    float3 viewVec = _Frame.CameraPosition - worldPos;
-    float3 lit;
-    if (normalAndFlag.w > 0.5) {
-        lit = StandardLambertBlinnPhong(
-            normalAndFlag.xyz, viewVec, lightDir,
-            _PointLight.Color, _PointLight.Power * attenuation,
-            albedo, surface.rgb, surface.a
-        );
-    } else {
-        lit = StandardPBR(
-            normalAndFlag.xyz, viewVec, lightDir,
-            _PointLight.Color * _PointLight.Power * attenuation,
-            albedo, surface.rgb
-        );
-    }
+    BeSurfacePoint surfacePoint = MakeSurfacePoint(worldPos, _Frame.CameraPosition, normalAndFlag, albedo, surface);
+    float3 lit = ShadePointLight(
+        surfacePoint, _PointLight.Position, _PointLight.Radius,
+        _PointLight.Color, _PointLight.Power
+    );
 
     PixelOutput output;
     output.LightHDR = lit * shadowAbsenceFactor;

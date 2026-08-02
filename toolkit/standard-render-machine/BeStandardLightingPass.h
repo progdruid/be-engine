@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <umbrellas/common.hpp>
+#include <umbrellas/include-glm.h>
 #include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
@@ -23,6 +24,13 @@ class BeStandardLightingPass final : public BeRenderPass {
     std::shared_ptr<BeTexture> _prefilteredCubemap;
     std::shared_ptr<BeTexture> _brdfLutTexture;
     std::shared_ptr<BeTexture> _output;
+
+    BeMaterialScheme _batchedScheme;
+    std::shared_ptr<BeMaterial> _batchedMaterial;
+    SenPipeline _batchedPipeline;
+    uint32_t _batchedCapacity = 0;
+    std::vector<glm::vec4> _batchedPositionRadius;
+    std::vector<glm::vec4> _batchedColorPower;
 
     BeMaterialScheme _directionalLightScheme;
     std::vector<std::shared_ptr<BeMaterial>> _directionalLightMaterials;
