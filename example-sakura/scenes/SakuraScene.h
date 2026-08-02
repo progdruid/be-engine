@@ -7,6 +7,7 @@
 
 #include "BaseScene.h"
 #include "BeAssetRegistry.h"
+#include "FpsCounter.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
 struct BeProp;
@@ -88,7 +89,8 @@ class SakuraScene : public BaseScene {
     std::filesystem::file_time_type _sceneLastWriteTime{};
 
     float _time = 0.0f;
-    
+    FpsCounter _fpsCounter;
+
     expose
     explicit SakuraScene(Game* game);
     ~SakuraScene() override;

@@ -3,7 +3,10 @@
 
 #include <umbrellas/include-glfw.h>
 
+#include <imgui/imgui.h>
+
 #include "BeRenderPass.h"
+#include "imgui/BeImGuiPass.h"
 #include "OrbitCameraController.h"
 #include "FreeCameraController.h"
 #include "RigCameraController.h"
@@ -365,6 +368,15 @@ auto SakuraScene::RebuildPasses() -> void {
     _machine->AddFullscreenPass(BeShaderLibrary::GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });
 
     _machine->AddBackbufferPass("Sakura_FXAA", Settings.Background.ClearColor);
+
+    auto imguiPass = std::make_unique<BeImGuiPass>(GameIns->Window);
+    imguiPass->SetUICallback([this]() {
+        ImGui::Begin("Stats");
+        ImGui::Text("%.0f FPS (%.2f ms)", _fpsCounter.GetFps(), _fpsCounter.GetFrameMs());
+        ImGui::End();
+    });
+    _machine->AddPass(std::move(imguiPass));
+
     _machine->BuildPasses();
 }
 
@@ -389,7 +401,8 @@ auto SakuraScene::Tick(float deltaTime) -> void {
     static const auto CirclingView = _registry.view<TransformComponent, CirclingComponent>();
 
     _time += deltaTime;
-    
+    _fpsCounter.Tick(deltaTime);
+
     if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
         _cameraMode = (_cameraMode + 1) % 3;
         if (_cameraMode == 2) _rigCameraController->Play("flythrough", /*loop*/ true);
