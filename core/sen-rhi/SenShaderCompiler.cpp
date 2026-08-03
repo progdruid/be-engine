@@ -38,7 +38,7 @@ auto SenShaderCompiler::Compile(
     const std::filesystem::path& filePath,
     const std::string& entryPoint,
     SenShaderStage stage
-) -> std::expected<std::vector<uint32_t>, std::string> {
+) -> std::expected<CompileResult, std::string> {
 
     be_assert(globalSession, "SenShaderCompiler was never initialized. Make sure to call Init.");
 
@@ -123,7 +123,18 @@ auto SenShaderCompiler::Compile(
     const size_t byteSize = code->getBufferSize();
     be_assert(byteSize % sizeof(uint32_t) == 0, "SenShaderCompiler: SPIR-V blob is not word-aligned");
 
-    auto words = std::vector<uint32_t>(byteSize / sizeof(uint32_t));
-    std::memcpy(words.data(), code->getBufferPointer(), byteSize);
-    return words;
+    auto result = CompileResult();
+    result.Bytecode.resize(byteSize / sizeof(uint32_t));
+    std::memcpy(result.Bytecode.data(), code->getBufferPointer(), byteSize);
+
+    const auto sourcePath = std::filesystem::weakly_canonical(filePath);
+    const SlangInt32 dependencyCount = module->getDependencyFileCount();
+    for (SlangInt32 i = 0; i < dependencyCount; ++i) {
+        auto dependency = std::filesystem::weakly_canonical(module->getDependencyFilePath(i));
+        if (dependency != sourcePath) {
+            result.Includes.push_back(std::move(dependency));
+        }
+    }
+
+    return result;
 }

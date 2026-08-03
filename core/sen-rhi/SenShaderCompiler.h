@@ -9,6 +9,11 @@
 
 class SenShaderCompiler {
     expose
+    struct CompileResult {
+        std::vector<uint32_t> Bytecode;
+        std::vector<std::filesystem::path> Includes;
+    };
+
     static std::vector<std::filesystem::path> SearchPaths;
 
     static auto AddSearchPath(std::filesystem::path path) -> void;
@@ -19,5 +24,5 @@ class SenShaderCompiler {
         const std::filesystem::path& filePath,
         const std::string& entryPoint,
         SenShaderStage stage
-    ) -> std::expected<std::vector<uint32_t>, std::string>;
+    ) -> std::expected<CompileResult, std::string>;
 };

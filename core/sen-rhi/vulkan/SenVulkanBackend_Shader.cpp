@@ -7,17 +7,26 @@ auto SenVulkanBackend::CreateShader(const SenShaderSourceDesc& sourceDesc) -> Se
     auto compileResult = SenShaderCompiler::Compile(sourceDesc.SourcePath, sourceDesc.FunctionName, sourceDesc.Stage);
     be_assert(compileResult, "SenVulkanBackend::CreateShader: shader compilation failed: " + compileResult.error());
 
-    auto& spirv = compileResult.value();
+    auto& bytecode = compileResult.value().Bytecode;
 
     VkShaderModuleCreateInfo moduleInfo {
         .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = spirv.size() * sizeof(uint32_t),
-        .pCode    = spirv.data(),
+        .codeSize = bytecode.size() * sizeof(uint32_t),
+        .pCode    = bytecode.data(),
     };
 
     const SenShader handle { _nextShaderId++ };
     auto& entry = _shaders[handle.ID];
     entry.Stage = sourceDesc.Stage;
+    entry.SourcePath = sourceDesc.SourcePath;
+    entry.FunctionName = sourceDesc.FunctionName;
+    entry.Includes = std::move(compileResult.value().Includes);
+
+    std::fprintf(stderr, "[shader] %s:%s ->", entry.SourcePath.filename().c_str(), entry.FunctionName.c_str());
+    for (const auto& include : entry.Includes) {
+        std::fprintf(stderr, " %s", include.filename().c_str());
+    }
+    std::fprintf(stderr, "\n");
 
     VkResult result = vkCreateShaderModule(_device, &moduleInfo, nullptr, &entry.Module);
     be_assert(result == VK_SUCCESS, "Failed to create shader module!");

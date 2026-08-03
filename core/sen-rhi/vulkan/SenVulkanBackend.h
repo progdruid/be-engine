@@ -47,6 +47,9 @@ struct SenVulkanSamplerEntry {
 struct SenVulkanShaderEntry {
     VkShaderModule Module = VK_NULL_HANDLE;
     SenShaderStage Stage;
+    std::filesystem::path SourcePath;
+    std::string FunctionName;
+    std::vector<std::filesystem::path> Includes;
 };
 
 
