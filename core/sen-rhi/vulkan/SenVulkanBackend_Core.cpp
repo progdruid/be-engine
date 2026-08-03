@@ -16,6 +16,8 @@ VkPhysicalDevice SenVulkanBackend::_physicalDevice;
 VkDevice SenVulkanBackend::_device;
 VkQueue SenVulkanBackend::_queue;
 uint32_t SenVulkanBackend::_queueFamilyIndex;
+VkSemaphore SenVulkanBackend::_timeline = VK_NULL_HANDLE;
+uint64_t SenVulkanBackend::_timelineValue = 0;
 uint32_t SenVulkanBackend::_minUniformBufferOffsetAlignment = 256;
 VkDescriptorPool SenVulkanBackend::_descriptorPool = VK_NULL_HANDLE;
 VkCommandPool SenVulkanBackend::_commandPool;
@@ -137,10 +139,16 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
         .sType                = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
         .shaderDrawParameters = VK_TRUE,  // Slang-emitted SPIR-V declares the DrawParameters capability
     };
+    // 1.2 core features
+    VkPhysicalDeviceVulkan12Features enabled12Features {
+        .sType             = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .pNext             = &enabled11Features,
+        .timelineSemaphore = VK_TRUE,
+    };
     // 1.3 core features
     VkPhysicalDeviceVulkan13Features enabled13Features {
         .sType            = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-        .pNext            = &enabled11Features,
+        .pNext            = &enabled12Features,
         .synchronization2 = VK_TRUE,
         .dynamicRendering = VK_TRUE,
     };
@@ -158,6 +166,19 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     be_assert(result == VK_SUCCESS, "Vulkan: Failed to create device!");
     vkGetDeviceQueue(_device, _queueFamilyIndex, 0, &_queue);
 
+    // timeline semaphore
+    VkSemaphoreTypeCreateInfo timelineType {
+        .sType         = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+        .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+        .initialValue  = 0,
+    };
+    VkSemaphoreCreateInfo timelineInfo {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = &timelineType,
+    };
+    result = vkCreateSemaphore(_device, &timelineInfo, nullptr, &_timeline);
+    be_assert(result == VK_SUCCESS, "Failed to create timeline semaphore!");
+    _timelineValue = 0;
 
     // command pool
     VkCommandPoolCreateInfo cmdPoolInfo {
@@ -200,6 +221,8 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
 }
 
 auto SenVulkanBackend::Shutdown() -> void {
+    WaitIdle();
+
     // Destroy all swapchains first (they depend on device)
     auto swapchains = _swapchains;
     for (const auto id : swapchains | std::views::keys) {
@@ -236,6 +259,7 @@ auto SenVulkanBackend::Shutdown() -> void {
         DestroySampler(SenSampler { id });
     }
 
+    if (_timeline)         { vkDestroySemaphore(_device, _timeline, nullptr); _timeline = VK_NULL_HANDLE; }
     if (_commandPool)      { vkDestroyCommandPool(_device, _commandPool, nullptr); _commandPool = VK_NULL_HANDLE; }
     if (_descriptorPool)   { vkDestroyDescriptorPool(_device, _descriptorPool, nullptr); _descriptorPool = VK_NULL_HANDLE; }
     if (_allocator)        { vmaDestroyAllocator(_allocator); _allocator = VK_NULL_HANDLE; }
@@ -263,22 +287,35 @@ auto SenVulkanBackend::AllocateCommandBuffer() -> SenVulkanCommandBuffer {
 }
 
 auto SenVulkanBackend::SubmitImmediate(SenVulkanCommandBuffer& cmd) -> void {
-    const VkCommandBuffer vkCmd = cmd.GetNativeHandle();
-
-    const VkSubmitInfo submitInfo {
-        .sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .commandBufferCount = 1,
-        .pCommandBuffers    = &vkCmd,
+    const VkCommandBufferSubmitInfo cmdInfo {
+        .sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = cmd.GetNativeHandle(),
     };
-
-    const VkFenceCreateInfo fenceInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    VkFence fence;
-    vkCreateFence(_device, &fenceInfo, nullptr, &fence);
-
-    vkQueueSubmit(_queue, 1, &submitInfo, fence);
-    vkWaitForFences(_device, 1, &fence, VK_TRUE, UINT64_MAX);
-
-    vkDestroyFence(_device, fence, nullptr);
+    
+    const uint64_t signalValue = ++_timelineValue;
+    const VkSemaphoreSubmitInfo signalInfo {
+        .sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .semaphore = _timeline,
+        .value     = signalValue,
+        .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+    };
+    
+    const VkSubmitInfo2 submitInfo {
+        .sType                    = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .commandBufferInfoCount   = 1,
+        .pCommandBufferInfos      = &cmdInfo,
+        .signalSemaphoreInfoCount = 1,
+        .pSignalSemaphoreInfos    = &signalInfo,
+    };
+    vkQueueSubmit2(_queue, 1, &submitInfo, VK_NULL_HANDLE);
+    
+    const VkSemaphoreWaitInfo waitInfo {
+        .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+        .semaphoreCount = 1,
+        .pSemaphores    = &_timeline,
+        .pValues        = &signalValue,
+    }; 
+    vkWaitSemaphores(_device, &waitInfo, UINT64_MAX);
 }
 
 // ─── native escape hatches ────────────────────────────────────────────────────────────────

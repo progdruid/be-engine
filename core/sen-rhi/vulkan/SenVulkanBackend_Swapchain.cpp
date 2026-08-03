@@ -168,19 +168,13 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
 
     // 7. Create sync objects
     VkSemaphoreCreateInfo semaphoreInfo { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-    VkFenceCreateInfo fenceInfo {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,  // start signaled so first frame doesn't wait forever
-    };
 
     entry.FramesInFlight = desc.FramesInFlight;
     entry.ImageAvailableSemaphores.resize(entry.FramesInFlight);
-    entry.InFlightFences.resize(entry.FramesInFlight);
+    entry.SlotTimelineValues.assign(entry.FramesInFlight, 0);
     for (uint32_t i = 0; i < entry.FramesInFlight; ++i) {
         result = vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &entry.ImageAvailableSemaphores[i]);
         be_assert(result == VK_SUCCESS, "Failed to create semaphore!");
-        result = vkCreateFence(_device, &fenceInfo, nullptr, &entry.InFlightFences[i]);
-        be_assert(result == VK_SUCCESS, "Failed to create fence!");
     }
 
     entry.RenderFinishedSemaphores.resize(imageCount);
@@ -188,7 +182,7 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
         result = vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &entry.RenderFinishedSemaphores[i]);
         be_assert(result == VK_SUCCESS, "Failed to create semaphore!");
     }
-    entry.ImagesInFlight.assign(imageCount, VK_NULL_HANDLE);
+    entry.ImageTimelineValues.assign(imageCount, 0);
 
     const SenSwapchain handle { _nextSwapchainId++ };
     _swapchains[handle.ID] = std::move(entry);
@@ -205,7 +199,6 @@ auto SenVulkanBackend::DestroySwapchain(SenSwapchain handle) -> void {
             _textures.erase(tex.ID);
         }
 
-        for (auto fence : entry.InFlightFences)               { vkDestroyFence(_device, fence, nullptr); }
         for (auto semaphore : entry.ImageAvailableSemaphores) { vkDestroySemaphore(_device, semaphore, nullptr); }
         for (auto semaphore : entry.RenderFinishedSemaphores) { vkDestroySemaphore(_device, semaphore, nullptr); }
         for (auto imageView : entry.ImageViews) {
@@ -249,7 +242,14 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle, uint32_t frameSlot) -> Se
     auto& entry = _swapchains.at(handle.ID);
     be_assert(frameSlot < entry.FramesInFlight, "BeginFrame: frame slot out of range");
 
-    vkWaitForFences(_device, 1, &entry.InFlightFences[frameSlot], VK_TRUE, UINT64_MAX);
+    const uint64_t slotValue = entry.SlotTimelineValues[frameSlot];
+    const VkSemaphoreWaitInfo slotWait {
+        .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+        .semaphoreCount = 1,
+        .pSemaphores    = &_timeline,
+        .pValues        = &slotValue,
+    };
+    vkWaitSemaphores(_device, &slotWait, UINT64_MAX);
 
     vkAcquireNextImageKHR(
         _device, entry.Swapchain, UINT64_MAX,
@@ -257,12 +257,14 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle, uint32_t frameSlot) -> Se
         &entry.CurrentImageIndex
     );
 
-    if (entry.ImagesInFlight[entry.CurrentImageIndex] != VK_NULL_HANDLE) {
-        vkWaitForFences(_device, 1, &entry.ImagesInFlight[entry.CurrentImageIndex], VK_TRUE, UINT64_MAX);
-    }
-    entry.ImagesInFlight[entry.CurrentImageIndex] = entry.InFlightFences[frameSlot];
-
-    vkResetFences(_device, 1, &entry.InFlightFences[frameSlot]);
+    const uint64_t imageValue = entry.ImageTimelineValues[entry.CurrentImageIndex];
+    const VkSemaphoreWaitInfo imageWait {
+        .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+        .semaphoreCount = 1,
+        .pSemaphores    = &_timeline,
+        .pValues        = &imageValue,
+    };
+    vkWaitSemaphores(_device, &imageWait, UINT64_MAX);
 
     return entry.Textures[entry.CurrentImageIndex];
 }
@@ -271,21 +273,45 @@ auto SenVulkanBackend::EndFrame(SenSwapchain handle, SenVulkanCommandBuffer& cmd
     auto& entry = _swapchains.at(handle.ID);
     be_assert(frameSlot < entry.FramesInFlight, "EndFrame: frame slot out of range");
 
-    const VkCommandBuffer vkCmd = cmd.GetNativeHandle();
-
-    // Submit: wait on imageAvailable, signal renderFinished, signal fence when done
-    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    VkSubmitInfo submitInfo {
-        .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount   = 1,
-        .pWaitSemaphores      = &entry.ImageAvailableSemaphores[frameSlot],
-        .pWaitDstStageMask    = &waitStage,
-        .commandBufferCount   = 1,
-        .pCommandBuffers      = &vkCmd,
-        .signalSemaphoreCount = 1,
-        .pSignalSemaphores    = &entry.RenderFinishedSemaphores[entry.CurrentImageIndex],
+    const VkCommandBufferSubmitInfo cmdInfo {
+        .sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = cmd.GetNativeHandle(),
     };
-    vkQueueSubmit(_queue, 1, &submitInfo, entry.InFlightFences[frameSlot]);
+
+    const VkSemaphoreSubmitInfo waitInfo {
+        .sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .semaphore = entry.ImageAvailableSemaphores[frameSlot],
+        .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+    };
+
+    const uint64_t signalValue = ++_timelineValue;
+    const VkSemaphoreSubmitInfo signalInfos[] = {
+        {
+            .sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = entry.RenderFinishedSemaphores[entry.CurrentImageIndex],
+            .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        },
+        {
+            .sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = _timeline,
+            .value     = signalValue,
+            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        },
+    };
+
+    const VkSubmitInfo2 submitInfo {
+        .sType                    = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .waitSemaphoreInfoCount   = 1,
+        .pWaitSemaphoreInfos      = &waitInfo,
+        .commandBufferInfoCount   = 1,
+        .pCommandBufferInfos      = &cmdInfo,
+        .signalSemaphoreInfoCount = uint32_t(std::size(signalInfos)),
+        .pSignalSemaphoreInfos    = signalInfos,
+    };
+    vkQueueSubmit2(_queue, 1, &submitInfo, VK_NULL_HANDLE);
+
+    entry.SlotTimelineValues[frameSlot] = signalValue;
+    entry.ImageTimelineValues[entry.CurrentImageIndex] = signalValue;
 
     // Present: wait on renderFinished
     VkPresentInfoKHR presentInfo {

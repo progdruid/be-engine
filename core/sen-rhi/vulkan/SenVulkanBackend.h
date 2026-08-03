@@ -76,11 +76,11 @@ struct SenVulkanSwapchainEntry {
 
     // per frame slot
     std::vector<VkSemaphore> ImageAvailableSemaphores;
-    std::vector<VkFence>     InFlightFences;
+    std::vector<uint64_t>    SlotTimelineValues;
 
     // per swapchain image
     std::vector<VkSemaphore> RenderFinishedSemaphores;
-    std::vector<VkFence>     ImagesInFlight;
+    std::vector<uint64_t>    ImageTimelineValues;
 
     uint32_t CurrentImageIndex = 0;
 
@@ -102,6 +102,8 @@ class SenVulkanBackend {
     static VkDevice _device;
     static VkQueue _queue;
     static uint32_t _queueFamilyIndex;
+    static VkSemaphore _timeline;
+    static uint64_t _timelineValue;
     static uint32_t _minUniformBufferOffsetAlignment;
     static VkCommandPool _commandPool;
     static VkDescriptorPool _descriptorPool;
