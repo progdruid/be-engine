@@ -183,6 +183,7 @@ class SenVulkanBackend {
     static auto CreatePipeline  (const SenPipelineDesc& desc) -> SenPipeline;
     static auto DestroyPipeline (SenPipeline handle) -> void;
     static auto LookupPipeline  (SenPipeline handle) -> SenVulkanPipelineEntry&;
+    hide static auto MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulkanPipelineEntry;
 
     expose // debug print helpers
     static auto PrintBindGroup (SenBindGroup handle) -> std::string;

@@ -4,6 +4,12 @@
 #include <umbrellas/include-libassert.h>
 
 auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
+    const SenPipeline handle { _nextPipelineId++ };
+    _pipelines[handle.ID] = MakePipelineEntry(desc);
+    return handle;
+}
+
+auto SenVulkanBackend::MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulkanPipelineEntry {
     SenVulkanPipelineEntry entry {};
     entry.Desc = desc;
 
@@ -45,9 +51,7 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
         be_assert(result == VK_SUCCESS, "Failed to create compute pipeline!");
 
         entry.BindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-        const SenPipeline handle { _nextPipelineId++ };
-        _pipelines[handle.ID] = entry;
-        return handle;
+        return entry;
     }
 
     // ── shader stages ──────────────────────────────────────────────────────────
@@ -208,9 +212,7 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     result = vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &entry.Pipeline);
     be_assert(result == VK_SUCCESS, "Failed to create graphics pipeline!");
 
-    const SenPipeline handle { _nextPipelineId++ };
-    _pipelines[handle.ID] = entry;
-    return handle;
+    return entry;
 }
 
 auto SenVulkanBackend::DestroyPipeline(SenPipeline handle) -> void {
