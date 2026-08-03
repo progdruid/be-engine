@@ -7,6 +7,7 @@
 #include <sen-rhi/SenBackend.h>
 
 #include "BeShaderLibrary.h"
+#include "BeFileWatcher.h"
 #include "BeWindow.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
@@ -75,14 +76,11 @@ auto Game::MainLoop() -> void {
         Window->PollEvents();
         Input->Update();
 
-        if (Input->GetKeyDown(GLFW_KEY_F6)) {
-            const std::filesystem::path changed[] = { "shaders/backbuffer.hlsl" };
-            SenBackend::ReloadSources(changed);
-        }
-
         const double now = glfwGetTime();
         const float dt = static_cast<float>(now - lastTime);
         lastTime = now;
+
+        BeFileWatcher::Poll(dt);
 
         const auto activeScene = SceneManager->GetActiveScene<BaseScene>();
         if (activeScene)

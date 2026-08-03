@@ -195,6 +195,7 @@ class SenVulkanBackend {
     static auto DestroyShader (SenShader handle) -> void;
     static auto LookupShader  (SenShader handle) -> SenVulkanShaderEntry&;
     static auto ReloadSources (std::span<const std::filesystem::path> paths) -> void;
+    static auto GetShaderSourcePaths () -> std::vector<std::filesystem::path>;
     hide static auto ReloadShader(SenShader handle) -> bool;
 
     expose // pipelines

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <ranges>
 
+#include "BeFileWatcher.h"
 #include "BeShader.h"
 #include "BeShaderTools.h"
 #include "BeTexture.h"
@@ -17,6 +18,15 @@ std::unordered_map<std::string, std::shared_ptr<BeTexture>>    BeShaderLibrary::
 std::unordered_map<std::string, SenSampler>                    BeShaderLibrary::_samplers;
 
 auto BeShaderLibrary::LoadShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void {
+
+    static bool hotReloadRegistered = false;
+    if (!hotReloadRegistered) {
+        hotReloadRegistered = true;
+        BeFileWatcher::Register(
+            [] { return SenBackend::GetShaderSourcePaths(); },
+            [](std::span<const std::filesystem::path> changed) { SenBackend::ReloadSources(changed); }
+        );
+    }
 
     // collect sources
     auto sourcesToIndex = std::vector<std::pair<std::filesystem::path, std::string>>();

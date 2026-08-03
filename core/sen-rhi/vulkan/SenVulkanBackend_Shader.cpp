@@ -1,6 +1,7 @@
 #include "SenVulkanBackend.h"
 
 #include <algorithm>
+#include <ranges>
 
 #include <sen-rhi/SenShaderCompiler.h>
 #include <umbrellas/include-libassert.h>
@@ -123,6 +124,19 @@ auto SenVulkanBackend::ReloadSources(std::span<const std::filesystem::path> path
         stderr, "[shader] reloaded %zu shaders, %zu pipelines\n",
         reloadedShaders.size(), reloadedPipelineCount
     );
+}
+
+auto SenVulkanBackend::GetShaderSourcePaths() -> std::vector<std::filesystem::path> {
+    auto paths = std::vector<std::filesystem::path>();
+    for (const auto& entry : _shaders | std::views::values) {
+        paths.push_back(entry.SourcePath);
+        for (const auto& include : entry.Includes) {
+            paths.push_back(include);
+        }
+    }
+    std::ranges::sort(paths);
+    paths.erase(std::ranges::unique(paths).begin(), paths.end());
+    return paths;
 }
 
 auto SenVulkanBackend::DestroyShader(SenShader handle) -> void {
