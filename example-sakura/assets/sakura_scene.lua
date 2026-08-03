@@ -207,10 +207,11 @@ function makeShowcaseContent(data)
             },
             circling = {
                 origin = {0.0, 2.0, 0.0},
-                axis = {0, 1, 1},
+                axis = {0, 1, 0},
                 radius = 8.0,
                 speed = -15.0,
                 phase = 360.0 * i / lightCount,
+                rotate = true,
             },
         }
     end

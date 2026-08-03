@@ -1,7 +1,10 @@
 
 #include "Game.h"
 
+#include <filesystem>
+
 #include <umbrellas/include-glfw.h>
+#include <sen-rhi/SenBackend.h>
 
 #include "BeShaderLibrary.h"
 #include "BeWindow.h"
@@ -71,6 +74,11 @@ auto Game::MainLoop() -> void {
     while (!Window->ShouldClose()) {
         Window->PollEvents();
         Input->Update();
+
+        if (Input->GetKeyDown(GLFW_KEY_F6)) {
+            const std::filesystem::path changed[] = { "shaders/backbuffer.hlsl" };
+            SenBackend::ReloadSources(changed);
+        }
 
         const double now = glfwGetTime();
         const float dt = static_cast<float>(now - lastTime);

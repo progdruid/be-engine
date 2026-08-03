@@ -215,6 +215,15 @@ auto SenVulkanBackend::MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulk
     return entry;
 }
 
+auto SenVulkanBackend::ReloadPipeline(SenPipeline handle) -> void {
+    auto& entry = _pipelines.at(handle.ID);
+    auto reloaded = MakePipelineEntry(entry.Desc);
+
+    vkDestroyPipeline(_device, entry.Pipeline, nullptr);
+    vkDestroyPipelineLayout(_device, entry.Layout, nullptr);
+    entry = std::move(reloaded);
+}
+
 auto SenVulkanBackend::DestroyPipeline(SenPipeline handle) -> void {
     auto it = _pipelines.find(handle.ID);
     if (it != _pipelines.end()) {

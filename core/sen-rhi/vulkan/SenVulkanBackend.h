@@ -1,5 +1,7 @@
 #pragma once
 #include <array>
+#include <filesystem>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <vulkan/vulkan_core.h>
@@ -181,12 +183,15 @@ class SenVulkanBackend {
     static auto CreateShader (const SenShaderSourceDesc& sourceDesc) -> SenShader;
     static auto DestroyShader (SenShader handle) -> void;
     static auto LookupShader  (SenShader handle) -> SenVulkanShaderEntry&;
+    static auto ReloadSources (std::span<const std::filesystem::path> paths) -> void;
+    hide static auto ReloadShader(SenShader handle) -> bool;
 
     expose // pipelines
     static auto CreatePipeline  (const SenPipelineDesc& desc) -> SenPipeline;
     static auto DestroyPipeline (SenPipeline handle) -> void;
     static auto LookupPipeline  (SenPipeline handle) -> SenVulkanPipelineEntry&;
     hide static auto MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulkanPipelineEntry;
+    hide static auto ReloadPipeline(SenPipeline handle) -> void;
 
     expose // debug print helpers
     static auto PrintBindGroup (SenBindGroup handle) -> std::string;
