@@ -30,6 +30,7 @@ std::unordered_map<uint32_t, SenVulkanShaderEntry> SenVulkanBackend::_shaders;  
 std::unordered_map<uint32_t, SenVulkanPipelineEntry> SenVulkanBackend::_pipelines;   uint32_t SenVulkanBackend::_nextPipelineId = 1;
 std::unordered_map<uint32_t, SenVulkanSwapchainEntry> SenVulkanBackend::_swapchains; uint32_t SenVulkanBackend::_nextSwapchainId = 1;
 std::unordered_map<uint32_t, SenVulkanBindGroupEntry> SenVulkanBackend::_bindGroups; uint32_t SenVulkanBackend::_nextBindGroupId = 1;
+std::vector<SenVulkanRetirementNote> SenVulkanBackend::_retirements;
 
 // ─── device lifecycle ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
@@ -231,17 +232,17 @@ auto SenVulkanBackend::Shutdown() -> void {
 
     auto textures = _textures;
     for (const auto& id : textures | std::views::keys) {
-        DestroyTexture(SenTexture { id });
+        RetireTexture(SenTexture { id });
     }
 
     auto buffers = _buffers;
     for (const auto& id : buffers | std::views::keys) {
-        DestroyBuffer(SenBuffer { id });
+        RetireBuffer(SenBuffer { id });
     }
 
     auto pipelines = _pipelines;
     for (const auto& id : pipelines | std::views::keys) {
-        DestroyPipeline(SenPipeline { id });
+        RetirePipeline(SenPipeline { id });
     }
 
     auto shaders = _shaders;
@@ -251,13 +252,15 @@ auto SenVulkanBackend::Shutdown() -> void {
 
     auto bindGroups = _bindGroups;
     for (const auto& id : bindGroups | std::views::keys) {
-        DestroyBindGroup(SenBindGroup { id });
+        RetireBindGroup(SenBindGroup { id });
     }
 
     auto samplers = _samplers;
     for (const auto& id : samplers | std::views::keys) {
-        DestroySampler(SenSampler { id });
+        RetireSampler(SenSampler { id });
     }
+
+    FlushRetirements(UINT64_MAX);
 
     if (_timeline)         { vkDestroySemaphore(_device, _timeline, nullptr); _timeline = VK_NULL_HANDLE; }
     if (_commandPool)      { vkDestroyCommandPool(_device, _commandPool, nullptr); _commandPool = VK_NULL_HANDLE; }

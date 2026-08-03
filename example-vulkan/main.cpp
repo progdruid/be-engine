@@ -99,10 +99,10 @@ int main() {
 
     SenBackend::WaitIdle();
 
-    SenBackend::DestroyPipeline(pipeline);
+    SenBackend::RetirePipeline(pipeline);
     SenBackend::DestroyShader(pixelShader);
     SenBackend::DestroyShader(vertexShader);
-    SenBackend::DestroyBuffer(vertexBuffer);
+    SenBackend::RetireBuffer(vertexBuffer);
     SenBackend::DestroySwapchain(swapchain);
     SenBackend::Shutdown();
 }

@@ -29,11 +29,9 @@ auto SenVulkanBackend::CreateSampler(const SenSamplerDesc& desc) -> SenSampler {
     return handle;
 }
 
-auto SenVulkanBackend::DestroySampler(SenSampler handle) -> void {
-    auto it = _samplers.find(handle.ID);
-    if (it != _samplers.end()) {
-        vkDestroySampler(_device, it->second.Sampler, nullptr);
-        _samplers.erase(it);
+auto SenVulkanBackend::RetireSampler(SenSampler handle) -> void {
+    if (_samplers.contains(handle.ID)) {
+        _retirements.push_back({ SenVulkanRetirementNote::Kind::Sampler, handle.ID, _timelineValue + 1 });
     }
 }
 

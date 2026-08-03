@@ -40,6 +40,5 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
     
     PixelOutput output;
     output.BackbufferColor = float4(inputColor, 1.f);
-    //output.BackbufferColor.r += 1.2;
     return output;
 }

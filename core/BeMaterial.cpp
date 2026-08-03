@@ -30,7 +30,7 @@ BeMaterial::BeMaterial(BeMaterialScheme scheme) : _scheme(std::move(scheme)) {
 
 BeMaterial::~BeMaterial() {
     for (const auto& [_, group] : _bindGroups) {
-        SenBackend::DestroyBindGroup(group);
+        SenBackend::RetireBindGroup(group);
     }
 }
 
@@ -57,7 +57,7 @@ auto BeMaterial::GetBindGroupLayout() const -> SenBindGroupDesc {
 auto BeMaterial::GetBindGroup() -> SenBindGroupBinding {
     if (_bindGroupDirty) {
         for (const auto& [_, group] : _bindGroups) {
-            SenBackend::DestroyBindGroup(group);
+            SenBackend::RetireBindGroup(group);
         }
         _bindGroups.clear();
         _bindGroupDirty = false;
@@ -421,6 +421,9 @@ auto BeMaterial::GetFloat4Array(const std::string& propertyName) const -> std::v
 auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture, uint32_t mip) -> void {
     be_assert(_textures.contains(propertyName), "unknown texture property: " + propertyName);
     auto& binding = _textures.at(propertyName);
+    if (binding.Texture == texture && binding.Mip == mip) {
+        return;
+    }
     binding.Texture = texture;
     binding.Mip = mip;
     _bindGroupDirty = true;
@@ -435,7 +438,11 @@ auto BeMaterial::GetTexture(const std::string& propertyName) const -> std::share
 
 auto BeMaterial::SetSampler(const std::string& propertyName, SenSampler sampler) -> void {
     be_assert(_samplers.contains(propertyName), "unknown sampler property: " + propertyName);
-    _samplers.at(propertyName).first = sampler;
+    auto& binding = _samplers.at(propertyName);
+    if (binding.first.ID == sampler.ID) {
+        return;
+    }
+    binding.first = sampler;
     _bindGroupDirty = true;
 }
 

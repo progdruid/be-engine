@@ -16,21 +16,9 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     return handle;
 }
 
-auto SenVulkanBackend::DestroyTexture(SenTexture handle) -> void {
-    auto it = _textures.find(handle.ID);
-    if (it != _textures.end()) {
-        auto& entry = it->second;
-        auto destroy = [&](VkImageView v) -> void { if (v) { vkDestroyImageView(_device, v, nullptr); } };
-
-        destroy(entry.SRV);
-        destroy(entry.DSV);
-        for (auto v : entry.MipSRVs) { destroy(v); }
-        for (auto v : entry.MipRTVs) { destroy(v); }
-        for (auto v : entry.CubemapDSVs) { destroy(v); }
-        for (auto& mips : entry.CubemapMipRTVs) { for (auto v : mips) { destroy(v); } }
-
-        vmaDestroyImage(_allocator, entry.Image, entry.Allocation);
-        _textures.erase(it);
+auto SenVulkanBackend::RetireTexture(SenTexture handle) -> void {
+    if (_textures.contains(handle.ID)) {
+        _retirements.push_back({ SenVulkanRetirementNote::Kind::Texture, handle.ID, _timelineValue + 1 });
     }
 }
 

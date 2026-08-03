@@ -37,7 +37,7 @@ BeMaterialArena::BeMaterialArena(const BeMaterialScheme& scheme) : _schemeName(s
 BeMaterialArena::~BeMaterialArena() {
     for (const auto& chain : _chains) {
         for (const auto block : chain.Blocks) {
-            SenBackend::DestroyBuffer(block);
+            SenBackend::RetireBuffer(block);
         }
     }
 }

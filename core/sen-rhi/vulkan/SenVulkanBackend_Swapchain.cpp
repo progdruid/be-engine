@@ -242,6 +242,10 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle, uint32_t frameSlot) -> Se
     auto& entry = _swapchains.at(handle.ID);
     be_assert(frameSlot < entry.FramesInFlight, "BeginFrame: frame slot out of range");
 
+    uint64_t completedValue = 0;
+    vkGetSemaphoreCounterValue(_device, _timeline, &completedValue);
+    FlushRetirements(completedValue);
+
     const uint64_t slotValue = entry.SlotTimelineValues[frameSlot];
     const VkSemaphoreWaitInfo slotWait {
         .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,

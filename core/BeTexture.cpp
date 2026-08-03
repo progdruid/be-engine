@@ -157,7 +157,7 @@ BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
 }
 
 BeTexture::~BeTexture() {
-    SenBackend::DestroyTexture(Handle);
+    SenBackend::RetireTexture(Handle);
 }
 
 

@@ -150,12 +150,70 @@ auto SenVulkanBackend::CreateBindGroup(const SenBindGroupDesc& desc) -> SenBindG
     return handle;
 }
 
-auto SenVulkanBackend::DestroyBindGroup(SenBindGroup handle) -> void {
-    auto it = _bindGroups.find(handle.ID);
-    if (it != _bindGroups.end()) {
-        vkFreeDescriptorSets(_device, _descriptorPool, 1, &it->second.Set);
-        _bindGroups.erase(it);
+auto SenVulkanBackend::RetireBindGroup(SenBindGroup handle) -> void {
+    if (_bindGroups.contains(handle.ID)) {
+        _retirements.push_back({ SenVulkanRetirementNote::Kind::BindGroup, handle.ID, _timelineValue + 1 });
     }
+}
+
+auto SenVulkanBackend::FlushRetirements(uint64_t completedValue) -> void {
+    size_t flushed = 0;
+    while (flushed < _retirements.size() && _retirements[flushed].RetireValue <= completedValue) {
+        const auto& note = _retirements[flushed];
+        switch (note.ResourceKind) {
+            case SenVulkanRetirementNote::Kind::BindGroup: {
+                const auto it = _bindGroups.find(note.Id);
+                if (it != _bindGroups.end()) {
+                    vkFreeDescriptorSets(_device, _descriptorPool, 1, &it->second.Set);
+                    _bindGroups.erase(it);
+                }
+                break;
+            }
+            case SenVulkanRetirementNote::Kind::Texture: {
+                const auto it = _textures.find(note.Id);
+                if (it != _textures.end()) {
+                    auto& entry = it->second;
+                    auto destroy = [&](VkImageView v) -> void { if (v) { vkDestroyImageView(_device, v, nullptr); } };
+                    destroy(entry.SRV);
+                    destroy(entry.DSV);
+                    for (auto v : entry.MipSRVs) { destroy(v); }
+                    for (auto v : entry.MipRTVs) { destroy(v); }
+                    for (auto v : entry.CubemapDSVs) { destroy(v); }
+                    for (auto& mips : entry.CubemapMipRTVs) { for (auto v : mips) { destroy(v); } }
+                    vmaDestroyImage(_allocator, entry.Image, entry.Allocation);
+                    _textures.erase(it);
+                }
+                break;
+            }
+            case SenVulkanRetirementNote::Kind::Buffer: {
+                const auto it = _buffers.find(note.Id);
+                if (it != _buffers.end()) {
+                    vmaDestroyBuffer(_allocator, it->second.Buffer, it->second.Allocation);
+                    _buffers.erase(it);
+                }
+                break;
+            }
+            case SenVulkanRetirementNote::Kind::Sampler: {
+                const auto it = _samplers.find(note.Id);
+                if (it != _samplers.end()) {
+                    vkDestroySampler(_device, it->second.Sampler, nullptr);
+                    _samplers.erase(it);
+                }
+                break;
+            }
+            case SenVulkanRetirementNote::Kind::Pipeline: {
+                const auto it = _pipelines.find(note.Id);
+                if (it != _pipelines.end()) {
+                    vkDestroyPipeline(_device, it->second.Pipeline, nullptr);
+                    vkDestroyPipelineLayout(_device, it->second.Layout, nullptr);
+                    _pipelines.erase(it);
+                }
+                break;
+            }
+        }
+        ++flushed;
+    }
+    _retirements.erase(_retirements.begin(), _retirements.begin() + flushed);
 }
 
 auto SenVulkanBackend::LookupBindGroup(SenBindGroup handle) -> SenVulkanBindGroupEntry& {

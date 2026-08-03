@@ -224,12 +224,9 @@ auto SenVulkanBackend::ReloadPipeline(SenPipeline handle) -> void {
     entry = std::move(reloaded);
 }
 
-auto SenVulkanBackend::DestroyPipeline(SenPipeline handle) -> void {
-    auto it = _pipelines.find(handle.ID);
-    if (it != _pipelines.end()) {
-        vkDestroyPipeline(_device, it->second.Pipeline, nullptr);
-        vkDestroyPipelineLayout(_device, it->second.Layout, nullptr);
-        _pipelines.erase(it);
+auto SenVulkanBackend::RetirePipeline(SenPipeline handle) -> void {
+    if (_pipelines.contains(handle.ID)) {
+        _retirements.push_back({ SenVulkanRetirementNote::Kind::Pipeline, handle.ID, _timelineValue + 1 });
     }
 }
 

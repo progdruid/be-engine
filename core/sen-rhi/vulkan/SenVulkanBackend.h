@@ -67,6 +67,13 @@ struct SenVulkanBindGroupEntry {
     SenBindGroupDesc BindGroupDesc;
 };
 
+struct SenVulkanRetirementNote {
+    enum class Kind { BindGroup, Texture, Buffer, Sampler, Pipeline };
+    Kind ResourceKind;
+    uint32_t Id = 0;
+    uint64_t RetireValue = 0;
+};
+
 struct SenVulkanSwapchainEntry {
     VkSurfaceKHR   Surface   = VK_NULL_HANDLE;
     VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
@@ -117,6 +124,7 @@ class SenVulkanBackend {
     static std::unordered_map<uint32_t, SenVulkanBindGroupEntry> _bindGroups;   static uint32_t _nextBindGroupId;
     static std::unordered_map<uint32_t, SenVulkanShaderEntry> _shaders;         static uint32_t _nextShaderId;
     static std::unordered_map<uint32_t, SenVulkanPipelineEntry> _pipelines;     static uint32_t _nextPipelineId;
+    static std::vector<SenVulkanRetirementNote> _retirements;
     
     expose
     static auto Init      (const SenDeviceDesc& desc) -> void;
@@ -152,7 +160,7 @@ class SenVulkanBackend {
     
     expose // textures
     static auto CreateTexture  (const SenTextureDesc& desc) -> SenTexture;
-    static auto DestroyTexture (SenTexture handle) -> void;
+    static auto RetireTexture (SenTexture handle) -> void;
     static auto LookupTexture  (SenTexture handle) -> SenVulkanTextureEntry&;
     static auto GenerateMips   (SenTexture handle) -> void;   // blit-chain downsample of mip 0 into the rest
     hide static auto CreateImageView      (VkImage image, VkFormat format, VkImageViewType viewType, VkImageAspectFlags aspect, uint32_t baseMip, uint32_t mipLevels, uint32_t baseLayer, uint32_t layerCount) -> VkImageView;
@@ -165,20 +173,21 @@ class SenVulkanBackend {
     
     expose // buffers
     static auto CreateBuffer  (const SenBufferDesc& desc) -> SenBuffer;
-    static auto DestroyBuffer (SenBuffer handle) -> void;
+    static auto RetireBuffer (SenBuffer handle) -> void;
     static auto LookupBuffer  (SenBuffer handle) -> SenVulkanBufferEntry&;
     static auto WriteBuffer   (SenBuffer handle, const void* data, uint32_t size, uint32_t dstOffset = 0) -> void;
     hide static auto UploadToDeviceBuffer(VkBuffer dst, const void* data, uint32_t size, uint32_t dstOffset) -> void;
 
     expose // samplers
     static auto CreateSampler  (const SenSamplerDesc& desc) -> SenSampler;
-    static auto DestroySampler (SenSampler handle) -> void;
+    static auto RetireSampler (SenSampler handle) -> void;
     static auto LookupSampler  (SenSampler handle) -> SenVulkanSamplerEntry&;
 
     expose // bind groups
     static auto CreateBindGroup  (const SenBindGroupDesc& desc) -> SenBindGroup;
-    static auto DestroyBindGroup (SenBindGroup handle) -> void;
+    static auto RetireBindGroup (SenBindGroup handle) -> void;
     static auto LookupBindGroup  (SenBindGroup handle) -> SenVulkanBindGroupEntry&;
+    hide static auto FlushRetirements(uint64_t completedValue) -> void;
     hide static auto CreateDescriptorSetLayoutFromDesc(const SenBindGroupDesc& desc) -> VkDescriptorSetLayout;
     
     expose // shaders
@@ -190,7 +199,7 @@ class SenVulkanBackend {
 
     expose // pipelines
     static auto CreatePipeline  (const SenPipelineDesc& desc) -> SenPipeline;
-    static auto DestroyPipeline (SenPipeline handle) -> void;
+    static auto RetirePipeline (SenPipeline handle) -> void;
     static auto LookupPipeline  (SenPipeline handle) -> SenVulkanPipelineEntry&;
     hide static auto MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulkanPipelineEntry;
     hide static auto ReloadPipeline(SenPipeline handle) -> void;
