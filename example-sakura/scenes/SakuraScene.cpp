@@ -58,7 +58,8 @@ auto SakuraScene::Prepare() -> void {
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
 
     LoadSceneFile();
-    _sceneLastWriteTime = std::filesystem::last_write_time(Settings.SceneFile.Path);
+    const auto currentPath = Settings.SceneFile.Paths[Settings.SceneFile.CurrentSceneIndex];
+    _sceneLastWriteTime = std::filesystem::last_write_time(currentPath);
 
     RebuildPasses();
 
@@ -180,8 +181,10 @@ auto SakuraScene::OnLoad() -> void {
 }
 
 auto SakuraScene::LoadSceneFile() -> void {
+    const auto currentPath = Settings.SceneFile.Paths[Settings.SceneFile.CurrentSceneIndex];
+    
     BeLuaState lua;
-    if (!lua.DoFile(Settings.SceneFile.Path)) {
+    if (!lua.DoFile(currentPath)) {
         return;
     }
 
@@ -371,8 +374,17 @@ auto SakuraScene::RebuildPasses() -> void {
 
     auto imguiPass = std::make_unique<BeImGuiPass>(GameIns->Window);
     imguiPass->SetUICallback([this]() {
-        ImGui::Begin("Stats");
-        ImGui::Text("%.0f FPS (%.2f ms)", _fpsCounter.GetFps(), _fpsCounter.GetFrameMs());
+        ImGui::Begin("controls");
+        ImGui::Text("%.0f fps (%.2f ms)", _fpsCounter.GetFps(), _fpsCounter.GetFrameMs());
+        ImGui::SeparatorText("scene");
+        for (size_t i = 0; i < Settings.SceneFile.Paths.size(); ++i) {
+            const auto label = std::filesystem::path(Settings.SceneFile.Paths[i]).stem().string();
+            ImGui::BeginDisabled(i == Settings.SceneFile.CurrentSceneIndex);
+            if (ImGui::Button(label.c_str())) {
+                _pendingSceneIndex = static_cast<int>(i);
+            }
+            ImGui::EndDisabled();
+        }
         ImGui::End();
     });
     _machine->AddPass(std::move(imguiPass));
@@ -387,7 +399,17 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         return;
     }
 
-    const auto writeTime = std::filesystem::last_write_time(Settings.SceneFile.Path);
+    if (_pendingSceneIndex >= 0) {
+        Settings.SceneFile.CurrentSceneIndex = static_cast<uint8_t>(_pendingSceneIndex);
+        _pendingSceneIndex = -1;
+        LoadSceneFile();
+        RebuildPasses();
+        _machine->Activate();
+        _sceneLastWriteTime = std::filesystem::last_write_time(Settings.SceneFile.Paths[Settings.SceneFile.CurrentSceneIndex]);
+    }
+
+    const auto currentPath = Settings.SceneFile.Paths[Settings.SceneFile.CurrentSceneIndex];
+    const auto writeTime = std::filesystem::last_write_time(currentPath);
     if (writeTime > _sceneLastWriteTime) {
         LoadSceneFile();
         RebuildPasses();

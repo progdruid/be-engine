@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <filesystem>
 #include <string>
 #include <umbrellas/common.hpp>
@@ -38,7 +39,11 @@ struct SakuraSceneSettings {
     };
 
     struct {
-        std::string Path = "assets/sakura_scene.lua";
+        uint8_t CurrentSceneIndex = 0;
+        std::array<std::string, 2> Paths = {
+            "assets/sakura_scene.lua",
+            "assets/spinning_lights_500_scene.lua",
+        };
     } SceneFile;
 
     struct {
@@ -87,6 +92,7 @@ class SakuraScene : public BaseScene {
     std::shared_ptr<BeMaterial> _dofMaterial;
     std::unique_ptr<BeStandardRenderMachine> _machine;
     std::filesystem::file_time_type _sceneLastWriteTime{};
+    int _pendingSceneIndex = -1;
 
     float _time = 0.0f;
     FpsCounter _fpsCounter;
