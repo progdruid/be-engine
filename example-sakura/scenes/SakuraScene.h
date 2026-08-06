@@ -8,6 +8,7 @@
 
 #include "BaseScene.h"
 #include "BeAssetRegistry.h"
+#include "BeFileWatcher.h"
 #include "FpsCounter.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
@@ -40,9 +41,10 @@ struct SakuraSceneSettings {
 
     struct {
         uint8_t CurrentSceneIndex = 0;
-        std::array<std::string, 2> Paths = {
+        std::array<std::string, 3> Paths = {
             "assets/sakura_scene.lua",
             "assets/spinning_lights_500_scene.lua",
+            "assets/shader_scene.lua",
         };
     } SceneFile;
 
@@ -91,7 +93,7 @@ class SakuraScene : public BaseScene {
 
     std::shared_ptr<BeMaterial> _dofMaterial;
     std::unique_ptr<BeStandardRenderMachine> _machine;
-    std::filesystem::file_time_type _sceneLastWriteTime{};
+    BeFileWatcher::WatchId _sceneWatch = 0;
     int _pendingSceneIndex = -1;
 
     float _time = 0.0f;
@@ -105,6 +107,7 @@ class SakuraScene : public BaseScene {
     hide auto LoadProps() -> void;
     
     expose auto OnLoad() -> void override;
+    expose auto OnUnload() -> void override;
     hide auto RebuildPasses() -> void;
     hide auto LoadSceneFile() -> void;
 

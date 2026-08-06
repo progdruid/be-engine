@@ -58,11 +58,7 @@ auto SakuraScene::Prepare() -> void {
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
 
     LoadSceneFile();
-    const auto currentPath = Settings.SceneFile.Paths[Settings.SceneFile.CurrentSceneIndex];
-    _sceneLastWriteTime = std::filesystem::last_write_time(currentPath);
-
     RebuildPasses();
-
 
     // rig
     _rigCameraController = std::make_unique<RigCameraController>(_camera.get());
@@ -178,6 +174,19 @@ auto SakuraScene::LoadProps() -> void {
 
 auto SakuraScene::OnLoad() -> void {
     _machine->Activate();
+    _sceneWatch = BeFileWatcher::Register(
+        [this] { return std::vector{ std::filesystem::path(Settings.SceneFile.Paths[Settings.SceneFile.CurrentSceneIndex]) }; },
+        [this](std::span<const std::filesystem::path>) {
+            LoadSceneFile();
+            RebuildPasses();
+            _machine->Activate();
+        }
+    );
+}
+
+auto SakuraScene::OnUnload() -> void {
+    BeFileWatcher::Unregister(_sceneWatch);
+    _sceneWatch = 0;
 }
 
 auto SakuraScene::LoadSceneFile() -> void {
@@ -405,16 +414,6 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         LoadSceneFile();
         RebuildPasses();
         _machine->Activate();
-        _sceneLastWriteTime = std::filesystem::last_write_time(Settings.SceneFile.Paths[Settings.SceneFile.CurrentSceneIndex]);
-    }
-
-    const auto currentPath = Settings.SceneFile.Paths[Settings.SceneFile.CurrentSceneIndex];
-    const auto writeTime = std::filesystem::last_write_time(currentPath);
-    if (writeTime > _sceneLastWriteTime) {
-        LoadSceneFile();
-        RebuildPasses();
-        _machine->Activate();
-        _sceneLastWriteTime = writeTime;
     }
 
     static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
