@@ -151,18 +151,38 @@ auto BeMaterialScheme::Create(
             descriptor.DefaultValue = std::move(*vec);
             materialScheme.Properties.push_back(descriptor);
         }
-        else if (parsedProperty.Type == "matrix") {
+        else if (parsedProperty.Type == "matrix" && parsedProperty.ArrayLength == 1) {
             std::vector<float> mat = {
                 1, 0, 0, 0,
                 0, 1, 0, 0,
                 0, 0, 1, 0,
                 0, 0, 0, 1
             };
-        
+
             auto descriptor = BeMaterialPropertyDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Matrix;
             descriptor.DefaultValue = mat;
+            materialScheme.Properties.push_back(descriptor);
+        }
+        else if (parsedProperty.Type == "matrix" && parsedProperty.ArrayLength > 1) {
+            static constexpr float identity[16] = {
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1
+            };
+            std::vector<float> mats;
+            mats.reserve(size_t(parsedProperty.ArrayLength) * 16);
+            for (uint32_t k = 0; k < parsedProperty.ArrayLength; ++k) {
+                mats.insert(mats.end(), identity, identity + 16);
+            }
+
+            auto descriptor = BeMaterialPropertyDescriptor();
+            descriptor.Name = parsedProperty.Name;
+            descriptor.PropertyType = BeMaterialPropertyDescriptor::Type::Matrix;
+            descriptor.ArrayLength = parsedProperty.ArrayLength;
+            descriptor.DefaultValue = std::move(mats);
             materialScheme.Properties.push_back(descriptor);
         }
     }
@@ -170,7 +190,9 @@ auto BeMaterialScheme::Create(
     uint32_t offsetBytes = 0;
     for (const auto& property : materialScheme.Properties) {
         const bool isArray = property.ArrayLength > 1;
-        const uint32_t size  = isArray ? ArrayElementStride * property.ArrayLength : SizeMap.at(property.PropertyType);
+        // std140 array element stride: the element size rounded up to a 16-byte boundary (float..float4 -> 16, matrix -> 64).
+        const uint32_t elementStride = (SizeMap.at(property.PropertyType) + ArrayElementStride - 1) / ArrayElementStride * ArrayElementStride;
+        const uint32_t size  = isArray ? elementStride * property.ArrayLength : SizeMap.at(property.PropertyType);
         const uint32_t align = isArray ? ArrayElementStride : AlignMap.at(property.PropertyType);
 
         offsetBytes = (offsetBytes + align - 1) / align * align;

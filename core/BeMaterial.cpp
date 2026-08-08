@@ -7,8 +7,14 @@
 #include "BeTexture.h"
 #include "sen-rhi/SenBackend.h"
 
-// std140 array stride is 16 bytes = 4 floats per element.
+// std140 array stride is 16 bytes / 4 floats (float->float4); 
+// matrix os 64 bytes / 16 floats.
 static constexpr uint32_t ArrayStrideFloats = 4;
+static constexpr uint32_t MatrixStrideFloats = 16;
+
+static constexpr auto ArrayStrideFloatsFor(BeMaterialPropertyDescriptor::Type type) -> uint32_t {
+    return type == BeMaterialPropertyDescriptor::Type::Matrix ? MatrixStrideFloats : ArrayStrideFloats;
+}
 
 auto BeMaterial::Create(const BeMaterialScheme& scheme) -> std::shared_ptr<BeMaterial> {
     auto material = std::make_shared<BeMaterial>(scheme);
@@ -164,8 +170,9 @@ auto BeMaterial::AssembleData() -> void {
         const auto& defaultValue = property.DefaultValue;
         if (property.ArrayLength > 1) {
             const uint32_t comp = ComponentMap.at(property.PropertyType);
+            const uint32_t stride = ArrayStrideFloatsFor(property.PropertyType);
             for (uint32_t i = 0; i < property.ArrayLength; ++i) {
-                memcpy(_bufferData.data() + propertyOffset + i * ArrayStrideFloats,
+                memcpy(_bufferData.data() + propertyOffset + i * stride,
                        defaultValue.data() + i * comp, comp * sizeof(float));
             }
         } else {
@@ -334,6 +341,16 @@ auto BeMaterial::SetFloat4Array(const std::string& propertyName, std::span<const
     const uint32_t base = _scheme.PropertyOffsets.at(propertyName);
     for (size_t i = 0; i < values.size(); ++i) {
         memcpy(_bufferData.data() + base + i * ArrayStrideFloats, &values[i], sizeof(glm::vec4));
+    }
+    _cbufferDirty = true;
+}
+
+auto BeMaterial::SetMatrixArray(const std::string& propertyName, std::span<const glm::mat4x4> values) -> void {
+    be_assert(_scheme.PropertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
+    be_assert(values.size() <= _scheme.PropertyArrayLengths.at(propertyName), "too many array elements: " + propertyName);
+    const uint32_t base = _scheme.PropertyOffsets.at(propertyName);
+    for (size_t i = 0; i < values.size(); ++i) {
+        memcpy(_bufferData.data() + base + i * MatrixStrideFloats, glm::value_ptr(values[i]), sizeof(glm::mat4x4));
     }
     _cbufferDirty = true;
 }

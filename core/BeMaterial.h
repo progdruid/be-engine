@@ -85,6 +85,7 @@ class BeMaterial {
     auto SetFloat2Array (const std::string& propertyName, std::span<const glm::vec2> values) -> void;
     auto SetFloat3Array (const std::string& propertyName, std::span<const glm::vec3> values) -> void;
     auto SetFloat4Array (const std::string& propertyName, std::span<const glm::vec4> values) -> void;
+    auto SetMatrixArray (const std::string& propertyName, std::span<const glm::mat4x4> values) -> void;
 
     auto GetFloat1At (const std::string& propertyName, uint32_t index) const -> float;
     auto GetFloat2At (const std::string& propertyName, uint32_t index) const -> glm::vec2;
