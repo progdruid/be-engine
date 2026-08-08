@@ -59,7 +59,6 @@ struct RiftSceneSettings {
         glm::vec3 Direction = { -0.5f, -1.0f, -0.5f };
         glm::vec3 Color = glm::vec3(1.0f);
         float Power = 1.0f;
-        uint32_t ShadowMapResolution = 2048;
         float ShadowCameraDistance = 50.0f;
         float ShadowMapWorldSize = 30.0f;
         float ShadowNearPlane = 0.1f;

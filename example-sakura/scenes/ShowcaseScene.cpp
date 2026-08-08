@@ -117,17 +117,10 @@ auto ShowcaseScene::CreateObjects() -> void {
             .Color = glm::vec3(0.7f, 0.7f, 0.99),
             .Power = (1.0f / 0.7f) * 0.7f,
             .CastsShadows = true,
-            .ShadowMapResolution = 4096,
             .ShadowCameraDistance = 100.0f,
             .ShadowMapWorldSize = 60.0f,
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
-            .ShadowMap = BeTexture::Create("Showcase_MoonShadowMap")
-                .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
-                .SetFormat(SenFormat::Depth32)
-                .SetSize(4096, 4096)
-                .Build()
-            ,
         }
     );
 }
@@ -317,8 +310,6 @@ void ShowcaseScene::Tick(float deltaTime) {
                 sunLight.ShadowNearPlane,
                 sunLight.ShadowFarPlane
             ),
-            .ShadowMapResolution = sunLight.ShadowMapResolution,
-            .ShadowMap = sunLight.ShadowMap,
         });
     }
 }

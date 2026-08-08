@@ -20,31 +20,46 @@ auto BeStandardShadowPass::Initialise(BeRenderer& renderer) -> void {
 }
 
 auto BeStandardShadowPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
+    _srm->EnsureShadowArrays();
+
+    const auto directionalArray = _srm->GetDirectionalShadowArray();
+    uint32_t directionalSlice = 0;
     for (const auto& sunLight : _srm->GetSunLightEntries()) {
-        if (sunLight.CastsShadows) {
-            RenderDirectionalShadows(cmd, sunLight);
-        }
+        if (!sunLight.CastsShadows) continue;
+        if (directionalSlice >= _srm->Settings.Shadow.MaxDirectional) break;
+        RenderDirectionalShadows(cmd, sunLight, directionalArray, directionalSlice);
+        ++directionalSlice;
     }
+
+    const auto pointArray = _srm->GetPointShadowArray();
+    uint32_t pointSlice = 0;
     for (const auto& pointLight : _srm->GetPointLightEntries()) {
-        if (pointLight.CastsShadows) {
-            RenderPointLightShadows(cmd, pointLight);
-        }
+        if (!pointLight.CastsShadows) continue;
+        if (pointSlice >= _srm->Settings.Shadow.MaxPoint) break;
+        RenderPointLightShadows(cmd, pointLight, pointArray, pointSlice);
+        ++pointSlice;
     }
 }
 
-auto BeStandardShadowPass::RenderDirectionalShadows(SenCommandBuffer& cmd, const BeSRMSunLightEntry& sunLight) const -> void {
+auto BeStandardShadowPass::RenderDirectionalShadows(
+    SenCommandBuffer& cmd, 
+    const BeSRMSunLightEntry& sunLight, 
+    const std::shared_ptr<BeTexture>& shadowArray, 
+    uint32_t slice
+) const -> void {
+    
     const auto uniformMat = _srm->UniformMaterial;
     const auto& entries = _srm->GetGeometryEntries();
-
-    cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
-
-    BePass pass(cmd);
-    pass.SetDepthTarget(sunLight.ShadowMap.lock());
-    pass.SetViewport({ 0, 0, (float)sunLight.ShadowMapResolution, (float)sunLight.ShadowMapResolution, 0, 1 });
-    pass.Begin();
+    const float resolution = static_cast<float>(_srm->Settings.Shadow.DirectionalResolution);
 
     cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
     cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
+    cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
+    
+    BePass pass(cmd);
+    pass.SetDepthTarget(shadowArray, SenLoadOp::Clear, 1.0f, static_cast<int16_t>(slice));
+    pass.SetViewport({ 0, 0, resolution, resolution, 0, 1 });
+    pass.Begin();
 
     for (const auto& entry : entries) {
         if (!entry.CastShadows) {
@@ -63,7 +78,7 @@ auto BeStandardShadowPass::RenderDirectionalShadows(SenCommandBuffer& cmd, const
 
             const auto pipeline = BePipelineBuilder::Start(*entry.Prop->Shader)
                 .SetCullMode(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back)
-                .SetDepthFormat(sunLight.ShadowMap.lock()->Format)
+                .SetDepthFormat(shadowArray->Format)
                 .Build()
             ;
             
@@ -75,22 +90,28 @@ auto BeStandardShadowPass::RenderDirectionalShadows(SenCommandBuffer& cmd, const
     pass.End();
 }
 
-auto BeStandardShadowPass::RenderPointLightShadows(SenCommandBuffer& cmd, const BeSRMPointLightEntry& pointLight) const -> void {
+auto BeStandardShadowPass::RenderPointLightShadows(
+    SenCommandBuffer& cmd, 
+    const BeSRMPointLightEntry& pointLight, 
+    const std::shared_ptr<BeTexture>& shadowArray, 
+    uint32_t slice
+) const -> void {
+    
     const auto  uniformMat = _srm->UniformMaterial;
     const auto& entries = _srm->GetGeometryEntries();
-    const auto  shadowMap = pointLight.ShadowMap.lock();
+    const float resolution = static_cast<float>(_srm->Settings.Shadow.PointResolution);
 
     cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
     cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
-
     cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
 
     for (int face = 0; face < 6; ++face) {
         const glm::mat4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
+        const int16_t layer = static_cast<int16_t>(slice * 6 + face);
 
         BePass pass(cmd);
-        pass.SetDepthTarget(shadowMap, SenLoadOp::Clear, 1.0f, static_cast<int8_t>(face));
-        pass.SetViewport({ 0, 0, (float)pointLight.ShadowMapResolution, (float)pointLight.ShadowMapResolution, 0, 1 });
+        pass.SetDepthTarget(shadowArray, SenLoadOp::Clear, 1.0f, layer);
+        pass.SetViewport({ 0, 0, resolution, resolution, 0, 1 });
         pass.Begin();
 
         for (const auto& entry : entries) {
@@ -109,7 +130,7 @@ auto BeStandardShadowPass::RenderPointLightShadows(SenCommandBuffer& cmd, const 
                 const auto& propSlice = entry.Prop->Slices[j];
                 const auto  pipeline = BePipelineBuilder::Start(*entry.Prop->Shader)
                     .SetCullMode(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back)
-                    .SetDepthFormat(shadowMap->Format)
+                    .SetDepthFormat(shadowArray->Format)
                     .Build()
                 ;
                 

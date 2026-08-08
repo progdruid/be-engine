@@ -119,28 +119,17 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
 
     cmd.SetBindGroup(srm.UniformMaterial->GetBindGroup(), 0);
     
+    const auto directionalShadowArray = srm.GetDirectionalShadowArray();
+    const auto pointShadowArray = srm.GetPointShadowArray();
+
     BePass pass(cmd);
     pass.UseTextures(_gbufferInputs);
     pass.UseTexture(_depthInput);
-    for (const auto& sunLight : sunLights) {
-        if (sunLight.CastsShadows) {
-            pass.UseTexture(sunLight.ShadowMap.lock());
-        }
-    }
-    for (const auto& pointLight : pointLights) {
-        if (pointLight.CastsShadows) {
-            pass.UseTexture(pointLight.ShadowMap.lock());
-        }
-    }
-    if (_irradianceCubemap) {
-        pass.UseTexture(_irradianceCubemap);
-    }
-    if (_prefilteredCubemap) {
-        pass.UseTexture(_prefilteredCubemap);
-    }
-    if (_brdfLutTexture) {
-        pass.UseTexture(_brdfLutTexture);
-    }
+    if (directionalShadowArray) { pass.UseTexture(directionalShadowArray); }
+    if (pointShadowArray)       { pass.UseTexture(pointShadowArray); }
+    if (_irradianceCubemap)     { pass.UseTexture(_irradianceCubemap); }
+    if (_prefilteredCubemap)    { pass.UseTexture(_prefilteredCubemap); }
+    if (_brdfLutTexture)        { pass.UseTexture(_brdfLutTexture); }
     pass.AddColorTarget(_output, SenLoadOp::Clear);
     pass.SetViewport(renderer.GetViewport());
     pass.Begin();
@@ -178,12 +167,16 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     }
 
     // Shadowed directional lights
+    const float directionalTexelSize = 1.0f / srm.Settings.Shadow.DirectionalResolution;
     size_t shadowedSunIndex = 0;
     for (const auto& sunLight : sunLights) {
         if (!sunLight.CastsShadows) {
             continue;
         }
         const size_t i = shadowedSunIndex++;
+        if (i >= srm.Settings.Shadow.MaxDirectional) {
+            break;
+        }
         if (i >= _directionalLightMaterials.size()) {
             auto mat = BeMaterial::Create(_directionalLightScheme);
             mat->SetTexture("Depth", _depthInput);
@@ -198,18 +191,24 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
         mat->SetFloat3("Color", sunLight.Color);
         mat->SetFloat1("Power", sunLight.Power);
         mat->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
-        mat->SetFloat1("TexelSize", 1.0f / sunLight.ShadowMapResolution);
+        mat->SetFloat1("TexelSize", directionalTexelSize);
         mat->SetFloat1("ShadowBias", srm.Settings.Shadow.Bias);
-        mat->SetTexture("ShadowMap", sunLight.ShadowMap.lock());
+        mat->SetFloat1("ShadowSlice", static_cast<float>(i));
+        mat->SetTexture("ShadowMap", directionalShadowArray);
         cmd.SetPipeline(_directionalLightPipeline);
         cmd.SetBindGroup(mat->GetBindGroup(), 1);
         cmd.Draw(4, 0);
     }
 
-    // Shadowed point lights
+    // Shadowed point lights=
+    size_t shadowedPointIndex = 0;
     for (const auto& pointLight : pointLights) {
         if (!pointLight.CastsShadows) {
             continue;
+        }
+        const size_t i = shadowedPointIndex++;
+        if (i >= srm.Settings.Shadow.MaxPoint) {
+            break;
         }
         if (!_pointLightMaterials.contains(pointLight.Name)) {
             auto mat = BeMaterial::Create(_pointLightScheme);
@@ -225,9 +224,10 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
         mat->SetFloat3("Color", pointLight.Color);
         mat->SetFloat1("Power", pointLight.Power);
         mat->SetFloat1("HasShadowMap", 1.0f);
-        mat->SetFloat1("ShadowMapResolution", static_cast<float>(pointLight.ShadowMapResolution));
+        mat->SetFloat1("ShadowMapResolution", static_cast<float>(srm.Settings.Shadow.PointResolution));
         mat->SetFloat1("ShadowNearPlane", pointLight.ShadowNearPlane);
-        mat->SetTexture("PointLightShadowMap", pointLight.ShadowMap.lock());
+        mat->SetFloat1("ShadowSlice", static_cast<float>(i));
+        mat->SetTexture("PointLightShadowMap", pointShadowArray);
         cmd.SetPipeline(_pointLightPipeline);
         cmd.SetBindGroup(mat->GetBindGroup(), 1);
         cmd.Draw(4, 0);

@@ -290,19 +290,10 @@ auto SakuraScene::LoadSceneFile() -> void {
             comp.Color = table["color"].GetOr(comp.Color);
             comp.Power = table["power"].GetOr(comp.Power);
             comp.CastsShadows = table["castsShadows"].GetOr(comp.CastsShadows);
-            comp.ShadowMapResolution = table["shadowMapResolution"].GetOr(comp.ShadowMapResolution);
             comp.ShadowCameraDistance = table["shadowCameraDistance"].GetOr(comp.ShadowCameraDistance);
             comp.ShadowMapWorldSize = table["shadowMapWorldSize"].GetOr(comp.ShadowMapWorldSize);
             comp.ShadowNearPlane = table["shadowNearPlane"].GetOr(comp.ShadowNearPlane);
             comp.ShadowFarPlane = table["shadowFarPlane"].GetOr(comp.ShadowFarPlane);
-
-            if (comp.CastsShadows) {
-                comp.ShadowMap = BeTexture::Create(name + "_ShadowMap")
-                    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
-                    .SetFormat(SenFormat::Depth32)
-                    .SetSize(comp.ShadowMapResolution, comp.ShadowMapResolution)
-                    .Build();
-            }
             _registry.emplace<SunLightComponent>(entity, comp);
         }
 
@@ -312,17 +303,7 @@ auto SakuraScene::LoadSceneFile() -> void {
             comp.Color = table["color"].GetOr(comp.Color);
             comp.Power = table["power"].GetOr(comp.Power);
             comp.CastsShadows = table["castsShadows"].GetOr(comp.CastsShadows);
-            comp.ShadowMapResolution = table["shadowMapResolution"].GetOr(comp.ShadowMapResolution);
             comp.ShadowNearPlane = table["shadowNearPlane"].GetOr(comp.ShadowNearPlane);
-
-            if (comp.CastsShadows) {
-                comp.ShadowMap = BeTexture::Create(name + "_ShadowMap")
-                    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
-                    .SetFormat(SenFormat::Depth32)
-                    .SetCubemap(true)
-                    .SetSize(comp.ShadowMapResolution, comp.ShadowMapResolution)
-                    .Build();
-            }
             _registry.emplace<PointLightComponent>(entity, comp);
         }
     } // end of for loop
@@ -510,8 +491,6 @@ auto SakuraScene::Tick(float deltaTime) -> void {
                 sunLight.ShadowNearPlane,
                 sunLight.ShadowFarPlane
             ),
-            .ShadowMapResolution = sunLight.ShadowMapResolution,
-            .ShadowMap = sunLight.ShadowMap,
         });
     }
 
@@ -523,9 +502,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
             .Color = pointLight.Color,
             .Power = pointLight.Power,
             .CastsShadows = pointLight.CastsShadows,
-            .ShadowMapResolution = pointLight.ShadowMapResolution,
             .ShadowNearPlane = pointLight.ShadowNearPlane,
-            .ShadowMap = pointLight.ShadowMap,
         });
     }
 }

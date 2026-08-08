@@ -153,17 +153,10 @@ auto OldScene::OnLoad() -> void {
             .Color = glm::vec3(0.7f, 0.7f, 0.99f),
             .Power = (1.0f / 0.7f) * 0.7f,
             .CastsShadows = true,
-            .ShadowMapResolution = 4096,
             .ShadowCameraDistance = 100.0f,
             .ShadowMapWorldSize = 60.0f,
             .ShadowNearPlane = 0.1f,
             .ShadowFarPlane = 400.0f,
-            .ShadowMap = BeTexture::Create("Old_SunShadowMap")
-                .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
-                .SetFormat(SenFormat::Depth32)
-                .SetSize(4096, 4096)
-                .AddToRegistry(_assetRegistry)
-                .Build()
         }
     );
 
@@ -176,16 +169,7 @@ auto OldScene::OnLoad() -> void {
                 .Color = glm::vec3(0.99f, 0.8f, 0.6f),
                 .Power = (1.0f / 0.7f) * 2.7f,
                 .CastsShadows = true,
-                .ShadowMapResolution = 2048,
                 .ShadowNearPlane = 0.1f,
-                .ShadowMap =
-                    BeTexture::Create("Old_PointLight" + std::to_string(i) + "_ShadowMap")
-                    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
-                    .SetFormat(SenFormat::Depth32)
-                    .SetCubemap(true)
-                    .SetSize(2048, 2048)
-                    .AddToRegistry(_assetRegistry)
-                    .Build()
             }
         );
     }
@@ -305,8 +289,6 @@ auto OldScene::Tick(float deltaTime) -> void {
                 sunLight.ShadowNearPlane,
                 sunLight.ShadowFarPlane
             ),
-            .ShadowMapResolution = sunLight.ShadowMapResolution,
-            .ShadowMap = sunLight.ShadowMap,
         });
     }
 
@@ -318,9 +300,7 @@ auto OldScene::Tick(float deltaTime) -> void {
             .Color = pointLight.Color,
             .Power = pointLight.Power,
             .CastsShadows = pointLight.CastsShadows,
-            .ShadowMapResolution = pointLight.ShadowMapResolution,
             .ShadowNearPlane = pointLight.ShadowNearPlane,
-            .ShadowMap = pointLight.ShadowMap,
         });
     }
 }

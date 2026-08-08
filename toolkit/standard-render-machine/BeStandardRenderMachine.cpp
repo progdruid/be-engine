@@ -324,6 +324,33 @@ auto BeStandardRenderMachine::GetPointLightEntries() const -> const std::vector<
     return _pointLightEntries;
 }
 
+auto BeStandardRenderMachine::EnsureShadowArrays() -> void {
+    const uint32_t dirRes = Settings.Shadow.DirectionalResolution;
+    const uint32_t dirCount = Settings.Shadow.MaxDirectional;
+    if (dirCount > 0
+        && (!_directionalShadowArray || _directionalShadowArray->Width != dirRes || _directionalShadowArray->ArrayLength != dirCount)) {
+        _directionalShadowArray = BeTexture::Create("__srm_directional_shadow_array")
+            .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+            .SetFormat(SenFormat::Depth32)
+            .SetSize(dirRes, dirRes)
+            .SetArrayLength(dirCount)
+            .Build();
+    }
+
+    const uint32_t pointRes = Settings.Shadow.PointResolution;
+    const uint32_t pointCount = Settings.Shadow.MaxPoint;
+    if (pointCount > 0
+        && (!_pointShadowArray || _pointShadowArray->Width != pointRes || _pointShadowArray->ArrayLength != pointCount)) {
+        _pointShadowArray = BeTexture::Create("__srm_point_shadow_array")
+            .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+            .SetFormat(SenFormat::Depth32)
+            .SetCubemap(true)
+            .SetSize(pointRes, pointRes)
+            .SetArrayLength(pointCount)
+            .Build();
+    }
+}
+
 // =====================================================================================================================
 // BeStandardRenderMachine — asset loading
 // =====================================================================================================================

@@ -9,6 +9,7 @@
 
 class BeMaterial;
 class BeShader;
+class BeTexture;
 class BeStandardRenderMachine;
 struct BeSRMSunLightEntry;
 struct BeSRMPointLightEntry;
@@ -29,7 +30,17 @@ class BeStandardShadowPass final : public BeRenderPass {
     auto GetPassName() const -> const std::string override { return "Standard Shadow Pass"; }
 
     hide
-    auto RenderDirectionalShadows(SenCommandBuffer& cmd, const BeSRMSunLightEntry& sunLight) const -> void;
-    auto RenderPointLightShadows(SenCommandBuffer& cmd, const BeSRMPointLightEntry& pointLight) const -> void;
+    auto RenderDirectionalShadows(
+        SenCommandBuffer& cmd, 
+        const BeSRMSunLightEntry& sunLight, 
+        const std::shared_ptr<BeTexture>& shadowArray, 
+        uint32_t slice
+    ) const -> void;
+    auto RenderPointLightShadows(
+        SenCommandBuffer& cmd, 
+        const BeSRMPointLightEntry& pointLight, 
+        const std::shared_ptr<BeTexture>& shadowArray, 
+        uint32_t slice
+    ) const -> void;
     auto CalculatePointLightFaceViewProjection(const BeSRMPointLightEntry& pointLight, int faceIndex) const -> glm::mat4;
 };

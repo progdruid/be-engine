@@ -8,11 +8,15 @@
     HasShadowMap: float = 0
     ShadowMapResolution: float = 0
     ShadowNearPlane: float = 0
+    
     Depth: texture2d = black
     Albedo_RGB: texture2d = black
     WorldNormal_XYZ: texture2d = black
     ORM_RGB: texture2d = black
-    PointLightShadowMap: textureCube = black-cube
+    
+    PointLightShadowMap: textureCube[] = black-cube-array
+    ShadowSlice: float = 0
+    
     InputSampler: sampler = point-clamp
 }
 
@@ -45,6 +49,7 @@ struct point_light_material {
     float HasShadowMap;
     float ShadowMapResolution;
     float ShadowNearPlane;
+    float ShadowSlice;
 };
 
 cbuffer CBuffer_0 : register(b0, space0) {
@@ -59,7 +64,7 @@ Texture2D Depth : register(t2, space1);
 Texture2D Albedo_RGB : register(t3, space1);
 Texture2D WorldNormal_XYZ : register(t4, space1);
 Texture2D ORM_RGB : register(t5, space1);
-TextureCube PointLightShadowMap : register(t6, space1);
+TextureCubeArray PointLightShadowMap : register(t6, space1);
 
 struct PixelOutput {
     float3 LightHDR : SV_Target0;
@@ -77,7 +82,7 @@ float SamplePointLightShadow(float3 worldPos) {
 
     // sample cubemap with direction
     float3 sampleDir = normalize(lightDir);
-    float shadowmapDepth = PointLightShadowMap.Sample(InputSampler, sampleDir).r;
+    float shadowmapDepth = PointLightShadowMap.Sample(InputSampler, float4(sampleDir, _PointLight.ShadowSlice)).r;
     float near = _PointLight.ShadowNearPlane;
     float far = _PointLight.Radius;
     float linearDepth = (near * far) / (far - shadowmapDepth * (far - near));

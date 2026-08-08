@@ -29,6 +29,10 @@ enum class BeSRMLightingModel { PBR, Phong };
 struct BeSRMSettings {
     struct {
         float Bias = 0.001f;
+        uint32_t DirectionalResolution = 2048;
+        uint32_t PointResolution = 1024;
+        uint32_t MaxDirectional = 2;
+        uint32_t MaxPoint = 20;
     } Shadow;
 
     struct {
@@ -73,8 +77,6 @@ struct BeSRMSunLightEntry {
 
     bool CastsShadows;
     glm::mat4 ShadowViewProjection;
-    uint32_t ShadowMapResolution;
-    std::weak_ptr<BeTexture> ShadowMap;
 
     static auto CalculateViewProj(
         glm::vec3 direction,
@@ -93,9 +95,7 @@ struct BeSRMPointLightEntry {
     float Power;
 
     bool CastsShadows;
-    uint32_t ShadowMapResolution;
     float ShadowNearPlane;
-    std::weak_ptr<BeTexture> ShadowMap;
 };
 
 // =====================================================================================================================
@@ -125,6 +125,9 @@ class BeStandardRenderMachine {
     std::vector<BeSRMGeometryEntry> _geometryEntries;
     std::vector<BeSRMSunLightEntry> _sunLightEntries;
     std::vector<BeSRMPointLightEntry> _pointLightEntries;
+
+    std::shared_ptr<BeTexture> _directionalShadowArray;
+    std::shared_ptr<BeTexture> _pointShadowArray;
 
     SenBuffer _sharedVertexBuffer;
     SenBuffer _sharedIndexBuffer;
@@ -174,7 +177,7 @@ class BeStandardRenderMachine {
     auto BuildPasses() -> void;
     auto Activate() -> void;
 
-    // debug channel (−1 = normal, 0..N = G-buffer targets in declaration order) ----------------------------------------
+    // debug channel (−1 = normal, 0..N = G-buffer targets in declaration order) ---------------------------------------
     expose
     auto SetDebugChannel(int channel) -> void;
     auto GetDebugChannelTexture() const -> std::shared_ptr<BeTexture>;
@@ -191,6 +194,12 @@ class BeStandardRenderMachine {
     auto GetGeometryEntries() const -> const std::vector<BeSRMGeometryEntry>&;
     auto GetSunLightEntries() const -> const std::vector<BeSRMSunLightEntry>&;
     auto GetPointLightEntries() const -> const std::vector<BeSRMPointLightEntry>&;
+
+    // shadow arrays (lazily (re)allocated from Settings.Shadow) -------------------------------------------------------
+    expose
+    auto EnsureShadowArrays() -> void;
+    auto GetDirectionalShadowArray() const -> std::shared_ptr<BeTexture> { return _directionalShadowArray; }
+    auto GetPointShadowArray() const -> std::shared_ptr<BeTexture> { return _pointShadowArray; }
     
     // asset loading ---------------------------------------------------------------------------------------------------
     expose auto LoadProp(

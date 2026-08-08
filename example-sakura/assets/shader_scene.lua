@@ -13,7 +13,7 @@ function makeSettings()
         ambient = { color = "#000000" },
 
         skybox = {
-            enabled = true,
+            enabled = false,
             hdrPath = "assets/moonrise_puresky.hdr",
             --hdrPath = "assets/kloofendal_puresky.hdr",
         },
@@ -37,7 +37,7 @@ function makeContent(data)
     end
 
     objects.Cube = {
-        transform = { position = {0, -15, 0}, scale = {30, 30, 30} },
+        transform = { position = {0, -15, 0}, scale = {100, 30, 100} },
         render = { prop = "cube", castShadows = true }
     }
 
@@ -69,7 +69,7 @@ function makeContent(data)
         transform = { rotation = {0, 0, 0}, scale = {30, 30, 30} },
         render = { prop = "compass", castShadows = true },
         circling = {
-            origin = {0, -8, 0},
+            origin = {8, -8, 8},
             axis = {0, 1, 0},
             radius = 0.0,
             speed = 15.0,
@@ -83,10 +83,10 @@ function makeContent(data)
             transform = { scale = { 0.3, 0.3, 0.3 } },
             render = { prop = "emissiveCube", castShadows = false },
             pointLight = {
-                radius = 15.0,
+                radius = 25.0,
                 color = {1.0, 0.95, 0.85},
                 power = 3.0,
-                castsShadows = false,
+                castsShadows = true,
             },
             circling = {
                 origin = {0.0, 4.0, 0.0},
@@ -98,19 +98,19 @@ function makeContent(data)
         }
     end
 
-    local lightCount = 20
-    for i = 0, lightCount - 1 do
+    local lightCount = 10
+w    for i = 0, lightCount - 1 do
         objects["CirclingLight_" .. i] = {
             transform = { scale = { 1.0, 1.0, 1.0 } },
             render = { prop = "emissiveCube", castShadows = false },
             pointLight = {
-                radius = 20.0,
+                radius = 30.0,
                 color = {1.0, 0.95, 0.85},
                 power = 3.0,
-                castsShadows = false,
+                castsShadows = true,
             },
             circling = {
-                origin = {0.0, 2.0, 0.0},
+                origin = {0.0, 8.0, 0.0},
                 axis = {0, 1, 0},
                 radius = 8.0,
                 speed = -15.0,

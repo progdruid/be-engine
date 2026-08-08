@@ -98,6 +98,7 @@ auto BeShaderLibrary::RegisterBuiltinDefaultTextures() -> void {
         glm::vec4 Color;
         SenTextureUsage Usage = SenTextureUsage::ShaderResource;
         bool Cubemap = false;
+        uint32_t ArrayLength = 1;
     };
 
     const BuiltinDefaultTexture builtins[] = {
@@ -105,6 +106,8 @@ auto BeShaderLibrary::RegisterBuiltinDefaultTextures() -> void {
         { "black", glm::vec4(0.f, 0.f, 0.f, 1.f) },
         { "storage-black", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::ShaderResource | SenTextureUsage::Storage },
         { "black-cube", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::ShaderResource, true },
+        { "black-array", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::ShaderResource, false, 2 },
+        { "black-cube-array", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::ShaderResource, true, 2 },
         { "default-orm", glm::vec4(0.f, 1.f, 1.f, 1.f) },
         { "flat-normal", glm::vec4(0.5f, 0.5f, 1.f, 1.f) },
     };
@@ -115,6 +118,7 @@ auto BeShaderLibrary::RegisterBuiltinDefaultTextures() -> void {
             BeTexture::Create(std::string(builtin.Name))
             .SetSize(1, 1)
             .SetCubemap(builtin.Cubemap)
+            .SetArrayLength(builtin.ArrayLength)
             .SetUsage(builtin.Usage)
             .SetFormat(SenFormat::RGBA8_Unorm)
             .FillWithColor(builtin.Color)

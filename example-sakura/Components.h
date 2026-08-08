@@ -43,12 +43,10 @@ struct SunLightComponent {
 
     // shadow
     bool CastsShadows = true;
-    uint32_t ShadowMapResolution = 2048;
     float ShadowCameraDistance = 100.f;
     float ShadowMapWorldSize = 100.f;
     float ShadowNearPlane = 0.1f;
     float ShadowFarPlane = 400.f;
-    std::shared_ptr<BeTexture> ShadowMap;
 };
 
 struct PointLightComponent {
@@ -57,9 +55,7 @@ struct PointLightComponent {
     float Power = 1.f;
 
     bool CastsShadows = false;
-    uint32_t ShadowMapResolution = 1024;
     float ShadowNearPlane = 0.1f; // far plane is radius
-    std::shared_ptr<BeTexture> ShadowMap;
 };
 
 template<typename... Components>

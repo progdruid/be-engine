@@ -12,7 +12,8 @@
     Albedo_RGB: texture2d = black
     WorldNormal_XYZ: texture2d = black
     ORM_RGB: texture2d = black
-    ShadowMap: texture2d = black
+    ShadowMap: texture2d[] = black-array
+    ShadowSlice: float = 0
     InputSampler: sampler = point-clamp
 }
 
@@ -48,6 +49,7 @@ struct directional_light_material {
     float4x4 ProjectionView;
     float TexelSize;
     float ShadowBias;
+    float ShadowSlice;
 };
 
 cbuffer CBuffer_0 : register(b0, space0) {
@@ -62,7 +64,7 @@ Texture2D Depth : register(t2, space1);
 Texture2D Albedo_RGB : register(t3, space1);
 Texture2D WorldNormal_XYZ : register(t4, space1);
 Texture2D ORM_RGB : register(t5, space1);
-Texture2D ShadowMap : register(t6, space1);
+Texture2DArray ShadowMap : register(t6, space1);
 
 struct PixelOutput {
     float3 LightHDR : SV_Target0;
@@ -72,14 +74,22 @@ struct PixelOutput {
 /*========================================================*/
 
 
-float PCFShadow(Texture2D shadowMap, SamplerState pcfSampler, float2 uv, float texelSize, float currentDepth, float bias) {
+float PCFShadow(
+    Texture2DArray shadowMap, 
+    float slice, 
+    SamplerState pcfSampler, 
+    float2 uv, 
+    float texelSize, 
+    float currentDepth, 
+    float bias
+) {
     float shadow = 0.0;
 
     // 3x3 PCF filter
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
             float2 sampleUV = uv + float2(x, y) * texelSize;
-            float shadowmapDepth = shadowMap.Sample(pcfSampler, sampleUV).r;
+            float shadowmapDepth = shadowMap.Sample(pcfSampler, float3(sampleUV, slice)).r;
             shadow += (currentDepth < shadowmapDepth + bias) ? 1.0 : 0.0;
         }
     }
@@ -106,7 +116,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
             all(shadowUV >= 0.0) && all(shadowUV <= 1.0) &&
             currentShadowDepth >= 0.0 && currentShadowDepth <= 1.0;
         if (insideShadowMap) {
-            shadowAbsenceFactor = PCFShadow(ShadowMap, InputSampler, shadowUV, _DirectionalLight.TexelSize, currentShadowDepth, _DirectionalLight.ShadowBias);
+            shadowAbsenceFactor = PCFShadow(ShadowMap, _DirectionalLight.ShadowSlice, InputSampler, shadowUV, _DirectionalLight.TexelSize, currentShadowDepth, _DirectionalLight.ShadowBias);
         }
     }
 

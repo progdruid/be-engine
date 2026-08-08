@@ -190,7 +190,6 @@ auto RiftScene::CreateObjects() -> void {
             .Color = Settings.Sun.Color,
             .Power = Settings.Sun.Power,
             .CastsShadows = false,
-            .ShadowMapResolution = Settings.Sun.ShadowMapResolution,
             .ShadowCameraDistance = Settings.Sun.ShadowCameraDistance,
             .ShadowMapWorldSize = Settings.Sun.ShadowMapWorldSize,
             .ShadowNearPlane = Settings.Sun.ShadowNearPlane,
@@ -312,8 +311,6 @@ void RiftScene::Tick(float deltaTime) {
                 sunLight.ShadowNearPlane,
                 sunLight.ShadowFarPlane
             ),
-            .ShadowMapResolution = sunLight.ShadowMapResolution,
-            .ShadowMap = sunLight.ShadowMap,
         });
     }
 }
