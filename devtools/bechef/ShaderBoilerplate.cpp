@@ -79,7 +79,8 @@ static auto IsSampler(const std::string& type) -> bool {
 }
 
 static auto IsTexture(const std::string& type) -> bool {
-    return type == "texture2d" || type == "textureCube" || type == "storage texture2d";
+    return type == "texture2d" || type == "textureCube" || type == "storage texture2d"
+        || type == "texture2d[]" || type == "textureCube[]";
 }
 
 static auto GenerateIncludes(const std::filesystem::path& path, const std::vector<ResolvedBind>& binds) -> std::vector<std::string> {
@@ -154,6 +155,12 @@ static auto GenerateBindings(const ResolvedBind& bind) -> std::optional<std::str
         }
         else if (textures[i].Type == "textureCube") {
             type = "TextureCube";
+        }
+        else if (textures[i].Type == "texture2d[]") {
+            type = "Texture2DArray";
+        }
+        else if (textures[i].Type == "textureCube[]") {
+            type = "TextureCubeArray";
         }
 
         code += type + " " + textures[i].Name

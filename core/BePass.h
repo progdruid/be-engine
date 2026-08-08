@@ -38,18 +38,18 @@ class BePass {
     auto UseMaterial (const BeMaterial& material) -> BePass&;
 
     auto AddColorTarget (
-        SenTexture texture, 
-        SenLoadOp loadOp = SenLoadOp::Clear, 
-        glm::vec4 clearColor = {0, 0, 0, 0}, 
+        SenTexture texture,
+        SenLoadOp loadOp = SenLoadOp::Clear,
+        glm::vec4 clearColor = {0, 0, 0, 0},
         uint8_t mipLevel = 0,
-        int8_t cubemapFace = -1
+        int16_t arrayLayer = -1
     ) -> BePass&;
     auto AddColorTarget (
         const std::shared_ptr<BeTexture>& texture,
         SenLoadOp loadOp = SenLoadOp::Clear,
         glm::vec4 clearColor = {0, 0, 0, 0},
         uint8_t mipLevel = 0,
-        int8_t cubemapFace = -1
+        int16_t arrayLayer = -1
     ) -> BePass&;
     auto AddColorTargets (
         const std::vector<std::shared_ptr<BeTexture>>& textures,
@@ -58,17 +58,17 @@ class BePass {
     ) -> BePass&;
 
     auto SetDepthTarget (
-        SenTexture texture, 
-        SenLoadOp loadOp = SenLoadOp::Clear, 
-        float clearDepth = 1.0f, 
-        int8_t cubemapFace = -1, 
+        SenTexture texture,
+        SenLoadOp loadOp = SenLoadOp::Clear,
+        float clearDepth = 1.0f,
+        int16_t arrayLayer = -1,
         uint8_t clearStencil = 0
     ) -> BePass&;
     auto SetDepthTarget (
-        const std::shared_ptr<BeTexture>& texture, 
-        SenLoadOp loadOp = SenLoadOp::Clear, 
-        float clearDepth = 1.0f, 
-        int8_t cubemapFace = -1, 
+        const std::shared_ptr<BeTexture>& texture,
+        SenLoadOp loadOp = SenLoadOp::Clear,
+        float clearDepth = 1.0f,
+        int16_t arrayLayer = -1,
         uint8_t clearStencil = 0
     ) -> BePass&;
 

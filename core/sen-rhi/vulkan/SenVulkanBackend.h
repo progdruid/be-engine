@@ -23,15 +23,15 @@ struct SenVulkanTextureEntry {
     VkFormat Format = VK_FORMAT_UNDEFINED;
     VkImageView SRV = VK_NULL_HANDLE;                       // for shader sampling (all mips, all layers)
     VkImageView DSV = VK_NULL_HANDLE;                       // depth attachment (2D or per-face for cubemap — see below)
-    std::vector<VkImageView> MipSRVs;                       // [mip]       — single-mip sampling view (2D)
-    std::vector<VkImageView> MipRTVs;                       // [mip]       — color attachment per mip (2D)
-    std::array<VkImageView, 6> CubemapDSVs  = {};           // [face]      — depth attachment per cubemap face
-    std::array<std::vector<VkImageView>, 6> CubemapMipRTVs; // [face][mip] — color attachment per cubemap face per mip
-    std::vector<VkImageLayout> MipLayouts;                  // per-mip current layout (all faces share a mip's layout)
+    std::vector<VkImageView> MipSRVs;                       // [mip]        — single-mip sampling view (2D)
+    std::vector<VkImageView> MipRTVs;                       // [mip]        — color attachment per mip (2D)
+    std::vector<VkImageView> LayerDSVs;                     // [layer]      — depth attachment per array/cube image layer
+    std::vector<std::vector<VkImageView>> LayerMipRTVs;     // [layer][mip] — colour attachment per image layer per mip
+    std::vector<VkImageLayout> MipLayouts;                  
     uint32_t Width      = 0;                                // mip-0 dimensions, kept for mip generation
     uint32_t Height     = 0;
     uint32_t MipLevels  = 1;
-    uint32_t LayerCount = 1;                                // 1 for 2D, 6 for cubemaps
+    uint32_t LayerCount = 1;                                // 1 for 2D, N for 2D array, 6 for cube, 6*N for cube array
 };
 
 struct SenVulkanBufferEntry {
@@ -168,8 +168,6 @@ class SenVulkanBackend {
     expose static auto MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout) -> VkImageMemoryBarrier2;
     expose static auto RecordImageBarrier(VkCommandBuffer cmd, const VkImageMemoryBarrier2& barrier) -> void;
     hide static auto UploadToDeviceImage  (VkImage image, VkImageAspectFlags aspect, const void* data, uint32_t dataSize, uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t layerCount) -> void;
-    hide static auto CreateTexture2D      (const SenTextureDesc& desc, SenVulkanTextureEntry& entry) -> void;
-    hide static auto CreateTextureCubemap (const SenTextureDesc& desc, SenVulkanTextureEntry& entry) -> void;
     
     expose // buffers
     static auto CreateBuffer  (const SenBufferDesc& desc) -> SenBuffer;

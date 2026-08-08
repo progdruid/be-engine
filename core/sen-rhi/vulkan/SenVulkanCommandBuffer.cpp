@@ -24,9 +24,9 @@ auto SenVulkanCommandBuffer::BeginPass(const SenPassDesc& desc) -> void {
         auto& texEntry = SenVulkanBackend::LookupTexture(attachment.Texture);
 
         VkImageView view = VK_NULL_HANDLE;
-        if (attachment.CubemapFace >= 0) {
-            be_assert(attachment.CubemapFace < 6, "BeginPass: invalid cubemap face");
-            view = texEntry.CubemapMipRTVs[attachment.CubemapFace][attachment.MipLevel];
+        if (attachment.Layer >= 0) {
+            be_assert(attachment.Layer < int16_t(texEntry.LayerCount), "BeginPass: color layer out of range");
+            view = texEntry.LayerMipRTVs[attachment.Layer][attachment.MipLevel];
         } else {
             view = texEntry.MipRTVs[attachment.MipLevel];
         }
@@ -54,9 +54,9 @@ auto SenVulkanCommandBuffer::BeginPass(const SenPassDesc& desc) -> void {
         auto& texEntry = SenVulkanBackend::LookupTexture(depthAttach.Texture);
 
         VkImageView view = VK_NULL_HANDLE;
-        if (depthAttach.CubemapFace >= 0) {
-            be_assert(depthAttach.CubemapFace < 6, "BeginPass: invalid cubemap face for depth");
-            view = texEntry.CubemapDSVs[depthAttach.CubemapFace];
+        if (depthAttach.Layer >= 0) {
+            be_assert(depthAttach.Layer < int16_t(texEntry.LayerCount), "BeginPass: depth layer out of range");
+            view = texEntry.LayerDSVs[depthAttach.Layer];
         } else {
             view = texEntry.DSV;
         }

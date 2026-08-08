@@ -16,6 +16,7 @@ class BeTexture {
     expose struct BeTextureDescriptor {
         std::string Name;
         bool IsCubemap = false;
+        uint32_t ArrayLength = 1;
         SenFormat Format = SenFormat::RGBA8_Unorm;
         SenTextureUsage Usage = SenTextureUsage::ShaderResource;
         uint32_t Mips = 1;
@@ -45,6 +46,7 @@ class BeTexture {
         expose auto GenerateMips() -> Builder&&;
         expose auto SetSize(uint32_t w, uint32_t h) -> Builder&& ;
         expose auto SetCubemap(bool cubemap) -> Builder&& ;
+        expose auto SetArrayLength(uint32_t length) -> Builder&& ;
 
         expose auto FillWithColor (const glm::vec4& color) -> Builder&&;
         expose auto FillFromMemory (const uint8_t* src) -> Builder&&;
@@ -70,6 +72,7 @@ class BeTexture {
     expose uint32_t Width;
     expose uint32_t Height;
     expose bool IsCubemap;
+    expose uint32_t ArrayLength;
     expose uint32_t Mips;
     expose SenTextureUsage Usage;
     expose SenFormat Format;

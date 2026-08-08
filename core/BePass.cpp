@@ -51,21 +51,21 @@ auto BePass::UseMaterial(const BeMaterial& material) -> BePass& {
     return *this;
 }
 
-auto BePass::AddColorTarget(SenTexture texture, SenLoadOp loadOp, glm::vec4 clearColor, uint8_t mipLevel, int8_t cubemapFace) -> BePass& {
+auto BePass::AddColorTarget(SenTexture texture, SenLoadOp loadOp, glm::vec4 clearColor, uint8_t mipLevel, int16_t arrayLayer) -> BePass& {
     be_assert(texture.IsValid(), "BePass::AddColorTarget: invalid texture handle");
     _colorTargets.push_back(SenColorAttachment{
         .Texture     = texture,
         .MipLevel    = mipLevel,
-        .CubemapFace = cubemapFace,
+        .Layer       = arrayLayer,
         .LoadOp      = loadOp,
         .ClearColor  = clearColor,
     });
     return *this;
 }
 
-auto BePass::AddColorTarget(const std::shared_ptr<BeTexture>& texture, SenLoadOp loadOp, glm::vec4 clearColor, uint8_t mipLevel, int8_t cubemapFace) -> BePass& {
+auto BePass::AddColorTarget(const std::shared_ptr<BeTexture>& texture, SenLoadOp loadOp, glm::vec4 clearColor, uint8_t mipLevel, int16_t arrayLayer) -> BePass& {
     be_assert(texture != nullptr, "BePass::AddColorTarget: null texture");
-    return AddColorTarget(texture->Handle, loadOp, clearColor, mipLevel, cubemapFace);
+    return AddColorTarget(texture->Handle, loadOp, clearColor, mipLevel, arrayLayer);
 }
 
 auto BePass::AddColorTargets(const std::vector<std::shared_ptr<BeTexture>>& textures, SenLoadOp loadOp, glm::vec4 clearColor) -> BePass& {
@@ -75,11 +75,11 @@ auto BePass::AddColorTargets(const std::vector<std::shared_ptr<BeTexture>>& text
     return *this;
 }
 
-auto BePass::SetDepthTarget(SenTexture texture, SenLoadOp loadOp, float clearDepth, int8_t cubemapFace, uint8_t clearStencil) -> BePass& {
+auto BePass::SetDepthTarget(SenTexture texture, SenLoadOp loadOp, float clearDepth, int16_t arrayLayer, uint8_t clearStencil) -> BePass& {
     be_assert(texture.IsValid(), "BePass::SetDepthTarget: invalid texture handle");
     _depthTarget = SenDepthAttachment{
         .Texture      = texture,
-        .CubemapFace  = cubemapFace,
+        .Layer        = arrayLayer,
         .LoadOp       = loadOp,
         .ClearDepth   = clearDepth,
         .ClearStencil = clearStencil,
@@ -87,9 +87,9 @@ auto BePass::SetDepthTarget(SenTexture texture, SenLoadOp loadOp, float clearDep
     return *this;
 }
 
-auto BePass::SetDepthTarget(const std::shared_ptr<BeTexture>& texture, SenLoadOp loadOp, float clearDepth, int8_t cubemapFace, uint8_t clearStencil) -> BePass& {
+auto BePass::SetDepthTarget(const std::shared_ptr<BeTexture>& texture, SenLoadOp loadOp, float clearDepth, int16_t arrayLayer, uint8_t clearStencil) -> BePass& {
     be_assert(texture != nullptr, "BePass::SetDepthTarget: null texture");
-    return SetDepthTarget(texture->Handle, loadOp, clearDepth, cubemapFace, clearStencil);
+    return SetDepthTarget(texture->Handle, loadOp, clearDepth, arrayLayer, clearStencil);
 }
 
 auto BePass::SetViewport(SenViewport viewport) -> BePass& {

@@ -63,13 +63,14 @@ struct SenTexture {
 };
 
 struct SenTextureDesc {
-    SenFormat       Format  = SenFormat::Unknown;
-    uint32_t        Width   = 0;
-    uint32_t        Height  = 0;
-    SenTextureUsage Usage   = SenTextureUsage::None;
-    uint32_t        Mips    = 1;
-    bool            Cubemap = false;
-    const uint8_t*  Data    = nullptr; // optional initial pixel data, not owned
+    SenFormat       Format      = SenFormat::Unknown;
+    uint32_t        Width       = 0;
+    uint32_t        Height      = 0;
+    SenTextureUsage Usage       = SenTextureUsage::None;
+    uint32_t        Mips        = 1;
+    bool            Cubemap     = false;
+    uint32_t        ArrayLength = 1;
+    const uint8_t*  Data        = nullptr; // optional initial pixel data, not owned
 };
 
 
@@ -346,14 +347,14 @@ enum class SenLoadOp : uint8_t {
 struct SenColorAttachment {
     SenTexture Texture;
     uint8_t    MipLevel    = 0;
-    int8_t     CubemapFace = -1;   // -1 = not a cubemap face, 0-5 = cubemap face index
+    int16_t    Layer       = -1;   // -1 = whole texture, >=0 = array/cube layer index
     SenLoadOp  LoadOp      = SenLoadOp::Clear;
     glm::vec4  ClearColor  = {0, 0, 0, 0};
 };
 
 struct SenDepthAttachment {
     SenTexture Texture;
-    int8_t     CubemapFace  = -1;   // -1 = not a cubemap face, 0-5 = cubemap face index
+    int16_t    Layer        = -1;   // -1 = whole texture, >=0 = array/cube layer index
     SenLoadOp  LoadOp       = SenLoadOp::Clear;
     float      ClearDepth   = 1.0f;
     uint8_t    ClearStencil = 0;

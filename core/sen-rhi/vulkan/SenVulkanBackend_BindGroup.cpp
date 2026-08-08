@@ -178,8 +178,8 @@ auto SenVulkanBackend::FlushRetirements(uint64_t completedValue) -> void {
                     destroy(entry.DSV);
                     for (auto v : entry.MipSRVs) { destroy(v); }
                     for (auto v : entry.MipRTVs) { destroy(v); }
-                    for (auto v : entry.CubemapDSVs) { destroy(v); }
-                    for (auto& mips : entry.CubemapMipRTVs) { for (auto v : mips) { destroy(v); } }
+                    for (auto v : entry.LayerDSVs) { destroy(v); }
+                    for (auto& mips : entry.LayerMipRTVs) { for (auto v : mips) { destroy(v); } }
                     vmaDestroyImage(_allocator, entry.Image, entry.Allocation);
                     _textures.erase(it);
                 }

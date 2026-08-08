@@ -36,7 +36,8 @@ auto BeMaterialScheme::Create(
     for (const auto& parsedProperty : properties) {
 
         // extracting
-        if (parsedProperty.Type == "texture2d" || parsedProperty.Type == "textureCube") {
+        if (parsedProperty.Type == "texture2d"   || parsedProperty.Type == "textureCube"
+         || parsedProperty.Type == "texture2d[]" || parsedProperty.Type == "textureCube[]") {
             auto descriptor = BeMaterialTextureDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.DefaultTexturePath = parsedProperty.Default;

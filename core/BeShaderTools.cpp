@@ -49,15 +49,21 @@ auto BeShaderTools::ParseMaterialProperty(const std::string& text) -> std::expec
         if (rb == std::string::npos) {
             return std::unexpected("unclosed '[' in type -> " + text);
         }
-        try {
-            result.ArrayLength = std::stoul(std::string(Trim(Take(result.Type, lb + 1, rb), " \t")));
-        } catch (const std::exception&) {
-            return std::unexpected("invalid array length -> " + text);
+        const auto inner = Trim(Take(result.Type, lb + 1, rb), " \t");
+        const auto base = std::string(Trim(std::string_view(result.Type).substr(0, lb), " \t"));
+        if (inner.empty()) {
+            result.Type = base + "[]";
+        } else {
+            try {
+                result.ArrayLength = std::stoul(std::string(inner));
+            } catch (const std::exception&) {
+                return std::unexpected("invalid array length -> " + text);
+            }
+            if (result.ArrayLength == 0) {
+                return std::unexpected("array length must be > 0 -> " + text);
+            }
+            result.Type = base;
         }
-        if (result.ArrayLength == 0) {
-            return std::unexpected("array length must be > 0 -> " + text);
-        }
-        result.Type = std::string(Trim(std::string_view(result.Type).substr(0, lb), " \t"));
     }
 
     return result;

@@ -7,10 +7,93 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     const SenTexture handle { _nextTextureId++ };
     auto& entry = _textures[handle.ID];
 
-    if (desc.Cubemap) {
-        CreateTextureCubemap(desc, entry);
-    } else {
-        CreateTexture2D(desc, entry);
+    const VkFormat           format  = Sen::Vulkan::ToFormat(desc.Format);
+    const VkImageUsageFlags  usage   = Sen::Vulkan::ToImageUsageFlags(desc.Usage, desc.Data != nullptr);
+    const bool               isDepth = HasAny(desc.Usage, SenTextureUsage::DepthStencil);
+    const VkImageAspectFlags aspect  = isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+
+    const uint32_t cubeFactor = desc.Cubemap ? 6 : 1;
+    const uint32_t layerCount = cubeFactor * (desc.ArrayLength > 0 ? desc.ArrayLength : 1);
+    const bool     isLayered  = layerCount > 1;
+
+    entry.Format     = format;
+    entry.Width      = desc.Width;
+    entry.Height     = desc.Height;
+    entry.MipLevels  = desc.Mips;
+    entry.LayerCount = layerCount;
+    entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_UNDEFINED);
+
+    // Mip generation blits each level into the next, so every level is both a transfer source and destination.
+    const VkImageUsageFlags mipUsage = desc.Mips > 1 ? (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT) : 0;
+
+    VkImageCreateInfo imageInfo {
+        .sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .flags         = desc.Cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : VkImageCreateFlags(0),
+        .imageType     = VK_IMAGE_TYPE_2D,
+        .format        = format,
+        .extent        = { desc.Width, desc.Height, 1 },
+        .mipLevels     = desc.Mips,
+        .arrayLayers   = layerCount,
+        .samples       = VK_SAMPLE_COUNT_1_BIT,
+        .tiling        = VK_IMAGE_TILING_OPTIMAL,
+        .usage         = usage | mipUsage,
+        .sharingMode   = VK_SHARING_MODE_EXCLUSIVE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+    VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE };
+    VkResult result = vmaCreateImage(_allocator, &imageInfo, &allocInfo, &entry.Image, &entry.Allocation, nullptr);
+    be_assert(result == VK_SUCCESS, "Failed to create image!");
+
+    if (desc.Data) {
+        const uint32_t faceSize = desc.Width * desc.Height * Sen::Vulkan::BytesPerPixel(desc.Format);
+        if (layerCount == 1) {
+            UploadToDeviceImage(entry.Image, aspect, desc.Data, faceSize, desc.Width, desc.Height, desc.Mips, 1);
+        } else {
+            std::vector<uint8_t> expanded(size_t(faceSize) * layerCount);
+            for (uint32_t layer = 0; layer < layerCount; ++layer)
+                memcpy(expanded.data() + size_t(layer) * faceSize, desc.Data, faceSize);
+            UploadToDeviceImage(entry.Image, aspect, expanded.data(), faceSize * layerCount, desc.Width, desc.Height, desc.Mips, layerCount);
+        }
+        entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+
+    if (HasAny(desc.Usage, SenTextureUsage::ShaderResource)) {
+        const VkImageViewType srvType =
+            desc.Cubemap ? (desc.ArrayLength > 1 ? VK_IMAGE_VIEW_TYPE_CUBE_ARRAY : VK_IMAGE_VIEW_TYPE_CUBE)
+                         : (isLayered            ? VK_IMAGE_VIEW_TYPE_2D_ARRAY    : VK_IMAGE_VIEW_TYPE_2D);
+        entry.SRV = CreateImageView(entry.Image, format, srvType, aspect, 0, desc.Mips, 0, layerCount);
+        if (!isLayered) {
+            entry.MipSRVs.resize(desc.Mips);
+            for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
+                entry.MipSRVs[mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, 0, 1);
+            }
+        }
+    }
+    if (HasAny(desc.Usage, SenTextureUsage::DepthStencil)) {
+        if (isLayered) {
+            entry.LayerDSVs.resize(layerCount);
+            for (uint32_t layer = 0; layer < layerCount; ++layer) {
+                entry.LayerDSVs[layer] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, 1, layer, 1);
+            }
+        } else {
+            entry.DSV = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, 1, 0, 1);
+        }
+    }
+    if (HasAny(desc.Usage, SenTextureUsage::RenderTarget)) {
+        if (isLayered) {
+            entry.LayerMipRTVs.resize(layerCount);
+            for (uint32_t layer = 0; layer < layerCount; ++layer) {
+                entry.LayerMipRTVs[layer].resize(desc.Mips);
+                for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
+                    entry.LayerMipRTVs[layer][mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, layer, 1);
+                }
+            }
+        } else {
+            entry.MipRTVs.resize(desc.Mips);
+            for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
+                entry.MipRTVs[mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, 0, 1);
+            }
+        }
     }
 
     return handle;
@@ -24,122 +107,6 @@ auto SenVulkanBackend::RetireTexture(SenTexture handle) -> void {
 
 auto SenVulkanBackend:: LookupTexture(SenTexture handle) -> SenVulkanTextureEntry& {
     return _textures.at(handle.ID);
-}
-
-auto SenVulkanBackend::CreateTexture2D(const SenTextureDesc& desc, SenVulkanTextureEntry& entry) -> void {
-    const VkFormat           format  = Sen::Vulkan::ToFormat(desc.Format);
-    const VkImageUsageFlags  usage   = Sen::Vulkan::ToImageUsageFlags(desc.Usage, desc.Data != nullptr);
-    const bool               isDepth = HasAny(desc.Usage, SenTextureUsage::DepthStencil);
-    const VkImageAspectFlags aspect  = isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-    entry.Format     = format;
-    entry.Width      = desc.Width;
-    entry.Height     = desc.Height;
-    entry.MipLevels  = desc.Mips;
-    entry.LayerCount = 1;
-    entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_UNDEFINED);
-
-    // Mip generation blits each level into the next, so every level is both a transfer source and destination.
-    const VkImageUsageFlags mipUsage = desc.Mips > 1 ? (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT) : 0;
-
-    VkImageCreateInfo imageInfo {
-        .sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .imageType     = VK_IMAGE_TYPE_2D,
-        .format        = format,
-        .extent        = { desc.Width, desc.Height, 1 },
-        .mipLevels     = desc.Mips,
-        .arrayLayers   = 1,
-        .samples       = VK_SAMPLE_COUNT_1_BIT,
-        .tiling        = VK_IMAGE_TILING_OPTIMAL,
-        .usage         = usage | mipUsage,
-        .sharingMode   = VK_SHARING_MODE_EXCLUSIVE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-    };
-    VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE };
-    VkResult result = vmaCreateImage(_allocator, &imageInfo, &allocInfo, &entry.Image, &entry.Allocation, nullptr);
-    be_assert(result == VK_SUCCESS, "Failed to create 2D image!");
-
-    if (desc.Data) {
-        const uint32_t dataSize = desc.Width * desc.Height * Sen::Vulkan::BytesPerPixel(desc.Format);
-        UploadToDeviceImage(entry.Image, aspect, desc.Data, dataSize, desc.Width, desc.Height, desc.Mips, 1);
-        entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    }
-
-    if (HasAny(desc.Usage, SenTextureUsage::ShaderResource)) {
-        entry.SRV = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, desc.Mips, 0, 1);
-        entry.MipSRVs.resize(desc.Mips);
-        for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
-            entry.MipSRVs[mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, 0, 1);
-        }
-    }
-    if (HasAny(desc.Usage, SenTextureUsage::DepthStencil)) {
-        entry.DSV = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, 1, 0, 1);
-    }
-    if (HasAny(desc.Usage, SenTextureUsage::RenderTarget)) {
-        entry.MipRTVs.resize(desc.Mips);
-        for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
-            entry.MipRTVs[mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, 0, 1);
-        }
-    }
-}
-
-auto SenVulkanBackend::CreateTextureCubemap(const SenTextureDesc& desc, SenVulkanTextureEntry& entry) -> void {
-    const VkFormat           format  = Sen::Vulkan::ToFormat(desc.Format);
-    const VkImageUsageFlags  usage   = Sen::Vulkan::ToImageUsageFlags(desc.Usage, desc.Data != nullptr);
-    const bool               isDepth = HasAny(desc.Usage, SenTextureUsage::DepthStencil);
-    const VkImageAspectFlags aspect  = isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-    entry.Format     = format;
-    entry.Width      = desc.Width;
-    entry.Height     = desc.Height;
-    entry.MipLevels  = desc.Mips;
-    entry.LayerCount = 6;
-    entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_UNDEFINED);
-
-    // Mip generation blits each level into the next, so every level is both a transfer source and destination.
-    const VkImageUsageFlags mipUsage = desc.Mips > 1 ? (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT) : 0;
-
-    VkImageCreateInfo imageInfo {
-        .sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .flags         = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
-        .imageType     = VK_IMAGE_TYPE_2D,
-        .format        = format,
-        .extent        = { desc.Width, desc.Height, 1 },
-        .mipLevels     = desc.Mips,
-        .arrayLayers   = 6,
-        .samples       = VK_SAMPLE_COUNT_1_BIT,
-        .tiling        = VK_IMAGE_TILING_OPTIMAL,
-        .usage         = usage | mipUsage,
-        .sharingMode   = VK_SHARING_MODE_EXCLUSIVE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-    };
-    VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE };
-    VkResult result = vmaCreateImage(_allocator, &imageInfo, &allocInfo, &entry.Image, &entry.Allocation, nullptr);
-    be_assert(result == VK_SUCCESS, "Failed to create cubemap image!");
-
-    if (desc.Data) {
-        const uint32_t faceSize = desc.Width * desc.Height * Sen::Vulkan::BytesPerPixel(desc.Format);
-        std::vector<uint8_t> expanded(faceSize * 6);
-        for (int face = 0; face < 6; ++face)
-            memcpy(expanded.data() + face * faceSize, desc.Data, faceSize);
-        UploadToDeviceImage(entry.Image, aspect, expanded.data(), faceSize * 6, desc.Width, desc.Height, desc.Mips, 6);
-        entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    }
-
-    if (HasAny(desc.Usage, SenTextureUsage::ShaderResource)) {
-        entry.SRV = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_CUBE, aspect, 0, desc.Mips, 0, 6);
-    }
-    if (HasAny(desc.Usage, SenTextureUsage::DepthStencil)) {
-        for (uint32_t face = 0; face < 6; ++face) {
-            entry.CubemapDSVs[face] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, 1, face, 1);
-        }
-    }
-    if (HasAny(desc.Usage, SenTextureUsage::RenderTarget)) {
-        for (uint32_t face = 0; face < 6; ++face) {
-            entry.CubemapMipRTVs[face].resize(desc.Mips);
-            for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
-                entry.CubemapMipRTVs[face][mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, face, 1);
-            }
-        }
-    }
 }
 
 auto SenVulkanBackend::GenerateMips(SenTexture handle) -> void {
