@@ -32,8 +32,8 @@ BeStandardLightingPass::BeStandardLightingPass(
 , _output(std::move(output)) {}
 
 auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
-    const auto directionalLightShader = BeShaderLibrary::GetShader("directional-light");
-    const auto pointLightShader       = BeShaderLibrary::GetShader("point-light");
+    const auto dirShadowBatchShader   = BeShaderLibrary::GetShader("batched-directional-light-shadowed");
+    const auto pointShadowBatchShader = BeShaderLibrary::GetShader("batched-point-light-shadowed");
     const auto emissiveAddShader      = BeShaderLibrary::GetShader("emissive-add");
 
     constexpr SenBlendState additiveBlend = {
@@ -65,15 +65,27 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
         .Build()
     ;
 
-    _directionalLightScheme = directionalLightShader->GetMaterialScheme("main");
-    _directionalLightPipeline = BePipelineBuilder::Start(*directionalLightShader)
+    _dirShadowBatchScheme = dirShadowBatchShader->GetMaterialScheme("main");
+    _dirShadowBatchCapacity = _dirShadowBatchScheme.PropertyArrayLengths.at("LightDirection");
+    _dirShadowBatchMaterial = BeMaterial::Create(_dirShadowBatchScheme);
+    _dirShadowBatchMaterial->SetTexture("Depth", _depthInput);
+    _dirShadowBatchMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
+    _dirShadowBatchMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
+    _dirShadowBatchMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
+    _dirShadowBatchPipeline = BePipelineBuilder::Start(*dirShadowBatchShader)
         .SetBlend(additiveBlend)
         .SetColorFormats({ outputFormat })
         .Build()
     ;
-    
-    _pointLightScheme = pointLightShader->GetMaterialScheme("main");
-    _pointLightPipeline = BePipelineBuilder::Start(*pointLightShader)
+
+    _pointShadowBatchScheme = pointShadowBatchShader->GetMaterialScheme("main");
+    _pointShadowBatchCapacity = _pointShadowBatchScheme.PropertyArrayLengths.at("LightPositionRadius");
+    _pointShadowBatchMaterial = BeMaterial::Create(_pointShadowBatchScheme);
+    _pointShadowBatchMaterial->SetTexture("Depth", _depthInput);
+    _pointShadowBatchMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
+    _pointShadowBatchMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
+    _pointShadowBatchMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
+    _pointShadowBatchPipeline = BePipelineBuilder::Start(*pointShadowBatchShader)
         .SetBlend(additiveBlend)
         .SetColorFormats({ outputFormat })
         .Build()
@@ -134,103 +146,105 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     pass.SetViewport(renderer.GetViewport());
     pass.Begin();
 
-    // Unshadowed lights, batched into one looping draw per capacity-sized chunk
-    _batchedPositionRadius.clear();
-    _batchedColorPower.clear();
+    // Unshadowed lights, batched into capacity-sized chunks. 
+    // A shadow-caster with no shadow array present (e.g. no shadow pass was added) 
+    //  falls back to being rendered here, unshadowed.
+    static std::vector<glm::vec4> unshadowedPositionRadius;
+    static std::vector<glm::vec4> unshadowedColorPower;
+    unshadowedPositionRadius.clear();
+    unshadowedColorPower.clear();
     for (const auto& sunLight : sunLights) {
-        if (sunLight.CastsShadows) {
+        if (sunLight.CastsShadows && directionalShadowArray) {
             continue;
         }
-        _batchedPositionRadius.emplace_back(sunLight.Direction, -1.0f);
-        _batchedColorPower.emplace_back(sunLight.Color, sunLight.Power);
+        unshadowedPositionRadius.emplace_back(sunLight.Direction, -1.0f);
+        unshadowedColorPower.emplace_back(sunLight.Color, sunLight.Power);
     }
     for (const auto& pointLight : pointLights) {
-        if (pointLight.CastsShadows) {
+        if (pointLight.CastsShadows && pointShadowArray) {
             continue;
         }
-        _batchedPositionRadius.emplace_back(pointLight.Position, pointLight.Radius);
-        _batchedColorPower.emplace_back(pointLight.Color, pointLight.Power);
+        unshadowedPositionRadius.emplace_back(pointLight.Position, pointLight.Radius);
+        unshadowedColorPower.emplace_back(pointLight.Color, pointLight.Power);
     }
-
-    const auto totalBatched = _batchedPositionRadius.size();
-    for (size_t first = 0; first < totalBatched; first += _batchedCapacity) {
-        const size_t chunkSize = std::min<size_t>(_batchedCapacity, totalBatched - first);
-        const auto positionRadiusChunk = std::span(_batchedPositionRadius).subspan(first, chunkSize);
-        const auto colorPowerChunk = std::span(_batchedColorPower).subspan(first, chunkSize);
-
-        _batchedMaterial->SetFloat4Array("LightPositionRadius", positionRadiusChunk);
-        _batchedMaterial->SetFloat4Array("LightColorPower", colorPowerChunk);
+    for (size_t first = 0; first < unshadowedPositionRadius.size(); first += _batchedCapacity) {
+        const size_t chunkSize = std::min<size_t>(_batchedCapacity, unshadowedPositionRadius.size() - first);
+        _batchedMaterial->SetFloat4Array("LightPositionRadius", std::span(unshadowedPositionRadius).subspan(first, chunkSize));
+        _batchedMaterial->SetFloat4Array("LightColorPower", std::span(unshadowedColorPower).subspan(first, chunkSize));
         _batchedMaterial->SetFloat1("LightCount", static_cast<float>(chunkSize));
         cmd.SetPipeline(_batchedPipeline);
         cmd.SetBindGroup(_batchedMaterial->GetBindGroup(), 1);
         cmd.Draw(4, 0);
     }
 
-    // Shadowed directional lights
-    const float directionalTexelSize = 1.0f / srm.Settings.Shadow.DirectionalResolution;
-    size_t shadowedSunIndex = 0;
-    for (const auto& sunLight : sunLights) {
-        if (!sunLight.CastsShadows) {
-            continue;
+    // Shadowed directional lights, batched. Slice = shadowed-iteration order (matches the shadow pass).
+    if (directionalShadowArray) {
+        static std::vector<glm::vec4> directionSlice;
+        static std::vector<glm::vec4> colorPower;
+        static std::vector<glm::mat4> projectionViews;
+        directionSlice.clear();
+        colorPower.clear();
+        projectionViews.clear();
+        for (const auto& sunLight : sunLights) {
+            if (!sunLight.CastsShadows) {
+                continue;
+            }
+            if (directionSlice.size() >= srm.Settings.Shadow.MaxDirectional) {
+                break;
+            }
+            directionSlice.emplace_back(sunLight.Direction, static_cast<float>(directionSlice.size()));
+            colorPower.emplace_back(sunLight.Color, sunLight.Power);
+            projectionViews.push_back(sunLight.ShadowViewProjection);
         }
-        const size_t i = shadowedSunIndex++;
-        if (i >= srm.Settings.Shadow.MaxDirectional) {
-            break;
+        if (!directionSlice.empty()) {
+            _dirShadowBatchMaterial->SetFloat1("TexelSize", 1.0f / srm.Settings.Shadow.DirectionalResolution);
+            _dirShadowBatchMaterial->SetFloat1("ShadowBias", srm.Settings.Shadow.Bias);
+            _dirShadowBatchMaterial->SetTexture("ShadowMap", directionalShadowArray);
+            for (size_t first = 0; first < directionSlice.size(); first += _dirShadowBatchCapacity) {
+                const size_t chunkSize = std::min<size_t>(_dirShadowBatchCapacity, directionSlice.size() - first);
+                _dirShadowBatchMaterial->SetFloat4Array("LightDirection", std::span(directionSlice).subspan(first, chunkSize));
+                _dirShadowBatchMaterial->SetFloat4Array("LightColorPower", std::span(colorPower).subspan(first, chunkSize));
+                _dirShadowBatchMaterial->SetMatrixArray("LightProjectionView", std::span(projectionViews).subspan(first, chunkSize));
+                _dirShadowBatchMaterial->SetFloat1("LightCount", static_cast<float>(chunkSize));
+                cmd.SetPipeline(_dirShadowBatchPipeline);
+                cmd.SetBindGroup(_dirShadowBatchMaterial->GetBindGroup(), 1);
+                cmd.Draw(4, 0);
+            }
         }
-        if (i >= _directionalLightMaterials.size()) {
-            auto mat = BeMaterial::Create(_directionalLightScheme);
-            mat->SetTexture("Depth", _depthInput);
-            mat->SetTexture("Albedo_RGB", _gbufferInputs[0]);
-            mat->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
-            mat->SetTexture("ORM_RGB", _gbufferInputs[2]);
-            _directionalLightMaterials.push_back(std::move(mat));
-        }
-        const auto& mat = _directionalLightMaterials[i];
-        mat->SetFloat1("HasShadowMap", 1.0f);
-        mat->SetFloat3("Direction", sunLight.Direction);
-        mat->SetFloat3("Color", sunLight.Color);
-        mat->SetFloat1("Power", sunLight.Power);
-        mat->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
-        mat->SetFloat1("TexelSize", directionalTexelSize);
-        mat->SetFloat1("ShadowBias", srm.Settings.Shadow.Bias);
-        mat->SetFloat1("ShadowSlice", static_cast<float>(i));
-        mat->SetTexture("ShadowMap", directionalShadowArray);
-        cmd.SetPipeline(_directionalLightPipeline);
-        cmd.SetBindGroup(mat->GetBindGroup(), 1);
-        cmd.Draw(4, 0);
     }
 
-    // Shadowed point lights=
-    size_t shadowedPointIndex = 0;
-    for (const auto& pointLight : pointLights) {
-        if (!pointLight.CastsShadows) {
-            continue;
+    // Shadowed point lights, batched. Cube slice = shadowed-iteration order (matches the shadow pass).
+    if (pointShadowArray) {
+        static std::vector<glm::vec4> positionRadius;
+        static std::vector<glm::vec4> colorPower;
+        static std::vector<glm::vec4> shadowParams;
+        positionRadius.clear();
+        colorPower.clear();
+        shadowParams.clear();
+        for (const auto& pointLight : pointLights) {
+            if (!pointLight.CastsShadows) {
+                continue;
+            }
+            if (positionRadius.size() >= srm.Settings.Shadow.MaxPoint) {
+                break;
+            }
+            positionRadius.emplace_back(pointLight.Position, pointLight.Radius);
+            colorPower.emplace_back(pointLight.Color, pointLight.Power);
+            shadowParams.emplace_back(static_cast<float>(positionRadius.size() - 1), pointLight.ShadowNearPlane, 0.0f, 0.0f);
         }
-        const size_t i = shadowedPointIndex++;
-        if (i >= srm.Settings.Shadow.MaxPoint) {
-            break;
+        if (!positionRadius.empty()) {
+            _pointShadowBatchMaterial->SetTexture("PointLightShadowMap", pointShadowArray);
+            for (size_t first = 0; first < positionRadius.size(); first += _pointShadowBatchCapacity) {
+                const size_t chunkSize = std::min<size_t>(_pointShadowBatchCapacity, positionRadius.size() - first);
+                _pointShadowBatchMaterial->SetFloat4Array("LightPositionRadius", std::span(positionRadius).subspan(first, chunkSize));
+                _pointShadowBatchMaterial->SetFloat4Array("LightColorPower", std::span(colorPower).subspan(first, chunkSize));
+                _pointShadowBatchMaterial->SetFloat4Array("LightShadowParams", std::span(shadowParams).subspan(first, chunkSize));
+                _pointShadowBatchMaterial->SetFloat1("LightCount", static_cast<float>(chunkSize));
+                cmd.SetPipeline(_pointShadowBatchPipeline);
+                cmd.SetBindGroup(_pointShadowBatchMaterial->GetBindGroup(), 1);
+                cmd.Draw(4, 0);
+            }
         }
-        if (!_pointLightMaterials.contains(pointLight.Name)) {
-            auto mat = BeMaterial::Create(_pointLightScheme);
-            mat->SetTexture("Depth", _depthInput);
-            mat->SetTexture("Albedo_RGB", _gbufferInputs[0]);
-            mat->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
-            mat->SetTexture("ORM_RGB", _gbufferInputs[2]);
-            _pointLightMaterials[pointLight.Name] = std::move(mat);
-        }
-        const auto& mat = _pointLightMaterials[pointLight.Name];
-        mat->SetFloat3("Position", pointLight.Position);
-        mat->SetFloat1("Radius", pointLight.Radius);
-        mat->SetFloat3("Color", pointLight.Color);
-        mat->SetFloat1("Power", pointLight.Power);
-        mat->SetFloat1("HasShadowMap", 1.0f);
-        mat->SetFloat1("ShadowMapResolution", static_cast<float>(srm.Settings.Shadow.PointResolution));
-        mat->SetFloat1("ShadowNearPlane", pointLight.ShadowNearPlane);
-        mat->SetFloat1("ShadowSlice", static_cast<float>(i));
-        mat->SetTexture("PointLightShadowMap", pointShadowArray);
-        cmd.SetPipeline(_pointLightPipeline);
-        cmd.SetBindGroup(mat->GetBindGroup(), 1);
-        cmd.Draw(4, 0);
     }
 
     // Emissive

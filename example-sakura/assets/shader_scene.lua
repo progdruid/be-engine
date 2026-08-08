@@ -99,7 +99,7 @@ function makeContent(data)
     end
 
     local lightCount = 10
-w    for i = 0, lightCount - 1 do
+    for i = 0, lightCount - 1 do
         objects["CirclingLight_" .. i] = {
             transform = { scale = { 1.0, 1.0, 1.0 } },
             render = { prop = "emissiveCube", castShadows = false },

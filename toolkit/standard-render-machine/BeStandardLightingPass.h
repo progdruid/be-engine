@@ -2,9 +2,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <unordered_map>
 #include <umbrellas/common.hpp>
-#include <umbrellas/include-glm.h>
 #include <sen-rhi/SenTypes.h>
 
 #include "BeRenderPass.h"
@@ -29,15 +27,17 @@ class BeStandardLightingPass final : public BeRenderPass {
     std::shared_ptr<BeMaterial> _batchedMaterial;
     SenPipeline _batchedPipeline;
     uint32_t _batchedCapacity = 0;
-    std::vector<glm::vec4> _batchedPositionRadius;
-    std::vector<glm::vec4> _batchedColorPower;
 
-    BeMaterialScheme _directionalLightScheme;
-    std::vector<std::shared_ptr<BeMaterial>> _directionalLightMaterials;
-    SenPipeline _directionalLightPipeline;
-    BeMaterialScheme _pointLightScheme;
-    std::unordered_map<std::string, std::shared_ptr<BeMaterial>> _pointLightMaterials;
-    SenPipeline _pointLightPipeline;
+    BeMaterialScheme _dirShadowBatchScheme;
+    std::shared_ptr<BeMaterial> _dirShadowBatchMaterial;
+    SenPipeline _dirShadowBatchPipeline;
+    uint32_t _dirShadowBatchCapacity = 0;
+
+    BeMaterialScheme _pointShadowBatchScheme;
+    std::shared_ptr<BeMaterial> _pointShadowBatchMaterial;
+    SenPipeline _pointShadowBatchPipeline;
+    uint32_t _pointShadowBatchCapacity = 0;
+    
     std::shared_ptr<BeMaterial> _emissiveMaterial;
     SenPipeline _emissivePipeline;
     std::shared_ptr<BeMaterial> _ambientMaterial;
