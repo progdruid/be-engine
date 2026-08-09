@@ -50,7 +50,7 @@ auto BeMaterialScheme::Create(
             descriptor.IsStorage = true;
             materialScheme.Textures.push_back(descriptor);
         }
-        else if (parsedProperty.Type == "sampler") {
+        else if (parsedProperty.Type == "sampler" || parsedProperty.Type == "comparison sampler") {
             auto descriptor = BeMaterialSamplerDescriptor();
             descriptor.Name = parsedProperty.Name;
             descriptor.DefaultSamplerDescString = parsedProperty.Default;

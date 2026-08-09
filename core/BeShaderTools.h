@@ -14,7 +14,7 @@ class BeShaderTools {
 
     struct ParsedMaterialProperty {
         std::string Name;
-        std::string Type;         // "float".."float4", "matrix", "texture2d", "textureCube", "storage texture2d", "sampler"
+        std::string Type;         // "float".."float4", "matrix", "texture2d", "textureCube", "storage texture2d", "sampler", "comparison sampler"
         uint32_t    ArrayLength = 1; // element count; a trailing "[N]" on the type is stripped into this
         std::string Default;      // raw default token(s); empty when omitted
     };

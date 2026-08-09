@@ -75,7 +75,7 @@ static auto VertexFieldForLayout(const std::string& layout) -> std::string {
 }
 
 static auto IsSampler(const std::string& type) -> bool {
-    return type == "sampler";
+    return type == "sampler" || type == "comparison sampler";
 }
 
 static auto IsTexture(const std::string& type) -> bool {
@@ -139,7 +139,8 @@ static auto GenerateBindings(const ResolvedBind& bind) -> std::optional<std::str
 
     for (size_t i = 0; i < samplers.size(); i++) {
         if (!code.empty()) code += "\n";
-        code += "SamplerState " + samplers[i].Name
+        const auto samplerType = samplers[i].Type == "comparison sampler" ? std::string("SamplerComparisonState") : std::string("SamplerState");
+        code += samplerType + " " + samplers[i].Name
              +  " : register(s" + std::to_string(1 + i) + ", space" + space + ");";
     }
 
