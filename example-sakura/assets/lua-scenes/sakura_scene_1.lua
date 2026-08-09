@@ -2,10 +2,10 @@ function makeSettings()
     return {
         srm = {
             shadow     = { bias = 16.0 / 100000.0 },
-            ibl        = { maxSampleRadiance = 100.0 },
+            ibl        = { maxSampleRadiance = 1000.0 },
             skybox     = { clampRadiance = 0.0 },
             bloom      = { threshold = 2.5, knee = 0.7, intensity = 0.7, clamp = 4.0, upsampleRadius = 1.0 },
-            tonemapper = { exposure = 0.25, contrast = 1.70 },
+            tonemapper = { exposure = 0.5, contrast = 1.70 },
         },
 
         camera = { nearPlane = 0.1, farPlane = 250.0 },
@@ -13,9 +13,9 @@ function makeSettings()
         ambient = { color = "#000000" },
 
         skybox = {
-            enabled = false,
-            hdrPath = "assets/moonrise_puresky.hdr",
-            --hdrPath = "assets/kloofendal_puresky.hdr",
+            enabled = true,
+            --hdrPath = "assets/moonrise_puresky.hdr",
+            hdrPath = "assets/kloofendal_puresky.hdr",
         },
 
         bloom = { mipCount = 5, dirtTexturePath = "assets/bloom-dirt-mask.png" },
@@ -26,7 +26,7 @@ function makeSettings()
     }
 end
 
-function makeContent(data)
+function makeShowcaseContent(data)
     local objects = data.Objects
     local settings = data.Settings
 
@@ -37,7 +37,7 @@ function makeContent(data)
     end
 
     objects.Cube = {
-        transform = { position = {0, -15, 0}, scale = {100, 30, 100} },
+        transform = { position = {0, -15, 0}, scale = {30, 30, 30} },
         render = { prop = "cube", castShadows = true }
     }
 
@@ -50,12 +50,11 @@ function makeContent(data)
 
     objects.Moon = {
         transform = { position = {100, 150, 100}, scale = {6.0, 6.0, 6.0} },
-        render = { prop = "moon", castShadows = false },
         static = true,
         sunLight = {
-            direction = {-1, -1, -1},
-            color = {0.7, 0.7, 0.99},
-            power = 0.0,
+            direction = {-1, -1.2, -1},
+            color = {0.99, 0.99, 0.99},
+            power = 2.0,
             castsShadows = true,
             shadowMapResolution = 4096,
             shadowCameraDistance = 100.0,
@@ -69,7 +68,7 @@ function makeContent(data)
         transform = { rotation = {0, 0, 0}, scale = {30, 30, 30} },
         render = { prop = "compass", castShadows = true },
         circling = {
-            origin = {8, -8, 8},
+            origin = {0, -8, 0},
             axis = {0, 1, 0},
             radius = 0.0,
             speed = 15.0,
@@ -77,16 +76,28 @@ function makeContent(data)
         }
     }
 
-    local lightCount = 4
+    --objects.Book = {
+    --    transform = { rotation = {0, 0, 0}, scale = {3, 3, 3} },
+    --    render = { prop = "book", castShadows = true },
+    --    circling = {
+    --        origin = {0, 0, 0},
+    --        axis = {0, 1, 0},
+    --        radius = 0.0,
+    --        speed = 15.0,
+    --        rotate = true,
+    --    }
+    --}
+
+    local lightCount = 0
     for i = 0, lightCount - 1 do
         objects["CompassLight_" .. i] = {
             transform = { scale = { 0.3, 0.3, 0.3 } },
             render = { prop = "emissiveCube", castShadows = false },
             pointLight = {
-                radius = 25.0,
+                radius = 15.0,
                 color = {1.0, 0.95, 0.85},
                 power = 3.0,
-                castsShadows = true,
+                castsShadows = false,
             },
             circling = {
                 origin = {0.0, 4.0, 0.0},
@@ -97,28 +108,6 @@ function makeContent(data)
             },
         }
     end
-
-    local lightCount = 10
-    for i = 0, lightCount - 1 do
-        objects["CirclingLight_" .. i] = {
-            transform = { scale = { 1.0, 1.0, 1.0 } },
-            render = { prop = "emissiveCube", castShadows = false },
-            pointLight = {
-                radius = 30.0,
-                color = {1.0, 0.95, 0.85},
-                power = 3.0,
-                castsShadows = true,
-            },
-            circling = {
-                origin = {0.0, 8.0, 0.0},
-                axis = {0, 1, 0},
-                radius = 8.0,
-                speed = -15.0,
-                phase = 360.0 * i / lightCount,
-                rotate = true,
-            },
-        }
-    end
 end
 
 function makeData ()
@@ -126,7 +115,7 @@ function makeData ()
     data.Settings = makeSettings()
     data.Objects = {}
 
-    makeContent(data)
+    makeShowcaseContent(data)
 
     return data
 end

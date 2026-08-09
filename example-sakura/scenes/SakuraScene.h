@@ -41,10 +41,11 @@ struct SakuraSceneSettings {
 
     struct {
         uint8_t CurrentSceneIndex = 0;
-        std::array<std::string, 3> Paths = {
-            "assets/sakura_scene.lua",
-            "assets/spinning_lights_500_scene.lua",
-            "assets/shader_scene.lua",
+        std::array<std::string, 4> Paths = {
+            "assets/lua-scenes/sakura_scene.lua",
+            "assets/lua-scenes/sakura_scene_1.lua",
+            "assets/lua-scenes/sakura_scene_2.lua",
+            "assets/lua-scenes/spinning_lights_500_scene.lua",
         };
     } SceneFile;
 
