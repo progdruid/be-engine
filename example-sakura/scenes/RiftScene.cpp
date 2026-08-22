@@ -118,37 +118,23 @@ static auto MakeSpikyTerrain(float size, int cells, float spikeAmp) -> std::shar
     return mesh;
 }
 
-RiftScene::RiftScene(Game* game) : BaseScene(game) {}
+RiftScene::RiftScene(Game* game) : FullScene(game) {}
 RiftScene::~RiftScene() = default;
 
 void RiftScene::Prepare() {
-    _camera = std::make_shared<BeCamera>();
-    _camera->Width = GameIns->Renderer->GetSwapchainPixelWidth();
-    _camera->Height = GameIns->Renderer->GetSwapchainPixelHeight();
-    _camera->NearPlane = Settings.Camera.NearPlane;
-    _camera->FarPlane = Settings.Camera.FarPlane;
+    FullScene::Prepare();
+
     _shipCameraController = std::make_unique<ShipCameraController>(_camera.get());
-
-    const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
-    const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
-
-    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, _assetRegistry, screenWidth, screenHeight);
-
-    CreateObjects();
-
-    _machine->BakeMeshes();
-
-    _machine->DeclareGBufferTarget("Rift_BaseColor",         SenFormat::R11G11B10_Float);
-    _machine->DeclareGBufferTarget("Rift_WorldNormal",       SenFormat::RGBA16_Float);
-    _machine->DeclareGBufferTarget("Rift_SpecularShininess", SenFormat::RGBA8_Unorm);
-    _machine->DeclareGBufferTarget("Rift_Emissive",          SenFormat::R11G11B10_Float);
-    _machine->DeclareDepth        ("Rift_Depth",             SenFormat::Depth32);
-    _machine->DeclareTexture      ("Rift_HDR",               SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Rift_Post",              SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Rift_UI",                SenFormat::RGBA8_Unorm);
+    _hudMaterial->SetFloat1("AimRadius", _shipCameraController->AimRadius);
 }
 
-auto RiftScene::CreateObjects() -> void {
+auto RiftScene::DefineSettings() -> void {
+    _camera->NearPlane = Settings.Camera.NearPlane;
+    _camera->FarPlane = Settings.Camera.FarPlane;
+    _machine->UniformMaterial->SetFloat3("AmbientColor", Settings.Ambient.Color);
+}
+
+auto RiftScene::DefineAssets() -> void {
     auto phongShader = BeShaderLibrary::GetShader("standard-phong");
 
     auto box = BeProp::FromMesh(BeMeshPrimitives::Cube(), phongShader, "geometry-main");
@@ -163,6 +149,21 @@ auto RiftScene::CreateObjects() -> void {
     floor->Materials[0]->SetFloat3("DiffuseColor", Settings.Terrain.Color);
     _assetRegistry.AddProp("floor", floor);
     _machine->RegisterMesh(floor->Mesh);
+
+    _machine->BakeMeshes();
+
+    _machine->DeclareGBufferTarget("Rift_BaseColor",         SenFormat::R11G11B10_Float);
+    _machine->DeclareGBufferTarget("Rift_WorldNormal",       SenFormat::RGBA16_Float);
+    _machine->DeclareGBufferTarget("Rift_SpecularShininess", SenFormat::RGBA8_Unorm);
+    _machine->DeclareGBufferTarget("Rift_Emissive",          SenFormat::R11G11B10_Float);
+    _machine->DeclareDepthTarget  ("Rift_Depth",             SenFormat::Depth32);
+    _machine->DeclareTextureTarget("Rift_HDR",               SenFormat::R11G11B10_Float);
+    _machine->DeclareTextureTarget("Rift_Post",              SenFormat::R11G11B10_Float);
+    _machine->DeclareTextureTarget("Rift_UI",                SenFormat::RGBA8_Unorm);
+}
+
+auto RiftScene::DefineScene() -> void {
+    _registry.clear();
 
     CreateEntity(_registry
         ,NameComponent { .Name = "box-left" }
@@ -194,22 +195,11 @@ auto RiftScene::CreateObjects() -> void {
             .ShadowMapWorldSize = Settings.Sun.ShadowMapWorldSize,
             .ShadowNearPlane = Settings.Sun.ShadowNearPlane,
             .ShadowFarPlane = Settings.Sun.ShadowFarPlane,
-            //.ShadowMap = BeTexture::Create("Rift_SunShadowMap")
-            //    .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
-            //    .SetFormat(SenFormat::Depth32)
-            //    .SetSize(Settings.Sun.ShadowMapResolution, Settings.Sun.ShadowMapResolution)
-            //    .Build()
-            //,
         }
     );
 }
 
-void RiftScene::OnLoad() {
-    _machine->UniformMaterial->SetFloat3("AmbientColor", Settings.Ambient.Color);
-    LoadPasses();
-}
-
-void RiftScene::LoadPasses() {
+auto RiftScene::DefinePasses() -> void {
     _machine->ClearPasses();
     _machine->AddShadowPass();
     _machine->AddGeometryPass();
@@ -229,12 +219,11 @@ void RiftScene::LoadPasses() {
     _posterizeMaterial->SetFloat1("Enabled", Settings.Posterize.Enabled ? 1.0f : 0.0f);
     _posterizeMaterial->SetTexture("UITexture", _machine->GetRenderTexture("Rift_UI"));
 
-    const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
-    const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
+    const uint32_t screenWidth  = _gameIns->Renderer->GetSwapchainPixelWidth();
+    const uint32_t screenHeight = _gameIns->Renderer->GetSwapchainPixelHeight();
     const auto& hudScheme = BeShaderLibrary::GetShader("ship-hud")->GetMaterialScheme("main");
     _hudMaterial = BeMaterial::Create(hudScheme);
     _hudMaterial->SetFloat2("ScreenSize", { static_cast<float>(screenWidth), static_cast<float>(screenHeight) });
-    _hudMaterial->SetFloat1("AimRadius", _shipCameraController->AimRadius);
     _hudMaterial->SetFloat1("PixelSize", Settings.Posterize.PixelSize);
     _machine->AddFullscreenPass(BeShaderLibrary::GetShader("ship-hud"), _hudMaterial, { "Rift_UI" });
 
@@ -242,28 +231,27 @@ void RiftScene::LoadPasses() {
 
     _machine->AddBackbufferPass("Rift_Post", Settings.Background.ClearColor);
 
-    auto imguiPass = std::make_unique<BeImGuiPass>(GameIns->Window);
+    auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
     imguiPass->SetUICallback([this]() { _shipCameraController->DrawDebugUI(); });
     _machine->AddPass(std::move(imguiPass));
 
-    _machine->BuildPasses();
-    _machine->Activate();
+    _machine->InitialisePasses();
 }
 
 void RiftScene::Tick(float deltaTime) {
-    if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
-        GameIns->Input->SetMouseCapture(false);
-        GameIns->SceneManager->RequestSceneChange("menu");
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        _gameIns->Input->SetMouseCapture(false);
+        _gameIns->SceneManager->RequestSceneChange("menu");
         return;
     }
     
 
-    if (GameIns->Input->GetKeyDown(GLFW_KEY_ENTER)) {
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ENTER)) {
         Settings.Posterize.Enabled = !Settings.Posterize.Enabled;
         _posterizeMaterial->SetFloat1("Enabled", Settings.Posterize.Enabled ? 1.0f : 0.0f);
     }
 
-    _shipCameraController->Update(deltaTime, GameIns->Input.get());
+    _shipCameraController->Update(deltaTime, _gameIns->Input.get());
     _hudMaterial->SetFloat2("AimOffset", _shipCameraController->GetAim());
 
     const float tileSize = Settings.Terrain.Size;
@@ -277,40 +265,5 @@ void RiftScene::Tick(float deltaTime) {
         }
     }
 
-    auto& uniformMat = *_machine->UniformMaterial;
-    const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
-    uniformMat.SetMatrix("CameraProjectionView", projView);
-    uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));
-    uniformMat.SetFloat4("NearFarPlane", { _camera->NearPlane, _camera->FarPlane, 1.0f / _camera->NearPlane, 1.0f / _camera->FarPlane });
-    uniformMat.SetFloat3("CameraPosition", _camera->Position);
-
-    static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
-    static const auto SunView      = _registry.view<SunLightComponent>();
-
-    _machine->ClearFrame();
-
-    for (const auto [entity, name, transform, render] : GeometryView.each()) {
-        _machine->AddGeometry({
-            .Name = name.Name,
-            .ModelMatrix = BeSRMGeometryEntry::CalculateModelMatrix(transform.Position, transform.Rotation, transform.Scale),
-            .Prop = render.Prop,
-            .CastShadows = render.CastShadows,
-        });
-    }
-
-    for (const auto [entity, sunLight] : SunView.each()) {
-        _machine->AddSunLight({
-            .Direction = sunLight.Direction,
-            .Color = sunLight.Color,
-            .Power = sunLight.Power,
-            .CastsShadows = sunLight.CastsShadows,
-            .ShadowViewProjection = BeSRMSunLightEntry::CalculateViewProj(
-                sunLight.Direction,
-                sunLight.ShadowCameraDistance,
-                sunLight.ShadowMapWorldSize,
-                sunLight.ShadowNearPlane,
-                sunLight.ShadowFarPlane
-            ),
-        });
-    }
+    FullScene::Tick(deltaTime);
 }

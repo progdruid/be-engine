@@ -11,8 +11,8 @@
     FogEnd: float = 45.0
     FogColor: float3 = #334D80
     Enabled: float = 1.0
-    PaletteCount: float = 6.0
-    Palette: float3[8] = [#2E4372, #E89128, #F7F052, #D34E24, #8C3318, #1F2C47]
+    PaletteCount: float = 7.0
+    Palette: float3[8] = [#2E4372, #E89128, #F7F052, #D34E24, #8C3318, #1F2C47, #5D3B45]
 }
 
 @be-shader posterize {

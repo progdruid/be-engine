@@ -65,7 +65,15 @@ struct PixelOutput {
 #include "light-common.hlsli"
 #include "fullscreen-vertex.hlsl"
 
-float SamplePointShadow(TextureCubeArray shadowMap, SamplerState samp, float3 worldPos, float3 lightPos, float radius, float nearPlane, float slice) {
+float SamplePointShadow(
+    TextureCubeArray shadowMap, 
+    SamplerState samp, 
+    float3 worldPos, 
+    float3 lightPos, 
+    float radius, 
+    float nearPlane, 
+    float slice
+) {
     float3 lightDir = worldPos - lightPos;
     float distanceToLight = length(lightDir);
     float3 sampleDir = normalize(lightDir);

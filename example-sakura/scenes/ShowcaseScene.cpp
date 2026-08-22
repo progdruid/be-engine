@@ -35,35 +35,33 @@ static auto ExpandCurve(float t) -> float {
     }
 }
 
-ShowcaseScene::ShowcaseScene(Game* game) : BaseScene(game) {}
+ShowcaseScene::ShowcaseScene(Game* game) : FullScene(game) {}
 ShowcaseScene::~ShowcaseScene() = default;
 
 void ShowcaseScene::Prepare() {
-    _camera = std::make_shared<BeCamera>();
-    _camera->Width = GameIns->Renderer->GetSwapchainPixelWidth();
-    _camera->Height = GameIns->Renderer->GetSwapchainPixelHeight();
-    _camera->NearPlane = 0.1f;
-    _camera->FarPlane = 200.0f;
+    FullScene::Prepare();
+
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
+}
 
-    const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
-    const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
+auto ShowcaseScene::DefineSettings() -> void {
+    _camera->NearPlane = 0.1f;
+    _camera->FarPlane = 200.0f;
+    _machine->UniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.0f));
+}
 
-    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, _assetRegistry, screenWidth, screenHeight);
-
+auto ShowcaseScene::DefineAssets() -> void {
     LoadModels(*_machine);
-    CreateObjects();
-
     _machine->BakeMeshes();
 
     _machine->DeclareGBufferTarget("Showcase_BaseColor",         SenFormat::R11G11B10_Float);
     _machine->DeclareGBufferTarget("Showcase_WorldNormal",       SenFormat::RGBA16_Float);
     _machine->DeclareGBufferTarget("Showcase_SpecularShininess", SenFormat::RGBA8_Unorm);
     _machine->DeclareGBufferTarget("Showcase_Emissive",          SenFormat::R11G11B10_Float);
-    _machine->DeclareDepth        ("Showcase_Depth",             SenFormat::Depth32);
-    _machine->DeclareTexture      ("Showcase_FXAAOutput",        SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Showcase_PixelOutput",       SenFormat::R11G11B10_Float);
+    _machine->DeclareDepthTarget        ("Showcase_Depth",             SenFormat::Depth32);
+    _machine->DeclareTextureTarget      ("Showcase_FXAAOutput",        SenFormat::R11G11B10_Float);
+    _machine->DeclareTextureTarget      ("Showcase_PixelOutput",       SenFormat::R11G11B10_Float);
 }
 
 auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
@@ -125,12 +123,12 @@ auto ShowcaseScene::CreateObjects() -> void {
     );
 }
 
-void ShowcaseScene::OnLoad() {
-    _machine->UniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.0f));
-    LoadPasses();
+auto ShowcaseScene::DefineScene() -> void {
+    _registry.clear();
+    CreateObjects();
 }
 
-void ShowcaseScene::LoadPasses() {
+auto ShowcaseScene::DefinePasses() -> void {
     _machine->ClearPasses();
     _machine->AddGeometryPass();
 
@@ -152,14 +150,13 @@ void ShowcaseScene::LoadPasses() {
     }
 
     _machine->AddBackbufferPass(backbufferInput, { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
-    _machine->BuildPasses();
-    _machine->Activate();
+    _machine->InitialisePasses();
 }
 
 void ShowcaseScene::Tick(float deltaTime) {
-    if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
-        GameIns->Input->SetMouseCapture(false);
-        GameIns->SceneManager->RequestSceneChange("menu");
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        _gameIns->Input->SetMouseCapture(false);
+        _gameIns->SceneManager->RequestSceneChange("menu");
         return;
     }
 
@@ -176,29 +173,29 @@ void ShowcaseScene::Tick(float deltaTime) {
         _braceTime = 0.f;
     };
 
-    if (GameIns->Input->GetKeyDown(GLFW_KEY_1)) {
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_1)) {
         startBrace(GLFW_KEY_1, "ramen",          "#FAC8CD", TransformComponent());
-    } else if (GameIns->Input->GetKeyDown(GLFW_KEY_2)) {
+    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_2)) {
         startBrace(GLFW_KEY_2, "still-life",     "#D0D0C4", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(4.f) });
-    } else if (GameIns->Input->GetKeyDown(GLFW_KEY_3)) {
+    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_3)) {
         startBrace(GLFW_KEY_3, "headset",        "#84DCC6", TransformComponent { .Position = { 0, -0.5, 0 }, .Scale = glm::vec3(2.f) });
-    } else if (GameIns->Input->GetKeyDown(GLFW_KEY_4)) {
+    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_4)) {
         startBrace(GLFW_KEY_4, "honeydew_melons","#855C36", TransformComponent { .Position = { 0.f, 1.f, 0.f } });
-    } else if (GameIns->Input->GetKeyDown(GLFW_KEY_5)) {
+    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_5)) {
         startBrace(GLFW_KEY_5, "hunger_games",   "#39708E", TransformComponent { .Position = { 0.f, 3.f, 0.f }, .Scale = glm::vec3(2.f) });
-    } else if (GameIns->Input->GetKeyDown(GLFW_KEY_6)) {
+    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_6)) {
         startBrace(GLFW_KEY_6, "flower-pot",     "#E5D372", TransformComponent { .Position = { 0.f, -2.f, 0.f }, .Scale = glm::vec3(2.f) });
-    } else if (GameIns->Input->GetKeyDown(GLFW_KEY_7)) {
+    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_7)) {
         startBrace(GLFW_KEY_7, "watermelons",    "#A3A17B", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(90.f) });
-    } else if (GameIns->Input->GetKeyDown(GLFW_KEY_8)) {
+    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_8)) {
         startBrace(GLFW_KEY_8, "apfel",          "#73615E", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(2.f) });
-    } else if (GameIns->Input->GetKeyDown(GLFW_KEY_9)) {
+    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_9)) {
         startBrace(GLFW_KEY_9, "eggplant",       "#E1D5F2", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(0.2f) });
-    } else if (GameIns->Input->GetKeyDown(GLFW_KEY_0)) {
+    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_0)) {
         startBrace(GLFW_KEY_0, "tomatoes",       "#E4FDE1", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(2.f) });
     }
 
-    if (_heldKey != -1 && GameIns->Input->GetKeyUp(_heldKey)) {
+    if (_heldKey != -1 && _gameIns->Input->GetKeyUp(_heldKey)) {
         if (_popState == PopState::Bracing) {
             _popState = PopState::Expanding;
             _expandTime = 0.f;
@@ -218,53 +215,43 @@ void ShowcaseScene::Tick(float deltaTime) {
         }
     }
 
-    if (GameIns->Input->GetKeyDown(GLFW_KEY_C)) {
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_C)) {
         _useOrbitCamera = !_useOrbitCamera;
     }
 
-    if (GameIns->Input->GetKeyDown(GLFW_KEY_T)) {
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_T)) {
         _animatedTransitions = !_animatedTransitions;
         _popState = PopState::Idle;
         _heldKey = -1;
     }
 
-    if (GameIns->Input->GetKeyDown(GLFW_KEY_P)) {
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_P)) {
         _pixelationEnabled = !_pixelationEnabled;
-        LoadPasses();
+        DefinePasses();
     }
 
-    if (GameIns->Input->GetKeyDown(GLFW_KEY_O) && _pixelationEnabled) {
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_O) && _pixelationEnabled) {
         _pixelEdgesEnabled = !_pixelEdgesEnabled;
-        LoadPasses();
+        DefinePasses();
     }
 
     if (_pixelationEnabled) {
-        if (GameIns->Input->GetKeyDown(GLFW_KEY_MINUS)) {
+        if (_gameIns->Input->GetKeyDown(GLFW_KEY_MINUS)) {
             _pixelSize = std::max(1.0f, _pixelSize - 2.0f);
-            LoadPasses();
+            DefinePasses();
         }
-        if (GameIns->Input->GetKeyDown(GLFW_KEY_EQUAL)) {
+        if (_gameIns->Input->GetKeyDown(GLFW_KEY_EQUAL)) {
             _pixelSize = std::min(64.0f, _pixelSize + 2.0f);
-            LoadPasses();
+            DefinePasses();
         }
     }
 
     if (_useOrbitCamera) {
-        GameIns->Input->SetMouseCapture(false);
-        _orbitCameraController->Update(deltaTime, GameIns->Input.get());
+        _gameIns->Input->SetMouseCapture(false);
+        _orbitCameraController->Update(deltaTime, _gameIns->Input.get());
     } else {
-        _freeCameraController->Update(deltaTime, GameIns->Input.get());
+        _freeCameraController->Update(deltaTime, _gameIns->Input.get());
     }
-
-    auto& uniformMat = *_machine->UniformMaterial;
-    const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
-    uniformMat.SetMatrix("CameraProjectionView", projView);
-    uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));
-    uniformMat.SetFloat4("NearFarPlane", { _camera->NearPlane, _camera->FarPlane, 1.0f / _camera->NearPlane, 1.0f / _camera->FarPlane });
-    uniformMat.SetFloat3("CameraPosition", _camera->Position);
-
-    static const auto GeometryView = _registry.view<NameComponent, TransformComponent, RenderComponent>();
-    static const auto SunView      = _registry.view<SunLightComponent>();
 
     {
         float scaleMult = 1.f;
@@ -286,32 +273,7 @@ void ShowcaseScene::Tick(float deltaTime) {
         transform.Scale *= scaleMult;
     }
 
-    _machine->ClearFrame();
-
-    for (const auto [entity, name, transform, render] : GeometryView.each()) {
-        _machine->AddGeometry({
-            .Name = name.Name,
-            .ModelMatrix = BeSRMGeometryEntry::CalculateModelMatrix(transform.Position, transform.Rotation, transform.Scale),
-            .Prop = render.Prop,
-            .CastShadows = render.CastShadows,
-        });
-    }
-
-    for (const auto [entity, sunLight] : SunView.each()) {
-        _machine->AddSunLight({
-            .Direction = sunLight.Direction,
-            .Color = sunLight.Color,
-            .Power = sunLight.Power,
-            .CastsShadows = sunLight.CastsShadows,
-            .ShadowViewProjection = BeSRMSunLightEntry::CalculateViewProj(
-                sunLight.Direction,
-                sunLight.ShadowCameraDistance,
-                sunLight.ShadowMapWorldSize,
-                sunLight.ShadowNearPlane,
-                sunLight.ShadowFarPlane
-            ),
-        });
-    }
+    FullScene::Tick(deltaTime);
 }
 
 auto ShowcaseScene::ChangeShowcase(

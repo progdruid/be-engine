@@ -1,8 +1,9 @@
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS *.cpp *.h *.hpp)
 file(GLOB_RECURSE HLSL_FILES CONFIGURE_DEPENDS shaders/*.hlsl shaders/*.hlsli)
-set_source_files_properties(${HLSL_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
+file(GLOB_RECURSE ASSET_FILES CONFIGURE_DEPENDS assets/*)
+set_source_files_properties(${HLSL_FILES} ${ASSET_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
 
-add_executable(example-sakura ${SOURCES} ${HLSL_FILES})
+add_executable(example-sakura ${SOURCES} ${HLSL_FILES} ${ASSET_FILES})
 target_include_directories(example-sakura PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(example-sakura PRIVATE core toolkit lua luabridge3)
 

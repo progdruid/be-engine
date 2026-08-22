@@ -9,6 +9,7 @@
 
 #include "BeMaterial.h"
 #include "BeMesh.h"
+#include "BePassSequence.h"
 #include "BeProp.h"
 #include <sen-rhi/SenTypes.h>
 
@@ -114,7 +115,7 @@ class BeStandardRenderMachine {
     std::vector<std::shared_ptr<BeTexture>> _gbufferTargets;
     std::shared_ptr<BeTexture> _depthTarget;
 
-    std::vector<std::unique_ptr<BeRenderPass>> _passes;
+    BePassSequence _sequence;
 
     std::shared_ptr<BeTexture> _envCubemap;
     std::shared_ptr<BeTexture> _irradianceCubemap;
@@ -147,9 +148,10 @@ class BeStandardRenderMachine {
 
     // texture registry ------------------------------------------------------------------------------------------------
     expose
+    auto ClearTargets() -> void;
     auto DeclareGBufferTarget(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture>;
-    auto DeclareDepth(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture>;
-    auto DeclareTexture(const std::string& name, SenFormat format, bool storage = false, uint32_t mips = 1) -> std::shared_ptr<BeTexture>;
+    auto DeclareDepthTarget(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture>;
+    auto DeclareTextureTarget(const std::string& name, SenFormat format, bool storage = false, uint32_t mips = 1) -> std::shared_ptr<BeTexture>;
     auto GetRenderTexture(const std::string& name) const -> std::shared_ptr<BeTexture>;
 
     // pass builders ---------------------------------------------------------------------------------------------------
@@ -174,7 +176,7 @@ class BeStandardRenderMachine {
 
     expose
     auto ClearPasses() -> void;
-    auto BuildPasses() -> void;
+    auto InitialisePasses() -> void;
     auto Activate() -> void;
 
     // debug channel (−1 = normal, 0..N = G-buffer targets in declaration order) ---------------------------------------
@@ -210,6 +212,7 @@ class BeStandardRenderMachine {
     
     // mesh baking -----------------------------------------------------------------------------------------------------
     expose
+    auto ClearMeshes() -> void;
     auto RegisterMesh(const std::shared_ptr<BeMesh>& mesh) -> void;
     auto BakeMeshes() -> void;
     auto GetMeshSlices(BeMesh* mesh) const -> const std::vector<BeMeshSlice>& { return _meshSlices.at(mesh); }

@@ -16,18 +16,23 @@ MenuScene::~MenuScene() = default;
 
 auto MenuScene::OnLoad() -> void {
 
-    _imguiPass = std::make_unique<BeImGuiPass>(GameIns->Window);
-    _imguiPass->SetUICallback([this](){RunUI();});
-    _imguiPass->Initialise(*GameIns->Renderer);
-    GameIns->Renderer->SetPasses({ _imguiPass.get() });
+    auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
+    imguiPass->SetUICallback([this](){RunUI();});
+    imguiPass->Initialise(*_gameIns->Renderer);
+    _sequence.Passes.clear();
+    _sequence.Passes.push_back(std::move(imguiPass));
 
     ImGui::GetIO().Fonts->AddFontFromFileTTF("assets/i-hate-comic-sans.regular.ttf", 16.0f);
     _titleFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("assets/somelist.ttf", 16.0f);
 }
 
+auto MenuScene::Render() -> void {
+    _gameIns->Renderer->SetSequence(&_sequence);
+}
+
 auto MenuScene::Tick(float deltaTime) -> void {
-    if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
-        GameIns->Window->RequestClose();
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        _gameIns->Window->RequestClose();
     }
 }
 
@@ -66,28 +71,28 @@ auto MenuScene::RunUI() -> void {
     ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
 
     if (ImGui::Button("Sakura", ImVec2(buttonWidth, buttonHeight))) {
-        GameIns->SceneManager->RequestSceneChange("sakura");
+        _gameIns->SceneManager->RequestSceneChange("sakura");
     }
     
     ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
     ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.6f);
     
     if (ImGui::Button("Showcase", ImVec2(buttonWidth, buttonHeight))) {
-        GameIns->SceneManager->RequestSceneChange("showcase");
+        _gameIns->SceneManager->RequestSceneChange("showcase");
     }
 
     ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
     ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.7f);
 
     if (ImGui::Button("Rift", ImVec2(buttonWidth, buttonHeight))) {
-        GameIns->SceneManager->RequestSceneChange("rift");
+        _gameIns->SceneManager->RequestSceneChange("rift");
     }
 
     ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
     ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.8f);
 
     if (ImGui::Button("Old", ImVec2(buttonWidth, buttonHeight))) {
-        GameIns->SceneManager->RequestSceneChange("old");
+        _gameIns->SceneManager->RequestSceneChange("old");
     }
 
     ImGui::PopStyleVar();

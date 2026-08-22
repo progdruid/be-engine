@@ -18,10 +18,10 @@
 #include "scenes/BeSceneManager.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
-OldScene::OldScene(Game* game) : BaseScene(game) {}
+OldScene::OldScene(Game* game) : FullScene(game) {}
 OldScene::~OldScene() = default;
 
-auto OldScene::LoadPasses() -> void {
+auto OldScene::DefinePasses() -> void {
     _machine->ClearPasses();
 
     _machine->AddShadowPass();
@@ -32,25 +32,19 @@ auto OldScene::LoadPasses() -> void {
     _machine->AddTonemapperPass("Old_BloomOutput", "Old_TonemapperOutput");
 
     _machine->AddBackbufferPass("Old_TonemapperOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
-    _machine->BuildPasses();
-    _machine->Activate();
+    _machine->InitialisePasses();
 }
 
-auto OldScene::Prepare() -> void {
-    _camera = std::make_shared<BeCamera>();
-    _camera->Width = GameIns->Window->GetReportedLogicalWidth();
-    _camera->Height = GameIns->Window->GetReportedLogicalHeight();
+auto OldScene::DefineSettings() -> void {
     _camera->NearPlane = 0.1f;
     _camera->FarPlane = 200.0f;
+    _machine->UniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.0f));
+}
 
+auto OldScene::DefineAssets() -> void {
     const auto standardShader    = BeShaderLibrary::GetShader("standard-phong");
     const auto tessellatedShader = BeShaderLibrary::GetShader("tessellated");
     const auto terrainShader     = BeShaderLibrary::GetShader("terrain");
-
-    const uint32_t screenWidth  = GameIns->Renderer->GetSwapchainPixelWidth();
-    const uint32_t screenHeight = GameIns->Renderer->GetSwapchainPixelHeight();
-
-    _machine = std::make_unique<BeStandardRenderMachine>(GameIns->Renderer, _assetRegistry, screenWidth, screenHeight);
 
     {
         auto planeMesh = BeMeshPrimitives::Plane(63);
@@ -82,10 +76,10 @@ auto OldScene::Prepare() -> void {
     _machine->DeclareGBufferTarget("Old_WorldNormal",       SenFormat::RGBA16_Float);
     _machine->DeclareGBufferTarget("Old_SpecularShininess", SenFormat::RGBA8_Unorm);
     _machine->DeclareGBufferTarget("Old_Emissive",          SenFormat::R11G11B10_Float);
-    _machine->DeclareDepth        ("Old_Depth",             SenFormat::Depth32);
-    _machine->DeclareTexture      ("Old_HDR",               SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Old_BloomOutput",       SenFormat::R11G11B10_Float);
-    _machine->DeclareTexture      ("Old_TonemapperOutput",  SenFormat::R11G11B10_Float);
+    _machine->DeclareDepthTarget        ("Old_Depth",             SenFormat::Depth32);
+    _machine->DeclareTextureTarget      ("Old_HDR",               SenFormat::R11G11B10_Float);
+    _machine->DeclareTextureTarget      ("Old_BloomOutput",       SenFormat::R11G11B10_Float);
+    _machine->DeclareTextureTarget      ("Old_TonemapperOutput",  SenFormat::R11G11B10_Float);
 
     _assetRegistry.AddTexture("Old_BloomDirt",
         BeTexture::Create("Old_BloomDirt")
@@ -94,11 +88,8 @@ auto OldScene::Prepare() -> void {
     );
 }
 
-auto OldScene::OnLoad() -> void {
+auto OldScene::DefineScene() -> void {
     _registry.clear();
-
-    _machine->UniformMaterial->SetFloat3("AmbientColor", glm::vec3(0.0f));
-    LoadPasses();
 
     CreateEntity(_registry
         ,NameComponent { .Name = "Macintosh" }
@@ -176,47 +167,47 @@ auto OldScene::OnLoad() -> void {
 }
 
 auto OldScene::Tick(float deltaTime) -> void {
-    if (GameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
-        GameIns->Input->SetMouseCapture(false);
-        GameIns->SceneManager->RequestSceneChange("menu");
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        _gameIns->Input->SetMouseCapture(false);
+        _gameIns->SceneManager->RequestSceneChange("menu");
         return;
     }
 
     constexpr float moveSpeed = 5.0f;
     float speed = moveSpeed * deltaTime;
-    if (GameIns->Input->GetKey(GLFW_KEY_LEFT_SHIFT) || (GameIns->Input->IsGamepadConnected() && GameIns->Input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) {
+    if (_gameIns->Input->GetKey(GLFW_KEY_LEFT_SHIFT) || (_gameIns->Input->IsGamepadConnected() && _gameIns->Input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) {
         speed *= 2.0f;
     }
-    if (GameIns->Input->GetKey(GLFW_KEY_W)) { _camera->Position += _camera->GetFront() * speed; }
-    if (GameIns->Input->GetKey(GLFW_KEY_S)) { _camera->Position -= _camera->GetFront() * speed; }
-    if (GameIns->Input->GetKey(GLFW_KEY_D)) { _camera->Position += _camera->GetRight() * speed; }
-    if (GameIns->Input->GetKey(GLFW_KEY_A)) { _camera->Position -= _camera->GetRight() * speed; }
-    if (GameIns->Input->GetKey(GLFW_KEY_E)) { _camera->Position += glm::vec3(0, 1, 0) * speed; }
-    if (GameIns->Input->GetKey(GLFW_KEY_Q)) { _camera->Position -= glm::vec3(0, 1, 0) * speed; }
+    if (_gameIns->Input->GetKey(GLFW_KEY_W)) { _camera->Position += _camera->GetFront() * speed; }
+    if (_gameIns->Input->GetKey(GLFW_KEY_S)) { _camera->Position -= _camera->GetFront() * speed; }
+    if (_gameIns->Input->GetKey(GLFW_KEY_D)) { _camera->Position += _camera->GetRight() * speed; }
+    if (_gameIns->Input->GetKey(GLFW_KEY_A)) { _camera->Position -= _camera->GetRight() * speed; }
+    if (_gameIns->Input->GetKey(GLFW_KEY_E)) { _camera->Position += glm::vec3(0, 1, 0) * speed; }
+    if (_gameIns->Input->GetKey(GLFW_KEY_Q)) { _camera->Position -= glm::vec3(0, 1, 0) * speed; }
 
-    if (GameIns->Input->IsGamepadConnected()) {
-        const glm::vec2 leftStick = GameIns->Input->GetGamepadLeftStick();
+    if (_gameIns->Input->IsGamepadConnected()) {
+        const glm::vec2 leftStick = _gameIns->Input->GetGamepadLeftStick();
         _camera->Position += _camera->GetFront() * (leftStick.y * speed);
         _camera->Position += _camera->GetRight() * (leftStick.x * speed);
 
-        const float verticalInput = GameIns->Input->GetGamepadRightTrigger() - GameIns->Input->GetGamepadLeftTrigger();
+        const float verticalInput = _gameIns->Input->GetGamepadRightTrigger() - _gameIns->Input->GetGamepadLeftTrigger();
         _camera->Position += glm::vec3(0, 1, 0) * (verticalInput * speed);
     }
 
     glm::vec3 euler = _camera->GetEuler();
 
     bool captureMouse = false;
-    if (GameIns->Input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
+    if (_gameIns->Input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
         constexpr float mouseSens = 0.1f;
         captureMouse = true;
-        const glm::vec2 mouseDelta = GameIns->Input->GetMouseDelta();
+        const glm::vec2 mouseDelta = _gameIns->Input->GetMouseDelta();
         euler.x += mouseDelta.x * mouseSens;
         euler.y -= mouseDelta.y * mouseSens;
     }
-    GameIns->Input->SetMouseCapture(captureMouse);
+    _gameIns->Input->SetMouseCapture(captureMouse);
 
-    if (GameIns->Input->IsGamepadConnected()) {
-        const glm::vec2 rightStick = GameIns->Input->GetGamepadRightStick();
+    if (_gameIns->Input->IsGamepadConnected()) {
+        const glm::vec2 rightStick = _gameIns->Input->GetGamepadRightStick();
         constexpr float gamepadCameraSens = 100.0f;
         euler.x += rightStick.x * gamepadCameraSens * deltaTime;
         euler.y += rightStick.y * gamepadCameraSens * deltaTime;
@@ -225,28 +216,11 @@ auto OldScene::Tick(float deltaTime) -> void {
     euler.y = glm::clamp(euler.y, -89.0f, 89.0f);
     _camera->SetEuler(euler.x, euler.y);
 
-    const glm::vec2 scrollDelta = GameIns->Input->GetScrollDelta();
+    const glm::vec2 scrollDelta = _gameIns->Input->GetScrollDelta();
     if (scrollDelta.y != 0.0f) {
         _camera->Fov -= scrollDelta.y;
         _camera->Fov = glm::clamp(_camera->Fov, 20.0f, 90.0f);
     }
-
-    _elapsedTime += deltaTime;
-
-    {
-        _camera->Update();
-        auto& uniformMat = *_machine->UniformMaterial;
-        const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
-        uniformMat.SetMatrix("CameraProjectionView", projView);
-        uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));
-        uniformMat.SetFloat4("NearFarPlane", { _camera->NearPlane, _camera->FarPlane, 1.0f / _camera->NearPlane, 1.0f / _camera->FarPlane });
-        uniformMat.SetFloat3("CameraPosition", _camera->Position);
-        uniformMat.SetFloat1("Time", _elapsedTime);
-    }
-
-    static const auto GeometryView   = _registry.view<NameComponent, TransformComponent, RenderComponent>();
-    static const auto SunView        = _registry.view<SunLightComponent>();
-    static const auto PointLightView = _registry.view<NameComponent, TransformComponent, PointLightComponent>();
 
     {
         static float angle = 0.0f;
@@ -255,52 +229,17 @@ auto OldScene::Tick(float deltaTime) -> void {
             angle -= glm::two_pi<float>();
         }
 
+        const auto pointLights = _registry.view<NameComponent, TransformComponent, PointLightComponent>();
         auto i = size_t(0);
-        for (const auto [entity, name, transform, _] : PointLightView.each()) {
+        for (const auto [entity, name, transform, _] : pointLights.each()) {
             constexpr float radius = 13.0f;
-            const auto add = glm::two_pi<float>() * (float(i) / float(PointLightView.size_hint()));
+            const auto add = glm::two_pi<float>() * (float(i) / float(pointLights.size_hint()));
             const auto rad = radius * (0.7f + 0.3f * ((i + 1) % 2));
             transform.Position = glm::vec3(cos(angle + add) * rad, 4.0f + 4.0f * (i % 2), sin(angle + add) * rad);
             i++;
         }
     }
 
-    _machine->ClearFrame();
-
-    for (const auto [entity, name, transform, render] : GeometryView.each()) {
-        _machine->AddGeometry({
-            .Name = name.Name,
-            .ModelMatrix = BeSRMGeometryEntry::CalculateModelMatrix(transform.Position, transform.Rotation, transform.Scale),
-            .Prop = render.Prop,
-            .CastShadows = render.CastShadows,
-        });
-    }
-
-    for (const auto [entity, sunLight] : SunView.each()) {
-        _machine->AddSunLight({
-            .Direction = sunLight.Direction,
-            .Color = sunLight.Color,
-            .Power = sunLight.Power,
-            .CastsShadows = sunLight.CastsShadows,
-            .ShadowViewProjection = BeSRMSunLightEntry::CalculateViewProj(
-                sunLight.Direction,
-                sunLight.ShadowCameraDistance,
-                sunLight.ShadowMapWorldSize,
-                sunLight.ShadowNearPlane,
-                sunLight.ShadowFarPlane
-            ),
-        });
-    }
-
-    for (const auto [entity, name, transform, pointLight] : PointLightView.each()) {
-        _machine->AddPointLight({
-            .Name = name.Name,
-            .Position = transform.Position,
-            .Radius = pointLight.Radius,
-            .Color = pointLight.Color,
-            .Power = pointLight.Power,
-            .CastsShadows = pointLight.CastsShadows,
-            .ShadowNearPlane = pointLight.ShadowNearPlane,
-        });
-    }
+    FullScene::Tick(deltaTime);
+    _machine->UniformMaterial->SetFloat1("Time", _time);
 }

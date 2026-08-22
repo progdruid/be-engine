@@ -1,14 +1,14 @@
 function makeSettings()
     return {
         srm = {
-            shadow     = { bias = 16.0 / 100000.0 },
+            shadow     = { bias = 7.0 / 100000.0 },
             ibl        = { maxSampleRadiance = 1000.0 },
             skybox     = { clampRadiance = 0.0 },
             bloom      = { threshold = 2.5, knee = 0.7, intensity = 0.7, clamp = 4.0, upsampleRadius = 1.0 },
             tonemapper = { exposure = 0.5, contrast = 1.70 },
         },
 
-        camera = { nearPlane = 0.1, farPlane = 250.0 },
+        camera = { nearPlane = 0.1, farPlane = 200.0 },
 
         ambient = { color = "#000000" },
 
@@ -58,9 +58,9 @@ function makeShowcaseContent(data)
             castsShadows = true,
             shadowMapResolution = 4096,
             shadowCameraDistance = 100.0,
-            shadowMapWorldSize = 100.0,
+            shadowMapWorldSize = 80.0,
             shadowNearPlane = 0.1,
-            shadowFarPlane = 400.0
+            shadowFarPlane = 300.0
         }
     }
     

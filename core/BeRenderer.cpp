@@ -1,6 +1,7 @@
 #include "BeRenderer.h"
 
 #include "BeMaterialArena.h"
+#include "BePassSequence.h"
 #include "BeRenderPass.h"
 #include "BeShader.h"
 #include "BeShaderLibrary.h"
@@ -63,17 +64,17 @@ auto BeRenderer::GetViewport() const -> SenViewport {
     return { 0, 0, float(GetSwapchainPixelWidth()), float(GetSwapchainPixelHeight()), 0, 1 };
 }
 
-auto BeRenderer::SetPasses(std::vector<BeRenderPass*> passes) -> void {
-    SenBackend::WaitIdle();
-    _passes = std::move(passes);
+auto BeRenderer::SetSequence(BePassSequence* sequence) -> void {
+    _sequence = sequence;
 }
 
-auto BeRenderer::ClearPasses() -> void {
+auto BeRenderer::WaitIdle() -> void {
     SenBackend::WaitIdle();
-    _passes.clear();
 }
 
 auto BeRenderer::Render() -> void {
+    be_assert(_sequence != nullptr, "BeRenderer::Render(): sequence is null");
+    
     SenBackend::BeginDebugEvent("Frame");
 
     const uint32_t slot = _currentFrame % FramesInFlight;
@@ -86,7 +87,7 @@ auto BeRenderer::Render() -> void {
     auto& cmd = _frameCmds[slot];
     cmd.Begin();
 
-    for (const auto& pass : _passes) {
+    for (const auto& pass : _sequence->Passes) {
         SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
         pass->Render(*this, cmd);
         SenBackend::EndDebugEvent();

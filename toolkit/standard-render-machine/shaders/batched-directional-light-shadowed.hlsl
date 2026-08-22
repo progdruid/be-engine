@@ -72,7 +72,15 @@ struct PixelOutput {
 #include "light-common.hlsli"
 #include "fullscreen-vertex.hlsl"
 
-float PCFShadow(Texture2DArray shadowMap, float slice, SamplerState pcfSampler, float2 uv, float texelSize, float currentDepth, float bias) {
+float PCFShadow(
+    Texture2DArray shadowMap, 
+    float slice, 
+    SamplerState pcfSampler, 
+    float2 uv, 
+    float texelSize, 
+    float currentDepth, 
+    float bias
+) {
     float shadow = 0.0;
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {

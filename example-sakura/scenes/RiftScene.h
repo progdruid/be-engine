@@ -7,14 +7,10 @@
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 
-#include "BaseScene.h"
-#include "BeAssetRegistry.h"
-#include "entt/entt.hpp"
+#include "FullScene.h"
 
-class BeCamera;
 class ShipCameraController;
 class BeMaterial;
-class BeStandardRenderMachine;
 class BeImGuiPass;
 
 struct RiftSceneSettings {
@@ -70,12 +66,8 @@ struct RiftSceneSettings {
     } Background;
 };
 
-class RiftScene : public BaseScene {
+class RiftScene : public FullScene {
     hide
-    BeAssetRegistry _assetRegistry;
-    entt::registry _registry;
-    std::shared_ptr<BeCamera> _camera;
-    std::unique_ptr<BeStandardRenderMachine> _machine;
     std::unique_ptr<ShipCameraController> _shipCameraController;
     std::array<entt::entity, 9> _terrainTiles;
     std::shared_ptr<BeMaterial> _posterizeMaterial;
@@ -88,10 +80,11 @@ class RiftScene : public BaseScene {
     ~RiftScene() override;
 
     auto Prepare() -> void override;
-    auto CreateObjects() -> void;
-
-    auto OnLoad() -> void override;
-    auto LoadPasses() -> void;
-
     auto Tick(float deltaTime) -> void override;
+
+    protect
+    auto DefineAssets() -> void override;
+    auto DefineSettings() -> void override;
+    auto DefineScene() -> void override;
+    auto DefinePasses() -> void override;
 };

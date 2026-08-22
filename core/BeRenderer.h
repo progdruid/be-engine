@@ -9,6 +9,7 @@
 
 class BeWindow;
 class BeRenderPass;
+struct BePassSequence;
 class BeShader;
 
 
@@ -26,14 +27,14 @@ class BeRenderer {
     hide
     uint32_t _desiredWidth;
     uint32_t _desiredHeight;
-    void* _nativeWindow;
+    raw_ptr<void> _nativeWindow;
     SenSwapchain _swapchain;
 
     SenTexture _backbufferTexture;
     std::array<SenCommandBuffer, FramesInFlight> _frameCmds;
     SenCommandBuffer _immediateCmd;
 
-    std::vector<BeRenderPass*> _passes;
+    raw_ptr<BePassSequence> _sequence = nullptr;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
@@ -48,8 +49,8 @@ class BeRenderer {
     
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
     expose
-    auto SetPasses(std::vector<BeRenderPass*> passes) -> void;
-    auto ClearPasses() -> void;
+    auto SetSequence(BePassSequence* sequence) -> void;
+    auto WaitIdle() -> void;
     auto Render() -> void;
     auto RenderOnce(const std::vector<BeRenderPass*>& passes) -> void;
 

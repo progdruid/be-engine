@@ -4,25 +4,16 @@
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 
-#include "BaseScene.h"
+#include "FullScene.h"
 #include "Components.h"
-#include "BeAssetRegistry.h"
-#include "entt/entt.hpp"
-class BeInput;
-class BeCamera;
+
 class OrbitCameraController;
 class FreeCameraController;
-class BeWindow;
-class BeRenderer;
 class BeStandardRenderMachine;
 class BeMaterial;
 
-class ShowcaseScene : public BaseScene {
+class ShowcaseScene : public FullScene {
     hide
-    BeAssetRegistry _assetRegistry;
-    entt::registry _registry;
-    std::shared_ptr<BeCamera> _camera;
-    std::unique_ptr<BeStandardRenderMachine> _machine;
     std::unique_ptr<OrbitCameraController> _orbitCameraController;
     std::unique_ptr<FreeCameraController> _freeCameraController;
     bool _useOrbitCamera = true;
@@ -51,14 +42,17 @@ class ShowcaseScene : public BaseScene {
     ~ShowcaseScene() override;
 
     auto Prepare() -> void override;
-    auto CreateTargetTextures() -> void;
-    auto LoadModels (BeStandardRenderMachine& machine) -> void;
-    auto CreateObjects() -> void;
-
-    auto OnLoad() -> void override;
-    auto LoadPasses() -> void;
-
     auto Tick(float deltaTime) -> void override;
+
+    protect
+    auto DefineSettings() -> void override;
+    auto DefineAssets() -> void override;
+    auto DefineScene() -> void override;
+    auto DefinePasses() -> void override;
+
+    hide
+    auto LoadModels(BeStandardRenderMachine& machine) -> void;
+    auto CreateObjects() -> void;
     auto ChangeShowcase (
         const std::string& modelName,
         const std::string& hxcolor,

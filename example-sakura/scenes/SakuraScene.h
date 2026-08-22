@@ -1,44 +1,19 @@
 #pragma once
 #include <array>
-#include <filesystem>
 #include <string>
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
-#include <entt/entt.hpp>
 
-#include "BaseScene.h"
-#include "BeAssetRegistry.h"
-#include "BeFileWatcher.h"
+#include "FullScene.h"
 #include "FpsCounter.h"
-#include "standard-render-machine/BeStandardRenderMachine.h"
 
 struct BeProp;
-class BeInput;
-class BeCamera;
 class OrbitCameraController;
 class FreeCameraController;
 class RigCameraController;
-class BeWindow;
-class BeRenderer;
 class BeMaterial;
 
 struct SakuraSceneSettings {
-    BeSRMSettings SRM = {
-        .Shadow = {
-            .Bias = 16.f / 100000.f,
-        },
-        .Bloom = {
-            .Threshold = 2.5f,
-            .Knee = 0.7f,
-            .Intensity = 0.7f,
-            .Clamp = 4.0f,
-        },
-        .Tonemapper = {
-            .Exposure = 0.25f,
-            .Contrast = 1.70f,
-        },
-    };
-
     struct {
         uint8_t CurrentSceneIndex = 0;
         std::array<std::string, 4> Paths = {
@@ -48,15 +23,6 @@ struct SakuraSceneSettings {
             "assets/lua-scenes/spinning_lights_500_scene.lua",
         };
     } SceneFile;
-
-    struct {
-        float NearPlane = 0.1f;
-        float FarPlane = 250.0f;
-    } Camera;
-
-    struct {
-        glm::vec3 Color = glm::vec3(0.0f);
-    } Ambient;
 
     struct {
         bool Enabled = true;
@@ -79,38 +45,32 @@ struct SakuraSceneSettings {
     } Background;
 };
 
-class SakuraScene : public BaseScene {
+class SakuraScene : public FullScene {
     expose
     SakuraSceneSettings Settings;
 
     hide
-    BeAssetRegistry _assetRegistry;
-    entt::registry _registry;
-    std::shared_ptr<BeCamera> _camera;
     std::unique_ptr<OrbitCameraController> _orbitCameraController;
     std::unique_ptr<FreeCameraController> _freeCameraController;
-    std::unique_ptr<RigCameraController> _rigCameraController;
-    int _cameraMode = 0;   // 0 = free, 1 = orbit, 2 = rig
+    int _cameraMode = 0;
 
     std::shared_ptr<BeMaterial> _dofMaterial;
-    std::unique_ptr<BeStandardRenderMachine> _machine;
-    BeFileWatcher::WatchId _sceneWatch = 0;
     int _pendingSceneIndex = -1;
 
-    float _time = 0.0f;
     FpsCounter _fpsCounter;
 
     expose
     explicit SakuraScene(Game* game);
     ~SakuraScene() override;
-
-    expose auto Prepare() -> void override;
-    hide auto LoadProps() -> void;
     
-    expose auto OnLoad() -> void override;
-    expose auto OnUnload() -> void override;
-    hide auto RebuildPasses() -> void;
-    hide auto LoadSceneFile() -> void;
-
+    expose auto Prepare() -> void override;
     expose auto Tick(float deltaTime) -> void override;
+
+    protect
+    auto DefineAssets() -> void override;
+    auto DefineSettings() -> void override;
+    auto DefineScene() -> void override;
+    auto DefinePasses() -> void override;
+
+    hide
 };
