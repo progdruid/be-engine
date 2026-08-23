@@ -149,7 +149,7 @@ auto ShowcaseScene::DefinePasses() -> void {
         backbufferInput = "Showcase_PixelOutput";
     }
 
-    _machine->AddBackbufferPass(backbufferInput, { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
+    _machine->AddBackbufferPass(backbufferInput);
     _machine->InitialisePasses();
 }
 

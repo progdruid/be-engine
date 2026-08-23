@@ -139,8 +139,6 @@ auto SakuraScene::DefineSettings() -> void {
     Settings.DepthOfField.MinFocalDistance = depthOfField["minFocalDistance"].GetOr(Settings.DepthOfField.MinFocalDistance);
     Settings.DepthOfField.FocusSpeed = depthOfField["focusSpeed"].GetOr(Settings.DepthOfField.FocusSpeed);
 
-    Settings.Background.ClearColor = settings["background"]["clearColor"].GetOr(Settings.Background.ClearColor);
-
     ApplyBaseSettings(settings);
 }
 
@@ -200,7 +198,7 @@ auto SakuraScene::DefinePasses() -> void {
     fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Sakura_Tonemapper"));
     _machine->AddFullscreenPass(BeShaderLibrary::GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });
 
-    _machine->AddBackbufferPass("Sakura_FXAA", Settings.Background.ClearColor);
+    _machine->AddBackbufferPass("Sakura_FXAA");
 
     auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
     imguiPass->SetUICallback([this]() {

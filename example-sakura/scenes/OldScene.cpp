@@ -31,7 +31,7 @@ auto OldScene::DefinePasses() -> void {
 
     _machine->AddTonemapperPass("Old_BloomOutput", "Old_TonemapperOutput");
 
-    _machine->AddBackbufferPass("Old_TonemapperOutput", { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f });
+    _machine->AddBackbufferPass("Old_TonemapperOutput");
     _machine->InitialisePasses();
 }
 

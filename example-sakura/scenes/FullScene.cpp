@@ -153,6 +153,10 @@ auto FullScene::ApplyBaseSettings(const BeLuaValue& settings) -> void {
     _machine->Settings.Tonemapper.Exposure = tonemapper["exposure"].GetOr(_machine->Settings.Tonemapper.Exposure);
     _machine->Settings.Tonemapper.Contrast = tonemapper["contrast"].GetOr(_machine->Settings.Tonemapper.Contrast);
 
+    const auto backbuffer = settings["backbuffer"];
+    _machine->Settings.Backbuffer.BackgroundColor = backbuffer["backgroundColor"].GetOr(_machine->Settings.Backbuffer.BackgroundColor);
+    _machine->Settings.Backbuffer.DiscardFar = backbuffer["discardFar"].GetOr(_machine->Settings.Backbuffer.DiscardFar);
+
     const auto camera = settings["camera"];
     _camera->NearPlane = camera["nearPlane"].GetOr(_camera->NearPlane);
     _camera->FarPlane = camera["farPlane"].GetOr(_camera->FarPlane);

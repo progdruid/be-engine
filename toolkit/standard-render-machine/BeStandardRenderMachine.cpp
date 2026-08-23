@@ -177,11 +177,11 @@ auto BeStandardRenderMachine::AddTonemapperPass(const std::string& inputName, co
     AddFullscreenPass(shader, _tonemapperMaterial, { outputName });
 }
 
-auto BeStandardRenderMachine::AddBackbufferPass(const std::string& inputName, glm::vec3 clearColor) -> void {
+auto BeStandardRenderMachine::AddBackbufferPass(const std::string& inputName) -> void {
     auto input = GetRenderTexture(inputName);
     be_assert(input, "AddBackbufferPass: input texture not found: " + inputName);
 
-    auto pass = std::make_unique<BeStandardBackbufferPass>(this, input, clearColor);
+    auto pass = std::make_unique<BeStandardBackbufferPass>(this, input, _depthTarget);
     _sequence.Passes.push_back(std::move(pass));
 }
 

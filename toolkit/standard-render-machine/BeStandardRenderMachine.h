@@ -56,6 +56,11 @@ struct BeSRMSettings {
         float Exposure = 1.f;
         float Contrast = 1.f;
     } Tonemapper;
+
+    struct {
+        glm::vec3 BackgroundColor = glm::vec3(0.f);
+        bool DiscardFar = false;
+    } Backbuffer;
 };
 
 // =====================================================================================================================
@@ -162,7 +167,7 @@ class BeStandardRenderMachine {
     auto AddBloomPass(uint32_t mipCount, const std::string& inputName, const std::string& outputName, std::shared_ptr<BeTexture> dirtTexture = nullptr) -> void;
     auto AddFullscreenPass(raw_ptr<BeShader> shader, std::shared_ptr<BeMaterial> material, const std::vector<std::string>& outputNames) -> void;
     auto AddTonemapperPass(const std::string& inputName, const std::string& outputName) -> void;
-    auto AddBackbufferPass(const std::string& inputName, glm::vec3 clearColor = {}) -> void;
+    auto AddBackbufferPass(const std::string& inputName) -> void;
     auto AddPass(std::unique_ptr<BeRenderPass> pass) -> void;
 
     auto AddEnvironmentBakePass(std::shared_ptr<BeTexture> equirect, uint32_t cubemapSize = 512) -> void;

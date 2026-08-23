@@ -60,10 +60,6 @@ struct RiftSceneSettings {
         float ShadowNearPlane = 0.1f;
         float ShadowFarPlane = 200.0f;
     } Sun;
-
-    struct {
-        glm::vec3 ClearColor = { 0.05f, 0.05f, 0.08f };
-    } Background;
 };
 
 class RiftScene : public FullScene {

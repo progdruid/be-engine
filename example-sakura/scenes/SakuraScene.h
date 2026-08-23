@@ -39,10 +39,6 @@ struct SakuraSceneSettings {
         float MinFocalDistance = 0.5f;
         float FocusSpeed = 5.0f;
     } DepthOfField;
-
-    struct {
-        glm::vec3 ClearColor = { 0.f / 255.f, 23.f / 255.f, 31.f / 255.f };
-    } Background;
 };
 
 class SakuraScene : public FullScene {

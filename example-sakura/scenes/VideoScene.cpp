@@ -2,72 +2,93 @@
 
 #include <umbrellas/include-glfw.h>
 
+#include "BeCamera.h"
 #include "BeInput.h"
 #include "BeMeshPrimitives.h"
 #include "BeProp.h"
 #include "BeShaderLibrary.h"
-#include "BeTexture.h"
+#include "FreeCameraController.h"
+#include "OrbitCameraController.h"
 #include "Game.h"
+#include "lua/BeLua.h"
 #include "scenes/BeSceneManager.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
 VideoScene::VideoScene(Game* game) : FullScene(game) {}
-VideoScene::~VideoScene() {}
+VideoScene::~VideoScene() = default;
 
-void VideoScene::Tick(float deltaTime) {
-    FullScene::Tick(deltaTime);
-    
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
-        _gameIns->Input->SetMouseCapture(false);
-        _gameIns->SceneManager->RequestSceneChange("menu");
-        return;
-    }
+auto VideoScene::Prepare() -> void {
+    SetWatchFile("assets/lua-scenes/video_scene.lua", [this] -> void { Reload(); });
+
+    FullScene::Prepare();
+
+    _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
+    _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get(), glm::vec3(0.f), 30.f, 30.f);
+    _camera->Position = { 0.f, 10.f, -24.f };
+    _camera->LookIn(glm::normalize(glm::vec3(0.f, -8.f, 24.f)));
 }
 
 auto VideoScene::DefineAssets() -> void {
+    _machine->ClearTargets();
+    _machine->ClearMeshes();
+
     _machine->DeclareGBufferTarget("Video_Albedo_RGB",      SenFormat::R11G11B10_Float);
     _machine->DeclareGBufferTarget("Video_WorldNormal_XYZ", SenFormat::RGBA16_Float);
     _machine->DeclareGBufferTarget("Video_ORM_RGB",         SenFormat::RGBA8_Unorm);
     _machine->DeclareGBufferTarget("Video_Emissive_RGB",    SenFormat::R11G11B10_Float);
-    _machine->DeclareGBufferTarget("Video_Other",           SenFormat::R11G11B10_Float);
     _machine->DeclareDepthTarget  ("Video_Depth",           SenFormat::Depth32);
     _machine->DeclareTextureTarget("Video_HDR",             SenFormat::R11G11B10_Float);
     _machine->DeclareTextureTarget("Video_Bloom",           SenFormat::R11G11B10_Float);
     _machine->DeclareTextureTarget("Video_Tonemapped",      SenFormat::R11G11B10_Float);
 
-    const auto shader = BeShaderLibrary::GetShader("standard-pbr");
+    const auto shader = BeShaderLibrary::GetShader("displaced-plane");
 
-    const auto sphere = BeProp::FromMesh(BeMeshPrimitives::Sphere(), shader, "geometry-main");
-    _assetRegistry.AddProp("sphere", sphere);
-    _machine->RegisterMesh(sphere->Mesh);
-
-    const auto cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), shader, "geometry-main");
-    _assetRegistry.AddProp("cube", cube);
-    _machine->RegisterMesh(cube->Mesh);
+    const auto plane = BeProp::FromMesh(BeMeshPrimitives::Plane(60), shader, "geometry-main");
+    _assetRegistry.AddProp("displaced-plane", plane);
+    _machine->RegisterMesh(plane->Mesh);
 
     _machine->BakeMeshes();
+}
+
+auto VideoScene::DefineSettings() -> void {
+    const auto settings = _sceneLua->Call("makeData")["Settings"];
+    ApplyBaseSettings(settings);
+}
+
+auto VideoScene::DefineScene() -> void {
+    const auto objects = _sceneLua->Call("makeData")["Objects"];
+    ApplyBaseScene(objects);
 }
 
 auto VideoScene::DefinePasses() -> void {
     _machine->ClearPasses();
 
-    const auto skyTexture = 
-        BeTexture::Create("sky-texture")
-        .LoadFromFileHdr("assets/moonrise_puresky.hdr")
-        .Build()
-    ;
-    _machine->AddEnvironmentBakePass(skyTexture);
-    _machine->BakeEnvironment();
-
-    _machine->AddShadowPass();
     _machine->AddGeometryPass();
     _machine->AddLightingPass("Video_HDR");
-    _machine->AddSkyboxPass("Video_HDR");
     _machine->AddBloomPass(5, "Video_HDR", "Video_Bloom");
-
     _machine->AddTonemapperPass("Video_Bloom", "Video_Tonemapped");
-    _machine->AddBackbufferPass("Video_Tonemapped", glm::vec3(0.f));
+    _machine->AddBackbufferPass("Video_Tonemapped");
 
     _machine->InitialisePasses();
 }
 
+auto VideoScene::Tick(float deltaTime) -> void {
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        _gameIns->Input->SetMouseCapture(false);
+        _gameIns->SceneManager->RequestSceneChange("menu");
+        return;
+    }
+
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_C)) {
+        _useOrbitCamera = !_useOrbitCamera;
+    }
+
+    if (_useOrbitCamera) {
+        _gameIns->Input->SetMouseCapture(false);
+        _orbitCameraController->Update(deltaTime, _gameIns->Input.get());
+    } else {
+        _freeCameraController->Update(deltaTime, _gameIns->Input.get());
+    }
+
+    FullScene::Tick(deltaTime);
+}

@@ -21,8 +21,6 @@ function makeSettings()
         bloom = { mipCount = 5, dirtTexturePath = "assets/bloom-dirt-mask.png" },
 
         depthOfField = { enabled = false, minFocalDistance = 0.5, focusSpeed = 5.0 },
-
-        background = { clearColor = { 0.0 / 255.0, 23.0 / 255.0, 31.0 / 255.0 } },
     }
 end
 

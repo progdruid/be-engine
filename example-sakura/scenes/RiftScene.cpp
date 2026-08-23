@@ -229,7 +229,7 @@ auto RiftScene::DefinePasses() -> void {
 
     _machine->AddFullscreenPass(BeShaderLibrary::GetShader("posterize"), _posterizeMaterial, { "Rift_Post" });
 
-    _machine->AddBackbufferPass("Rift_Post", Settings.Background.ClearColor);
+    _machine->AddBackbufferPass("Rift_Post");
 
     auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
     imguiPass->SetUICallback([this]() { _shipCameraController->DrawDebugUI(); });

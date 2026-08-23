@@ -1,5 +1,6 @@
 #include "MenuScene.h"
 
+#include <algorithm>
 #include <iostream>
 #include <umbrellas/include-glfw.h>
 #include <scenes/BeSceneManager.h>
@@ -65,34 +66,33 @@ auto MenuScene::RunUI() -> void {
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
 
-    auto buttonWidth = 200.0f;
-    auto buttonHeight = 70.f;
-    auto windowWidth = ImGui::GetWindowWidth();
-    ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
+    const char* scenes[] = { "sakura", "showcase", "rift", "old", "video" };
+    const int sceneCount = static_cast<int>(std::size(scenes));
 
-    if (ImGui::Button("Sakura", ImVec2(buttonWidth, buttonHeight))) {
-        _gameIns->SceneManager->RequestSceneChange("sakura");
-    }
-    
-    ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
-    ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.6f);
-    
-    if (ImGui::Button("Showcase", ImVec2(buttonWidth, buttonHeight))) {
-        _gameIns->SceneManager->RequestSceneChange("showcase");
-    }
+    const float windowWidth = ImGui::GetWindowWidth();
+    const float windowHeight = ImGui::GetWindowHeight();
 
-    ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
-    ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.7f);
+    const float buttonWidth = 200.0f;
+    const float buttonHeight = 50.0f;
+    const float groupTop = windowHeight * 0.5f;
+    const float groupHeight = windowHeight * 0.4f;
+    const float minSpacing = 0.0f;
+    const float maxSpacing = 0.0f;
 
-    if (ImGui::Button("Rift", ImVec2(buttonWidth, buttonHeight))) {
-        _gameIns->SceneManager->RequestSceneChange("rift");
-    }
+    float spacing = sceneCount > 1
+        ? (groupHeight - sceneCount * buttonHeight) / (sceneCount - 1)
+        : 0.0f;
+    spacing = std::clamp(spacing, minSpacing, maxSpacing);
 
-    ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
-    ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.8f);
+    const float blockHeight = sceneCount * buttonHeight + (sceneCount - 1) * spacing;
+    const float startY = groupTop + (groupHeight - blockHeight) * 0.5f;
 
-    if (ImGui::Button("Old", ImVec2(buttonWidth, buttonHeight))) {
-        _gameIns->SceneManager->RequestSceneChange("old");
+    for (int i = 0; i < sceneCount; ++i) {
+        ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
+        ImGui::SetCursorPosY(startY + i * (buttonHeight + spacing));
+        if (ImGui::Button(scenes[i], ImVec2(buttonWidth, buttonHeight))) {
+            _gameIns->SceneManager->RequestSceneChange(scenes[i]);
+        }
     }
 
     ImGui::PopStyleVar();
