@@ -212,10 +212,8 @@ auto SenVulkanBackend::DestroySwapchain(SenSwapchain handle) -> void {
 }
 
 auto SenVulkanBackend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uint32_t height) -> void {
-    auto entry = _swapchains[handle.ID];
-
-    DestroySwapchain(handle);
-    handle = CreateSwapchain({
+    const auto& entry = _swapchains.at(handle.ID);
+    const SenSwapchainDesc desc {
         .NativeWindowHandle = entry.NativeWindowHandle,
         .Width = width,
         .Height = height,
@@ -223,7 +221,10 @@ auto SenVulkanBackend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uin
         .FramesInFlight = entry.FramesInFlight,
         .Format = entry.Format,
         .PresentMode = entry.PresentMode,
-    });
+    };
+
+    DestroySwapchain(handle);
+    handle = CreateSwapchain(desc);
 }
 
 auto SenVulkanBackend::GetSwapchainFormat(SenSwapchain handle) -> SenFormat {
@@ -236,6 +237,14 @@ auto SenVulkanBackend::GetSwapchainWidth(SenSwapchain handle) -> uint32_t {
 
 auto SenVulkanBackend::GetSwapchainHeight(SenSwapchain handle) -> uint32_t {
     return _swapchains.at(handle.ID).Height;
+}
+
+auto SenVulkanBackend::GetSurfaceExtent(SenSwapchain handle, uint32_t& outWidth, uint32_t& outHeight) -> void {
+    const auto& entry = _swapchains.at(handle.ID);
+    VkSurfaceCapabilitiesKHR capabilities;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, entry.Surface, &capabilities);
+    outWidth  = capabilities.currentExtent.width;
+    outHeight = capabilities.currentExtent.height;
 }
 
 auto SenVulkanBackend::BeginFrame(SenSwapchain handle, uint32_t frameSlot) -> SenTexture {
@@ -255,11 +264,14 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle, uint32_t frameSlot) -> Se
     };
     vkWaitSemaphores(_device, &slotWait, UINT64_MAX);
 
-    vkAcquireNextImageKHR(
+    const VkResult acquireResult = vkAcquireNextImageKHR(
         _device, entry.Swapchain, UINT64_MAX,
         entry.ImageAvailableSemaphores[frameSlot], VK_NULL_HANDLE,
         &entry.CurrentImageIndex
     );
+    if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
+        return SenTexture{};
+    }
 
     const uint64_t imageValue = entry.ImageTimelineValues[entry.CurrentImageIndex];
     const VkSemaphoreWaitInfo imageWait {

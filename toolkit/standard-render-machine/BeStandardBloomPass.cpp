@@ -101,7 +101,7 @@ auto BeStandardBloomPass::RenderBrightPass(SenCommandBuffer& cmd) const -> void 
     pass.UseTexture(_inputHDR);
     pass.UseMaterial(*_brightMaterial);
     pass.AddColorTarget(_bloomTexture, SenLoadOp::DontCare, {}, 0);
-    pass.SetViewport(_bloomTexture->GetMipViewport(0));
+    pass.SetViewport(_bloomTexture->GetViewport());
     pass.Begin();
     cmd.SetPipeline(_brightPipeline);
     cmd.SetBindGroup(_brightMaterial->GetBindGroup(), 1);
@@ -141,7 +141,7 @@ auto BeStandardBloomPass::RenderAddPass(BeRenderer& renderer, SenCommandBuffer& 
     BePass pass(cmd);
     pass.UseMaterial(*_addMaterial);
     pass.AddColorTarget(_output, SenLoadOp::Load);
-    pass.SetViewport(renderer.GetViewport());
+    pass.SetViewport(_output->GetViewport());
     pass.Begin();
     cmd.SetPipeline(_addPipeline);
     cmd.SetBindGroup(_addMaterial->GetBindGroup(), 1);

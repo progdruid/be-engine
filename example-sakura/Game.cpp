@@ -25,10 +25,10 @@ Game::~Game() = default;
 
 
 auto Game::Run() -> int {
-    Width = 1920;
-    Height = 1080;
+    Width = 800;
+    Height = 600;
     
-    Window = std::make_shared<BeWindow>(0, 0, "be: example sakura", BeWindowMode::Fullscreen);
+    Window = std::make_shared<BeWindow>(Width, Height, "be: example sakura", BeWindowMode::Windowed);
     Renderer = std::make_shared<BeRenderer>(Window->GetReportedPixelWidth(), Window->GetReportedPixelHeight(), static_cast<void*>(Window->GetGlfwWindow()));
     //Renderer->LaunchDevice(SenPresentMode::Immediate);
     Renderer->LaunchDevice(SenPresentMode::VSync);
@@ -86,6 +86,10 @@ auto Game::MainLoop() -> void {
         lastTime = now;
 
         BeFileWatcher::Poll(dt);
+
+        if (!Renderer->PollResize()) {
+            continue;
+        }
 
         const auto activeScene = SceneManager->GetActiveScene<BaseScene>();
         if (activeScene) {

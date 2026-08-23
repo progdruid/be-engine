@@ -39,7 +39,7 @@ auto BeStandardFullscreenEffectPass::Render(BeRenderer& renderer, SenCommandBuff
         pass.UseMaterial(*_material);
     }
     pass.AddColorTargets(_outputs, SenLoadOp::Load);
-    pass.SetViewport(renderer.GetViewport());
+    pass.SetViewport(_outputs[0]->GetViewport());
     pass.Begin();
 
     cmd.SetBindGroup(_srm->UniformMaterial->GetBindGroup(), 0);

@@ -39,7 +39,7 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     BePass pass(cmd);
     pass.AddColorTargets(_colorTargets);
     pass.SetDepthTarget(_depthTarget);
-    pass.SetViewport(renderer.GetViewport());
+    pass.SetViewport(_colorTargets[0]->GetViewport());
     pass.Begin();
 
     cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());

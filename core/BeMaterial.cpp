@@ -61,8 +61,15 @@ auto BeMaterial::GetBindGroupLayout() const -> SenBindGroupDesc {
 
 // rename to RetrieveBindGroup
 auto BeMaterial::GetBindGroup() -> SenBindGroupBinding {
+    for (auto& binding : _textures | std::views::values) {
+        if (binding.Texture && binding.Texture->Generation != binding.CachedGeneration) {
+            binding.CachedGeneration = binding.Texture->Generation;
+            _bindGroupDirty = true;
+        }
+    }
+
     if (_bindGroupDirty) {
-        for (const auto& [_, group] : _bindGroups) {
+        for (const auto& group : _bindGroups | std::views::values) {
             SenBackend::RetireBindGroup(group);
         }
         _bindGroups.clear();
@@ -443,6 +450,7 @@ auto BeMaterial::SetTexture(const std::string& propertyName, const std::shared_p
     }
     binding.Texture = texture;
     binding.Mip = mip;
+    binding.CachedGeneration = texture ? texture->Generation : 0;
     _bindGroupDirty = true;
 }
 

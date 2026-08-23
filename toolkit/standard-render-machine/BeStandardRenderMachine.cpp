@@ -100,6 +100,26 @@ auto BeStandardRenderMachine::GetRenderTexture(const std::string& name) const ->
     return it != _textureRegistry.end() ? it->second : nullptr;
 }
 
+auto BeStandardRenderMachine::PollRenderer() -> void {
+    const auto renderer = _renderer.lock();
+    be_assert(renderer, "BeStandardRenderMachine::PollRenderer: renderer expired");
+
+    const uint32_t width = renderer->GetSwapchainPixelWidth();
+    const uint32_t height = renderer->GetSwapchainPixelHeight();
+    if (width == 0 || height == 0) { return; }
+    if (width == _width && height == _height) { return; }
+
+    Resize(width, height);
+}
+
+auto BeStandardRenderMachine::Resize(uint32_t width, uint32_t height) -> void {
+    _width = width;
+    _height = height;
+    for (const auto& texture : _textureRegistry | std::views::values) {
+        texture->Resize(width, height);
+    }
+}
+
 // =====================================================================================================================
 // BeStandardRenderMachine — pass builders
 // =====================================================================================================================

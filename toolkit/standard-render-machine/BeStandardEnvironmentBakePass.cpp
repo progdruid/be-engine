@@ -84,7 +84,7 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffe
         BePass pass(cmd);
         pass.UseTexture(_equirect);
         pass.AddColorTarget(_envCubemap, SenLoadOp::DontCare, {}, 0, static_cast<int8_t>(face));
-        pass.SetViewport(_envCubemap->GetMipViewport(0));
+        pass.SetViewport(_envCubemap->GetViewport());
         pass.Begin();
         cmd.SetBindGroup(_envFaceMaterials[face]->GetBindGroup(), 0);
         cmd.Draw(4, 0);
@@ -96,7 +96,7 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffe
         BePass pass(cmd);
         pass.UseTexture(_envCubemap);
         pass.AddColorTarget(_irradianceCubemap, SenLoadOp::DontCare, {}, 0, static_cast<int8_t>(face));
-        pass.SetViewport(_irradianceCubemap->GetMipViewport(0));
+        pass.SetViewport(_irradianceCubemap->GetViewport());
         pass.Begin();
         cmd.SetBindGroup(_irradianceFaceMaterials[face]->GetBindGroup(), 0);
         cmd.Draw(4, 0);
@@ -122,7 +122,7 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffe
     {
         BePass pass(cmd);
         pass.AddColorTarget(_brdfLutTexture, SenLoadOp::DontCare, {});
-        pass.SetViewport(_brdfLutTexture->GetMipViewport(0));
+        pass.SetViewport(_brdfLutTexture->GetViewport());
         pass.Begin();
         cmd.SetBindGroup(_brdfLutMaterial->GetBindGroup(), 0);
         cmd.Draw(4, 0);

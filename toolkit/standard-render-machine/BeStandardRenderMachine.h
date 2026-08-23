@@ -151,6 +151,10 @@ class BeStandardRenderMachine {
     explicit BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, BeAssetRegistry& assetRegistry, uint32_t width, uint32_t height);
     ~BeStandardRenderMachine();
 
+    // resize ----------------------------------------------------------------------------------------------------------
+    hide auto Resize(uint32_t width, uint32_t height) -> void;
+    expose auto PollRenderer() -> void;
+
     // texture registry ------------------------------------------------------------------------------------------------
     expose
     auto ClearTargets() -> void;

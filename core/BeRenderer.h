@@ -51,6 +51,7 @@ class BeRenderer {
     expose
     auto SetSequence(BePassSequence* sequence) -> void;
     auto WaitIdle() -> void;
+    auto PollResize() -> bool;
     auto Render() -> void;
     auto RenderOnce(const std::vector<BeRenderPass*>& passes) -> void;
 

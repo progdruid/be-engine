@@ -72,6 +72,23 @@ auto BeRenderer::WaitIdle() -> void {
     SenBackend::WaitIdle();
 }
 
+auto BeRenderer::PollResize() -> bool {
+    uint32_t width = 0;
+    uint32_t height = 0;
+    SenBackend::GetSurfaceExtent(_swapchain, width, height);
+
+    if (width == 0 || height == 0) { return false; }
+    if (width == UINT32_MAX) { return true; }
+
+    if (width != GetSwapchainPixelWidth() || height != GetSwapchainPixelHeight()) {
+        SenBackend::WaitIdle();
+        SenBackend::ResizeSwapchain(_swapchain, width, height);
+        _desiredWidth = width;
+        _desiredHeight = height;
+    }
+    return true;
+}
+
 auto BeRenderer::Render() -> void {
     be_assert(_sequence != nullptr, "BeRenderer::Render(): sequence is null");
     
@@ -79,6 +96,13 @@ auto BeRenderer::Render() -> void {
 
     const uint32_t slot = _currentFrame % FramesInFlight;
     _backbufferTexture = SenBackend::BeginFrame(_swapchain, slot);
+    if (!_backbufferTexture.IsValid() && PollResize()) {
+        _backbufferTexture = SenBackend::BeginFrame(_swapchain, slot);
+    }
+    if (!_backbufferTexture.IsValid()) {
+        SenBackend::EndDebugEvent();
+        return;
+    }
 
     // safe here, not earlier: BeginFrame waits on this slot's fence, so the GPU is done with
     // both the command buffer and the arena chunks about to be reused.

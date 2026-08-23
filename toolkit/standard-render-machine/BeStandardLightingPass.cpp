@@ -143,7 +143,7 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     if (_prefilteredCubemap)    { pass.UseTexture(_prefilteredCubemap); }
     if (_brdfLutTexture)        { pass.UseTexture(_brdfLutTexture); }
     pass.AddColorTarget(_output, SenLoadOp::Clear);
-    pass.SetViewport(renderer.GetViewport());
+    pass.SetViewport(_output->GetViewport());
     pass.Begin();
 
     // Unshadowed lights, batched into capacity-sized chunks. 

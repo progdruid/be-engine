@@ -167,12 +167,39 @@ BeTexture::~BeTexture() {
 auto BeTexture::GetMipViewport(const uint32_t mip) const -> const SenViewport& { return _mipViewports[mip]; }
 
 
+auto BeTexture::Resize(uint32_t width, uint32_t height) -> void {
+    if (width == Width && height == Height) {
+        return;
+    }
+
+    SenBackend::RetireTexture(Handle);
+
+    Width  = width;
+    Height = height;
+
+    SenTextureDesc senDesc;
+    senDesc.Format      = Format;
+    senDesc.Width       = Width;
+    senDesc.Height      = Height;
+    senDesc.Usage       = Usage;
+    senDesc.Mips        = Mips;
+    senDesc.Cubemap     = IsCubemap;
+    senDesc.ArrayLength = ArrayLength;
+    senDesc.Data        = nullptr;
+
+    Handle = SenBackend::CreateTexture(senDesc);
+    ++Generation;
+
+    CreateMipViewports();
+}
+
+
 auto BeTexture::CreateMipViewports() -> void {
     _mipViewports.resize(Mips);
     for (uint32_t i = 0; i < Mips; ++i) {
         auto& viewport = _mipViewports[i];
-        viewport.Width    = static_cast<float>(Width >> i);
-        viewport.Height   = static_cast<float>(Height >> i);
+        viewport.Width    = static_cast<float>(std::max(1u, Width >> i));
+        viewport.Height   = static_cast<float>(std::max(1u, Height >> i));
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
         viewport.X        = 0.0f;

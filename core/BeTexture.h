@@ -76,6 +76,7 @@ class BeTexture {
     expose uint32_t Mips;
     expose SenTextureUsage Usage;
     expose SenFormat Format;
+    expose uint64_t Generation = 0;
 
     hide std::vector<SenViewport> _mipViewports;
 
@@ -85,11 +86,12 @@ class BeTexture {
 
     // public interface ////////////////////////////////////////////////////////////////////////////////////////////////
     expose auto GetMipViewport (const uint32_t mip) const -> const SenViewport&;
+    expose auto GetViewport () const -> const SenViewport& { return GetMipViewport(0); }
+    expose auto Resize (uint32_t width, uint32_t height) -> void;
 
     // private logic ///////////////////////////////////////////////////////////////////////////////////////////////////
     hide auto CreateMipViewports() -> void;
-
-
+    
     // befriending shared_ptr for constructor/destructor access because ours are private
     friend class std::shared_ptr<BeTexture>;
 };

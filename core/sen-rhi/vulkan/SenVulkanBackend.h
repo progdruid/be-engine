@@ -142,6 +142,7 @@ class SenVulkanBackend {
     static auto GetSwapchainFormat    (SenSwapchain handle) -> SenFormat;
     static auto GetSwapchainWidth     (SenSwapchain handle) -> uint32_t;
     static auto GetSwapchainHeight    (SenSwapchain handle) -> uint32_t;
+    static auto GetSurfaceExtent      (SenSwapchain handle, uint32_t& outWidth, uint32_t& outHeight) -> void;
 
     expose // command buffer factory
     static auto AllocateCommandBuffer () -> SenVulkanCommandBuffer;

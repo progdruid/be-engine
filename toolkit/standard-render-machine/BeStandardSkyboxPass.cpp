@@ -43,7 +43,7 @@ auto BeStandardSkyboxPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -
     pass.UseTexture(_depth);
     pass.UseTexture(_envCubemap);
     pass.AddColorTarget(_output, SenLoadOp::Load);
-    pass.SetViewport(renderer.GetViewport());
+    pass.SetViewport(_output->GetViewport());
     pass.Begin();
     cmd.SetPipeline(_pipeline);
     cmd.SetBindGroup(_material->GetBindGroup(), 1);

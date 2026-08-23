@@ -85,6 +85,8 @@ auto FullScene::Tick(float deltaTime) -> void {
         }
     }
 
+    _camera->Width = _gameIns->Renderer->GetSwapchainPixelWidth();
+    _camera->Height = _gameIns->Renderer->GetSwapchainPixelHeight();
     _camera->Update();
     auto& uniformMat = *_machine->UniformMaterial;
     const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
@@ -95,6 +97,7 @@ auto FullScene::Tick(float deltaTime) -> void {
 }
 
 auto FullScene::Render() -> void {
+    _machine->PollRenderer();
     _machine->Activate();
     _machine->ClearFrame();
 

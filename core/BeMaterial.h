@@ -30,6 +30,7 @@ class BeMaterial {
         uint8_t Slot;
         bool IsStorage;
         uint32_t Mip = SEN_FULL_MIPS; // SEN_FULL_MIPS = full-mip SRV
+        uint64_t CachedGeneration = 0;
     };
     std::unordered_map<std::string, TextureBinding> _textures;
     std::unordered_map<std::string, std::pair<SenSampler, uint8_t>> _samplers;
