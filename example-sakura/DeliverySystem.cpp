@@ -7,6 +7,7 @@
 #include "BeAssetRegistry.h"
 #include "BeProp.h"
 #include "Components.h"
+#include "RiftTerrain.h"
 
 DeliverySystem::DeliverySystem(entt::registry& registry, BeAssetRegistry& assets, Config config)
     : _registry(registry)
@@ -24,25 +25,29 @@ auto DeliverySystem::RandomFloat(float lo, float hi) -> float {
 
 auto DeliverySystem::DistanceToTarget(glm::vec3 shipPos) const -> float {
     if (_target < 0) return std::numeric_limits<float>::max();
-    return glm::length(_stations[_target].Position - shipPos);
+    return glm::length(_stations[_target].Aim - shipPos);
 }
 
 auto DeliverySystem::GenerateStations() -> void {
-    if (_config.StationProps.empty() || _config.StationCount <= 0) return;
+    if (_config.StationKinds.empty() || _config.StationCount <= 0) return;
 
-    std::uniform_int_distribution<size_t> pickProp(0, _config.StationProps.size() - 1);
+    std::uniform_int_distribution<size_t> pickKind(0, _config.StationKinds.size() - 1);
     _stations.reserve(_config.StationCount);
 
     for (int index = 0; index < _config.StationCount; ++index) {
+        const auto& kind = _config.StationKinds[pickKind(_rng)];
+        auto prop = _assets.GetProp(kind.Prop).lock();
+        be_assert(prop, "DeliverySystem: missing station prop");
+
         glm::vec3 position{0.0f};
         for (int attempt = 0; attempt < 64; ++attempt) {
             const float radius = _config.MapRadius * std::sqrt(RandomFloat(0.0f, 1.0f));
             const float angle = RandomFloat(0.0f, glm::two_pi<float>());
-            position = glm::vec3(
-                radius * std::cos(angle),
-                RandomFloat(_config.AltitudeMin, _config.AltitudeMax),
-                radius * std::sin(angle)
-            );
+            const float x = radius * std::cos(angle);
+            const float z = radius * std::sin(angle);
+            const float ground = RiftTerrain::SampleHeight(x, z, _config.TerrainSize, _config.TerrainSpikeAmplitude);
+            const float y = kind.Flying ? ground + RandomFloat(_config.AltitudeMin, _config.AltitudeMax) : ground;
+            position = glm::vec3(x, y, z);
 
             bool tooClose = false;
             for (const auto& station : _stations) {
@@ -54,16 +59,14 @@ auto DeliverySystem::GenerateStations() -> void {
             if (!tooClose) break;
         }
 
-        auto prop = _assets.GetProp(_config.StationProps[pickProp(_rng)]).lock();
-        be_assert(prop, "DeliverySystem: missing station prop");
-
+        const glm::vec3 pivot = position - kind.Origin * kind.Scale;
         const auto entity = CreateEntity(_registry
             ,NameComponent { .Name = "station-" + std::to_string(index) }
-            ,TransformComponent { .Position = position, .Scale = glm::vec3(_config.StationScale) }
+            ,TransformComponent { .Position = pivot, .Scale = glm::vec3(kind.Scale) }
             ,RenderComponent { .Prop = prop, .CastShadows = false }
             ,StationComponent { .Index = index }
         );
-        _stations.push_back({ .Position = position, .Entity = entity });
+        _stations.push_back({ .Position = position, .Aim = pivot + kind.AimPoint * kind.Scale, .Entity = entity });
     }
 }
 
@@ -74,11 +77,16 @@ auto DeliverySystem::Begin(glm::vec3 shipPos) -> void {
 
 auto DeliverySystem::Update(glm::vec3 shipPos) -> bool {
     if (_target < 0) return false;
-    if (glm::length(_stations[_target].Position - shipPos) > _config.VisitRadius) return false;
+    if (glm::length(_stations[_target].Aim - shipPos) > _config.VisitRadius) return false;
 
     ++_delivered;
     _target = PickTargetExcept(_target);
     return true;
+}
+
+auto DeliverySystem::TargetNearest(glm::vec3 shipPos) -> void {
+    if (_stations.empty()) return;
+    _target = NearestStation(shipPos);
 }
 
 auto DeliverySystem::NearestStation(glm::vec3 pos) const -> int {

@@ -20,6 +20,7 @@ struct RiftSceneSettings {
     struct {
         float NearPlane = 0.5f;
         float FarPlane = 300.0f;
+        float SpawnHeight = 100.0f;
     } Camera;
 
     struct {
@@ -47,7 +48,7 @@ struct RiftSceneSettings {
         std::vector<glm::vec3> Palette = {
             HexColor("#2E4372"),
             HexColor("#E89128"),
-            HexColor("#F7F052"),
+            HexColor("#FFFFFF"),
             HexColor("#D34E24"),
             HexColor("#8C3318"),
             HexColor("#1F2C47"),
@@ -66,14 +67,79 @@ struct RiftSceneSettings {
 
     struct {
         DeliverySystem::Config Config = {
-            .StationProps = { "station-sphere", "station-cube", "station-shard" },
+            .StationKinds = {
+                {
+                    .Prop = "station-solar-1",
+                    .Path = "assets/rift/simple_solar_station_1.glb",
+                    .EmissiveMix = 0.5f,
+                    .AimPoint = glm::vec3(0.0f, 3.0f, 0.0f),
+                    .Scale = 4.0f,
+                    .Flying = false,
+                },
+                {
+                    .Prop = "station-solar-2",
+                    .Path = "assets/rift/simple_solar_station_2.glb",
+                    .EmissiveMix = 0.5f,
+                    .AimPoint = glm::vec3(0.0f, 3.0f, 0.0f),
+                    .Scale = 4.0f,
+                    .Flying = false,
+                },
+                {
+                    .Prop = "station-solar-3",
+                    .Path = "assets/rift/simple_solar_station_3.glb",
+                    .EmissiveMix = 0.5f,
+                    .AimPoint = glm::vec3(0.0f, 3.0f, 0.0f),
+                    .Scale = 4.0f,
+                    .Flying = false,
+                },
+                {
+                    .Prop = "flying-station",
+                    .Path = "assets/rift/flying_station.glb",
+                    .EmissiveMix = 0.5f,
+                    .AimPoint = glm::vec3(0.0f, 1.0f, 0.0f),
+                    .Scale = 40.0f,
+                    .Flying = true,
+                },
+                {
+                    .Prop = "oxygen-station",
+                    .Path = "assets/rift/oxygen_station.glb",
+                    .EmissiveMix = 0.5f,
+                    .AimPoint = glm::vec3(0.0f, 0.0f, 0.0f),
+                    .Origin = glm::vec3(0.0f, -0.5f, 0.0f),
+                    .Scale = 10.0f,
+                    .Flying = false,
+                },
+                {
+                    .Prop = "mining-station",
+                    .Path = "assets/rift/mining_station/scene.gltf",
+                    .EmissiveMix = 0.5f,
+                    .AimPoint = glm::vec3(0.0f, 3.0f, 0.0f),
+                    .Scale = 0.01f,
+                    .Flying = true,
+                },
+                {
+                    .Prop = "iss",
+                    .Path = "assets/rift/iss/scene.gltf",
+                    .EmissiveMix = 0.5f,
+                    .AimPoint = glm::vec3(0.0f, 0.0f, 0.0f),
+                    .Scale = 40.0f,
+                    .Flying = true,
+                },
+                {
+                    .Prop = "power_station",
+                    .Path = "assets/rift/power_station/scene.gltf",
+                    .EmissiveMix = 0.5f,
+                    .AimPoint = glm::vec3(0.0f, 3.0f, 0.0f),
+                    .Scale = 2.0f,
+                    .Flying = true,
+                },
+            },
             .StationCount = 12,
             .MapRadius = 1500.0f,
             .AltitudeMin = 30.0f,
             .AltitudeMax = 150.0f,
             .MinSeparation = 250.0f,
             .VisitRadius = 35.0f,
-            .StationScale = 10.0f,
         };
         struct {
             float ScreenMargin = 0.88f;
@@ -103,6 +169,10 @@ class RiftScene : public FullScene {
 
     auto Prepare() -> void override;
     auto Tick(float deltaTime) -> void override;
+
+    hide
+    auto EnterPlayMode() -> void;
+    auto ExitPlayMode() -> void;
 
     protect
     auto DefineAssets() -> void override;

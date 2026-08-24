@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <random>
 #include <string>
 
 #include <umbrellas/include-glfw.h>
@@ -11,6 +12,7 @@
 
 #include "ShipCameraController.h"
 #include "DeliverySystem.h"
+#include "RiftTerrain.h"
 #include "BeCamera.h"
 #include "imgui/BeImGuiPass.h"
 #include "BeInput.h"
@@ -26,112 +28,33 @@
 #include "BeShader.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
-static auto MakeSpikyTerrain(float size, int cells, float spikeAmp) -> std::shared_ptr<BeMesh> {
-    const float half = size * 0.5f;
-    const float cell = size / cells;
-
-    auto hash = [](int x, int z) -> float {
-        uint32_t h = static_cast<uint32_t>(x * 374761393 + z * 668265263);
-        h = (h ^ (h >> 13)) * 1274126177u;
-        h ^= h >> 16;
-        return (h & 0xFFFF) / 65535.0f;
-    };
-    auto smootherstep = [](float t) -> float {
-        return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
-    };
-    auto valueNoise = [&](float u, float v, int freq) -> float {
-        float px = u * freq;
-        float pz = v * freq;
-        int x0 = static_cast<int>(std::floor(px));
-        int z0 = static_cast<int>(std::floor(pz));
-        float tx = smootherstep(px - x0);
-        float tz = smootherstep(pz - z0);
-        int seed = freq * 131;
-        int x1 = (x0 + 1) % freq;
-        int z1 = (z0 + 1) % freq;
-        x0 = x0 % freq;
-        z0 = z0 % freq;
-        float c00 = hash(x0 + seed, z0);
-        float c10 = hash(x1 + seed, z0);
-        float c01 = hash(x0 + seed, z1);
-        float c11 = hash(x1 + seed, z1);
-        float a = c00 + (c10 - c00) * tx;
-        float b = c01 + (c11 - c01) * tx;
-        return a + (b - a) * tz;
-    };
-    auto ridgedFbm = [&](float u, float v) -> float {
-        float sum = 0.0f;
-        float amp = 1.0f;
-        float norm = 0.0f;
-        int freq = 2;
-        for (int octave = 0; octave < 5; ++octave) {
-            float n = valueNoise(u, v, freq);
-            float ridge = 1.0f - std::fabs(2.0f * n - 1.0f);
-            ridge *= ridge;
-            sum += amp * ridge;
-            norm += amp;
-            amp *= 0.55f;
-            freq *= 2;
-        }
-        return sum / norm;
-    };
-    auto heightAt = [&](int gx, int gz) -> float {
-        float u = static_cast<float>(gx) / cells;
-        float v = static_cast<float>(gz) / cells;
-        float e = ridgedFbm(u, v);
-        return std::pow(e, 2.0f) * spikeAmp;
-    };
-    auto vpos = [&](int gx, int gz) -> glm::vec3 {
-        return glm::vec3(-(gx * cell - half), heightAt(gx, gz), gz * cell - half);
-    };
-
-    auto mesh = std::make_shared<BeMesh>();
-    auto pushTri = [&](glm::vec3 a, glm::vec3 b, glm::vec3 c) {
-        glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
-        uint32_t base = static_cast<uint32_t>(mesh->Vertices.size());
-        for (const auto& p : { a, b, c }) {
-            BeFullVertex v{};
-            v.Position = p;
-            v.Normal = normal;
-            mesh->Vertices.push_back(v);
-        }
-        mesh->Indices.push_back(base + 0);
-        mesh->Indices.push_back(base + 1);
-        mesh->Indices.push_back(base + 2);
-    };
-
-    for (int gz = 0; gz < cells; ++gz) {
-        for (int gx = 0; gx < cells; ++gx) {
-            glm::vec3 topLeft = vpos(gx, gz);
-            glm::vec3 topRight = vpos(gx + 1, gz);
-            glm::vec3 bottomLeft = vpos(gx, gz + 1);
-            glm::vec3 bottomRight = vpos(gx + 1, gz + 1);
-            pushTri(topLeft, topRight, bottomLeft);
-            pushTri(topRight, bottomRight, bottomLeft);
-        }
-    }
-
-    mesh->Slices.push_back({
-        .IndexCount = static_cast<uint32_t>(mesh->Indices.size()),
-        .StartIndexLocation = 0,
-        .BaseVertexLocation = 0,
-    });
-
-    return mesh;
-}
-
 RiftScene::RiftScene(Game* game) : FullScene(game) {}
 RiftScene::~RiftScene() = default;
 
 void RiftScene::Prepare() {
     FullScene::Prepare();
 
+    _camera->Position = glm::vec3(0.0f, Settings.Camera.SpawnHeight, 0.0f);
+
     _shipCameraController = std::make_unique<ShipCameraController>(_camera.get());
     _hudMaterial->SetFloat1("AimRadius", _shipCameraController->AimRadius);
+}
 
-    _delivery = std::make_unique<DeliverySystem>(_registry, _assetRegistry, Settings.Delivery.Config);
+auto RiftScene::EnterPlayMode() -> void {
+    auto deliveryConfig = Settings.Delivery.Config;
+    deliveryConfig.TerrainSize = Settings.Terrain.Size;
+    deliveryConfig.TerrainSpikeAmplitude = Settings.Terrain.SpikeAmplitude;
+    deliveryConfig.Seed = std::random_device{}();
+    _delivery = std::make_unique<DeliverySystem>(_registry, _assetRegistry, deliveryConfig);
     _delivery->GenerateStations();
     _delivery->Begin(_camera->Position);
+}
+
+auto RiftScene::ExitPlayMode() -> void {
+    const auto stations = _registry.view<StationComponent>();
+    _registry.destroy(stations.begin(), stations.end());
+    _delivery.reset();
+    _hudMaterial->SetFloat1("TargetState", 0.0f);
 }
 
 auto RiftScene::DefineSettings() -> void {
@@ -149,25 +72,21 @@ auto RiftScene::DefineAssets() -> void {
     _machine->RegisterMesh(box->Mesh);
 
     auto floor = BeProp::FromMesh(
-        MakeSpikyTerrain(Settings.Terrain.Size, Settings.Terrain.Cells, Settings.Terrain.SpikeAmplitude),
+        RiftTerrain::BuildMesh(Settings.Terrain.Size, Settings.Terrain.Cells, Settings.Terrain.SpikeAmplitude),
         phongShader, "geometry-main"
     );
     floor->Materials[0]->SetFloat3("DiffuseColor", Settings.Terrain.Color);
     _assetRegistry.AddProp("floor", floor);
     _machine->RegisterMesh(floor->Mesh);
 
-    auto whiteTexture = BeShaderLibrary::GetDefaultTexture("white").lock();
-    auto makeStation = [&](const std::string& name, std::shared_ptr<BeMesh> mesh, glm::vec3 color) {
-        auto prop = BeProp::FromMesh(mesh, phongShader, "geometry-main");
-        prop->Materials[0]->SetFloat3("DiffuseColor", color * 0.35f);
-        prop->Materials[0]->SetFloat3("EmissiveColor", color);
-        prop->Materials[0]->SetTexture("EmissiveTexture", whiteTexture);
-        _assetRegistry.AddProp(name, prop);
-        _machine->RegisterMesh(prop->Mesh);
-    };
-    makeStation("station-sphere", BeMeshPrimitives::Sphere(), HexColor("#F7F052"));
-    makeStation("station-cube", BeMeshPrimitives::Cube(), HexColor("#E89128"));
-    makeStation("station-shard", BeMeshPrimitives::Sphere(4, 6), HexColor("#D34E24"));
+    auto stationShader = BeShaderLibrary::GetShader("station");
+    for (const auto& kind : Settings.Delivery.Config.StationKinds) {
+        auto prop = _machine->LoadProp(kind.Path, stationShader, BeSRMLightingModel::Phong);
+        for (const auto& material : prop->Materials) {
+            material->SetFloat1("EmissiveMix", kind.EmissiveMix);
+        }
+        _assetRegistry.AddProp(kind.Prop, prop);
+    }
 
     _machine->BakeMeshes();
 
@@ -250,9 +169,9 @@ auto RiftScene::DefinePasses() -> void {
 
     _machine->AddBackbufferPass("Rift_Post");
 
-    auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
-    imguiPass->SetUICallback([this]() { _shipCameraController->DrawDebugUI(); });
-    _machine->AddPass(std::move(imguiPass));
+    //auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
+    //imguiPass->SetUICallback([this]() { _shipCameraController->DrawDebugUI(); });
+    //_machine->AddPass(std::move(imguiPass));
 
     _machine->InitialisePasses();
 }
@@ -270,6 +189,15 @@ void RiftScene::Tick(float deltaTime) {
         _posterizeMaterial->SetFloat1("Enabled", Settings.Posterize.Enabled ? 1.0f : 0.0f);
     }
 
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_P)) {
+        if (_delivery) ExitPlayMode();
+        else EnterPlayMode();
+    }
+
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_T) && _delivery) {
+        _delivery->TargetNearest(_camera->Position);
+    }
+
     _shipCameraController->Update(deltaTime, _gameIns->Input.get());
     _hudMaterial->SetFloat2("AimOffset", _shipCameraController->GetAim());
 
@@ -280,7 +208,7 @@ void RiftScene::Tick(float deltaTime) {
     horizonDir = horizonLen > 1e-3f ? horizonDir / horizonLen : glm::vec2(1.0f, 0.0f);
     _hudMaterial->SetFloat2("HorizonDir", { horizonDir.x, -horizonDir.y });
 
-    _delivery->Update(_camera->Position);
+    if (_delivery) _delivery->Update(_camera->Position);
 
     const float screenW = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelWidth());
     const float screenH = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelHeight());
@@ -290,7 +218,7 @@ void RiftScene::Tick(float deltaTime) {
     glm::vec2 targetDir = { 0.0f, 1.0f };
     float targetRadius = marker.MinRadius;
     float targetAlpha = 1.0f;
-    if (_delivery->HasTarget()) {
+    if (_delivery && _delivery->HasTarget()) {
         const glm::vec4 clip = _camera->GetProjectionMatrix() * _camera->GetViewMatrix()
             * glm::vec4(_delivery->TargetPosition(), 1.0f);
         const bool behind = clip.w <= 1e-4f;

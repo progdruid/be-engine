@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <random>
 #include <string>
 #include <vector>
@@ -17,21 +18,33 @@ struct StationComponent {
 
 class DeliverySystem {
     expose
+    struct StationKind {
+        std::string Prop;
+        std::filesystem::path Path;
+        float EmissiveMix;
+        glm::vec3 AimPoint;
+        glm::vec3 Origin;
+        float Scale;
+        bool Flying;
+    };
+
     struct Config {
-        std::vector<std::string> StationProps;
+        std::vector<StationKind> StationKinds;
         int StationCount;
         float MapRadius;
         float AltitudeMin;
         float AltitudeMax;
         float MinSeparation;
         float VisitRadius;
-        float StationScale;
+        float TerrainSize;
+        float TerrainSpikeAmplitude;
         unsigned Seed = 1337;
     };
 
     hide
     struct Station {
         glm::vec3 Position;
+        glm::vec3 Aim;
         entt::entity Entity;
     };
 
@@ -51,9 +64,10 @@ class DeliverySystem {
     auto GenerateStations() -> void;
     auto Begin(glm::vec3 shipPos) -> void;
     auto Update(glm::vec3 shipPos) -> bool;
+    auto TargetNearest(glm::vec3 shipPos) -> void;
 
     [[nodiscard]] auto HasTarget() const -> bool { return _target >= 0; }
-    [[nodiscard]] auto TargetPosition() const -> glm::vec3 { return _stations[_target].Position; }
+    [[nodiscard]] auto TargetPosition() const -> glm::vec3 { return _stations[_target].Aim; }
     [[nodiscard]] auto DeliveredCount() const -> int { return _delivered; }
     [[nodiscard]] auto StationCount() const -> int { return static_cast<int>(_stations.size()); }
     [[nodiscard]] auto DistanceToTarget(glm::vec3 shipPos) const -> float;

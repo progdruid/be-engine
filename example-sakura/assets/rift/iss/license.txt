@@ -1,0 +1,11 @@
+Model Information:
+* title:	Mir Station with Soyuz and Progress docked
+* source:	https://sketchfab.com/3d-models/mir-station-with-soyuz-and-progress-docked-bd6ac084ae5645848a67597b17665579
+* author:	tashtego (https://sketchfab.com/tashtego)
+
+Model License:
+* license type:	CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
+* requirements:	Author must be credited. No commercial use.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Mir Station with Soyuz and Progress docked" (https://sketchfab.com/3d-models/mir-station-with-soyuz-and-progress-docked-bd6ac084ae5645848a67597b17665579) by tashtego (https://sketchfab.com/tashtego) licensed under CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)

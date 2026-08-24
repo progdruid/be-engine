@@ -58,7 +58,7 @@ auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
     if (glm::length(thrust) > 0.0001f)
         _velocity += glm::normalize(thrust) * accel * dt;
 
-    if (input->GetKeyDown(GLFW_KEY_Z)) FlightAssist = !FlightAssist;
+    if (input->GetKeyDown(GLFW_KEY_SPACE)) FlightAssist = !FlightAssist;
 
     if (input->GetKey(GLFW_KEY_X)) {
         _velocity -= _velocity * (1.0f - std::exp(-FullStopDamping * dt));
@@ -75,7 +75,7 @@ auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
 
 auto ShipCameraController::DrawDebugUI() -> void {
     ImGui::Begin("Ship Camera");
-    ImGui::Text("Flight Assist: %s  (Z toggles)", FlightAssist ? "ON" : "OFF");
+    ImGui::Text("Flight Assist: %s  (Space toggles)", FlightAssist ? "ON" : "OFF");
     ImGui::Text("Speed: %.1f / %.0f", glm::length(_velocity), MaxSpeed);
     ImGui::Text("Velocity : %+.1f %+.1f %+.1f", _velocity.x, _velocity.y, _velocity.z);
     ImGui::Text("AngVel   : P%+.0f Y%+.0f R%+.0f", _angularVelocity.x, _angularVelocity.y, _angularVelocity.z);

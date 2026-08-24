@@ -1,0 +1,11 @@
+Model Information:
+* title:	Mining Station
+* source:	https://sketchfab.com/3d-models/mining-station-6f1e3c11f11546a9a5f7be07b07e9f5f
+* author:	MRowa (https://sketchfab.com/MRowa)
+
+Model License:
+* license type:	CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)
+* requirements:	Author must be credited. Modified versions must have the same license. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Mining Station" (https://sketchfab.com/3d-models/mining-station-6f1e3c11f11546a9a5f7be07b07e9f5f) by MRowa (https://sketchfab.com/MRowa) licensed under CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)
