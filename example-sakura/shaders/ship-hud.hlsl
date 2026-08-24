@@ -20,6 +20,7 @@
     TargetRingRadius: float = 5.0
     TargetArrowSize: float = 4.0
     TargetAlpha: float = 1.0
+    HorizonDir: float2 = (1.0, 0.0)
 }
 
 @be-shader ship-hud {
@@ -62,6 +63,7 @@ struct ship_hud_material {
     float TargetRingRadius;
     float TargetArrowSize;
     float TargetAlpha;
+    float2 HorizonDir;
 };
 
 cbuffer CBuffer_0 : register(b0, space0) {
@@ -106,9 +108,13 @@ PixelOutput PS(FullscreenVSOutput input) {
     bool vArm = abs(ad.x - bd) <= hw && ad.y <= bd + hw && ad.y >= bd - arm;
     if (hArm || vArm) hit = 1.0;
 
-    // east/west wing ticks only
+    // horizon-aligned wing ticks (bar stays parallel to the world horizon)
     float aimR = _Main.AimRadius / ps;
-    if (abs(ad.x - aimR) <= _Main.TickLength && ad.y <= hw) hit = 1.0;
+    float2 barDir = _Main.HorizonDir;
+    float2 barPerp = float2(-barDir.y, barDir.x);
+    float barAlong = dot(d, barDir);
+    float barAcross = dot(d, barPerp);
+    if (abs(abs(barAlong) - aimR) <= _Main.TickLength && abs(barAcross) <= hw + 0.5) hit = 1.0;
 
     // aim marker: solid box, snapped to the cell grid
     float2 aimD = floor(aimPos / ps) - c0;

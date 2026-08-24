@@ -273,6 +273,13 @@ void RiftScene::Tick(float deltaTime) {
     _shipCameraController->Update(deltaTime, _gameIns->Input.get());
     _hudMaterial->SetFloat2("AimOffset", _shipCameraController->GetAim());
 
+    const glm::vec3 worldUp = { 0.0f, 1.0f, 0.0f };
+    const glm::vec2 upScreen = { glm::dot(worldUp, _camera->GetRight()), glm::dot(worldUp, _camera->GetUp()) };
+    glm::vec2 horizonDir = { upScreen.y, -upScreen.x };
+    const float horizonLen = glm::length(horizonDir);
+    horizonDir = horizonLen > 1e-3f ? horizonDir / horizonLen : glm::vec2(1.0f, 0.0f);
+    _hudMaterial->SetFloat2("HorizonDir", { horizonDir.x, -horizonDir.y });
+
     _delivery->Update(_camera->Position);
 
     const float screenW = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelWidth());
