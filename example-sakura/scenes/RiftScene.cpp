@@ -1,5 +1,6 @@
 #include "RiftScene.h"
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 
@@ -9,6 +10,7 @@
 #include "BeMesh.h"
 
 #include "ShipCameraController.h"
+#include "DeliverySystem.h"
 #include "BeCamera.h"
 #include "imgui/BeImGuiPass.h"
 #include "BeInput.h"
@@ -126,6 +128,10 @@ void RiftScene::Prepare() {
 
     _shipCameraController = std::make_unique<ShipCameraController>(_camera.get());
     _hudMaterial->SetFloat1("AimRadius", _shipCameraController->AimRadius);
+
+    _delivery = std::make_unique<DeliverySystem>(_registry, _assetRegistry, Settings.Delivery.Config);
+    _delivery->GenerateStations();
+    _delivery->Begin(_camera->Position);
 }
 
 auto RiftScene::DefineSettings() -> void {
@@ -149,6 +155,19 @@ auto RiftScene::DefineAssets() -> void {
     floor->Materials[0]->SetFloat3("DiffuseColor", Settings.Terrain.Color);
     _assetRegistry.AddProp("floor", floor);
     _machine->RegisterMesh(floor->Mesh);
+
+    auto whiteTexture = BeShaderLibrary::GetDefaultTexture("white").lock();
+    auto makeStation = [&](const std::string& name, std::shared_ptr<BeMesh> mesh, glm::vec3 color) {
+        auto prop = BeProp::FromMesh(mesh, phongShader, "geometry-main");
+        prop->Materials[0]->SetFloat3("DiffuseColor", color * 0.35f);
+        prop->Materials[0]->SetFloat3("EmissiveColor", color);
+        prop->Materials[0]->SetTexture("EmissiveTexture", whiteTexture);
+        _assetRegistry.AddProp(name, prop);
+        _machine->RegisterMesh(prop->Mesh);
+    };
+    makeStation("station-sphere", BeMeshPrimitives::Sphere(), HexColor("#F7F052"));
+    makeStation("station-cube", BeMeshPrimitives::Cube(), HexColor("#E89128"));
+    makeStation("station-shard", BeMeshPrimitives::Sphere(4, 6), HexColor("#D34E24"));
 
     _machine->BakeMeshes();
 
@@ -253,6 +272,43 @@ void RiftScene::Tick(float deltaTime) {
 
     _shipCameraController->Update(deltaTime, _gameIns->Input.get());
     _hudMaterial->SetFloat2("AimOffset", _shipCameraController->GetAim());
+
+    _delivery->Update(_camera->Position);
+
+    const float screenW = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelWidth());
+    const float screenH = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelHeight());
+    const auto& marker = Settings.Delivery.Marker;
+    float targetState = 0.0f;
+    glm::vec2 targetPixel = { screenW * 0.5f, screenH * 0.5f };
+    glm::vec2 targetDir = { 0.0f, 1.0f };
+    float targetRadius = marker.MinRadius;
+    float targetAlpha = 1.0f;
+    if (_delivery->HasTarget()) {
+        const glm::vec4 clip = _camera->GetProjectionMatrix() * _camera->GetViewMatrix()
+            * glm::vec4(_delivery->TargetPosition(), 1.0f);
+        const bool behind = clip.w <= 1e-4f;
+        glm::vec2 ndc = glm::vec2(clip.x, clip.y) / clip.w;
+        if (behind) ndc = -ndc;
+        const bool onScreen = !behind && std::abs(ndc.x) <= 1.0f && std::abs(ndc.y) <= 1.0f;
+        if (onScreen) {
+            targetState = 1.0f;
+            targetPixel = { (ndc.x * 0.5f + 0.5f) * screenW, (0.5f - ndc.y * 0.5f) * screenH };
+            const float distance = glm::length(_delivery->TargetPosition() - _camera->Position);
+            targetRadius = glm::mix(marker.MinRadius, marker.MaxRadius, glm::smoothstep(marker.SizeFar, marker.SizeNear, distance));
+            targetAlpha = glm::smoothstep(marker.FadeNear, marker.FadeFar, distance);
+        } else {
+            targetState = 2.0f;
+            const float extent = std::max(std::max(std::abs(ndc.x), std::abs(ndc.y)), 1e-4f);
+            const glm::vec2 marked = (ndc / extent) * marker.ScreenMargin;
+            targetPixel = { (marked.x * 0.5f + 0.5f) * screenW, (0.5f - marked.y * 0.5f) * screenH };
+            targetDir = glm::normalize(glm::vec2(ndc.x, -ndc.y));
+        }
+    }
+    _hudMaterial->SetFloat2("TargetPos", targetPixel);
+    _hudMaterial->SetFloat2("TargetDir", targetDir);
+    _hudMaterial->SetFloat1("TargetState", targetState);
+    _hudMaterial->SetFloat1("TargetRingRadius", targetRadius);
+    _hudMaterial->SetFloat1("TargetAlpha", targetAlpha);
 
     const float tileSize = Settings.Terrain.Size;
     const int centerX = static_cast<int>(std::round(_camera->Position.x / tileSize));

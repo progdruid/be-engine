@@ -13,6 +13,13 @@
     AimBoxHalf: float = 1.0
     DashPeriod: float = 2.0
     UiColor: float3 = (0.93, 0.91, 0.84)
+    
+    TargetPos: float2 = (0.0, 0.0)
+    TargetDir: float2 = (0.0, 1.0)
+    TargetState: float = 0.0
+    TargetRingRadius: float = 5.0
+    TargetArrowSize: float = 4.0
+    TargetAlpha: float = 1.0
 }
 
 @be-shader ship-hud {
@@ -49,6 +56,12 @@ struct ship_hud_material {
     float AimBoxHalf;
     float DashPeriod;
     float3 UiColor;
+    float2 TargetPos;
+    float2 TargetDir;
+    float TargetState;
+    float TargetRingRadius;
+    float TargetArrowSize;
+    float TargetAlpha;
 };
 
 cbuffer CBuffer_0 : register(b0, space0) {
@@ -110,6 +123,25 @@ PixelOutput PS(FullscreenVSOutput input) {
     bool inRange = along > bd + hw + 1.0 && along < lenA - (_Main.AimBoxHalf + 1.0);
     bool dashOn = fmod(floor(along / _Main.DashPeriod), 2.0) < 0.5;
     if (length(d - closest) <= hw + 0.5 && inRange && dashOn) hit = 1.0;
+
+    // delivery target marker: diamond when on-screen, edge chevron when off-screen
+    float state = _Main.TargetState;
+    if (state > 0.5) {
+        float2 tCell = floor(_Main.TargetPos / ps) - c0;
+        float2 rel = d - tCell;
+        if (state < 1.5) {
+            float ring = abs(rel.x) + abs(rel.y);
+            if (abs(ring - _Main.TargetRingRadius) <= hw + 0.5) hit = max(hit, _Main.TargetAlpha);
+        } else {
+            float2 fwd = _Main.TargetDir;
+            float2 side = float2(-fwd.y, fwd.x);
+            float f = dot(rel, fwd);
+            float s = dot(rel, side);
+            float sz = _Main.TargetArrowSize;
+            float taper = saturate((sz - f) / (sz * 1.5));
+            if (f <= sz && f >= -sz * 0.5 && abs(s) <= taper * sz * 0.8) hit = 1.0;
+        }
+    }
 
     PixelOutput output;
     output.HudOutput = float4(_Main.UiColor, hit);

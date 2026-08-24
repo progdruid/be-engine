@@ -3,13 +3,16 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 
+#include "DeliverySystem.h"
 #include "FullScene.h"
 
 class ShipCameraController;
+class DeliverySystem;
 class BeMaterial;
 class BeImGuiPass;
 
@@ -60,11 +63,34 @@ struct RiftSceneSettings {
         float ShadowNearPlane = 0.1f;
         float ShadowFarPlane = 200.0f;
     } Sun;
+
+    struct {
+        DeliverySystem::Config Config = {
+            .StationProps = { "station-sphere", "station-cube", "station-shard" },
+            .StationCount = 12,
+            .MapRadius = 1500.0f,
+            .AltitudeMin = 30.0f,
+            .AltitudeMax = 150.0f,
+            .MinSeparation = 250.0f,
+            .VisitRadius = 35.0f,
+            .StationScale = 10.0f,
+        };
+        struct {
+            float ScreenMargin = 0.88f;
+            float MinRadius = 1.5f;
+            float MaxRadius = 10.0f;
+            float SizeFar = 800.0f;
+            float SizeNear = 120.0f;
+            float FadeNear = 80.0f;
+            float FadeFar = 200.0f;
+        } Marker;
+    } Delivery;
 };
 
 class RiftScene : public FullScene {
     hide
     std::unique_ptr<ShipCameraController> _shipCameraController;
+    std::unique_ptr<DeliverySystem> _delivery;
     std::array<entt::entity, 9> _terrainTiles;
     std::shared_ptr<BeMaterial> _posterizeMaterial;
     std::shared_ptr<BeMaterial> _hudMaterial;
