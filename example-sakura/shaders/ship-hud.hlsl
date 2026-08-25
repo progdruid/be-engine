@@ -9,7 +9,8 @@
     PipHalf: float = 0.0
     BracketOffset: float = 6.0
     BracketArm: float = 3.0
-    TickLength: float = 2.0
+    TickLength: float = 3.0
+    GroundTickLength: float = 2.0
     AimBoxHalf: float = 1.0
     DashPeriod: float = 2.0
     UiColor: float3 = (0.93, 0.91, 0.84)
@@ -54,6 +55,7 @@ struct ship_hud_material {
     float BracketOffset;
     float BracketArm;
     float TickLength;
+    float GroundTickLength;
     float AimBoxHalf;
     float DashPeriod;
     float3 UiColor;
@@ -115,6 +117,10 @@ PixelOutput PS(FullscreenVSOutput input) {
     float barAlong = dot(d, barDir);
     float barAcross = dot(d, barPerp);
     if (abs(abs(barAlong) - aimR) <= _Main.TickLength && abs(barAcross) <= hw + 0.5) hit = 1.0;
+
+    // ground indicator: drop from each tick's inner corner toward the ground (+barPerp)
+    float innerEnd = aimR - _Main.TickLength + 0.5;
+    if (abs(abs(barAlong) - innerEnd) <= 0.5 && barAcross >= 0.5 && barAcross <= _Main.GroundTickLength + 0.5) hit = 1.0;
 
     // aim marker: solid box, snapped to the cell grid
     float2 aimD = floor(aimPos / ps) - c0;

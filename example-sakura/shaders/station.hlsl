@@ -11,7 +11,7 @@
     SpecularTexture: texture2d = black
     EmissiveTexture: texture2d = black
     NormalMap: texture2d = flat-normal
-    InputSampler: sampler = anisotropic-wrap
+    InputSampler: sampler = point-wrap
 }
 
 @be-shader station {

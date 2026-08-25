@@ -12,6 +12,7 @@
 
 #include "ShipCameraController.h"
 #include "DeliverySystem.h"
+#include "RiftSettings.h"
 #include "RiftTerrain.h"
 #include "BeCamera.h"
 #include "imgui/BeImGuiPass.h"
@@ -28,24 +29,26 @@
 #include "BeShader.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
-RiftScene::RiftScene(Game* game) : FullScene(game) {}
-RiftScene::~RiftScene() = default;
+RiftScene::RiftScene(Game* game) : FullScene(game) {
+    RiftStore::Bootstrap();
+}
+
+RiftScene::~RiftScene() {
+    RiftStore::Shutdown();
+}
 
 void RiftScene::Prepare() {
     FullScene::Prepare();
 
-    _camera->Position = glm::vec3(0.0f, Settings.Camera.SpawnHeight, 0.0f);
+    _camera->Position = glm::vec3(0.0f, RiftStore::Get().Camera.SpawnHeight, 0.0f);
 
     _shipCameraController = std::make_unique<ShipCameraController>(_camera.get());
-    _hudMaterial->SetFloat1("AimRadius", _shipCameraController->AimRadius);
+    _hudMaterial->SetFloat1("AimRadius", RiftStore::Get().Ship.AimRadius);
 }
 
 auto RiftScene::EnterPlayMode() -> void {
-    auto deliveryConfig = Settings.Delivery.Config;
-    deliveryConfig.TerrainSize = Settings.Terrain.Size;
-    deliveryConfig.TerrainSpikeAmplitude = Settings.Terrain.SpikeAmplitude;
-    deliveryConfig.Seed = std::random_device{}();
-    _delivery = std::make_unique<DeliverySystem>(_registry, _assetRegistry, deliveryConfig);
+    RiftStore::Get().Delivery.Seed = std::random_device{}();
+    _delivery = std::make_unique<DeliverySystem>(_registry, _assetRegistry);
     _delivery->GenerateStations();
     _delivery->Begin(_camera->Position);
 }
@@ -58,12 +61,14 @@ auto RiftScene::ExitPlayMode() -> void {
 }
 
 auto RiftScene::DefineSettings() -> void {
-    _camera->NearPlane = Settings.Camera.NearPlane;
-    _camera->FarPlane = Settings.Camera.FarPlane;
-    _machine->UniformMaterial->SetFloat3("AmbientColor", Settings.Ambient.Color);
+    const auto& settings = RiftStore::Get();
+    _camera->NearPlane = settings.Camera.NearPlane;
+    _camera->FarPlane = settings.Camera.FarPlane;
+    _machine->UniformMaterial->SetFloat3("AmbientColor", settings.Ambient.Color);
 }
 
 auto RiftScene::DefineAssets() -> void {
+    const auto& settings = RiftStore::Get();
     auto phongShader = BeShaderLibrary::GetShader("standard-phong");
 
     auto box = BeProp::FromMesh(BeMeshPrimitives::Cube(), phongShader, "geometry-main");
@@ -72,15 +77,15 @@ auto RiftScene::DefineAssets() -> void {
     _machine->RegisterMesh(box->Mesh);
 
     auto floor = BeProp::FromMesh(
-        RiftTerrain::BuildMesh(Settings.Terrain.Size, Settings.Terrain.Cells, Settings.Terrain.SpikeAmplitude),
+        RiftTerrain::BuildMesh(settings.Terrain.Size, settings.Terrain.Cells, settings.Terrain.SpikeAmplitude),
         phongShader, "geometry-main"
     );
-    floor->Materials[0]->SetFloat3("DiffuseColor", Settings.Terrain.Color);
+    floor->Materials[0]->SetFloat3("DiffuseColor", settings.Terrain.Color);
     _assetRegistry.AddProp("floor", floor);
     _machine->RegisterMesh(floor->Mesh);
 
     auto stationShader = BeShaderLibrary::GetShader("station");
-    for (const auto& kind : Settings.Delivery.Config.StationKinds) {
+    for (const auto& kind : settings.Delivery.Kinds) {
         auto prop = _machine->LoadProp(kind.Path, stationShader, BeSRMLightingModel::Phong);
         for (const auto& material : prop->Materials) {
             material->SetFloat1("EmissiveMix", kind.EmissiveMix);
@@ -122,17 +127,18 @@ auto RiftScene::DefineScene() -> void {
         );
     }
 
+    const auto& sun = RiftStore::Get().Sun;
     CreateEntity(_registry
         ,NameComponent { .Name = "Sun" }
         ,SunLightComponent {
-            .Direction = Settings.Sun.Direction,
-            .Color = Settings.Sun.Color,
-            .Power = Settings.Sun.Power,
+            .Direction = sun.Direction,
+            .Color = sun.Color,
+            .Power = sun.Power,
             .CastsShadows = false,
-            .ShadowCameraDistance = Settings.Sun.ShadowCameraDistance,
-            .ShadowMapWorldSize = Settings.Sun.ShadowMapWorldSize,
-            .ShadowNearPlane = Settings.Sun.ShadowNearPlane,
-            .ShadowFarPlane = Settings.Sun.ShadowFarPlane,
+            .ShadowCameraDistance = sun.ShadowCameraDistance,
+            .ShadowMapWorldSize = sun.ShadowMapWorldSize,
+            .ShadowNearPlane = sun.ShadowNearPlane,
+            .ShadowFarPlane = sun.ShadowFarPlane,
         }
     );
 }
@@ -143,18 +149,19 @@ auto RiftScene::DefinePasses() -> void {
     _machine->AddGeometryPass();
     _machine->AddLightingPass("Rift_HDR");
 
+    const auto& posterize = RiftStore::Get().Posterize;
     const auto& posterizeScheme = BeShaderLibrary::GetShader("posterize")->GetMaterialScheme("main");
     _posterizeMaterial = BeMaterial::Create(posterizeScheme);
     _posterizeMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Rift_HDR"));
     _posterizeMaterial->SetTexture("DepthTexture", _machine->GetRenderTexture("Rift_Depth"));
-    _posterizeMaterial->SetFloat1("PixelSize", Settings.Posterize.PixelSize);
-    _posterizeMaterial->SetFloat1("DitherSpread", Settings.Posterize.DitherSpread);
-    _posterizeMaterial->SetFloat1("FogStart", Settings.Posterize.FogStart);
-    _posterizeMaterial->SetFloat1("FogEnd", Settings.Posterize.FogEnd);
-    _posterizeMaterial->SetFloat3("FogColor", Settings.Posterize.FogColor);
-    _posterizeMaterial->SetFloat3Array("Palette", Settings.Posterize.Palette);
-    _posterizeMaterial->SetFloat1("PaletteCount", static_cast<float>(Settings.Posterize.Palette.size()));
-    _posterizeMaterial->SetFloat1("Enabled", Settings.Posterize.Enabled ? 1.0f : 0.0f);
+    _posterizeMaterial->SetFloat1("PixelSize", posterize.PixelSize);
+    _posterizeMaterial->SetFloat1("DitherSpread", posterize.DitherSpread);
+    _posterizeMaterial->SetFloat1("FogStart", posterize.FogStart);
+    _posterizeMaterial->SetFloat1("FogEnd", posterize.FogEnd);
+    _posterizeMaterial->SetFloat3("FogColor", posterize.FogColor);
+    _posterizeMaterial->SetFloat3Array("Palette", posterize.Palette);
+    _posterizeMaterial->SetFloat1("PaletteCount", static_cast<float>(posterize.Palette.size()));
+    _posterizeMaterial->SetFloat1("Enabled", posterize.Enabled ? 1.0f : 0.0f);
     _posterizeMaterial->SetTexture("UITexture", _machine->GetRenderTexture("Rift_UI"));
 
     const uint32_t screenWidth  = _gameIns->Renderer->GetSwapchainPixelWidth();
@@ -162,7 +169,7 @@ auto RiftScene::DefinePasses() -> void {
     const auto& hudScheme = BeShaderLibrary::GetShader("ship-hud")->GetMaterialScheme("main");
     _hudMaterial = BeMaterial::Create(hudScheme);
     _hudMaterial->SetFloat2("ScreenSize", { static_cast<float>(screenWidth), static_cast<float>(screenHeight) });
-    _hudMaterial->SetFloat1("PixelSize", Settings.Posterize.PixelSize);
+    _hudMaterial->SetFloat1("PixelSize", posterize.PixelSize);
     _machine->AddFullscreenPass(BeShaderLibrary::GetShader("ship-hud"), _hudMaterial, { "Rift_UI" });
 
     _machine->AddFullscreenPass(BeShaderLibrary::GetShader("posterize"), _posterizeMaterial, { "Rift_Post" });
@@ -185,8 +192,9 @@ void RiftScene::Tick(float deltaTime) {
     
 
     if (_gameIns->Input->GetKeyDown(GLFW_KEY_ENTER)) {
-        Settings.Posterize.Enabled = !Settings.Posterize.Enabled;
-        _posterizeMaterial->SetFloat1("Enabled", Settings.Posterize.Enabled ? 1.0f : 0.0f);
+        bool& enabled = RiftStore::Get().Posterize.Enabled;
+        enabled = !enabled;
+        _posterizeMaterial->SetFloat1("Enabled", enabled ? 1.0f : 0.0f);
     }
 
     if (_gameIns->Input->GetKeyDown(GLFW_KEY_P)) {
@@ -212,7 +220,7 @@ void RiftScene::Tick(float deltaTime) {
 
     const float screenW = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelWidth());
     const float screenH = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelHeight());
-    const auto& marker = Settings.Delivery.Marker;
+    const auto& marker = RiftStore::Get().Delivery.Marker;
     float targetState = 0.0f;
     glm::vec2 targetPixel = { screenW * 0.5f, screenH * 0.5f };
     glm::vec2 targetDir = { 0.0f, 1.0f };
@@ -245,7 +253,7 @@ void RiftScene::Tick(float deltaTime) {
     _hudMaterial->SetFloat1("TargetRingRadius", targetRadius);
     _hudMaterial->SetFloat1("TargetAlpha", targetAlpha);
 
-    const float tileSize = Settings.Terrain.Size;
+    const float tileSize = RiftStore::Get().Terrain.Size;
     const int centerX = static_cast<int>(std::round(_camera->Position.x / tileSize));
     const int centerZ = static_cast<int>(std::round(_camera->Position.z / tileSize));
     int tileIndex = 0;

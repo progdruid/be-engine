@@ -2,26 +2,20 @@
 
 #include <cmath>
 #include <limits>
-#include <utility>
 
 #include "BeAssetRegistry.h"
 #include "BeProp.h"
 #include "Components.h"
+#include "RiftSettings.h"
 #include "RiftTerrain.h"
 
-DeliverySystem::DeliverySystem(entt::registry& registry, BeAssetRegistry& assets, Config config)
+DeliverySystem::DeliverySystem(entt::registry& registry, BeAssetRegistry& assets)
     : _registry(registry)
     , _assets(assets)
-    , _config(std::move(config))
-    , _rng(_config.Seed)
+    , _rng(RiftStore::Get().Delivery.Seed)
 {}
 
 DeliverySystem::~DeliverySystem() = default;
-
-auto DeliverySystem::RandomFloat(float lo, float hi) -> float {
-    std::uniform_real_distribution<float> dist(lo, hi);
-    return dist(_rng);
-}
 
 auto DeliverySystem::DistanceToTarget(glm::vec3 shipPos) const -> float {
     if (_target < 0) return std::numeric_limits<float>::max();
@@ -29,29 +23,31 @@ auto DeliverySystem::DistanceToTarget(glm::vec3 shipPos) const -> float {
 }
 
 auto DeliverySystem::GenerateStations() -> void {
-    if (_config.StationKinds.empty() || _config.StationCount <= 0) return;
+    const auto& config = RiftStore::Get().Delivery;
+    const auto& terrain = RiftStore::Get().Terrain;
+    if (config.Kinds.empty() || config.StationCount <= 0) return;
 
-    std::uniform_int_distribution<size_t> pickKind(0, _config.StationKinds.size() - 1);
-    _stations.reserve(_config.StationCount);
+    std::uniform_int_distribution<size_t> pickKind(0, config.Kinds.size() - 1);
+    _stations.reserve(config.StationCount);
 
-    for (int index = 0; index < _config.StationCount; ++index) {
-        const auto& kind = _config.StationKinds[pickKind(_rng)];
+    for (int index = 0; index < config.StationCount; ++index) {
+        const auto& kind = config.Kinds[pickKind(_rng)];
         auto prop = _assets.GetProp(kind.Prop).lock();
         be_assert(prop, "DeliverySystem: missing station prop");
 
         glm::vec3 position{0.0f};
         for (int attempt = 0; attempt < 64; ++attempt) {
-            const float radius = _config.MapRadius * std::sqrt(RandomFloat(0.0f, 1.0f));
-            const float angle = RandomFloat(0.0f, glm::two_pi<float>());
+            const float radius = config.MapRadius * std::sqrt(FloatRange(0.0f, 1.0f).Pick(_rng));
+            const float angle = FloatRange(0.0f, glm::two_pi<float>()).Pick(_rng);
             const float x = radius * std::cos(angle);
             const float z = radius * std::sin(angle);
-            const float ground = RiftTerrain::SampleHeight(x, z, _config.TerrainSize, _config.TerrainSpikeAmplitude);
-            const float y = kind.Flying ? ground + RandomFloat(_config.AltitudeMin, _config.AltitudeMax) : ground;
+            const float ground = RiftTerrain::SampleHeight(x, z, terrain.Size, terrain.SpikeAmplitude);
+            const float y = kind.Flying ? ground + kind.AltitudeRange.Pick(_rng) : ground;
             position = glm::vec3(x, y, z);
 
             bool tooClose = false;
             for (const auto& station : _stations) {
-                if (glm::length(station.Position - position) < _config.MinSeparation) {
+                if (glm::length(station.Position - position) < config.MinSeparation) {
                     tooClose = true;
                     break;
                 }
@@ -60,9 +56,14 @@ auto DeliverySystem::GenerateStations() -> void {
         }
 
         const glm::vec3 pivot = position - kind.Origin * kind.Scale;
+        const glm::quat rotation = glm::quat(glm::vec3(
+            kind.RotationX.Pick(_rng),
+            kind.RotationY.Pick(_rng),
+            kind.RotationZ.Pick(_rng)
+        ));
         const auto entity = CreateEntity(_registry
             ,NameComponent { .Name = "station-" + std::to_string(index) }
-            ,TransformComponent { .Position = pivot, .Scale = glm::vec3(kind.Scale) }
+            ,TransformComponent { .Position = pivot, .Rotation = rotation, .Scale = glm::vec3(kind.Scale) }
             ,RenderComponent { .Prop = prop, .CastShadows = false }
             ,StationComponent { .Index = index }
         );
@@ -77,7 +78,7 @@ auto DeliverySystem::Begin(glm::vec3 shipPos) -> void {
 
 auto DeliverySystem::Update(glm::vec3 shipPos) -> bool {
     if (_target < 0) return false;
-    if (glm::length(_stations[_target].Aim - shipPos) > _config.VisitRadius) return false;
+    if (glm::length(_stations[_target].Aim - shipPos) > RiftStore::Get().Delivery.VisitRadius) return false;
 
     ++_delivered;
     _target = PickTargetExcept(_target);
