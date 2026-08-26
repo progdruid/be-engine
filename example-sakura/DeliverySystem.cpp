@@ -67,7 +67,21 @@ auto DeliverySystem::GenerateStations() -> void {
             ,RenderComponent { .Prop = prop, .CastShadows = false }
             ,StationComponent { .Index = index }
         );
-        _stations.push_back({ .Position = position, .Aim = pivot + kind.AimPoint * kind.Scale, .Entity = entity });
+        _stations.push_back({ .Position = position, .Aim = pivot + kind.AimPoint * kind.Scale, .Entity = entity, .DockRadius = kind.DockRadius });
+        auto& station = _stations.back();
+
+        auto dockProp = _assets.GetProp("dock-ring").lock();
+        be_assert(dockProp, "DeliverySystem: missing dock-ring prop");
+        for (size_t dock = 0; dock < kind.DockPositions.size(); ++dock) {
+            const glm::vec3 dockWorld = pivot + rotation * (kind.DockPositions[dock] * kind.Scale);
+            station.Docks.push_back(dockWorld);
+            CreateEntity(_registry
+                ,NameComponent { .Name = "dock-" + std::to_string(index) + "-" + std::to_string(dock) }
+                ,TransformComponent { .Position = dockWorld, .Scale = glm::vec3(kind.DockRadius) }
+                ,RenderComponent { .Prop = dockProp, .CastShadows = false }
+                ,DockComponent { .StationIndex = index }
+            );
+        }
     }
 }
 
@@ -78,7 +92,16 @@ auto DeliverySystem::Begin(glm::vec3 shipPos) -> void {
 
 auto DeliverySystem::Update(glm::vec3 shipPos) -> bool {
     if (_target < 0) return false;
-    if (glm::length(_stations[_target].Aim - shipPos) > RiftStore::Get().Delivery.VisitRadius) return false;
+
+    const auto& station = _stations[_target];
+    bool docked = false;
+    for (const auto& dock : station.Docks) {
+        if (glm::length(dock - shipPos) <= station.DockRadius) {
+            docked = true;
+            break;
+        }
+    }
+    if (!docked) return false;
 
     ++_delivered;
     _target = PickTargetExcept(_target);

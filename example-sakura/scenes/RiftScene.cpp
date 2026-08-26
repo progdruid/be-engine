@@ -56,6 +56,8 @@ auto RiftScene::EnterPlayMode() -> void {
 auto RiftScene::ExitPlayMode() -> void {
     const auto stations = _registry.view<StationComponent>();
     _registry.destroy(stations.begin(), stations.end());
+    const auto docks = _registry.view<DockComponent>();
+    _registry.destroy(docks.begin(), docks.end());
     _delivery.reset();
     _hudMaterial->SetFloat1("TargetState", 0.0f);
 }
@@ -92,6 +94,11 @@ auto RiftScene::DefineAssets() -> void {
         }
         _assetRegistry.AddProp(kind.Prop, prop);
     }
+
+    auto ringShader = BeShaderLibrary::GetShader("dock-ring");
+    auto ring = BeProp::FromMesh(BeMeshPrimitives::Plane(), ringShader, "geometry-main");
+    _assetRegistry.AddProp("dock-ring", ring);
+    _machine->RegisterMesh(ring->Mesh);
 
     _machine->BakeMeshes();
 

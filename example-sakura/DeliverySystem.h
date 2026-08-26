@@ -14,12 +14,18 @@ struct StationComponent {
     int Index = 0;
 };
 
+struct DockComponent {
+    int StationIndex = -1;
+};
+
 class DeliverySystem {
     hide
     struct Station {
         glm::vec3 Position;
         glm::vec3 Aim;
         entt::entity Entity;
+        float DockRadius = 0.f;
+        std::vector<glm::vec3> Docks;
     };
 
     entt::registry& _registry;

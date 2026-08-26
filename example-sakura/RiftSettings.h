@@ -31,6 +31,8 @@ struct StationKind {
     FloatRange RotationX { 0.0f, glm::two_pi<float>() };
     FloatRange RotationY { 0.0f, glm::two_pi<float>() };
     FloatRange RotationZ { 0.0f, glm::two_pi<float>() };
+    float DockRadius { 5.0f };
+    std::vector<glm::vec3> DockPositions {};
 };
 
 struct RiftSettings {
@@ -147,6 +149,11 @@ struct RiftSettings {
                 .Flying = false,
                 .RotationX = {0.f, 0.f },
                 .RotationZ = {0.f, 0.f },
+                .DockRadius = 7.0f,
+                .DockPositions = {
+                    glm::vec3(0.43f, 0.8f,  0.86f),
+                    glm::vec3(0.43f, 0.8f, -0.06f),
+                },
             },
             //{
             //    .Prop = "mining-station",
@@ -164,6 +171,13 @@ struct RiftSettings {
                 .Scale = 80.0f,
                 .Flying = true,
                 .AltitudeRange = { 200.0f, 350.0f },
+                .DockRadius = 10.0f,
+                .DockPositions = {
+                    glm::vec3( 0.0f ,  0.0f  ,  1.85f ),
+                    glm::vec3( 0.0f , -1.25f , -0.514f),
+                    glm::vec3(-0.22f, -0.905f, -0.514f),
+                    glm::vec3( 0.0f ,  0.0f  , -1.45f )
+                },
             },
             //{
             //    .Prop = "power_station",
