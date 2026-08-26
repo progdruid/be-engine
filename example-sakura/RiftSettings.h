@@ -103,13 +103,16 @@ struct RiftSettings {
         float FlightAssistDamping = 2.0f;
         float FullStopDamping = 6.0f;
         bool FlightAssist = true;
+
+        float DockSpringFrequency = 8.0f;
+        float DockDampingRatio = 0.3f;
     } Ship;
 
     struct DeliverySettings {
         std::vector<StationKind> Kinds = {
             //{
             //    .Prop = "station-solar-1",
-            //    .Path = "assets/rift/simple_solar_station_1.glb",
+            //    .Path = "assets/rift/simplhme_solar_station_1.glb",
             //    .EmissiveMix = 0.5f,
             //    .AimPoint = glm::vec3(0.0f, 3.0f, 0.0f),
             //    .Scale = 10.0f,

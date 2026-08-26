@@ -44,32 +44,40 @@ auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
     _angularVelocity.z += (targetOmega.z - _angularVelocity.z) * rollAlpha;
     _camera->RotateLocal(_angularVelocity.x * dt, _angularVelocity.y * dt, _angularVelocity.z * dt);
 
-    const glm::quat orientation = _camera->GetOrientation();
-    const glm::vec3 front = orientation * glm::vec3(0.0f, 0.0f, 1.0f);
-    const glm::vec3 up = orientation * glm::vec3(0.0f, 1.0f, 0.0f);
+    if (_isCaptured) {
+        const float omega = ship.DockSpringFrequency;
+        const float k = omega * omega;
+        const float c = 2.0f * ship.DockDampingRatio * omega;
+        const glm::vec3 toAnchor = _anchor - _camera->Position;
+        _velocity += (k * toAnchor - c * _velocity) * dt;
+    } else {
+        const glm::quat orientation = _camera->GetOrientation();
+        const glm::vec3 front = orientation * glm::vec3(0.0f, 0.0f, 1.0f);
+        const glm::vec3 up = orientation * glm::vec3(0.0f, 1.0f, 0.0f);
 
-    glm::vec3 thrust{0.0f};
-    if (input->GetKey(GLFW_KEY_W)) thrust += front;
-    if (input->GetKey(GLFW_KEY_S)) thrust -= front;
-    if (input->GetKey(GLFW_KEY_Q)) thrust -= up;
-    if (input->GetKey(GLFW_KEY_E)) thrust += up;
+        glm::vec3 thrust{0.0f};
+        if (input->GetKey(GLFW_KEY_W)) thrust += front;
+        if (input->GetKey(GLFW_KEY_S)) thrust -= front;
+        if (input->GetKey(GLFW_KEY_Q)) thrust -= up;
+        if (input->GetKey(GLFW_KEY_E)) thrust += up;
 
-    float accel = ship.ThrustAccel;
-    if (input->GetKey(GLFW_KEY_LEFT_SHIFT)) accel *= ship.BoostMultiplier;
+        float accel = ship.ThrustAccel;
+        if (input->GetKey(GLFW_KEY_LEFT_SHIFT)) accel *= ship.BoostMultiplier;
 
-    if (glm::length(thrust) > 0.0001f)
-        _velocity += glm::normalize(thrust) * accel * dt;
+        if (glm::length(thrust) > 0.0001f)
+            _velocity += glm::normalize(thrust) * accel * dt;
 
-    if (input->GetKeyDown(GLFW_KEY_SPACE)) ship.FlightAssist = !ship.FlightAssist;
+        if (input->GetKeyDown(GLFW_KEY_SPACE)) ship.FlightAssist = !ship.FlightAssist;
 
-    if (input->GetKey(GLFW_KEY_X)) {
-        _velocity -= _velocity * (1.0f - std::exp(-ship.FullStopDamping * dt));
-    } else if (ship.FlightAssist) {
-        _velocity -= _velocity * (1.0f - std::exp(-ship.FlightAssistDamping * dt));
+        if (input->GetKey(GLFW_KEY_X)) {
+            _velocity -= _velocity * (1.0f - std::exp(-ship.FullStopDamping * dt));
+        } else if (ship.FlightAssist) {
+            _velocity -= _velocity * (1.0f - std::exp(-ship.FlightAssistDamping * dt));
+        }
+
+        const float speed = glm::length(_velocity);
+        if (speed > ship.MaxSpeed) _velocity *= ship.MaxSpeed / speed;
     }
-
-    const float speed = glm::length(_velocity);
-    if (speed > ship.MaxSpeed) _velocity *= ship.MaxSpeed / speed;
 
     _camera->Position += _velocity * dt;
     _camera->Update();

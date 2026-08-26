@@ -223,7 +223,19 @@ void RiftScene::Tick(float deltaTime) {
     horizonDir = horizonLen > 1e-3f ? horizonDir / horizonLen : glm::vec2(1.0f, 0.0f);
     _hudMaterial->SetFloat2("HorizonDir", { horizonDir.x, -horizonDir.y });
 
-    if (_delivery) _delivery->Update(_camera->Position);
+    if (_delivery) {
+        const auto dock = _delivery->CheckDock(_camera->Position);
+        _shipCameraController->SetInDock(dock.Hit);
+
+        if (_shipCameraController->HasJustEnteredDock()) {
+            _shipCameraController->Capture(dock.Anchor);
+            _delivery->NotifyDocked(dock);
+        }
+
+        if (_gameIns->Input->GetKeyDown(GLFW_KEY_C)) {
+            _shipCameraController->Uncapture();
+        }
+    }
 
     const float screenW = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelWidth());
     const float screenH = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelHeight());
@@ -234,8 +246,9 @@ void RiftScene::Tick(float deltaTime) {
     float targetRadius = marker.MinRadius;
     float targetAlpha = 1.0f;
     if (_delivery && _delivery->HasTarget()) {
+        const glm::vec3 targetWorld = _delivery->TargetPosition(_camera->Position);
         const glm::vec4 clip = _camera->GetProjectionMatrix() * _camera->GetViewMatrix()
-            * glm::vec4(_delivery->TargetPosition(), 1.0f);
+            * glm::vec4(targetWorld, 1.0f);
         const bool behind = clip.w <= 1e-4f;
         glm::vec2 ndc = glm::vec2(clip.x, clip.y) / clip.w;
         if (behind) ndc = -ndc;
@@ -243,7 +256,7 @@ void RiftScene::Tick(float deltaTime) {
         if (onScreen) {
             targetState = 1.0f;
             targetPixel = { (ndc.x * 0.5f + 0.5f) * screenW, (0.5f - ndc.y * 0.5f) * screenH };
-            const float distance = glm::length(_delivery->TargetPosition() - _camera->Position);
+            const float distance = glm::length(targetWorld - _camera->Position);
             targetRadius = glm::mix(marker.MinRadius, marker.MaxRadius, glm::smoothstep(marker.SizeFar, marker.SizeNear, distance));
             targetAlpha = glm::smoothstep(marker.FadeNear, marker.FadeFar, distance);
         } else {

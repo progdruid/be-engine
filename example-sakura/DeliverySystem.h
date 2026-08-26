@@ -40,13 +40,20 @@ class DeliverySystem {
     ~DeliverySystem();
 
     expose
+    struct DockHit {
+        bool Hit = false;
+        glm::vec3 Anchor{0.0f};
+        bool IsTarget = false;
+    };
+
     auto GenerateStations() -> void;
     auto Begin(glm::vec3 shipPos) -> void;
-    auto Update(glm::vec3 shipPos) -> bool;
+    auto CheckDock(glm::vec3 shipPos) const -> DockHit;
+    auto NotifyDocked(const DockHit& hit) -> void;
     auto TargetNearest(glm::vec3 shipPos) -> void;
 
     [[nodiscard]] auto HasTarget() const -> bool { return _target >= 0; }
-    [[nodiscard]] auto TargetPosition() const -> glm::vec3 { return _stations[_target].Aim; }
+    [[nodiscard]] auto TargetPosition(glm::vec3 shipPos) const -> glm::vec3;
     [[nodiscard]] auto DeliveredCount() const -> int { return _delivered; }
     [[nodiscard]] auto StationCount() const -> int { return static_cast<int>(_stations.size()); }
     [[nodiscard]] auto DistanceToTarget(glm::vec3 shipPos) const -> float;

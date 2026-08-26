@@ -14,9 +14,20 @@ class ShipCameraController {
     auto DrawDebugUI() -> void;
     [[nodiscard]] auto GetAim() const -> glm::vec2 { return _aim; }
 
+    auto SetInDock(bool inDock) -> void { _wasInDockLast = _isInDock; _isInDock = inDock; }
+    [[nodiscard]] auto HasJustEnteredDock() const -> bool { return _isInDock && !_wasInDockLast; }
+
+    auto Capture(glm::vec3 anchor) -> void { _isCaptured = true; _anchor = anchor; }
+    auto Uncapture() -> void { _isCaptured = false; }
+    [[nodiscard]] auto IsCaptured() const -> bool { return _isCaptured; }
+
     hide
     BeCamera* _camera;
     glm::vec3 _velocity{0.0f};
     glm::vec3 _angularVelocity{0.0f};
     glm::vec2 _aim{0.0f};
+    bool _isInDock{false};
+    bool _wasInDockLast{false};
+    bool _isCaptured{false};
+    glm::vec3 _anchor{0.0f};
 };

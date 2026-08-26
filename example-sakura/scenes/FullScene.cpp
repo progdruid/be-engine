@@ -94,6 +94,7 @@ auto FullScene::Tick(float deltaTime) -> void {
     uniformMat.SetMatrix("CameraInverseProjectionView", glm::inverse(projView));
     uniformMat.SetFloat4("NearFarPlane", { _camera->NearPlane, _camera->FarPlane, 1.0f / _camera->NearPlane, 1.0f / _camera->FarPlane });
     uniformMat.SetFloat3("CameraPosition", _camera->Position);
+    uniformMat.SetFloat1("Time", _time);
 }
 
 auto FullScene::Render() -> void {

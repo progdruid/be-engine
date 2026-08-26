@@ -90,22 +90,39 @@ auto DeliverySystem::Begin(glm::vec3 shipPos) -> void {
     _target = PickTargetExcept(NearestStation(shipPos));
 }
 
-auto DeliverySystem::Update(glm::vec3 shipPos) -> bool {
-    if (_target < 0) return false;
-
-    const auto& station = _stations[_target];
-    bool docked = false;
-    for (const auto& dock : station.Docks) {
-        if (glm::length(dock - shipPos) <= station.DockRadius) {
-            docked = true;
-            break;
+auto DeliverySystem::CheckDock(glm::vec3 shipPos) const -> DockHit {
+    for (int index = 0; index < static_cast<int>(_stations.size()); ++index) {
+        const auto& station = _stations[index];
+        for (const auto& dock : station.Docks) {
+            if (glm::length(dock - shipPos) <= station.DockRadius) {
+                return { .Hit = true, .Anchor = dock, .IsTarget = index == _target };
+            }
         }
     }
-    if (!docked) return false;
+    return {};
+}
 
+auto DeliverySystem::TargetPosition(glm::vec3 shipPos) const -> glm::vec3 {
+    const auto& station = _stations[_target];
+    if (station.Docks.empty()) return station.Aim;
+
+    glm::vec3 closest = station.Docks[0];
+    float best = glm::dot(closest - shipPos, closest - shipPos);
+    for (const auto& dock : station.Docks) {
+        const glm::vec3 delta = dock - shipPos;
+        const float distanceSq = glm::dot(delta, delta);
+        if (distanceSq < best) {
+            best = distanceSq;
+            closest = dock;
+        }
+    }
+    return closest;
+}
+
+auto DeliverySystem::NotifyDocked(const DockHit& hit) -> void {
+    if (!hit.IsTarget || _target < 0) return;
     ++_delivered;
     _target = PickTargetExcept(_target);
-    return true;
 }
 
 auto DeliverySystem::TargetNearest(glm::vec3 shipPos) -> void {
