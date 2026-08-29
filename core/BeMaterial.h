@@ -58,6 +58,7 @@ class BeMaterial {
     // interface ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
     auto GetSchemeName () const -> std::string { return _scheme.Name; }
+    auto GetScheme () const -> const BeMaterialScheme& { return _scheme; }
     auto GetUniqueID () const -> uint32_t { return _uniqueID; }
 
     auto GetBindGroup () -> SenBindGroupBinding;

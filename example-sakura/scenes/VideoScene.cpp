@@ -4,9 +4,6 @@
 
 #include "BeCamera.h"
 #include "BeInput.h"
-#include "BeMeshPrimitives.h"
-#include "BeProp.h"
-#include "BeShaderLibrary.h"
 #include "FreeCameraController.h"
 #include "OrbitCameraController.h"
 #include "Game.h"
@@ -41,23 +38,23 @@ auto VideoScene::DefineAssets() -> void {
     _machine->DeclareTextureTarget("Video_Bloom",           SenFormat::R11G11B10_Float);
     _machine->DeclareTextureTarget("Video_Tonemapped",      SenFormat::R11G11B10_Float);
 
-    const auto shader = BeShaderLibrary::GetShader("displaced-plane");
-
-    const auto plane = BeProp::FromMesh(BeMeshPrimitives::Plane(60), shader, "geometry-main");
-    _assetRegistry.AddProp("displaced-plane", plane);
-    _machine->RegisterMesh(plane->Mesh);
-
+    _assetRegistry.ClearTextures();
+    _assetRegistry.ClearProps();
+    ApplyLuaAssets(_sceneLua->Call("makeData")["Assets"]);
+    
     _machine->BakeMeshes();
 }
 
 auto VideoScene::DefineSettings() -> void {
     const auto settings = _sceneLua->Call("makeData")["Settings"];
-    ApplyBaseSettings(settings);
+    ApplyLuaSettings(settings);
 }
 
 auto VideoScene::DefineScene() -> void {
+    _registry.clear();
+    
     const auto objects = _sceneLua->Call("makeData")["Objects"];
-    ApplyBaseScene(objects);
+    ApplyLuaScene(objects);
 }
 
 auto VideoScene::DefinePasses() -> void {

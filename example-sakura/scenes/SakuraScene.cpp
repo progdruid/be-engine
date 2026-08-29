@@ -139,12 +139,13 @@ auto SakuraScene::DefineSettings() -> void {
     Settings.DepthOfField.MinFocalDistance = depthOfField["minFocalDistance"].GetOr(Settings.DepthOfField.MinFocalDistance);
     Settings.DepthOfField.FocusSpeed = depthOfField["focusSpeed"].GetOr(Settings.DepthOfField.FocusSpeed);
 
-    ApplyBaseSettings(settings);
+    ApplyLuaSettings(settings);
 }
 
 auto SakuraScene::DefineScene() -> void {
+    _registry.clear();
     const auto objects = _sceneLua->Call("makeData")["Objects"];
-    ApplyBaseScene(objects);
+    ApplyLuaScene(objects);
 }
 
 auto SakuraScene::DefinePasses() -> void {

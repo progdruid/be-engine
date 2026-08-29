@@ -41,8 +41,8 @@ auto BeSRMSunLightEntry::CalculateViewProj(
     return lightOrtho * lightView;
 }
 
-BeStandardRenderMachine::BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, BeAssetRegistry& assetRegistry, uint32_t width, uint32_t height)
-    : _renderer(std::move(renderer)), _assetRegistry(assetRegistry), _width(width), _height(height) {
+BeStandardRenderMachine::BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, uint32_t width, uint32_t height)
+    : _renderer(std::move(renderer)), _width(width), _height(height) {
     UniformMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("uniform-material"));
 }
 

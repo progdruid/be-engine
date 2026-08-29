@@ -16,6 +16,16 @@ function makeData()
         --backbuffer = { backgroundColor = '#000000', discardFar = true },
     }
 
+    data.Assets = {
+        props = {
+            ["displaced-plane"] = {
+                mesh = { primitive = "plane", subdivisions = 60 },
+                shader = "displaced-plane",
+                material = "geometry-main",
+            },
+        },
+    }
+
     data.Objects = {}
 
     data.Objects.Plane = {

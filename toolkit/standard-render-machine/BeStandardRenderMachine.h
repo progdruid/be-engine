@@ -110,7 +110,6 @@ class BeStandardRenderMachine {
 
     hide
     std::weak_ptr<BeRenderer> _renderer;
-    BeAssetRegistry& _assetRegistry;
     uint32_t _width;
     uint32_t _height;
 
@@ -148,7 +147,7 @@ class BeStandardRenderMachine {
 
     // lifetime --------------------------------------------------------------------------------------------------------
     expose
-    explicit BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, BeAssetRegistry& assetRegistry, uint32_t width, uint32_t height);
+    explicit BeStandardRenderMachine(std::weak_ptr<BeRenderer> renderer, uint32_t width, uint32_t height);
     ~BeStandardRenderMachine();
 
     // resize ----------------------------------------------------------------------------------------------------------
@@ -227,8 +226,4 @@ class BeStandardRenderMachine {
     auto GetMeshSlices(BeMesh* mesh) const -> const std::vector<BeMeshSlice>& { return _meshSlices.at(mesh); }
     auto GetSharedVertexBuffer() const -> SenBuffer { return _sharedVertexBuffer; }
     auto GetSharedIndexBuffer() const -> SenBuffer { return _sharedIndexBuffer; }
-
-    // internal use by passes ------------------------------------------------------------------------------------------
-    expose
-    auto GetAssetRegistry() const -> BeAssetRegistry& { return _assetRegistry; }
 };

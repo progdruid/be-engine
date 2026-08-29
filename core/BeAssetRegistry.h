@@ -37,10 +37,12 @@ class BeAssetRegistry {
     auto GetTexture(std::string_view name) -> std::weak_ptr<BeTexture> { be_assert(_textures.contains(std::string(name))); return _textures.at(std::string(name)); }
     auto RemoveTexture(std::string_view name) -> void { _textures.erase(std::string(name)); }
     auto HasTexture(std::string_view name) const -> bool { return _textures.contains(std::string(name)); }
-
+    auto ClearTextures() -> void { _textures.clear(); }
+    
     expose // Prop
     auto AddProp(std::string_view name, std::shared_ptr<BeProp> prop) -> void { _props[std::string(name)] = prop; }
     auto GetProp(std::string_view name) -> std::weak_ptr<BeProp> { be_assert(_props.contains(std::string(name))); return _props.at(std::string(name)); }
     auto RemoveProp(std::string_view name) -> void { _props.erase(std::string(name)); }
     auto HasProp(std::string_view name) const -> bool { return _props.contains(std::string(name)); }
+    auto ClearProps() -> void { _props.clear(); }
 };

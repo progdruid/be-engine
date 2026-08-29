@@ -17,8 +17,7 @@ class Game {
     expose std::shared_ptr<BeWindow> Window;
     expose std::shared_ptr<BeRenderer> Renderer;
     expose std::shared_ptr<BeInput> Input;
-    expose std::unique_ptr<BeSceneManager> SceneManager; 
-    expose std::shared_ptr<BeStandardRenderMachine> SRM;
+    expose std::unique_ptr<BeSceneManager> SceneManager;
     
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose Game();
