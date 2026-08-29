@@ -104,6 +104,13 @@ struct RiftSettings {
         float FullStopDamping = 6.0f;
         bool FlightAssist = true;
 
+        float GroundEffectLowAltitude = 40.0f;
+        float GroundEffectHighAltitude = 90.0f;
+        float GroundEffectSpeedLow = 1.0f;
+        float GroundEffectDragLow = 1.0f;
+        float GroundEffectSpeedHigh = 0.7f;
+        float GroundEffectDragHigh = 1.0f;
+
         float DockSpringFrequency = 8.0f;
         float DockDampingRatio = 0.3f;
     } Ship;

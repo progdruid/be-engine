@@ -69,14 +69,17 @@ auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
 
         if (input->GetKeyDown(GLFW_KEY_SPACE)) ship.FlightAssist = !ship.FlightAssist;
 
-        if (input->GetKey(GLFW_KEY_X)) {
-            _velocity -= _velocity * (1.0f - std::exp(-ship.FullStopDamping * dt));
-        } else if (ship.FlightAssist) {
-            _velocity -= _velocity * (1.0f - std::exp(-ship.FlightAssistDamping * dt));
-        }
+        const float proximity = 1.0f - glm::smoothstep(ship.GroundEffectLowAltitude, ship.GroundEffectHighAltitude, _camera->Position.y);
+        float speedCap = ship.MaxSpeed * glm::mix(ship.GroundEffectSpeedHigh, ship.GroundEffectSpeedLow, proximity);
+        
+        float damping = 0.0f;
+        if (input->GetKey(GLFW_KEY_X)) damping = ship.FullStopDamping;
+        else if (ship.FlightAssist) damping = ship.FlightAssistDamping;
+        damping *= glm::mix(ship.GroundEffectDragHigh, ship.GroundEffectDragLow, proximity);
+        _velocity -= _velocity * (1.0f - std::exp(-damping * dt));
 
         const float speed = glm::length(_velocity);
-        if (speed > ship.MaxSpeed) _velocity *= ship.MaxSpeed / speed;
+        if (speed > speedCap) _velocity *= speedCap / speed;
     }
 
     _camera->Position += _velocity * dt;
@@ -87,7 +90,9 @@ auto ShipCameraController::DrawDebugUI() -> void {
     const auto& ship = RiftStore::Get().Ship;
     ImGui::Begin("Ship Camera");
     ImGui::Text("Flight Assist: %s  (Space toggles)", ship.FlightAssist ? "ON" : "OFF");
-    ImGui::Text("Speed: %.1f / %.0f", glm::length(_velocity), ship.MaxSpeed);
+    const float proximity = 1.0f - glm::smoothstep(ship.GroundEffectLowAltitude, ship.GroundEffectHighAltitude, _camera->Position.y);
+    ImGui::Text("Altitude: %.0f  Ground Effect: %.0f%%", _camera->Position.y, proximity * 100.0f);
+    ImGui::Text("Speed: %.1f / %.0f", glm::length(_velocity), ship.MaxSpeed * glm::mix(1.0f, ship.GroundEffectSpeedLow, proximity));
     ImGui::Text("Velocity : %+.1f %+.1f %+.1f", _velocity.x, _velocity.y, _velocity.z);
     ImGui::Text("AngVel   : P%+.0f Y%+.0f R%+.0f", _angularVelocity.x, _angularVelocity.y, _angularVelocity.z);
     ImGui::Text("Aim      : %+.2f %+.2f", _aim.x, _aim.y);
