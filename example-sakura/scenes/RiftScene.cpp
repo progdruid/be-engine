@@ -12,10 +12,12 @@
 
 #include "ShipCameraController.h"
 #include "DeliverySystem.h"
+#include "StationUI.h"
 #include "RiftSettings.h"
 #include "RiftTerrain.h"
 #include "BeCamera.h"
 #include "imgui/BeImGuiPass.h"
+#include "imgui/imgui.h"
 #include "BeInput.h"
 #include "BeMaterial.h"
 #include "BeMeshPrimitives.h"
@@ -50,7 +52,12 @@ auto RiftScene::EnterPlayMode() -> void {
     RiftStore::Get().Delivery.Seed = std::random_device{}();
     _delivery = std::make_unique<DeliverySystem>(_registry, _assetRegistry);
     _delivery->GenerateStations();
-    _delivery->Begin(_camera->Position);
+}
+
+auto RiftScene::SetStationUiOpen(bool open) -> void {
+    _stationUiOpen = open;
+    _shipCameraController->SetControlsEnabled(!open);
+    _gameIns->Input->SetMouseCapture(!open);
 }
 
 auto RiftScene::ExitPlayMode() -> void {
@@ -58,6 +65,7 @@ auto RiftScene::ExitPlayMode() -> void {
     _registry.destroy(stations.begin(), stations.end());
     const auto docks = _registry.view<DockComponent>();
     _registry.destroy(docks.begin(), docks.end());
+    SetStationUiOpen(false);
     _delivery.reset();
     _hudMaterial->SetFloat1("TargetState", 0.0f);
 }
@@ -183,11 +191,18 @@ auto RiftScene::DefinePasses() -> void {
 
     _machine->AddBackbufferPass("Rift_Post");
 
-    //auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
-    //imguiPass->SetUICallback([this]() { _shipCameraController->DrawDebugUI(); });
-    //_machine->AddPass(std::move(imguiPass));
+    auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
+    imguiPass->SetUICallback([this]() {
+        ImGui::PushFont(_riftFont);
+        _shipCameraController->DrawDebugUI();
+        if (_stationUiOpen && _delivery) StationUI::Draw(*_delivery, _camera->Position);
+        ImGui::PopFont();
+    });
+    _machine->AddPass(std::move(imguiPass));
 
     _machine->InitialisePasses();
+
+    _riftFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("assets/rift/b612-mono/B612Mono-Regular.ttf", 20.0f);
 }
 
 void RiftScene::Tick(float deltaTime) {
@@ -209,10 +224,6 @@ void RiftScene::Tick(float deltaTime) {
         else EnterPlayMode();
     }
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_T) && _delivery) {
-        _delivery->TargetNearest(_camera->Position);
-    }
-
     _shipCameraController->Update(deltaTime, _gameIns->Input.get());
     _hudMaterial->SetFloat2("AimOffset", _shipCameraController->GetAim());
 
@@ -232,8 +243,14 @@ void RiftScene::Tick(float deltaTime) {
             _delivery->NotifyDocked(dock);
         }
 
+        if (_shipCameraController->IsCaptured() && _gameIns->Input->GetKeyDown(GLFW_KEY_S)) {
+            SetStationUiOpen(!_stationUiOpen);
+        }
+
         if (_gameIns->Input->GetKeyDown(GLFW_KEY_C)) {
             _shipCameraController->Uncapture();
+            _delivery->NotifyUndocked();
+            SetStationUiOpen(false);
         }
     }
 
@@ -245,8 +262,8 @@ void RiftScene::Tick(float deltaTime) {
     glm::vec2 targetDir = { 0.0f, 1.0f };
     float targetRadius = marker.MinRadius;
     float targetAlpha = 1.0f;
-    if (_delivery && _delivery->HasTarget()) {
-        const glm::vec3 targetWorld = _delivery->TargetPosition(_camera->Position);
+    if (_delivery && _delivery->HasContract() && !_delivery->CanComplete()) {
+        const glm::vec3 targetWorld = _delivery->GetTargetPosition(_camera->Position);
         const glm::vec4 clip = _camera->GetProjectionMatrix() * _camera->GetViewMatrix()
             * glm::vec4(targetWorld, 1.0f);
         const bool behind = clip.w <= 1e-4f;

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <optional>
 #include <random>
+#include <string>
 #include <vector>
 
 #include <umbrellas/common.hpp>
@@ -19,6 +21,13 @@ struct DockComponent {
 };
 
 class DeliverySystem {
+    expose
+    struct Job {
+        int Destination = -1;
+        float Distance = 0.0f;
+        int Reward = 0;
+    };
+
     hide
     struct Station {
         glm::vec3 Position;
@@ -26,14 +35,16 @@ class DeliverySystem {
         entt::entity Entity;
         float DockRadius = 0.f;
         std::vector<glm::vec3> Docks;
+        std::vector<Job> Jobs;
     };
 
     entt::registry& _registry;
     BeAssetRegistry& _assets;
     std::mt19937 _rng;
     std::vector<Station> _stations;
-    int _target = -1;
-    int _delivered = 0;
+    std::optional<Job> _contract;
+    int _dockedStation = -1;
+    int _credits = 0;
 
     expose
     explicit DeliverySystem(entt::registry& registry, BeAssetRegistry& assets);
@@ -43,22 +54,25 @@ class DeliverySystem {
     struct DockHit {
         bool Hit = false;
         glm::vec3 Anchor{0.0f};
-        bool IsTarget = false;
+        int Station = -1;
     };
 
     auto GenerateStations() -> void;
-    auto Begin(glm::vec3 shipPos) -> void;
     auto CheckDock(glm::vec3 shipPos) const -> DockHit;
     auto NotifyDocked(const DockHit& hit) -> void;
-    auto TargetNearest(glm::vec3 shipPos) -> void;
+    auto NotifyUndocked() -> void;
 
-    [[nodiscard]] auto HasTarget() const -> bool { return _target >= 0; }
-    [[nodiscard]] auto TargetPosition(glm::vec3 shipPos) const -> glm::vec3;
-    [[nodiscard]] auto DeliveredCount() const -> int { return _delivered; }
-    [[nodiscard]] auto StationCount() const -> int { return static_cast<int>(_stations.size()); }
-    [[nodiscard]] auto DistanceToTarget(glm::vec3 shipPos) const -> float;
+    auto TakeJob(int station, int jobIndex) -> void;
+    auto CompleteContract() -> void;
 
-    hide
-    auto NearestStation(glm::vec3 pos) const -> int;
-    auto PickTargetExcept(int except) -> int;
+    [[nodiscard]] auto HasContract() const -> bool { return _contract.has_value(); }
+    [[nodiscard]] auto CanComplete() const -> bool { return _contract && _dockedStation >= 0 && _dockedStation == _contract->Destination; }
+    [[nodiscard]] auto GetTargetPosition(glm::vec3 shipPos) const -> glm::vec3;
+    [[nodiscard]] auto GetStationCount() const -> int { return static_cast<int>(_stations.size()); }
+    [[nodiscard]] auto GetDistanceToTarget(glm::vec3 shipPos) const -> float;
+    [[nodiscard]] auto GetDockedStation() const -> int { return _dockedStation; }
+    [[nodiscard]] auto GetCredits() const -> int { return _credits; }
+    [[nodiscard]] auto GetContract() const -> const std::optional<Job>& { return _contract; }
+    [[nodiscard]] auto GetStationJobs(int station) const -> const std::vector<Job>& { return _stations[station].Jobs; }
+    [[nodiscard]] auto GetStationName(int station) const -> std::string;
 };

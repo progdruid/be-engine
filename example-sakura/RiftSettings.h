@@ -199,6 +199,9 @@ struct RiftSettings {
             //},
         };
         int StationCount = 12;
+        int JobsPerStation = 4;
+        float RewardBase = 50.0f;
+        float RewardPerMeter = 0.2f;
         float MapRadius = 1500.0f;
         float MinSeparation = 250.0f;
         float VisitRadius = 35.0f;

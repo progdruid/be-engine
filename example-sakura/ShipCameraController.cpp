@@ -19,12 +19,14 @@ auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
 
     glm::vec3 targetOmega{0.0f};
 
-    const glm::vec2 mouseDelta = input->GetMouseDelta();
-    _aim += mouseDelta * (ship.MouseSensitivity / ship.AimRadius);
-    const float aimLen = glm::length(_aim);
-    if (aimLen > 1.0f) _aim /= aimLen;
-    if (ship.MouseReturn > 0.0f) _aim -= _aim * (1.0f - std::exp(-ship.MouseReturn * dt));
-    input->SetMouseCapture(true);
+    if (_controlsEnabled) {
+        const glm::vec2 mouseDelta = input->GetMouseDelta();
+        _aim += mouseDelta * (ship.MouseSensitivity / ship.AimRadius);
+        const float aimLen = glm::length(_aim);
+        if (aimLen > 1.0f) _aim /= aimLen;
+        if (ship.MouseReturn > 0.0f) _aim -= _aim * (1.0f - std::exp(-ship.MouseReturn * dt));
+        input->SetMouseCapture(true);
+    }
 
     glm::vec2 steer{0.0f};
     const float mag = glm::length(_aim);
@@ -33,8 +35,8 @@ auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
     const float pitchSign = ship.InvertPitch ? 1.0f : -1.0f;
     targetOmega.x += pitchSign * steer.y * ship.PitchRate;
     targetOmega.y += steer.x * ship.YawRate;
-    if (input->GetKey(GLFW_KEY_A)) targetOmega.z += ship.RollRate;
-    if (input->GetKey(GLFW_KEY_D)) targetOmega.z -= ship.RollRate;
+    if (_controlsEnabled && input->GetKey(GLFW_KEY_A)) targetOmega.z += ship.RollRate;
+    if (_controlsEnabled && input->GetKey(GLFW_KEY_D)) targetOmega.z -= ship.RollRate;
 
     const float rotAlpha = 1.0f - std::exp(-ship.RotationResponse * dt);
     const float rollResponse = std::abs(targetOmega.z) > std::abs(_angularVelocity.z) ? ship.RollAccel : ship.RollDecel;
@@ -97,6 +99,8 @@ auto ShipCameraController::DrawDebugUI() -> void {
     ImGui::Text("AngVel   : P%+.0f Y%+.0f R%+.0f", _angularVelocity.x, _angularVelocity.y, _angularVelocity.z);
     ImGui::Text("Aim      : %+.2f %+.2f", _aim.x, _aim.y);
     ImGui::TextUnformatted("Mouse = yaw/pitch, A/D = roll.");
-    ImGui::TextUnformatted("W/S = thrust, Q/E = up/down, Shift = boost, X = stop.");
+    ImGui::TextUnformatted("W/S = thrust, Q/E = up/down.");
+    ImGui::TextUnformatted("Shift = boost, Space = toggle flight assist.");
+    ImGui::TextUnformatted("C = undock from a station, S = toggle station menu.");
     ImGui::End();
 }

@@ -21,6 +21,8 @@ class ShipCameraController {
     auto Uncapture() -> void { _isCaptured = false; }
     [[nodiscard]] auto IsCaptured() const -> bool { return _isCaptured; }
 
+    auto SetControlsEnabled(bool enabled) -> void { _controlsEnabled = enabled; }
+
     hide
     BeCamera* _camera;
     glm::vec3 _velocity{0.0f};
@@ -29,5 +31,6 @@ class ShipCameraController {
     bool _isInDock{false};
     bool _wasInDockLast{false};
     bool _isCaptured{false};
+    bool _controlsEnabled{true};
     glm::vec3 _anchor{0.0f};
 };

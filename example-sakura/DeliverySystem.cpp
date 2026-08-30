@@ -1,7 +1,7 @@
 #include "DeliverySystem.h"
 
 #include <cmath>
-#include <limits>
+#include <cstdio>
 
 #include "BeAssetRegistry.h"
 #include "BeProp.h"
@@ -17,9 +17,15 @@ DeliverySystem::DeliverySystem(entt::registry& registry, BeAssetRegistry& assets
 
 DeliverySystem::~DeliverySystem() = default;
 
-auto DeliverySystem::DistanceToTarget(glm::vec3 shipPos) const -> float {
-    if (_target < 0) return std::numeric_limits<float>::max();
-    return glm::length(_stations[_target].Aim - shipPos);
+auto DeliverySystem::GetDistanceToTarget(glm::vec3 shipPos) const -> float {
+    be_assert(_contract, "GetDistanceToTarget: no active contract");
+    return glm::length(_stations[_contract->Destination].Aim - shipPos);
+}
+
+auto DeliverySystem::GetStationName(int station) const -> std::string {
+    char buffer[32];
+    std::snprintf(buffer, sizeof(buffer), "Station %02d", station + 1);
+    return buffer;
 }
 
 auto DeliverySystem::GenerateStations() -> void {
@@ -83,11 +89,21 @@ auto DeliverySystem::GenerateStations() -> void {
             );
         }
     }
-}
 
-auto DeliverySystem::Begin(glm::vec3 shipPos) -> void {
-    if (_stations.empty()) return;
-    _target = PickTargetExcept(NearestStation(shipPos));
+    if (_stations.size() <= 1) return;
+    const int jobCount = config.JobsPerStation < 0 ? 0 : config.JobsPerStation;
+    std::uniform_int_distribution<int> pickStation(0, static_cast<int>(_stations.size()) - 1);
+    for (int index = 0; index < static_cast<int>(_stations.size()); ++index) {
+        auto& station = _stations[index];
+        station.Jobs.reserve(jobCount);
+        for (int job = 0; job < jobCount; ++job) {
+            int destination = index;
+            while (destination == index) destination = pickStation(_rng);
+            const float distance = glm::length(_stations[destination].Position - station.Position);
+            const int reward = static_cast<int>(config.RewardBase + distance * config.RewardPerMeter);
+            station.Jobs.push_back({ .Destination = destination, .Distance = distance, .Reward = reward });
+        }
+    }
 }
 
 auto DeliverySystem::CheckDock(glm::vec3 shipPos) const -> DockHit {
@@ -95,15 +111,16 @@ auto DeliverySystem::CheckDock(glm::vec3 shipPos) const -> DockHit {
         const auto& station = _stations[index];
         for (const auto& dock : station.Docks) {
             if (glm::length(dock - shipPos) <= station.DockRadius) {
-                return { .Hit = true, .Anchor = dock, .IsTarget = index == _target };
+                return { .Hit = true, .Anchor = dock, .Station = index };
             }
         }
     }
     return {};
 }
 
-auto DeliverySystem::TargetPosition(glm::vec3 shipPos) const -> glm::vec3 {
-    const auto& station = _stations[_target];
+auto DeliverySystem::GetTargetPosition(glm::vec3 shipPos) const -> glm::vec3 {
+    be_assert(_contract, "GetTargetPosition: no active contract");
+    const auto& station = _stations[_contract->Destination];
     if (station.Docks.empty()) return station.Aim;
 
     glm::vec3 closest = station.Docks[0];
@@ -120,33 +137,22 @@ auto DeliverySystem::TargetPosition(glm::vec3 shipPos) const -> glm::vec3 {
 }
 
 auto DeliverySystem::NotifyDocked(const DockHit& hit) -> void {
-    if (!hit.IsTarget || _target < 0) return;
-    ++_delivered;
-    _target = PickTargetExcept(_target);
+    _dockedStation = hit.Station;
 }
 
-auto DeliverySystem::TargetNearest(glm::vec3 shipPos) -> void {
-    if (_stations.empty()) return;
-    _target = NearestStation(shipPos);
+auto DeliverySystem::NotifyUndocked() -> void {
+    _dockedStation = -1;
 }
 
-auto DeliverySystem::NearestStation(glm::vec3 pos) const -> int {
-    int nearest = -1;
-    float best = std::numeric_limits<float>::max();
-    for (int index = 0; index < static_cast<int>(_stations.size()); ++index) {
-        const float distance = glm::length(_stations[index].Position - pos);
-        if (distance < best) {
-            best = distance;
-            nearest = index;
-        }
-    }
-    return nearest;
+auto DeliverySystem::TakeJob(int station, int jobIndex) -> void {
+    be_assert(station >= 0 && station < static_cast<int>(_stations.size()), "TakeJob: station out of range");
+    const auto& jobs = _stations[station].Jobs;
+    be_assert(jobIndex >= 0 && jobIndex < static_cast<int>(jobs.size()), "TakeJob: job out of range");
+    _contract = jobs[jobIndex];
 }
 
-auto DeliverySystem::PickTargetExcept(int except) -> int {
-    if (_stations.size() <= 1) return 0;
-    std::uniform_int_distribution<int> pick(0, static_cast<int>(_stations.size()) - 1);
-    int chosen = except;
-    while (chosen == except) chosen = pick(_rng);
-    return chosen;
+auto DeliverySystem::CompleteContract() -> void {
+    be_assert(CanComplete(), "CompleteContract: not at contract destination");
+    _credits += _contract->Reward;
+    _contract.reset();
 }

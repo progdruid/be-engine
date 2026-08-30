@@ -23,7 +23,7 @@ auto MenuScene::OnLoad() -> void {
     _sequence.Passes.clear();
     _sequence.Passes.push_back(std::move(imguiPass));
 
-    ImGui::GetIO().Fonts->AddFontFromFileTTF("assets/i-hate-comic-sans.regular.ttf", 16.0f);
+    _bodyFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("assets/i-hate-comic-sans.regular.ttf", 16.0f);
     _titleFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("assets/somelist.ttf", 16.0f);
 }
 
@@ -45,6 +45,8 @@ auto MenuScene::RunUI() -> void {
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
 
     ImGui::Begin("Menu", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
+
+    ImGui::PushFont(_bodyFont);
 
     ImGui::SetCursorPosY(ImGui::GetWindowHeight() * 0.3f);
 
@@ -105,6 +107,8 @@ auto MenuScene::RunUI() -> void {
     auto creditsWidth = ImGui::CalcTextSize(creditsText).x;
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - creditsWidth) * 0.5f);
     ImGui::Text(creditsText);
+
+    ImGui::PopFont();
 
     ImGui::End();
 

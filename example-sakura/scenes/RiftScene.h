@@ -12,6 +12,7 @@ class ShipCameraController;
 class DeliverySystem;
 class BeMaterial;
 class BeImGuiPass;
+struct ImFont;
 
 class RiftScene : public FullScene {
     hide
@@ -20,6 +21,8 @@ class RiftScene : public FullScene {
     std::array<entt::entity, 9> _terrainTiles;
     std::shared_ptr<BeMaterial> _posterizeMaterial;
     std::shared_ptr<BeMaterial> _hudMaterial;
+    ImFont* _riftFont = nullptr;
+    bool _stationUiOpen = false;
 
     expose
     explicit RiftScene(Game* game);
@@ -31,6 +34,7 @@ class RiftScene : public FullScene {
     hide
     auto EnterPlayMode() -> void;
     auto ExitPlayMode() -> void;
+    auto SetStationUiOpen(bool open) -> void;
 
     protect
     auto DefineAssets() -> void override;

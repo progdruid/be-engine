@@ -16,6 +16,7 @@ struct ImFont;
 class MenuScene : public BaseScene {
     hide
     BePassSequence _sequence;
+    ImFont* _bodyFont = nullptr;
     ImFont* _titleFont = nullptr;
 
     expose
