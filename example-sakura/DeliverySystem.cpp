@@ -9,9 +9,10 @@
 #include "RiftSettings.h"
 #include "RiftTerrain.h"
 
-DeliverySystem::DeliverySystem(entt::registry& registry, BeAssetRegistry& assets)
+DeliverySystem::DeliverySystem(entt::registry& registry, BeAssetRegistry& assets, const RiftTerrain& terrain)
     : _registry(registry)
     , _assets(assets)
+    , _terrain(terrain)
     , _rng(RiftStore::Get().Delivery.Seed)
 {}
 
@@ -30,7 +31,6 @@ auto DeliverySystem::GetStationName(int station) const -> std::string {
 
 auto DeliverySystem::GenerateStations() -> void {
     const auto& config = RiftStore::Get().Delivery;
-    const auto& terrain = RiftStore::Get().Terrain;
     if (config.Kinds.empty() || config.StationCount <= 0) return;
 
     std::uniform_int_distribution<size_t> pickKind(0, config.Kinds.size() - 1);
@@ -47,7 +47,7 @@ auto DeliverySystem::GenerateStations() -> void {
             const float angle = FloatRange(0.0f, glm::two_pi<float>()).Pick(_rng);
             const float x = radius * std::cos(angle);
             const float z = radius * std::sin(angle);
-            const float ground = RiftTerrain::SampleHeight(x, z, terrain.Size, terrain.SpikeAmplitude);
+            const float ground = _terrain.GetHeight(x, z);
             const float y = kind.Flying ? ground + kind.AltitudeRange.Pick(_rng) : ground;
             position = glm::vec3(x, y, z);
 

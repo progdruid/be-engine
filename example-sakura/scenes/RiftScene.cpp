@@ -44,13 +44,13 @@ void RiftScene::Prepare() {
 
     _camera->Position = glm::vec3(0.0f, RiftStore::Get().Camera.SpawnHeight, 0.0f);
 
-    _shipCameraController = std::make_unique<ShipCameraController>(_camera.get());
+    _shipCameraController = std::make_unique<ShipCameraController>(_camera.get(), _terrain.get());
     _hudMaterial->SetFloat1("AimRadius", RiftStore::Get().Ship.AimRadius);
 }
 
 auto RiftScene::EnterPlayMode() -> void {
     RiftStore::Get().Delivery.Seed = std::random_device{}();
-    _delivery = std::make_unique<DeliverySystem>(_registry, _assetRegistry);
+    _delivery = std::make_unique<DeliverySystem>(_registry, _assetRegistry, *_terrain);
     _delivery->GenerateStations();
 }
 
@@ -86,10 +86,8 @@ auto RiftScene::DefineAssets() -> void {
     _assetRegistry.AddProp("box", box);
     _machine->RegisterMesh(box->Mesh);
 
-    auto floor = BeProp::FromMesh(
-        RiftTerrain::BuildMesh(settings.Terrain.Size, settings.Terrain.Cells, settings.Terrain.SpikeAmplitude),
-        phongShader, "geometry-main"
-    );
+    _terrain = std::make_unique<RiftTerrain>(settings.Terrain.Size, settings.Terrain.Cells, settings.Terrain.SpikeAmplitude);
+    auto floor = BeProp::FromMesh(_terrain->BuildMesh(), phongShader, "geometry-main");
     floor->Materials[0]->SetFloat3("DiffuseColor", settings.Terrain.Color);
     _assetRegistry.AddProp("floor", floor);
     _machine->RegisterMesh(floor->Mesh);

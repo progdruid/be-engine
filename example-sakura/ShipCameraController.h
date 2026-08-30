@@ -5,10 +5,11 @@
 
 class BeCamera;
 class BeInput;
+class RiftTerrain;
 
 class ShipCameraController {
     expose
-    explicit ShipCameraController(BeCamera* camera);
+    explicit ShipCameraController(BeCamera* camera, const RiftTerrain* terrain);
 
     auto Update(float deltaTime, BeInput* input) -> void;
     auto DrawDebugUI() -> void;
@@ -25,6 +26,7 @@ class ShipCameraController {
 
     hide
     BeCamera* _camera;
+    const RiftTerrain* _terrain;
     glm::vec3 _velocity{0.0f};
     glm::vec3 _angularVelocity{0.0f};
     glm::vec2 _aim{0.0f};

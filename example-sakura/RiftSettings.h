@@ -111,6 +111,9 @@ struct RiftSettings {
         float GroundEffectSpeedHigh = 0.7f;
         float GroundEffectDragHigh = 1.0f;
 
+        float CollisionRadius = 2.2f;
+        float GroundFriction = 3.0f;
+
         float DockSpringFrequency = 8.0f;
         float DockDampingRatio = 0.3f;
     } Ship;

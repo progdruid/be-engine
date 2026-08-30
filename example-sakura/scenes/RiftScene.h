@@ -10,12 +10,14 @@
 
 class ShipCameraController;
 class DeliverySystem;
+class RiftTerrain;
 class BeMaterial;
 class BeImGuiPass;
 struct ImFont;
 
 class RiftScene : public FullScene {
     hide
+    std::unique_ptr<RiftTerrain> _terrain;
     std::unique_ptr<ShipCameraController> _shipCameraController;
     std::unique_ptr<DeliverySystem> _delivery;
     std::array<entt::entity, 9> _terrainTiles;

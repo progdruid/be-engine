@@ -7,10 +7,12 @@
 #include "BeCamera.h"
 #include "BeInput.h"
 #include "RiftSettings.h"
+#include "RiftTerrain.h"
 #include "imgui/imgui.h"
 
-ShipCameraController::ShipCameraController(BeCamera* camera)
+ShipCameraController::ShipCameraController(BeCamera* camera, const RiftTerrain* terrain)
     : _camera(camera)
+    , _terrain(terrain)
 {}
 
 auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
@@ -85,6 +87,17 @@ auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
     }
 
     _camera->Position += _velocity * dt;
+
+    if (!_isCaptured && _terrain) {
+        const auto collision = _terrain->CollideSphere(_camera->Position, ship.CollisionRadius);
+        if (collision.Hit) {
+            _camera->Position = collision.Position;
+            const float into = glm::dot(_velocity, collision.Normal);
+            if (into < 0.0f) _velocity -= into * collision.Normal;
+            _velocity -= _velocity * (1.0f - std::exp(-ship.GroundFriction * dt));
+        }
+    }
+
     _camera->Update();
 }
 

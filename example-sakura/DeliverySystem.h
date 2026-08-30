@@ -11,6 +11,7 @@
 #include "entt/entt.hpp"
 
 class BeAssetRegistry;
+class RiftTerrain;
 
 struct StationComponent {
     int Index = 0;
@@ -40,6 +41,7 @@ class DeliverySystem {
 
     entt::registry& _registry;
     BeAssetRegistry& _assets;
+    const RiftTerrain& _terrain;
     std::mt19937 _rng;
     std::vector<Station> _stations;
     std::optional<Job> _contract;
@@ -47,7 +49,7 @@ class DeliverySystem {
     int _credits = 0;
 
     expose
-    explicit DeliverySystem(entt::registry& registry, BeAssetRegistry& assets);
+    DeliverySystem(entt::registry& registry, BeAssetRegistry& assets, const RiftTerrain& terrain);
     ~DeliverySystem();
 
     expose
