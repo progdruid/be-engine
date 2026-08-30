@@ -156,3 +156,26 @@ auto DeliverySystem::CompleteContract() -> void {
     _credits += _contract->Reward;
     _contract.reset();
 }
+
+auto DeliverySystem::ApplyCrashPenalty() -> void {
+    _credits /= 2;
+    _contract.reset();
+}
+
+auto DeliverySystem::GetRespawnDock(glm::vec3 shipPos) -> glm::vec3 {
+    be_assert(!_stations.empty(), "GetRespawnDock: no stations");
+
+    const Station* closest = &_stations.front();
+    float closestDistSq = glm::dot(shipPos - closest->Position, shipPos - closest->Position);
+    for (const auto& station : _stations) {
+        const float distSq = glm::dot(shipPos - station.Position, shipPos - station.Position);
+        if (distSq < closestDistSq) {
+            closest = &station;
+            closestDistSq = distSq;
+        }
+    }
+
+    if (closest->Docks.empty()) return closest->Position;
+    std::uniform_int_distribution<size_t> pickDock(0, closest->Docks.size() - 1);
+    return closest->Docks[pickDock(_rng)];
+}

@@ -88,16 +88,29 @@ auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
 
     _camera->Position += _velocity * dt;
 
+    _lastImpactSpeed = 0.0f;
     if (!_isCaptured && _terrain) {
         const auto collision = _terrain->CollideSphere(_camera->Position, ship.CollisionRadius);
         if (collision.Hit) {
             _camera->Position = collision.Position;
             const float into = glm::dot(_velocity, collision.Normal);
-            if (into < 0.0f) _velocity -= into * collision.Normal;
+            if (into < 0.0f) {
+                _lastImpactSpeed = -into;
+                _velocity -= into * collision.Normal;
+            }
             _velocity -= _velocity * (1.0f - std::exp(-ship.GroundFriction * dt));
         }
     }
 
+    _camera->Update();
+}
+
+auto ShipCameraController::Respawn(glm::vec3 position) -> void {
+    _camera->Position = position;
+    _velocity = glm::vec3(0.0f);
+    _angularVelocity = glm::vec3(0.0f);
+    _aim = glm::vec2(0.0f);
+    _lastImpactSpeed = 0.0f;
     _camera->Update();
 }
 

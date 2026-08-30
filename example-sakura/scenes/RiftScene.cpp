@@ -233,6 +233,11 @@ void RiftScene::Tick(float deltaTime) {
     _hudMaterial->SetFloat2("HorizonDir", { horizonDir.x, -horizonDir.y });
 
     if (_delivery) {
+        if (_shipCameraController->GetLastImpactSpeed() > RiftStore::Get().Ship.CrashImpactSpeed) {
+            _delivery->ApplyCrashPenalty();
+            _shipCameraController->Respawn(_delivery->GetRespawnDock(_camera->Position));
+        }
+
         const auto dock = _delivery->CheckDock(_camera->Position);
         _shipCameraController->SetInDock(dock.Hit);
 

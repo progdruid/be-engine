@@ -13,7 +13,9 @@ class ShipCameraController {
 
     auto Update(float deltaTime, BeInput* input) -> void;
     auto DrawDebugUI() -> void;
+    auto Respawn(glm::vec3 position) -> void;
     [[nodiscard]] auto GetAim() const -> glm::vec2 { return _aim; }
+    [[nodiscard]] auto GetLastImpactSpeed() const -> float { return _lastImpactSpeed; }
 
     auto SetInDock(bool inDock) -> void { _wasInDockLast = _isInDock; _isInDock = inDock; }
     [[nodiscard]] auto HasJustEnteredDock() const -> bool { return _isInDock && !_wasInDockLast; }
@@ -30,6 +32,7 @@ class ShipCameraController {
     glm::vec3 _velocity{0.0f};
     glm::vec3 _angularVelocity{0.0f};
     glm::vec2 _aim{0.0f};
+    float _lastImpactSpeed{0.0f};
     bool _isInDock{false};
     bool _wasInDockLast{false};
     bool _isCaptured{false};

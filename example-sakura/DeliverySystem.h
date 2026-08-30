@@ -66,6 +66,8 @@ class DeliverySystem {
 
     auto TakeJob(int station, int jobIndex) -> void;
     auto CompleteContract() -> void;
+    auto ApplyCrashPenalty() -> void;
+    [[nodiscard]] auto GetRespawnDock(glm::vec3 shipPos) -> glm::vec3;
 
     [[nodiscard]] auto HasContract() const -> bool { return _contract.has_value(); }
     [[nodiscard]] auto CanComplete() const -> bool { return _contract && _dockedStation >= 0 && _dockedStation == _contract->Destination; }

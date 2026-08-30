@@ -113,6 +113,7 @@ struct RiftSettings {
 
         float CollisionRadius = 2.2f;
         float GroundFriction = 3.0f;
+        float CrashImpactSpeed = 25.0f;
 
         float DockSpringFrequency = 8.0f;
         float DockDampingRatio = 0.3f;
