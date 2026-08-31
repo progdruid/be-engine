@@ -36,6 +36,8 @@ struct StationKind {
 };
 
 struct RiftSettings {
+    unsigned Seed = 1337;
+
     struct CameraSettings {
         float NearPlane = 0.5f;
         float FarPlane = 300.0f;
@@ -53,7 +55,13 @@ struct RiftSettings {
     struct TerrainSettings {
         float Size = 180.0f;
         int Cells = 45;
+        float MapSize = 2880.0f;
         float SpikeAmplitude = 75.0f;
+        int ValleyFrequency = 8;
+        float ValleyWidth = 0.05f;
+        float WallSlope = 0.10f;
+        float HighlandBase = 30.0f;
+        float ValleyRoughness = 24.0f;
         glm::vec3 Color = HexColor("#F28123");
     } Terrain;
 
@@ -104,14 +112,15 @@ struct RiftSettings {
         float FullStopDamping = 6.0f;
         bool FlightAssist = true;
 
-        float GroundEffectLowAltitude = 40.0f;
-        float GroundEffectHighAltitude = 90.0f;
+        float GroundEffectLowAltitude = 20.0f;
+        float GroundEffectHighAltitude = 40.0f;
         float GroundEffectSpeedLow = 1.0f;
         float GroundEffectDragLow = 1.0f;
         float GroundEffectSpeedHigh = 0.7f;
         float GroundEffectDragHigh = 1.0f;
+        float GroundEffectResponse = 2.0f;
 
-        float CollisionRadius = 2.2f;
+        float CollisionRadius = 2.0f;
         float GroundFriction = 3.0f;
         float CrashImpactSpeed = 25.0f;
 
@@ -206,10 +215,9 @@ struct RiftSettings {
         int JobsPerStation = 4;
         float RewardBase = 50.0f;
         float RewardPerMeter = 0.2f;
-        float MapRadius = 1500.0f;
+        float MapRadius = 2500.0f;
         float MinSeparation = 250.0f;
         float VisitRadius = 35.0f;
-        unsigned Seed = 1337;
 
         struct MarkerSettings {
             float ScreenMargin = 0.88f;

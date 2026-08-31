@@ -13,7 +13,7 @@ DeliverySystem::DeliverySystem(entt::registry& registry, BeAssetRegistry& assets
     : _registry(registry)
     , _assets(assets)
     , _terrain(terrain)
-    , _rng(RiftStore::Get().Delivery.Seed)
+    , _rng(RiftStore::Get().Seed)
 {}
 
 DeliverySystem::~DeliverySystem() = default;

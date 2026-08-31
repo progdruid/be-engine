@@ -33,6 +33,7 @@ class ShipCameraController {
     glm::vec3 _angularVelocity{0.0f};
     glm::vec2 _aim{0.0f};
     float _lastImpactSpeed{0.0f};
+    float _groundEffectProximity{0.0f};
     bool _isInDock{false};
     bool _wasInDockLast{false};
     bool _isCaptured{false};

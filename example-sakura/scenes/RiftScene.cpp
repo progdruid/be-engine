@@ -33,6 +33,7 @@
 
 RiftScene::RiftScene(Game* game) : FullScene(game) {
     RiftStore::Bootstrap();
+    RiftStore::Get().Seed = std::random_device{}();
 }
 
 RiftScene::~RiftScene() {
@@ -49,7 +50,6 @@ void RiftScene::Prepare() {
 }
 
 auto RiftScene::EnterPlayMode() -> void {
-    RiftStore::Get().Delivery.Seed = std::random_device{}();
     _delivery = std::make_unique<DeliverySystem>(_registry, _assetRegistry, *_terrain);
     _delivery->GenerateStations();
 }
@@ -86,9 +86,25 @@ auto RiftScene::DefineAssets() -> void {
     _assetRegistry.AddProp("box", box);
     _machine->RegisterMesh(box->Mesh);
 
-    _terrain = std::make_unique<RiftTerrain>(settings.Terrain.Size, settings.Terrain.Cells, settings.Terrain.SpikeAmplitude);
-    auto floor = BeProp::FromMesh(_terrain->BuildMesh(), phongShader, "geometry-main");
+    _terrain = std::make_unique<RiftTerrain>();
+
+    const auto packedHeights = _terrain->CopyPackedHeights();
+    const auto resolution = static_cast<uint32_t>(_terrain->GetResolution());
+    auto heightMap = BeTexture::Create("rift-heightmap")
+        .SetSize(resolution, resolution)
+        .SetFormat(SenFormat::R32_Float)
+        .SetUsage(SenTextureUsage::ShaderResource)
+        .FillFromMemory(reinterpret_cast<const uint8_t*>(packedHeights.data()))
+        .Build();
+
+    auto terrainShader = BeShaderLibrary::GetShader("rift-terrain");
+    auto floor = BeProp::FromMesh(BeMeshPrimitives::Plane(settings.Terrain.Cells), terrainShader, "geometry-main");
     floor->Materials[0]->SetFloat3("DiffuseColor", settings.Terrain.Color);
+    floor->Materials[0]->SetTexture("HeightMap", heightMap);
+    floor->Materials[0]->SetSampler("HeightSampler", BeShaderLibrary::GetSampler("point-wrap"));
+    floor->Materials[0]->SetFloat1("MapSize", settings.Terrain.MapSize);
+    floor->Materials[0]->SetFloat1("MapResolution", static_cast<float>(resolution));
+    floor->Materials[0]->SetFloat1("HeightScale", 1.0f);
     _assetRegistry.AddProp("floor", floor);
     _machine->RegisterMesh(floor->Mesh);
 
@@ -132,11 +148,12 @@ auto RiftScene::DefineScene() -> void {
         ,RenderComponent { .Prop = _assetRegistry.GetProp("box").lock(), .CastShadows = true }
     );
 
+    const float tileSize = RiftStore::Get().Terrain.Size;
     for (int tile = 0; tile < 9; ++tile) {
         _terrainTiles[tile] = CreateEntity(_registry
             ,NameComponent { .Name = "terrain-" + std::to_string(tile) }
-            ,TransformComponent { }
-            ,RenderComponent { .Prop = _assetRegistry.GetProp("floor").lock(), .CastShadows = true }
+            ,TransformComponent { .Scale = { tileSize, 1.0f, tileSize } }
+            ,RenderComponent { .Prop = _assetRegistry.GetProp("floor").lock(), .CastShadows = false }
         );
     }
 

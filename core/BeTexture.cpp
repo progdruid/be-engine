@@ -45,7 +45,6 @@ auto BeTexture::Builder::FillFromMemory(const uint8_t* src) -> Builder&& {
     const auto data = static_cast<uint8_t*>(malloc(byteSize));
 
     memcpy(data, src, byteSize);
-    FlipVertically(_descriptor.Width, _descriptor.Height, data);
 
     _descriptor.Data = data;
     return std::move(*this);
@@ -62,7 +61,7 @@ auto BeTexture::Builder::LoadFromFile(const std::filesystem::path& file) -> Buil
     memcpy(data, decoded, imageSize);
     stbi_image_free(decoded);
 
-    FlipVertically(w, h, data);
+    BeTexture::FlipVertically(w, h, data);
     _descriptor.Data = data;
     _descriptor.Width = w;
     _descriptor.Height = h;
@@ -87,8 +86,8 @@ auto BeTexture::Builder::LoadFromFileHdr(const std::filesystem::path& file) -> B
     return std::move(*this);
 }
 
-auto BeTexture::Builder::FlipVertically(const uint32_t w, const uint32_t h, uint8_t* data) -> void {
-    const uint32_t rowSize = w * 4;
+auto BeTexture::FlipVertically(const uint32_t w, const uint32_t h, uint8_t* data, const uint32_t bytesPerPixel) -> void {
+    const uint32_t rowSize = w * bytesPerPixel;
     const auto tempRow = new uint8_t[rowSize];
 
     for (uint32_t y = 0; y < h / 2; ++y) {

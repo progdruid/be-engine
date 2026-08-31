@@ -22,12 +22,15 @@ class RiftTerrain {
         float Penetration = 0.0f;
     };
 
-    RiftTerrain(float size, int cells, float spikeAmplitude);
+    RiftTerrain();
 
-    [[nodiscard]] auto BuildMesh() const -> std::shared_ptr<BeMesh>;
     [[nodiscard]] auto GetSurface(float worldX, float worldZ) const -> SurfaceHit;
     [[nodiscard]] auto GetHeight(float worldX, float worldZ) const -> float;
     [[nodiscard]] auto CollideSphere(glm::vec3 center, float radius) const -> Collision;
+
+    [[nodiscard]] auto GetMapSize() const -> float { return _size; }
+    [[nodiscard]] auto GetResolution() const -> int { return _cells; }
+    [[nodiscard]] auto CopyPackedHeights() const -> std::vector<float>;
 
     hide
     [[nodiscard]] auto GetVertexHeight(int i, int j) const -> float;

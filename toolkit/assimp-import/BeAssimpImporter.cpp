@@ -171,6 +171,7 @@ auto BeAssimpImporter::LoadTextureFromAssimpPath(
         uint8_t* decoded = stbi_load_from_memory(reinterpret_cast<const uint8_t*>(aiTex->pcData), aiTex->mWidth, &w, &h, &channelsInFile, 4);
         if (!decoded) throw std::runtime_error("Failed to decode embedded texture");
 
+        BeTexture::FlipVertically(w, h, decoded);
         const auto & resource = builder
             .SetSize(w, h).FillFromMemory(decoded).Build();
         stbi_image_free(decoded);
@@ -187,6 +188,7 @@ auto BeAssimpImporter::LoadTextureFromAssimpPath(
         converted[i * 4 + 2] = srcData[i * 4 + 0]; // R -> B
         converted[i * 4 + 3] = srcData[i * 4 + 3]; // A
     }
+    BeTexture::FlipVertically(aiTex->mWidth, aiTex->mHeight, converted);
     const auto & resource = builder
         .SetSize(aiTex->mWidth, aiTex->mHeight)
         .FillFromMemory(converted)

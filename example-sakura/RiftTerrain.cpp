@@ -1,10 +1,11 @@
 #include "RiftTerrain.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 
-#include "BeMesh.h"
+#include "RiftSettings.h"
 
 namespace {
 
@@ -40,8 +41,8 @@ auto ClosestPointOnTriangle(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c) 
     return a + ab * (vb * denom) + ac * (vc * denom);
 }
 
-auto Hash(int x, int z) -> float {
-    uint32_t h = static_cast<uint32_t>(x * 374761393 + z * 668265263);
+auto Hash(int x, int z, uint32_t seed) -> float {
+    uint32_t h = static_cast<uint32_t>(x * 374761393 + z * 668265263) + seed * 2246822519u;
     h = (h ^ (h >> 13)) * 1274126177u;
     h ^= h >> 16;
     return (h & 0xFFFF) / 65535.0f;
@@ -51,34 +52,34 @@ auto SmootherStep(float t) -> float {
     return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
 }
 
-auto ValueNoise(float u, float v, int freq) -> float {
+auto ValueNoise(float u, float v, int freq, uint32_t seed) -> float {
     float px = u * freq;
     float pz = v * freq;
     int x0 = static_cast<int>(std::floor(px));
     int z0 = static_cast<int>(std::floor(pz));
     float tx = SmootherStep(px - x0);
     float tz = SmootherStep(pz - z0);
-    int seed = freq * 131;
+    int octaveSeed = freq * 131;
     int x1 = (x0 + 1) % freq;
     int z1 = (z0 + 1) % freq;
     x0 = x0 % freq;
     z0 = z0 % freq;
-    float c00 = Hash(x0 + seed, z0);
-    float c10 = Hash(x1 + seed, z0);
-    float c01 = Hash(x0 + seed, z1);
-    float c11 = Hash(x1 + seed, z1);
+    float c00 = Hash(x0 + octaveSeed, z0, seed);
+    float c10 = Hash(x1 + octaveSeed, z0, seed);
+    float c01 = Hash(x0 + octaveSeed, z1, seed);
+    float c11 = Hash(x1 + octaveSeed, z1, seed);
     float a = c00 + (c10 - c00) * tx;
     float b = c01 + (c11 - c01) * tx;
     return a + (b - a) * tz;
 }
 
-auto RidgedFbm(float u, float v) -> float {
+auto RidgedFbm(float u, float v, int baseFreq, uint32_t seed) -> float {
     float sum = 0.0f;
     float amp = 1.0f;
     float norm = 0.0f;
-    int freq = 2;
+    int freq = baseFreq;
     for (int octave = 0; octave < 5; ++octave) {
-        float n = ValueNoise(u, v, freq);
+        float n = ValueNoise(u, v, freq, seed);
         float ridge = 1.0f - std::fabs(2.0f * n - 1.0f);
         ridge *= ridge;
         sum += amp * ridge;
@@ -89,71 +90,78 @@ auto RidgedFbm(float u, float v) -> float {
     return sum / norm;
 }
 
-auto HeightAtUV(float u, float v, float spikeAmplitude) -> float {
-    float e = RidgedFbm(u, v);
-    return std::pow(e, 2.0f) * spikeAmplitude;
+auto SmoothFbm(float u, float v, int baseFreq, int octaves, uint32_t seed) -> float {
+    float sum = 0.0f;
+    float amp = 1.0f;
+    float norm = 0.0f;
+    int freq = baseFreq;
+    for (int octave = 0; octave < octaves; ++octave) {
+        sum += amp * ValueNoise(u, v, freq, seed);
+        norm += amp;
+        amp *= 0.5f;
+        freq *= 2;
+    }
+    return sum / norm;
+}
+
+auto Smoothstep(float edge0, float edge1, float x) -> float {
+    float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+    return t * t * (3.0f - 2.0f * t);
+}
+
+auto HeightAtUV(
+    float u, float v,
+    float spikeAmplitude, int spikeFreq, float valleyRoughness,
+    int valleyFreq, float valleyWidth, float wallSlope, float highlandBase,
+    uint32_t seed
+) -> float {
+    float valley = SmoothFbm(u, v, valleyFreq, 3, seed ^ 0x9E3779B9u);
+    float d = std::fabs(valley - 0.5f);
+    float mask = Smoothstep(valleyWidth, valleyWidth + wallSlope, d);
+    float mountain = std::pow(RidgedFbm(u, v, spikeFreq, seed), 2.0f);
+    return mountain * (valleyRoughness + mask * spikeAmplitude) + mask * highlandBase;
 }
 
 }
 
-RiftTerrain::RiftTerrain(float size, int cells, float spikeAmplitude)
-    : _size(size)
-    , _half(size * 0.5f)
-    , _cell(size / cells)
-    , _cells(cells)
-{
-    const int stride = cells + 1;
+RiftTerrain::RiftTerrain() {
+    const auto& t = RiftStore::Get().Terrain;
+    const int tiles = static_cast<int>(std::lround(t.MapSize / t.Size));
+    const int mapCells = tiles * t.Cells;
+    const int spikeFreq = 2 * tiles;
+
+    _size = t.MapSize;
+    _half = t.MapSize * 0.5f;
+    _cells = mapCells;
+    _cell = t.MapSize / mapCells;
+
+    const int stride = mapCells + 1;
     _heights.resize(static_cast<size_t>(stride) * stride);
-    for (int j = 0; j <= cells; ++j) {
-        for (int i = 0; i <= cells; ++i) {
-            _heights[static_cast<size_t>(j) * stride + i] =
-                HeightAtUV(static_cast<float>(i) / cells, static_cast<float>(j) / cells, spikeAmplitude);
+    for (int j = 0; j <= mapCells; ++j) {
+        for (int i = 0; i <= mapCells; ++i) {
+            _heights[static_cast<size_t>(j) * stride + i] = HeightAtUV(
+                static_cast<float>(i) / mapCells, static_cast<float>(j) / mapCells,
+                t.SpikeAmplitude, spikeFreq, t.ValleyRoughness,
+                t.ValleyFrequency, t.ValleyWidth, t.WallSlope, t.HighlandBase,
+                RiftStore::Get().Seed
+            );
         }
     }
+}
+
+auto RiftTerrain::CopyPackedHeights() const -> std::vector<float> {
+    const int stride = _cells + 1;
+    std::vector<float> packed(static_cast<size_t>(_cells) * _cells);
+    for (int j = 0; j < _cells; ++j) {
+        for (int i = 0; i < _cells; ++i) {
+            packed[static_cast<size_t>(j) * _cells + i] = _heights[static_cast<size_t>(j) * stride + i];
+        }
+    }
+    return packed;
 }
 
 auto RiftTerrain::GetVertexHeight(int i, int j) const -> float {
     return _heights[static_cast<size_t>(j) * (_cells + 1) + i];
-}
-
-auto RiftTerrain::BuildMesh() const -> std::shared_ptr<BeMesh> {
-    auto vpos = [&](int gx, int gz) -> glm::vec3 {
-        return glm::vec3(-(gx * _cell - _half), GetVertexHeight(gx, gz), gz * _cell - _half);
-    };
-
-    auto mesh = std::make_shared<BeMesh>();
-    auto pushTri = [&](glm::vec3 a, glm::vec3 b, glm::vec3 c) {
-        glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
-        uint32_t base = static_cast<uint32_t>(mesh->Vertices.size());
-        for (const auto& p : { a, b, c }) {
-            BeFullVertex v{};
-            v.Position = p;
-            v.Normal = normal;
-            mesh->Vertices.push_back(v);
-        }
-        mesh->Indices.push_back(base + 0);
-        mesh->Indices.push_back(base + 1);
-        mesh->Indices.push_back(base + 2);
-    };
-
-    for (int gz = 0; gz < _cells; ++gz) {
-        for (int gx = 0; gx < _cells; ++gx) {
-            glm::vec3 topLeft = vpos(gx, gz);
-            glm::vec3 topRight = vpos(gx + 1, gz);
-            glm::vec3 bottomLeft = vpos(gx, gz + 1);
-            glm::vec3 bottomRight = vpos(gx + 1, gz + 1);
-            pushTri(topLeft, topRight, bottomLeft);
-            pushTri(topRight, bottomRight, bottomLeft);
-        }
-    }
-
-    mesh->Slices.push_back({
-        .IndexCount = static_cast<uint32_t>(mesh->Indices.size()),
-        .StartIndexLocation = 0,
-        .BaseVertexLocation = 0,
-    });
-
-    return mesh;
 }
 
 auto RiftTerrain::GetSurface(float worldX, float worldZ) const -> SurfaceHit {

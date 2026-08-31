@@ -73,7 +73,11 @@ auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
 
         if (input->GetKeyDown(GLFW_KEY_SPACE)) ship.FlightAssist = !ship.FlightAssist;
 
-        const float proximity = 1.0f - glm::smoothstep(ship.GroundEffectLowAltitude, ship.GroundEffectHighAltitude, _camera->Position.y);
+        const float groundHeight = _terrain ? _terrain->GetHeight(_camera->Position.x, _camera->Position.z) : 0.0f;
+        const float altitude = _camera->Position.y - groundHeight;
+        const float targetProximity = 1.0f - glm::smoothstep(ship.GroundEffectLowAltitude, ship.GroundEffectHighAltitude, altitude);
+        _groundEffectProximity += (targetProximity - _groundEffectProximity) * (1.0f - std::exp(-ship.GroundEffectResponse * dt));
+        const float proximity = _groundEffectProximity;
         float speedCap = ship.MaxSpeed * glm::mix(ship.GroundEffectSpeedHigh, ship.GroundEffectSpeedLow, proximity);
         
         float damping = 0.0f;
@@ -118,8 +122,10 @@ auto ShipCameraController::DrawDebugUI() -> void {
     const auto& ship = RiftStore::Get().Ship;
     ImGui::Begin("Ship Camera");
     ImGui::Text("Flight Assist: %s  (Space toggles)", ship.FlightAssist ? "ON" : "OFF");
-    const float proximity = 1.0f - glm::smoothstep(ship.GroundEffectLowAltitude, ship.GroundEffectHighAltitude, _camera->Position.y);
-    ImGui::Text("Altitude: %.0f  Ground Effect: %.0f%%", _camera->Position.y, proximity * 100.0f);
+    const float groundHeight = _terrain ? _terrain->GetHeight(_camera->Position.x, _camera->Position.z) : 0.0f;
+    const float altitude = _camera->Position.y - groundHeight;
+    const float proximity = _groundEffectProximity;
+    ImGui::Text("Altitude: %.0f  Ground Effect: %.0f%%", altitude, proximity * 100.0f);
     ImGui::Text("Speed: %.1f / %.0f", glm::length(_velocity), ship.MaxSpeed * glm::mix(1.0f, ship.GroundEffectSpeedLow, proximity));
     ImGui::Text("Velocity : %+.1f %+.1f %+.1f", _velocity.x, _velocity.y, _velocity.z);
     ImGui::Text("AngVel   : P%+.0f Y%+.0f R%+.0f", _angularVelocity.x, _angularVelocity.y, _angularVelocity.z);
