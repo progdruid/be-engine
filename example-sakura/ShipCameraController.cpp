@@ -60,18 +60,20 @@ auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
         const glm::vec3 up = orientation * glm::vec3(0.0f, 1.0f, 0.0f);
 
         glm::vec3 thrust{0.0f};
-        if (input->GetKey(GLFW_KEY_W)) thrust += front;
-        if (input->GetKey(GLFW_KEY_S)) thrust -= front;
-        if (input->GetKey(GLFW_KEY_Q)) thrust -= up;
-        if (input->GetKey(GLFW_KEY_E)) thrust += up;
+        if (_controlsEnabled) {
+            if (input->GetKey(GLFW_KEY_W)) thrust += front;
+            if (input->GetKey(GLFW_KEY_S)) thrust -= front;
+            if (input->GetKey(GLFW_KEY_Q)) thrust -= up;
+            if (input->GetKey(GLFW_KEY_E)) thrust += up;
+        }
 
         float accel = ship.ThrustAccel;
-        if (input->GetKey(GLFW_KEY_LEFT_SHIFT)) accel *= ship.BoostMultiplier;
+        if (_controlsEnabled && input->GetKey(GLFW_KEY_LEFT_SHIFT)) accel *= ship.BoostMultiplier;
 
         if (glm::length(thrust) > 0.0001f)
             _velocity += glm::normalize(thrust) * accel * dt;
 
-        if (input->GetKeyDown(GLFW_KEY_SPACE)) ship.FlightAssist = !ship.FlightAssist;
+        if (_controlsEnabled && input->GetKeyDown(GLFW_KEY_SPACE)) ship.FlightAssist = !ship.FlightAssist;
 
         const float groundHeight = _terrain ? _terrain->GetHeight(_camera->Position.x, _camera->Position.z) : 0.0f;
         const float altitude = _camera->Position.y - groundHeight;
@@ -81,7 +83,7 @@ auto ShipCameraController::Update(float deltaTime, BeInput* input) -> void {
         float speedCap = ship.MaxSpeed * glm::mix(ship.GroundEffectSpeedHigh, ship.GroundEffectSpeedLow, proximity);
         
         float damping = 0.0f;
-        if (input->GetKey(GLFW_KEY_X)) damping = ship.FullStopDamping;
+        if (_controlsEnabled && input->GetKey(GLFW_KEY_X)) damping = ship.FullStopDamping;
         else if (ship.FlightAssist) damping = ship.FlightAssistDamping;
         damping *= glm::mix(ship.GroundEffectDragHigh, ship.GroundEffectDragLow, proximity);
         _velocity -= _velocity * (1.0f - std::exp(-damping * dt));

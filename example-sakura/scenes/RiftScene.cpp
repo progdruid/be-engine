@@ -70,6 +70,34 @@ auto RiftScene::ExitPlayMode() -> void {
     _hudMaterial->SetFloat1("TargetState", 0.0f);
 }
 
+auto RiftScene::DeathSequence() -> BeCoroutine {
+    const auto& ship = RiftStore::Get().Ship;
+    _dying = true;
+    _shipCameraController->SetControlsEnabled(false);
+
+    const float fadeOutStart = _time;
+    while (_time - fadeOutStart < ship.DeathFadeOutTime) {
+        _posterizeMaterial->SetFloat1("Fade", (_time - fadeOutStart) / ship.DeathFadeOutTime);
+        co_yield 0.0f;
+    }
+    _posterizeMaterial->SetFloat1("Fade", 1.0f);
+
+    _delivery->ApplyCrashPenalty();
+    _shipCameraController->Respawn(_delivery->GetRespawnDock(_camera->Position));
+
+    co_yield ship.DeathHoldTime;
+
+    const float fadeInStart = _time;
+    while (_time - fadeInStart < ship.DeathFadeInTime) {
+        _posterizeMaterial->SetFloat1("Fade", 1.0f - (_time - fadeInStart) / ship.DeathFadeInTime);
+        co_yield 0.0f;
+    }
+    _posterizeMaterial->SetFloat1("Fade", 0.0f);
+
+    _shipCameraController->SetControlsEnabled(true);
+    _dying = false;
+}
+
 auto RiftScene::DefineSettings() -> void {
     const auto& settings = RiftStore::Get();
     _camera->NearPlane = settings.Camera.NearPlane;
@@ -234,7 +262,7 @@ void RiftScene::Tick(float deltaTime) {
         _posterizeMaterial->SetFloat1("Enabled", enabled ? 1.0f : 0.0f);
     }
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_P)) {
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_P) && !_dying) {
         if (_delivery) ExitPlayMode();
         else EnterPlayMode();
     }
@@ -249,12 +277,13 @@ void RiftScene::Tick(float deltaTime) {
     horizonDir = horizonLen > 1e-3f ? horizonDir / horizonLen : glm::vec2(1.0f, 0.0f);
     _hudMaterial->SetFloat2("HorizonDir", { horizonDir.x, -horizonDir.y });
 
-    if (_delivery) {
+    if (_delivery && !_dying) {
         if (_shipCameraController->GetLastImpactSpeed() > RiftStore::Get().Ship.CrashImpactSpeed) {
-            _delivery->ApplyCrashPenalty();
-            _shipCameraController->Respawn(_delivery->GetRespawnDock(_camera->Position));
+            _coroutineScheduler.Start(DeathSequence());
         }
+    }
 
+    if (_delivery && !_dying) {
         const auto dock = _delivery->CheckDock(_camera->Position);
         _shipCameraController->SetInDock(dock.Hit);
 

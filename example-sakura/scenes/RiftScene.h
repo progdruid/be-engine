@@ -25,6 +25,7 @@ class RiftScene : public FullScene {
     std::shared_ptr<BeMaterial> _hudMaterial;
     ImFont* _riftFont = nullptr;
     bool _stationUiOpen = false;
+    bool _dying = false;
 
     expose
     explicit RiftScene(Game* game);
@@ -37,6 +38,7 @@ class RiftScene : public FullScene {
     auto EnterPlayMode() -> void;
     auto ExitPlayMode() -> void;
     auto SetStationUiOpen(bool open) -> void;
+    auto DeathSequence() -> BeCoroutine;
 
     protect
     auto DefineAssets() -> void override;
