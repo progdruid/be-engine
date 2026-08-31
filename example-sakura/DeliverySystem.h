@@ -42,6 +42,7 @@ class DeliverySystem {
         glm::vec3 Aim;
         entt::entity Entity;
         float DockRadius = 0.f;
+        std::string Name;
         std::vector<glm::vec3> Docks;
         std::vector<Job> Jobs;
         std::vector<MarketEntry> Market;

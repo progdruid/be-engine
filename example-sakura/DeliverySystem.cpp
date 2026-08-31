@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <iterator>
 #include <numeric>
 
 #include "BeAssetRegistry.h"
@@ -26,9 +27,8 @@ auto DeliverySystem::GetDistanceToTarget(glm::vec3 shipPos) const -> float {
 }
 
 auto DeliverySystem::GetStationName(int station) const -> std::string {
-    char buffer[32];
-    std::snprintf(buffer, sizeof(buffer), "Station %02d", station + 1);
-    return buffer;
+    be_assert(station >= 0 && station < static_cast<int>(_stations.size()), "GetStationName: out of range");
+    return _stations[station].Name;
 }
 
 auto DeliverySystem::GenerateStations() -> void {
@@ -90,6 +90,29 @@ auto DeliverySystem::GenerateStations() -> void {
                 ,DockComponent { .StationIndex = index }
             );
         }
+    }
+
+    static const char* const nameHeads[] = {
+        "Iron", "Cold", "Rust", "High", "Dusk", "Grim", "Deep", "Ash", "Black", "Storm",
+        "Grey", "Stone", "Frost", "Salt", "Red", "Dead", "North", "Gale", "Bleak", "Ember",
+        "Wind", "Pale", "Far", "Stark",
+    };
+    static const char* const nameTails[] = {
+        "hold", "harbor", "gate", "spire", "fall", "reach", "hollow", "ford", "watch", "rest",
+        "crag", "run", "mire", "keep", "barrow", "moor", "vale", "drift", "cross", "haven",
+        "ridge", "port", "end", "forge",
+    };
+    std::uniform_int_distribution<size_t> pickHead(0, std::size(nameHeads) - 1);
+    std::uniform_int_distribution<size_t> pickTail(0, std::size(nameTails) - 1);
+    for (auto& station : _stations) {
+        std::string name;
+        for (int attempt = 0; attempt < 64; ++attempt) {
+            name = std::string(nameHeads[pickHead(_rng)]) + nameTails[pickTail(_rng)];
+            const bool taken = std::any_of(_stations.begin(), _stations.end(),
+                [&](const Station& other) -> bool { return &other != &station && other.Name == name; });
+            if (!taken) break;
+        }
+        station.Name = name;
     }
 
     const int commodityCount = static_cast<int>(config.Commodities.size());
