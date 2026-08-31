@@ -33,6 +33,7 @@ enum class SenFormat : uint8_t {
     RGB32_Float,
     RGBA32_Float,
     RG32_Float,
+    R32_Float,
 };
 
 // ─── texture ─────────────────────────────────────────────────────

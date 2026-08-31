@@ -16,6 +16,7 @@ namespace Sen::Vulkan {
             case SenFormat::RGB32_Float:     return 12;
             case SenFormat::RGBA32_Float:    return 16;
             case SenFormat::RG32_Float:      return 8;
+            case SenFormat::R32_Float:       return 4;
             default:                         return 4;
         }
     }
@@ -85,6 +86,7 @@ namespace Sen::Vulkan {
             case SenFormat::RGB32_Float:     return VK_FORMAT_R32G32B32_SFLOAT;
             case SenFormat::RGBA32_Float:    return VK_FORMAT_R32G32B32A32_SFLOAT;
             case SenFormat::RG32_Float:      return VK_FORMAT_R32G32_SFLOAT;
+            case SenFormat::R32_Float:       return VK_FORMAT_R32_SFLOAT;
             default:                         return VK_FORMAT_UNDEFINED;
         }
     }
@@ -99,6 +101,7 @@ namespace Sen::Vulkan {
             case VK_FORMAT_R32G32B32_SFLOAT:        return SenFormat::RGB32_Float;
             case VK_FORMAT_R32G32B32A32_SFLOAT:     return SenFormat::RGBA32_Float;
             case VK_FORMAT_R32G32_SFLOAT:           return SenFormat::RG32_Float;
+            case VK_FORMAT_R32_SFLOAT:              return SenFormat::R32_Float;
             default:                                return SenFormat::Unknown;
         }
     }
