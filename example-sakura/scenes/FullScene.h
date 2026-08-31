@@ -10,6 +10,7 @@
 #include "BaseScene.h"
 #include "BeAssetRegistry.h"
 #include "BeFileWatcher.h"
+#include "coroutine/BeCoroutineScheduler.h"
 #include "entt/entt.hpp"
 
 class BeCamera;
@@ -38,6 +39,7 @@ class FullScene : public BaseScene {
     std::unique_ptr<BeStandardRenderMachine> _machine;
     float _time = 0.0f;
     std::unique_ptr<BeLuaState> _sceneLua;
+    BeCoroutineScheduler _coroutineScheduler;
 
     hide
     std::filesystem::path _sceneWatchFilePath;

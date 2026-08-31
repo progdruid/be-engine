@@ -39,6 +39,8 @@ auto FullScene::OnLoad() -> void {
 }
 
 auto FullScene::OnUnload() -> void {
+    _coroutineScheduler.Clear();
+
     if (_sceneWatch != 0) {
         BeFileWatcher::Unregister(_sceneWatch);
         _sceneWatch = 0;
@@ -77,6 +79,8 @@ auto FullScene::Reload(ReloadMask mask) -> void {
 
 auto FullScene::Tick(float deltaTime) -> void {
     _time += deltaTime;
+
+    _coroutineScheduler.Update(deltaTime);
 
     for (const auto [_, transform, circling] : _registry.view<TransformComponent, CirclingComponent>().each()) {
         const auto reference = std::abs(circling.Axis.y) > 0.999f ? glm::vec3(0.f, 0.f, 1.f) : glm::vec3(0.f, 1.f, 0.f);
