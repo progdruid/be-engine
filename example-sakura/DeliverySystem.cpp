@@ -1,7 +1,9 @@
 #include "DeliverySystem.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <numeric>
 
 #include "BeAssetRegistry.h"
 #include "BeProp.h"
@@ -90,6 +92,29 @@ auto DeliverySystem::GenerateStations() -> void {
         }
     }
 
+    const int commodityCount = static_cast<int>(config.Commodities.size());
+    _cargo.assign(commodityCount, 0);
+    if (commodityCount > 0) {
+        const int minCount = std::clamp(config.MarketMinCommodities, 0, commodityCount);
+        const int maxCount = std::clamp(config.MarketMaxCommodities, minCount, commodityCount);
+        std::uniform_int_distribution<int> pickForSaleCount(minCount, maxCount);
+        for (auto& station : _stations) {
+            station.Market.reserve(commodityCount);
+            for (int commodity = 0; commodity < commodityCount; ++commodity) {
+                const float average = config.Commodities[commodity].AverageValue;
+                const float factor = 1.0f + FloatRange(-config.PriceDeviation, config.PriceDeviation).Pick(_rng);
+                const int price = std::max(1, static_cast<int>(std::lround(average * factor)));
+                station.Market.push_back({ .Commodity = commodity, .Price = price, .ForSale = false });
+            }
+
+            std::vector<int> pool(commodityCount);
+            std::iota(pool.begin(), pool.end(), 0);
+            std::shuffle(pool.begin(), pool.end(), _rng);
+            const int forSaleCount = pickForSaleCount(_rng);
+            for (int slot = 0; slot < forSaleCount; ++slot) station.Market[pool[slot]].ForSale = true;
+        }
+    }
+
     if (_stations.size() <= 1) return;
     const int jobCount = config.JobsPerStation < 0 ? 0 : config.JobsPerStation;
     std::uniform_int_distribution<int> pickStation(0, static_cast<int>(_stations.size()) - 1);
@@ -160,6 +185,51 @@ auto DeliverySystem::CompleteContract() -> void {
 auto DeliverySystem::ApplyCrashPenalty() -> void {
     _credits /= 2;
     _contract.reset();
+}
+
+auto DeliverySystem::BuyCommodity(int station, int commodity, int tons) -> void {
+    be_assert(station >= 0 && station < static_cast<int>(_stations.size()), "BuyCommodity: station out of range");
+    be_assert(commodity >= 0 && commodity < static_cast<int>(_cargo.size()), "BuyCommodity: commodity out of range");
+    be_assert(tons > 0, "BuyCommodity: non-positive tons");
+
+    const auto& entry = _stations[station].Market[commodity];
+    be_assert(entry.ForSale, "BuyCommodity: commodity not sold here");
+    const int cost = entry.Price * tons;
+    be_assert(cost <= _credits, "BuyCommodity: insufficient credits");
+    be_assert(GetCargoUsed() + tons <= GetCargoCapacity(), "BuyCommodity: exceeds cargo capacity");
+
+    _credits -= cost;
+    _cargo[commodity] += tons;
+}
+
+auto DeliverySystem::SellCommodity(int station, int commodity, int tons) -> void {
+    be_assert(station >= 0 && station < static_cast<int>(_stations.size()), "SellCommodity: station out of range");
+    be_assert(commodity >= 0 && commodity < static_cast<int>(_cargo.size()), "SellCommodity: commodity out of range");
+    be_assert(tons > 0, "SellCommodity: non-positive tons");
+    be_assert(_cargo[commodity] >= tons, "SellCommodity: not enough cargo");
+
+    _credits += _stations[station].Market[commodity].Price * tons;
+    _cargo[commodity] -= tons;
+}
+
+auto DeliverySystem::GetCommodityName(int commodity) const -> std::string {
+    const auto& commodities = RiftStore::Get().Delivery.Commodities;
+    be_assert(commodity >= 0 && commodity < static_cast<int>(commodities.size()), "GetCommodityName: out of range");
+    return commodities[commodity].Name;
+}
+
+auto DeliverySystem::GetCommodityAverage(int commodity) const -> float {
+    const auto& commodities = RiftStore::Get().Delivery.Commodities;
+    be_assert(commodity >= 0 && commodity < static_cast<int>(commodities.size()), "GetCommodityAverage: out of range");
+    return commodities[commodity].AverageValue;
+}
+
+auto DeliverySystem::GetCargoUsed() const -> int {
+    return std::accumulate(_cargo.begin(), _cargo.end(), 0);
+}
+
+auto DeliverySystem::GetCargoCapacity() const -> int {
+    return RiftStore::Get().Delivery.CargoCapacity;
 }
 
 auto DeliverySystem::GetRespawnDock(glm::vec3 shipPos) -> glm::vec3 {

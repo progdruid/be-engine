@@ -29,6 +29,13 @@ class DeliverySystem {
         int Reward = 0;
     };
 
+    expose
+    struct MarketEntry {
+        int Commodity = -1;
+        int Price = 0;
+        bool ForSale = false;
+    };
+
     hide
     struct Station {
         glm::vec3 Position;
@@ -37,6 +44,7 @@ class DeliverySystem {
         float DockRadius = 0.f;
         std::vector<glm::vec3> Docks;
         std::vector<Job> Jobs;
+        std::vector<MarketEntry> Market;
     };
 
     entt::registry& _registry;
@@ -44,6 +52,7 @@ class DeliverySystem {
     const RiftTerrain& _terrain;
     std::mt19937 _rng;
     std::vector<Station> _stations;
+    std::vector<int> _cargo;
     std::optional<Job> _contract;
     int _dockedStation = -1;
     int _credits = 0;
@@ -67,6 +76,9 @@ class DeliverySystem {
     auto TakeJob(int station, int jobIndex) -> void;
     auto CompleteContract() -> void;
     auto ApplyCrashPenalty() -> void;
+
+    auto BuyCommodity(int station, int commodity, int tons) -> void;
+    auto SellCommodity(int station, int commodity, int tons) -> void;
     [[nodiscard]] auto GetRespawnDock(glm::vec3 shipPos) -> glm::vec3;
 
     [[nodiscard]] auto HasContract() const -> bool { return _contract.has_value(); }
@@ -79,4 +91,11 @@ class DeliverySystem {
     [[nodiscard]] auto GetContract() const -> const std::optional<Job>& { return _contract; }
     [[nodiscard]] auto GetStationJobs(int station) const -> const std::vector<Job>& { return _stations[station].Jobs; }
     [[nodiscard]] auto GetStationName(int station) const -> std::string;
+
+    [[nodiscard]] auto GetStationMarket(int station) const -> const std::vector<MarketEntry>& { return _stations[station].Market; }
+    [[nodiscard]] auto GetCommodityName(int commodity) const -> std::string;
+    [[nodiscard]] auto GetCommodityAverage(int commodity) const -> float;
+    [[nodiscard]] auto GetCargoTons(int commodity) const -> int { return _cargo[commodity]; }
+    [[nodiscard]] auto GetCargoUsed() const -> int;
+    [[nodiscard]] auto GetCargoCapacity() const -> int;
 };

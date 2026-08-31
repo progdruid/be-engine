@@ -35,6 +35,11 @@ struct StationKind {
     std::vector<glm::vec3> DockPositions {};
 };
 
+struct Commodity {
+    std::string Name;
+    float AverageValue = 0.0f;
+};
+
 struct RiftSettings {
     unsigned Seed = 1337;
 
@@ -221,6 +226,21 @@ struct RiftSettings {
         float MapRadius = 2500.0f;
         float MinSeparation = 250.0f;
         float VisitRadius = 35.0f;
+
+        std::vector<Commodity> Commodities = {
+            { .Name = "Water Ice",   .AverageValue = 20.0f },
+            { .Name = "Iron Ore",    .AverageValue = 35.0f },
+            { .Name = "Oxygen",      .AverageValue = 55.0f },
+            { .Name = "Silicon",     .AverageValue = 70.0f },
+            { .Name = "Titanium",    .AverageValue = 130.0f },
+            { .Name = "Rare Earths", .AverageValue = 220.0f },
+            { .Name = "Helium-3",    .AverageValue = 340.0f },
+            { .Name = "Antimatter",  .AverageValue = 820.0f },
+        };
+        int CargoCapacity = 40;
+        float PriceDeviation = 0.28f;
+        int MarketMinCommodities = 2;
+        int MarketMaxCommodities = 5;
 
         struct MarkerSettings {
             float ScreenMargin = 0.88f;
