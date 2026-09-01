@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <random>
 #include <string>
 
@@ -12,6 +13,7 @@
 
 #include "ShipCameraController.h"
 #include "DeliverySystem.h"
+#include "MetaSystem.h"
 #include "StationUI.h"
 #include "RiftSettings.h"
 #include "RiftTerrain.h"
@@ -19,6 +21,7 @@
 #include "imgui/BeImGuiPass.h"
 #include "imgui/imgui.h"
 #include "BeInput.h"
+#include "BeWindow.h"
 #include "BeMaterial.h"
 #include "BeMeshPrimitives.h"
 #include "BeProp.h"
@@ -52,12 +55,11 @@ void RiftScene::Prepare() {
 auto RiftScene::EnterPlayMode() -> void {
     _delivery = std::make_unique<DeliverySystem>(_registry, _assetRegistry, *_terrain);
     _delivery->GenerateStations();
+    _meta.Begin();
 }
 
 auto RiftScene::SetStationUiOpen(bool open) -> void {
     _stationUiOpen = open;
-    _shipCameraController->SetControlsEnabled(!open);
-    _gameIns->Input->SetMouseCapture(!open);
 }
 
 auto RiftScene::ExitPlayMode() -> void {
@@ -67,13 +69,13 @@ auto RiftScene::ExitPlayMode() -> void {
     _registry.destroy(docks.begin(), docks.end());
     SetStationUiOpen(false);
     _delivery.reset();
+    _meta.End();
     _hudMaterial->SetFloat1("TargetState", 0.0f);
 }
 
 auto RiftScene::DeathSequence() -> BeCoroutine {
     const auto& ship = RiftStore::Get().Ship;
     _dying = true;
-    _shipCameraController->SetControlsEnabled(false);
 
     const float fadeOutStart = _time;
     while (_time - fadeOutStart < ship.DeathFadeOutTime) {
@@ -94,7 +96,6 @@ auto RiftScene::DeathSequence() -> BeCoroutine {
     }
     _posterizeMaterial->SetFloat1("Fade", 0.0f);
 
-    _shipCameraController->SetControlsEnabled(true);
     _dying = false;
 }
 
@@ -237,7 +238,8 @@ auto RiftScene::DefinePasses() -> void {
     auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
     imguiPass->SetUICallback([this]() {
         ImGui::PushFont(_riftFont);
-        _shipCameraController->DrawDebugUI();
+        if (_delivery) _meta.DrawUI(*_delivery);
+        if (_showDebug) _shipCameraController->DrawDebugUI();
         if (_stationUiOpen && _delivery) StationUI::Draw(*_delivery, _camera->Position);
         ImGui::PopFont();
     });
@@ -266,6 +268,28 @@ void RiftScene::Tick(float deltaTime) {
         if (_delivery) ExitPlayMode();
         else EnterPlayMode();
     }
+
+    if (_gameIns->Input->GetKeyDown(GLFW_KEY_F1)) _showDebug = !_showDebug;
+
+    const bool cheatMod = _gameIns->Input->GetKey(GLFW_KEY_LEFT_CONTROL) && _gameIns->Input->GetKey(GLFW_KEY_LEFT_ALT);
+    if (cheatMod && _delivery) {
+        if (_gameIns->Input->GetKeyDown(GLFW_KEY_EQUAL)) _delivery->SetCredits(_delivery->GetCredits() + 1000);
+        if (_gameIns->Input->GetKeyDown(GLFW_KEY_MINUS)) _delivery->SetCredits(_delivery->GetCredits() - 1000);
+        if (_gameIns->Input->GetKeyDown(GLFW_KEY_LEFT_BRACKET)) _meta.SetElapsed(_meta.GetElapsed() - 30.0f);
+        if (_gameIns->Input->GetKeyDown(GLFW_KEY_RIGHT_BRACKET)) _meta.SetElapsed(_meta.GetElapsed() + 30.0f);
+    }
+
+    if (_delivery) {
+        _meta.Update(deltaTime, *_delivery);
+        if (_meta.WantsClose()) {
+            _gameIns->Window->RequestClose();
+            return;
+        }
+    }
+
+    const bool uiOpen = _meta.IsPaused() || _stationUiOpen;
+    _shipCameraController->SetControlsEnabled(!uiOpen && !_dying);
+    _gameIns->Input->SetMouseCapture(!uiOpen);
 
     _shipCameraController->Update(deltaTime, _gameIns->Input.get());
     _hudMaterial->SetFloat2("AimOffset", _shipCameraController->GetAim());

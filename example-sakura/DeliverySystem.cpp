@@ -210,6 +210,10 @@ auto DeliverySystem::ApplyCrashPenalty() -> void {
     _contract.reset();
 }
 
+auto DeliverySystem::SetCredits(int credits) -> void {
+    _credits = std::max(0, credits);
+}
+
 auto DeliverySystem::BuyCommodity(int station, int commodity, int tons) -> void {
     be_assert(station >= 0 && station < static_cast<int>(_stations.size()), "BuyCommodity: station out of range");
     be_assert(commodity >= 0 && commodity < static_cast<int>(_cargo.size()), "BuyCommodity: commodity out of range");

@@ -77,6 +77,7 @@ class DeliverySystem {
     auto TakeJob(int station, int jobIndex) -> void;
     auto CompleteContract() -> void;
     auto ApplyCrashPenalty() -> void;
+    auto SetCredits(int credits) -> void;
 
     auto BuyCommodity(int station, int commodity, int tons) -> void;
     auto SellCommodity(int station, int commodity, int tons) -> void;

@@ -7,6 +7,7 @@
 
 #include "DeliverySystem.h"
 #include "FullScene.h"
+#include "MetaSystem.h"
 
 class ShipCameraController;
 class DeliverySystem;
@@ -26,6 +27,8 @@ class RiftScene : public FullScene {
     ImFont* _riftFont = nullptr;
     bool _stationUiOpen = false;
     bool _dying = false;
+    bool _showDebug = false;
+    MetaSystem _meta;
 
     expose
     explicit RiftScene(Game* game);

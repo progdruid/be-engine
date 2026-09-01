@@ -252,6 +252,11 @@ struct RiftSettings {
             float FadeFar = 200.0f;
         } Marker;
     } Delivery;
+
+    struct DebtSettings {
+        int Target = 7500;
+        float TimeLimit = 900.0f;
+    } Debt;
 };
 
 class RiftStore {
