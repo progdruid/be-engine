@@ -67,6 +67,7 @@ auto RiftScene::ExitPlayMode() -> void {
     _registry.destroy(stations.begin(), stations.end());
     const auto docks = _registry.view<DockComponent>();
     _registry.destroy(docks.begin(), docks.end());
+    _shipCameraController->Uncapture();
     SetStationUiOpen(false);
     _delivery.reset();
     _meta.End();
