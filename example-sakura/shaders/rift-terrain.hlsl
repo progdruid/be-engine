@@ -82,7 +82,7 @@ struct Interpolators {
 Interpolators VertexFunction(VertexInput input) {
     float4 worldFlat = mul(float4(input.Position, 1.0), _GeometryObject.Model);
 
-    float2 hUV = float2(0.5 - worldFlat.x / _Terrain.MapSize,
+    float2 hUV = float2(0.5 + worldFlat.x / _Terrain.MapSize,
                         0.5 + worldFlat.z / _Terrain.MapSize);
     float2 texUV = hUV + 0.5 / _Terrain.MapResolution;
     float height = HeightMap.SampleLevel(HeightSampler, texUV, 0).r * _Terrain.HeightScale;

@@ -8,6 +8,7 @@
 
 #include <umbrellas/include-glfw.h>
 #include <umbrellas/include-glm.h>
+#include <umbrellas/include-libassert.h>
 
 #include "BeMesh.h"
 
@@ -128,11 +129,12 @@ auto RiftScene::DefineAssets() -> void {
         .Build();
 
     auto terrainShader = BeShaderLibrary::GetShader("rift-terrain");
-    auto floor = BeProp::FromMesh(BeMeshPrimitives::Plane(settings.Terrain.Cells), terrainShader, "geometry-main");
+    be_assert(settings.Terrain.GridVerticesPerRenderTile % 2 == 1, "vertices per render tile must be odd so tile vertices land on integer logical coords");
+    auto floor = BeProp::FromMesh(BeMeshPrimitives::Plane(settings.Terrain.GridVerticesPerRenderTile - 1), terrainShader, "geometry-main");
     floor->Materials[0]->SetFloat3("DiffuseColor", settings.Terrain.Color);
     floor->Materials[0]->SetTexture("HeightMap", heightMap);
     floor->Materials[0]->SetSampler("HeightSampler", BeShaderLibrary::GetSampler("point-wrap"));
-    floor->Materials[0]->SetFloat1("MapSize", settings.Terrain.MapSize);
+    floor->Materials[0]->SetFloat1("MapSize", settings.Terrain.LogicalMapWorldSize);
     floor->Materials[0]->SetFloat1("MapResolution", static_cast<float>(resolution));
     floor->Materials[0]->SetFloat1("HeightScale", 1.0f);
     _assetRegistry.AddProp("floor", floor);
@@ -178,7 +180,7 @@ auto RiftScene::DefineScene() -> void {
         ,RenderComponent { .Prop = _assetRegistry.GetProp("box").lock(), .CastShadows = true }
     );
 
-    const float tileSize = RiftStore::Get().Terrain.Size;
+    const float tileSize = RiftStore::Get().Terrain.GetRenderTileWorldSize();
     for (int tile = 0; tile < 9; ++tile) {
         _terrainTiles[tile] = CreateEntity(_registry
             ,NameComponent { .Name = "terrain-" + std::to_string(tile) }
@@ -364,7 +366,7 @@ void RiftScene::Tick(float deltaTime) {
     _hudMaterial->SetFloat1("TargetRingRadius", targetRadius);
     _hudMaterial->SetFloat1("TargetAlpha", targetAlpha);
 
-    const float tileSize = RiftStore::Get().Terrain.Size;
+    const float tileSize = RiftStore::Get().Terrain.GetRenderTileWorldSize();
     const int centerX = static_cast<int>(std::round(_camera->Position.x / tileSize));
     const int centerZ = static_cast<int>(std::round(_camera->Position.z / tileSize));
     int tileIndex = 0;

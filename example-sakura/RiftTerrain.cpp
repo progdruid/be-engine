@@ -126,14 +126,12 @@ auto HeightAtUV(
 
 RiftTerrain::RiftTerrain() {
     const auto& t = RiftStore::Get().Terrain;
-    const int tiles = static_cast<int>(std::lround(t.MapSize / t.Size));
-    const int mapCells = tiles * t.Cells;
-    const int spikeFreq = 2 * tiles;
+    const int mapCells = static_cast<int>(std::lround(t.LogicalMapWorldSize / t.LogicalCellWorldSize));
 
-    _size = t.MapSize;
-    _half = t.MapSize * 0.5f;
+    _size = t.LogicalMapWorldSize;
+    _half = t.LogicalMapWorldSize * 0.5f;
     _cells = mapCells;
-    _cell = t.MapSize / mapCells;
+    _cell = t.LogicalMapWorldSize / mapCells;
 
     const int stride = mapCells + 1;
     _heights.resize(static_cast<size_t>(stride) * stride);
@@ -141,7 +139,7 @@ RiftTerrain::RiftTerrain() {
         for (int i = 0; i <= mapCells; ++i) {
             _heights[static_cast<size_t>(j) * stride + i] = HeightAtUV(
                 static_cast<float>(i) / mapCells, static_cast<float>(j) / mapCells,
-                t.SpikeAmplitude, spikeFreq, t.ValleyRoughness,
+                t.SpikeAmplitude, t.SpikeFrequency, t.ValleyRoughness,
                 t.ValleyFrequency, t.ValleyWidth, t.WallSlope, t.HighlandBase,
                 RiftStore::Get().Seed
             );
@@ -165,7 +163,7 @@ auto RiftTerrain::GetVertexHeight(int i, int j) const -> float {
 }
 
 auto RiftTerrain::GetSurface(float worldX, float worldZ) const -> SurfaceHit {
-    float u = (_half - worldX) / _size;
+    float u = (worldX + _half) / _size;
     float v = (worldZ + _half) / _size;
     u -= std::floor(u);
     v -= std::floor(v);
@@ -187,12 +185,12 @@ auto RiftTerrain::GetSurface(float worldX, float worldZ) const -> SurfaceHit {
     if (tx + tz <= 1.0f) {
         return {
             h00 + tx * (h10 - h00) + tz * (h01 - h00),
-            glm::normalize(glm::vec3(h10 - h00, _cell, -(h01 - h00))),
+            glm::normalize(glm::vec3(-(h10 - h00), _cell, -(h01 - h00))),
         };
     }
     return {
         h11 + (1.0f - tx) * (h01 - h11) + (1.0f - tz) * (h10 - h11),
-        glm::normalize(glm::vec3(h11 - h01, _cell, -(h11 - h10))),
+        glm::normalize(glm::vec3(-(h11 - h01), _cell, -(h11 - h10))),
     };
 }
 
@@ -204,14 +202,14 @@ auto RiftTerrain::CollideSphere(glm::vec3 center, float radius) const -> Collisi
     auto wrap = [&](int i) { return ((i % _cells) + _cells) % _cells; };
     auto vertex = [&](int gi, int gj) -> glm::vec3 {
         return glm::vec3(
-            _half - gi * _cell,
+            gi * _cell - _half,
             _heights[static_cast<size_t>(wrap(gj)) * (_cells + 1) + wrap(gi)],
             gj * _cell - _half
         );
     };
 
-    const int giMin = static_cast<int>(std::floor((_half - (center.x + radius)) / _cell));
-    const int giMax = static_cast<int>(std::floor((_half - (center.x - radius)) / _cell));
+    const int giMin = static_cast<int>(std::floor((center.x - radius + _half) / _cell));
+    const int giMax = static_cast<int>(std::floor((center.x + radius + _half) / _cell));
     const int gjMin = static_cast<int>(std::floor((center.z - radius + _half) / _cell));
     const int gjMax = static_cast<int>(std::floor((center.z + radius + _half) / _cell));
 
@@ -260,8 +258,8 @@ auto RiftTerrain::CollideSphere(glm::vec3 center, float radius) const -> Collisi
             const glm::vec3 v10 = vertex(gi + 1, gj);
             const glm::vec3 v01 = vertex(gi, gj + 1);
             const glm::vec3 v11 = vertex(gi + 1, gj + 1);
-            consider(v00, v10, v01);
-            consider(v10, v11, v01);
+            consider(v00, v01, v10);
+            consider(v10, v01, v11);
         }
     }
 

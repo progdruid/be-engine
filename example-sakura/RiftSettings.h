@@ -58,16 +58,22 @@ struct RiftSettings {
     } Ambient;
 
     struct TerrainSettings {
-        float Size = 180.0f;
-        int Cells = 45;
-        float MapSize = 2880.0f;
+        float LogicalMapWorldSize = 2880.0f;
+        float LogicalCellWorldSize = 4.0f;
+        int GridVerticesPerRenderTile = 45;
+
         float SpikeAmplitude = 75.0f;
+        int SpikeFrequency = 32;
         int ValleyFrequency = 8;
         float ValleyWidth = 0.05f;
         float WallSlope = 0.10f;
         float HighlandBase = 30.0f;
         float ValleyRoughness = 24.0f;
         glm::vec3 Color = HexColor("#F28123");
+
+        [[nodiscard]] auto GetRenderTileWorldSize() const -> float {
+            return (GridVerticesPerRenderTile - 1) * LogicalCellWorldSize;
+        }
     } Terrain;
 
     struct PosterizeSettings {
