@@ -332,6 +332,7 @@ void RiftScene::Tick(float deltaTime) {
 
     const float screenW = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelWidth());
     const float screenH = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelHeight());
+    _hudMaterial->SetFloat2("ScreenSize", { screenW, screenH });
     const auto& marker = RiftStore::Get().Delivery.Marker;
     float targetState = 0.0f;
     glm::vec2 targetPixel = { screenW * 0.5f, screenH * 0.5f };
