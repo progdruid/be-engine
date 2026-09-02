@@ -24,6 +24,7 @@ auto StationUI::Draw(DeliverySystem& delivery, glm::vec3 shipPosition) -> void {
 
     ImGui::SetNextWindowPos(ImVec2(x, viewport->WorkPos.y + pad), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(width, topHeight), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.82f);
     ImGui::Begin("Station", nullptr, flags);
 
     ImGui::PushTextWrapPos(0.0f);
@@ -62,6 +63,7 @@ auto StationUI::Draw(DeliverySystem& delivery, glm::vec3 shipPosition) -> void {
 
     ImGui::SetNextWindowPos(ImVec2(x, viewport->WorkPos.y + pad + topHeight + gap), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(width, bottomHeight), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.82f);
     ImGui::Begin("Market", nullptr, flags);
 
     ImGui::PushTextWrapPos(0.0f);

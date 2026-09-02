@@ -241,9 +241,14 @@ auto RiftScene::DefinePasses() -> void {
     auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
     imguiPass->SetUICallback([this]() {
         ImGui::PushFont(_riftFont);
+        ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImGui::GetStyle().Colors[ImGuiCol_TitleBg]);
+        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(1.0f, 1.0f, 1.0f, 0.12f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.22f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(1.0f, 1.0f, 1.0f, 0.35f));
         if (_delivery) _meta.DrawUI(*_delivery);
         if (_showDebug) _shipCameraController->DrawDebugUI();
         if (_stationUiOpen && _delivery) StationUI::Draw(*_delivery, _camera->Position);
+        ImGui::PopStyleColor(4);
         ImGui::PopFont();
     });
     _machine->AddPass(std::move(imguiPass));
