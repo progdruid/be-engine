@@ -206,7 +206,10 @@ auto DeliverySystem::CompleteContract() -> void {
 }
 
 auto DeliverySystem::ApplyCrashPenalty() -> void {
-    _credits /= 2;
+    _credits = std::max(0, _credits - RiftStore::Get().Delivery.DeathFee);
+    for (int& tons : _cargo) {
+        tons -= (tons + 1) / 2;
+    }
     _contract.reset();
 }
 
