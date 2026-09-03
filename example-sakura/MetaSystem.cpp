@@ -117,7 +117,6 @@ auto MetaSystem::DrawUI(const DeliverySystem& delivery) -> void {
             "A / D    roll\n"
             "Shift    boost\n"
             "Space    flight assist\n"
-            "S        station menu (while docked)\n"
             "C        undock");
         ImGui::Spacing();
         if (ImGui::Button("Punch In", ImVec2(-1.0f, 0.0f))) {

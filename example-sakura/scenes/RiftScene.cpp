@@ -322,10 +322,7 @@ void RiftScene::Tick(float deltaTime) {
         if (_shipCameraController->HasJustEnteredDock()) {
             _shipCameraController->Capture(dock.Anchor);
             _delivery->NotifyDocked(dock);
-        }
-
-        if (_shipCameraController->IsCaptured() && _gameIns->Input->GetKeyDown(GLFW_KEY_S)) {
-            SetStationUiOpen(!_stationUiOpen);
+            SetStationUiOpen(true);
         }
 
         if (_gameIns->Input->GetKeyDown(GLFW_KEY_C)) {
