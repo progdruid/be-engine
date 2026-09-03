@@ -3,16 +3,16 @@
 #include <umbrellas/common.hpp>
 #include <scenes/BeScene.h>
 
-class Game;
+class BeStandardGame;
 
-class BaseScene : public BeScene {
+class BeStandardBaseScene : public BeScene {
 
     protect
-    Game* _gameIns = nullptr;
+    BeStandardGame* _game = nullptr;
 
     expose
-    explicit BaseScene(Game* game);
-    ~BaseScene() override;
+    explicit BeStandardBaseScene(BeStandardGame* game);
+    ~BeStandardBaseScene() override;
 
     virtual auto Prepare() -> void {}
     virtual auto Tick(float deltaTime) -> void {}

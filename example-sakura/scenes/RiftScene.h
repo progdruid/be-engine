@@ -6,7 +6,7 @@
 #include <umbrellas/common.hpp>
 
 #include "DeliverySystem.h"
-#include "FullScene.h"
+#include "standard-game/BeStandardFullScene.h"
 #include "MetaSystem.h"
 
 class ShipCameraController;
@@ -16,7 +16,7 @@ class BeMaterial;
 class BeImGuiPass;
 struct ImFont;
 
-class RiftScene : public FullScene {
+class RiftScene : public BeStandardFullScene {
     hide
     std::unique_ptr<RiftTerrain> _terrain;
     std::unique_ptr<ShipCameraController> _shipCameraController;
@@ -31,7 +31,7 @@ class RiftScene : public FullScene {
     MetaSystem _meta;
 
     expose
-    explicit RiftScene(Game* game);
+    explicit RiftScene(BeStandardGame* game);
     ~RiftScene() override;
 
     auto Prepare() -> void override;

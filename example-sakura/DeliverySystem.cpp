@@ -8,7 +8,7 @@
 
 #include "BeAssetRegistry.h"
 #include "BeProp.h"
-#include "Components.h"
+#include "standard-game/Components.h"
 #include "RiftSettings.h"
 #include "RiftTerrain.h"
 

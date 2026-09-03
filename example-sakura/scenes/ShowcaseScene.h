@@ -4,15 +4,15 @@
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 
-#include "FullScene.h"
-#include "Components.h"
+#include "standard-game/BeStandardFullScene.h"
+#include "standard-game/Components.h"
 
 class OrbitCameraController;
 class FreeCameraController;
 class BeStandardRenderMachine;
 class BeMaterial;
 
-class ShowcaseScene : public FullScene {
+class ShowcaseScene : public BeStandardFullScene {
     hide
     std::unique_ptr<OrbitCameraController> _orbitCameraController;
     std::unique_ptr<FreeCameraController> _freeCameraController;
@@ -38,7 +38,7 @@ class ShowcaseScene : public FullScene {
     static constexpr float _expandDuration = 0.15f;
 
     expose
-    explicit ShowcaseScene(Game* game);
+    explicit ShowcaseScene(BeStandardGame* game);
     ~ShowcaseScene() override;
 
     auto Prepare() -> void override;

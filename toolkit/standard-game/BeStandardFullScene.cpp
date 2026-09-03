@@ -1,4 +1,4 @@
-#include "FullScene.h"
+#include "BeStandardFullScene.h"
 
 #include <cstdio>
 #include <span>
@@ -12,19 +12,19 @@
 #include "BeShaderLibrary.h"
 #include "BeTexture.h"
 #include "Components.h"
-#include "Game.h"
+#include "BeStandardGame.h"
 #include "lua/BeLua.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
-FullScene::FullScene(Game* game)
-    : BaseScene(game)
+BeStandardFullScene::BeStandardFullScene(BeStandardGame* game)
+    : BeStandardBaseScene(game)
 {}
 
-FullScene::~FullScene() {
-    FullScene::OnUnload();
+BeStandardFullScene::~BeStandardFullScene() {
+    BeStandardFullScene::OnUnload();
 }
 
-auto FullScene::OnLoad() -> void {
+auto BeStandardFullScene::OnLoad() -> void {
     _sceneWatch = BeFileWatcher::Register(
         [this] { return std::vector{ _sceneWatchFilePath }; },
         [this](std::span<const std::filesystem::path>) {
@@ -38,7 +38,7 @@ auto FullScene::OnLoad() -> void {
     );
 }
 
-auto FullScene::OnUnload() -> void {
+auto BeStandardFullScene::OnUnload() -> void {
     _coroutineScheduler.Clear();
 
     if (_sceneWatch != 0) {
@@ -47,7 +47,7 @@ auto FullScene::OnUnload() -> void {
     }
 }
 
-auto FullScene::SetWatchFile(std::filesystem::path filePath, std::function<void()> onReload) -> void {
+auto BeStandardFullScene::SetWatchFile(std::filesystem::path filePath, std::function<void()> onReload) -> void {
     _sceneWatchFilePath = std::move(filePath);
     _sceneWatchFunction = std::move(onReload);
 
@@ -57,27 +57,27 @@ auto FullScene::SetWatchFile(std::filesystem::path filePath, std::function<void(
     }
 }
 
-auto FullScene::Prepare() -> void {
-    const uint32_t screenWidth  = _gameIns->Renderer->GetSwapchainPixelWidth();
-    const uint32_t screenHeight = _gameIns->Renderer->GetSwapchainPixelHeight();
+auto BeStandardFullScene::Prepare() -> void {
+    const uint32_t screenWidth  = _game->Renderer->GetSwapchainPixelWidth();
+    const uint32_t screenHeight = _game->Renderer->GetSwapchainPixelHeight();
 
     _camera = std::make_shared<BeCamera>();
     _camera->Width = screenWidth;
     _camera->Height = screenHeight;
 
-    _machine = std::make_unique<BeStandardRenderMachine>(_gameIns->Renderer, screenWidth, screenHeight);
+    _machine = std::make_unique<BeStandardRenderMachine>(_game->Renderer, screenWidth, screenHeight);
 
     Reload(ReloadMask::All);
 }
 
-auto FullScene::Reload(ReloadMask mask) -> void {
+auto BeStandardFullScene::Reload(ReloadMask mask) -> void {
     if (HasAny(mask, ReloadMask::Settings)) DefineSettings();
     if (HasAny(mask, ReloadMask::Assets)) DefineAssets();
     if (HasAny(mask, ReloadMask::Scene)) DefineScene();
     if (HasAny(mask, ReloadMask::Passes)) DefinePasses();
 }
 
-auto FullScene::Tick(float deltaTime) -> void {
+auto BeStandardFullScene::Tick(float deltaTime) -> void {
     _time += deltaTime;
 
     _coroutineScheduler.Update(deltaTime);
@@ -94,8 +94,8 @@ auto FullScene::Tick(float deltaTime) -> void {
         }
     }
 
-    _camera->Width = _gameIns->Renderer->GetSwapchainPixelWidth();
-    _camera->Height = _gameIns->Renderer->GetSwapchainPixelHeight();
+    _camera->Width = _game->Renderer->GetSwapchainPixelWidth();
+    _camera->Height = _game->Renderer->GetSwapchainPixelHeight();
     _camera->Update();
     auto& uniformMat = *_machine->UniformMaterial;
     const auto projView = _camera->GetProjectionMatrix() * _camera->GetViewMatrix();
@@ -106,7 +106,7 @@ auto FullScene::Tick(float deltaTime) -> void {
     uniformMat.SetFloat1("Time", _time);
 }
 
-auto FullScene::Render() -> void {
+auto BeStandardFullScene::Render() -> void {
     _machine->PollRenderer();
     _machine->Activate();
     _machine->ClearFrame();
@@ -149,7 +149,7 @@ auto FullScene::Render() -> void {
     }
 }
 
-auto FullScene::ApplyLuaSettings(const BeLuaValue& settings) -> void {
+auto BeStandardFullScene::ApplyLuaSettings(const BeLuaValue& settings) -> void {
     const auto srm = settings["srm"];
     _machine->Settings.Shadow.Bias = srm["shadow"]["bias"].GetOr(_machine->Settings.Shadow.Bias);
     _machine->Settings.IBL.MaxSampleRadiance = srm["ibl"]["maxSampleRadiance"].GetOr(_machine->Settings.IBL.MaxSampleRadiance);
@@ -179,7 +179,7 @@ auto FullScene::ApplyLuaSettings(const BeLuaValue& settings) -> void {
     }
 }
 
-auto FullScene::ApplyLuaScene(const BeLuaValue& objects) -> void {
+auto BeStandardFullScene::ApplyLuaScene(const BeLuaValue& objects) -> void {
     for (const auto& [name, entityTable] : objects.Pairs()) {
         const auto entity = _registry.create();
         _registry.emplace<NameComponent>(entity, NameComponent{ .Name = name });
@@ -244,7 +244,7 @@ auto FullScene::ApplyLuaScene(const BeLuaValue& objects) -> void {
     }
 }
 
-auto FullScene::ApplyLuaAssets(const BeLuaValue& assets) -> void {
+auto BeStandardFullScene::ApplyLuaAssets(const BeLuaValue& assets) -> void {
     for (const auto& [name, texture] : assets["textures"].Pairs()) {
         const auto file = texture["file"].Get<std::string>();
         if (!file) {
@@ -267,7 +267,7 @@ auto FullScene::ApplyLuaAssets(const BeLuaValue& assets) -> void {
 
         const auto meshDef = propDef["mesh"];
         std::shared_ptr<BeProp> prop;
-        
+
         if (const auto file = meshDef["file"].Get<std::string>()) {
             const auto model = meshDef["lighting"].GetOr(std::string("pbr")) == "phong"
                 ? BeSRMLightingModel::Phong
@@ -298,7 +298,7 @@ auto FullScene::ApplyLuaAssets(const BeLuaValue& assets) -> void {
     }
 }
 
-auto FullScene::ResolveTexture(const BeLuaValue& value) -> std::shared_ptr<BeTexture> {
+auto BeStandardFullScene::ResolveTexture(const BeLuaValue& value) -> std::shared_ptr<BeTexture> {
     if (const auto name = value.Get<std::string>()) {
         if (!_assetRegistry.HasTexture(*name)) {
             std::fprintf(stderr, "[lua] texture '%s' is not registered\n", name->c_str());
@@ -319,12 +319,12 @@ auto FullScene::ResolveTexture(const BeLuaValue& value) -> std::shared_ptr<BeTex
         .Build();
 }
 
-auto FullScene::ApplyMaterialSet(BeMaterial& material, const std::string& key, const BeLuaValue& value) -> void {
+auto BeStandardFullScene::ApplyMaterialSet(BeMaterial& material, const std::string& key, const BeLuaValue& value) -> void {
     const auto& scheme = material.GetScheme();
 
     for (const auto& property : scheme.Properties) {
         if (property.Name != key) { continue; }
-        
+
         switch (property.PropertyType) {
             using enum BeMaterialPropertyDescriptor::Type;
             case Float:  if (const auto v = value.Get<float>())     material.SetFloat1(key, *v); break;
@@ -338,7 +338,7 @@ auto FullScene::ApplyMaterialSet(BeMaterial& material, const std::string& key, c
 
     for (const auto& texture : scheme.Textures) {
         if (texture.Name != key) { continue; }
-        
+
         if (const auto resolved = ResolveTexture(value)) {
             material.SetTexture(key, resolved);
         }
@@ -347,7 +347,7 @@ auto FullScene::ApplyMaterialSet(BeMaterial& material, const std::string& key, c
 
     for (const auto& sampler : scheme.Samplers) {
         if (sampler.Name != key) { continue; }
-        
+
         if (const auto name = value.Get<std::string>()) {
             material.SetSampler(key, BeShaderLibrary::GetSampler(*name));
         }

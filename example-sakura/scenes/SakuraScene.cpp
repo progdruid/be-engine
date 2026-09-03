@@ -21,11 +21,11 @@
 #include "BeProp.h"
 #include "BeTexture.h"
 #include "BeShader.h"
-#include "Game.h"
+#include "standard-game/BeStandardGame.h"
 #include "scenes/BeSceneManager.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
-SakuraScene::SakuraScene(Game* game) : FullScene(game) {}
+SakuraScene::SakuraScene(BeStandardGame* game) : BeStandardFullScene(game) {}
 SakuraScene::~SakuraScene() = default;
 
 void SakuraScene::Prepare() {
@@ -34,7 +34,7 @@ void SakuraScene::Prepare() {
         [this] -> void { Reload(); }
     );
 
-    FullScene::Prepare();
+    BeStandardFullScene::Prepare();
 
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
@@ -201,7 +201,7 @@ auto SakuraScene::DefinePasses() -> void {
 
     _machine->AddBackbufferPass("Sakura_FXAA");
 
-    auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
+    auto imguiPass = std::make_unique<BeImGuiPass>(_game->Window);
     imguiPass->SetUICallback([this]() {
         ImGui::Begin("controls");
         ImGui::Text("%.0f fps (%.2f ms)", _fpsCounter.GetFps(), _fpsCounter.GetFrameMs());
@@ -222,9 +222,9 @@ auto SakuraScene::DefinePasses() -> void {
 }
 
 auto SakuraScene::Tick(float deltaTime) -> void {
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
-        _gameIns->Input->SetMouseCapture(false);
-        _gameIns->SceneManager->RequestSceneChange("menu");
+    if (_game->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        _game->Input->SetMouseCapture(false);
+        _game->SceneManager->RequestSceneChange("menu");
         return;
     }
 
@@ -240,7 +240,7 @@ auto SakuraScene::Tick(float deltaTime) -> void {
 
     _fpsCounter.Tick(deltaTime);
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_C)) {
+    if (_game->Input->GetKeyDown(GLFW_KEY_C)) {
         _cameraMode = (_cameraMode + 1) % 2;
     }
 
@@ -248,20 +248,20 @@ auto SakuraScene::Tick(float deltaTime) -> void {
         const float focusStep = Settings.DepthOfField.FocusSpeed * deltaTime;
         float dofFocalDistance = _dofMaterial->GetFloat("FocalDistance");
 
-        if (_gameIns->Input->GetKey(GLFW_KEY_LEFT_BRACKET))
+        if (_game->Input->GetKey(GLFW_KEY_LEFT_BRACKET))
             dofFocalDistance = std::max(Settings.DepthOfField.MinFocalDistance, dofFocalDistance - focusStep);
-        if (_gameIns->Input->GetKey(GLFW_KEY_RIGHT_BRACKET))
+        if (_game->Input->GetKey(GLFW_KEY_RIGHT_BRACKET))
             dofFocalDistance += focusStep;
 
         _dofMaterial->SetFloat1("FocalDistance",  dofFocalDistance);
     }
 
     if (_cameraMode == 0) {
-        _freeCameraController->Update(deltaTime, _gameIns->Input.get());
+        _freeCameraController->Update(deltaTime, _game->Input.get());
     } else if (_cameraMode == 1) {
-        _gameIns->Input->SetMouseCapture(false);
-        _orbitCameraController->Update(deltaTime, _gameIns->Input.get());
+        _game->Input->SetMouseCapture(false);
+        _orbitCameraController->Update(deltaTime, _game->Input.get());
     }
 
-    FullScene::Tick(deltaTime);
+    BeStandardFullScene::Tick(deltaTime);
 }

@@ -13,8 +13,8 @@
 #include "BeRenderer.h"
 #include "BeTexture.h"
 #include "BeWindow.h"
-#include "Components.h"
-#include "Game.h"
+#include "standard-game/Components.h"
+#include "standard-game/BeStandardGame.h"
 #include "scenes/BeSceneManager.h"
 #include "BeAssetRegistry.h"
 #include "BeShaderLibrary.h"
@@ -35,11 +35,11 @@ static auto ExpandCurve(float t) -> float {
     }
 }
 
-ShowcaseScene::ShowcaseScene(Game* game) : FullScene(game) {}
+ShowcaseScene::ShowcaseScene(BeStandardGame* game) : BeStandardFullScene(game) {}
 ShowcaseScene::~ShowcaseScene() = default;
 
 void ShowcaseScene::Prepare() {
-    FullScene::Prepare();
+    BeStandardFullScene::Prepare();
 
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get());
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
@@ -154,9 +154,9 @@ auto ShowcaseScene::DefinePasses() -> void {
 }
 
 void ShowcaseScene::Tick(float deltaTime) {
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
-        _gameIns->Input->SetMouseCapture(false);
-        _gameIns->SceneManager->RequestSceneChange("menu");
+    if (_game->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        _game->Input->SetMouseCapture(false);
+        _game->SceneManager->RequestSceneChange("menu");
         return;
     }
 
@@ -173,29 +173,29 @@ void ShowcaseScene::Tick(float deltaTime) {
         _braceTime = 0.f;
     };
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_1)) {
+    if (_game->Input->GetKeyDown(GLFW_KEY_1)) {
         startBrace(GLFW_KEY_1, "ramen",          "#FAC8CD", TransformComponent());
-    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_2)) {
+    } else if (_game->Input->GetKeyDown(GLFW_KEY_2)) {
         startBrace(GLFW_KEY_2, "still-life",     "#D0D0C4", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(4.f) });
-    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_3)) {
+    } else if (_game->Input->GetKeyDown(GLFW_KEY_3)) {
         startBrace(GLFW_KEY_3, "headset",        "#84DCC6", TransformComponent { .Position = { 0, -0.5, 0 }, .Scale = glm::vec3(2.f) });
-    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_4)) {
+    } else if (_game->Input->GetKeyDown(GLFW_KEY_4)) {
         startBrace(GLFW_KEY_4, "honeydew_melons","#855C36", TransformComponent { .Position = { 0.f, 1.f, 0.f } });
-    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_5)) {
+    } else if (_game->Input->GetKeyDown(GLFW_KEY_5)) {
         startBrace(GLFW_KEY_5, "hunger_games",   "#39708E", TransformComponent { .Position = { 0.f, 3.f, 0.f }, .Scale = glm::vec3(2.f) });
-    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_6)) {
+    } else if (_game->Input->GetKeyDown(GLFW_KEY_6)) {
         startBrace(GLFW_KEY_6, "flower-pot",     "#E5D372", TransformComponent { .Position = { 0.f, -2.f, 0.f }, .Scale = glm::vec3(2.f) });
-    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_7)) {
+    } else if (_game->Input->GetKeyDown(GLFW_KEY_7)) {
         startBrace(GLFW_KEY_7, "watermelons",    "#A3A17B", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(90.f) });
-    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_8)) {
+    } else if (_game->Input->GetKeyDown(GLFW_KEY_8)) {
         startBrace(GLFW_KEY_8, "apfel",          "#73615E", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(2.f) });
-    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_9)) {
+    } else if (_game->Input->GetKeyDown(GLFW_KEY_9)) {
         startBrace(GLFW_KEY_9, "eggplant",       "#E1D5F2", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(0.2f) });
-    } else if (_gameIns->Input->GetKeyDown(GLFW_KEY_0)) {
+    } else if (_game->Input->GetKeyDown(GLFW_KEY_0)) {
         startBrace(GLFW_KEY_0, "tomatoes",       "#E4FDE1", TransformComponent { .Position = { 0.f, 1.f, 0.f }, .Scale = glm::vec3(2.f) });
     }
 
-    if (_heldKey != -1 && _gameIns->Input->GetKeyUp(_heldKey)) {
+    if (_heldKey != -1 && _game->Input->GetKeyUp(_heldKey)) {
         if (_popState == PopState::Bracing) {
             _popState = PopState::Expanding;
             _expandTime = 0.f;
@@ -215,42 +215,42 @@ void ShowcaseScene::Tick(float deltaTime) {
         }
     }
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_C)) {
+    if (_game->Input->GetKeyDown(GLFW_KEY_C)) {
         _useOrbitCamera = !_useOrbitCamera;
     }
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_T)) {
+    if (_game->Input->GetKeyDown(GLFW_KEY_T)) {
         _animatedTransitions = !_animatedTransitions;
         _popState = PopState::Idle;
         _heldKey = -1;
     }
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_P)) {
+    if (_game->Input->GetKeyDown(GLFW_KEY_P)) {
         _pixelationEnabled = !_pixelationEnabled;
         DefinePasses();
     }
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_O) && _pixelationEnabled) {
+    if (_game->Input->GetKeyDown(GLFW_KEY_O) && _pixelationEnabled) {
         _pixelEdgesEnabled = !_pixelEdgesEnabled;
         DefinePasses();
     }
 
     if (_pixelationEnabled) {
-        if (_gameIns->Input->GetKeyDown(GLFW_KEY_MINUS)) {
+        if (_game->Input->GetKeyDown(GLFW_KEY_MINUS)) {
             _pixelSize = std::max(1.0f, _pixelSize - 2.0f);
             DefinePasses();
         }
-        if (_gameIns->Input->GetKeyDown(GLFW_KEY_EQUAL)) {
+        if (_game->Input->GetKeyDown(GLFW_KEY_EQUAL)) {
             _pixelSize = std::min(64.0f, _pixelSize + 2.0f);
             DefinePasses();
         }
     }
 
     if (_useOrbitCamera) {
-        _gameIns->Input->SetMouseCapture(false);
-        _orbitCameraController->Update(deltaTime, _gameIns->Input.get());
+        _game->Input->SetMouseCapture(false);
+        _orbitCameraController->Update(deltaTime, _game->Input.get());
     } else {
-        _freeCameraController->Update(deltaTime, _gameIns->Input.get());
+        _freeCameraController->Update(deltaTime, _game->Input.get());
     }
 
     {
@@ -273,7 +273,7 @@ void ShowcaseScene::Tick(float deltaTime) {
         transform.Scale *= scaleMult;
     }
 
-    FullScene::Tick(deltaTime);
+    BeStandardFullScene::Tick(deltaTime);
 }
 
 auto ShowcaseScene::ChangeShowcase(

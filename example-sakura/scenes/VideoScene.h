@@ -4,19 +4,19 @@
 
 #include <umbrellas/include-glm.h>
 
-#include "FullScene.h"
+#include "standard-game/BeStandardFullScene.h"
 
 class FreeCameraController;
 class OrbitCameraController;
 
-class VideoScene : public FullScene {
+class VideoScene : public BeStandardFullScene {
     hide
     std::unique_ptr<FreeCameraController> _freeCameraController;
     std::unique_ptr<OrbitCameraController> _orbitCameraController;
     bool _useOrbitCamera = true;
 
     expose
-    explicit VideoScene(Game* game);
+    explicit VideoScene(BeStandardGame* game);
     ~VideoScene() override;
 
     auto Prepare() -> void override;

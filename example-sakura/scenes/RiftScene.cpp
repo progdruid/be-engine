@@ -28,14 +28,14 @@
 #include "BeProp.h"
 #include "BeRenderer.h"
 #include "BeTexture.h"
-#include "Components.h"
-#include "Game.h"
+#include "standard-game/Components.h"
+#include "standard-game/BeStandardGame.h"
 #include "scenes/BeSceneManager.h"
 #include "BeShaderLibrary.h"
 #include "BeShader.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
-RiftScene::RiftScene(Game* game) : FullScene(game) {
+RiftScene::RiftScene(BeStandardGame* game) : BeStandardFullScene(game) {
     RiftStore::Bootstrap();
     RiftStore::Get().Seed = std::random_device{}();
 }
@@ -45,7 +45,7 @@ RiftScene::~RiftScene() {
 }
 
 void RiftScene::Prepare() {
-    FullScene::Prepare();
+    BeStandardFullScene::Prepare();
 
     _camera->Position = glm::vec3(0.0f, RiftStore::Get().Camera.SpawnHeight, 0.0f);
 
@@ -226,8 +226,8 @@ auto RiftScene::DefinePasses() -> void {
     _posterizeMaterial->SetFloat1("Enabled", posterize.Enabled ? 1.0f : 0.0f);
     _posterizeMaterial->SetTexture("UITexture", _machine->GetRenderTexture("Rift_UI"));
 
-    const uint32_t screenWidth  = _gameIns->Renderer->GetSwapchainPixelWidth();
-    const uint32_t screenHeight = _gameIns->Renderer->GetSwapchainPixelHeight();
+    const uint32_t screenWidth  = _game->Renderer->GetSwapchainPixelWidth();
+    const uint32_t screenHeight = _game->Renderer->GetSwapchainPixelHeight();
     const auto& hudScheme = BeShaderLibrary::GetShader("ship-hud")->GetMaterialScheme("main");
     _hudMaterial = BeMaterial::Create(hudScheme);
     _hudMaterial->SetFloat2("ScreenSize", { static_cast<float>(screenWidth), static_cast<float>(screenHeight) });
@@ -238,7 +238,7 @@ auto RiftScene::DefinePasses() -> void {
 
     _machine->AddBackbufferPass("Rift_Post");
 
-    auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
+    auto imguiPass = std::make_unique<BeImGuiPass>(_game->Window);
     imguiPass->SetUICallback([this]() {
         ImGui::PushFont(_riftFont);
         ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImGui::GetStyle().Colors[ImGuiCol_TitleBg]);
@@ -259,47 +259,47 @@ auto RiftScene::DefinePasses() -> void {
 }
 
 void RiftScene::Tick(float deltaTime) {
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
-        _gameIns->Input->SetMouseCapture(false);
-        _gameIns->SceneManager->RequestSceneChange("menu");
+    if (_game->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        _game->Input->SetMouseCapture(false);
+        _game->SceneManager->RequestSceneChange("menu");
         return;
     }
     
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ENTER)) {
+    if (_game->Input->GetKeyDown(GLFW_KEY_ENTER)) {
         bool& enabled = RiftStore::Get().Posterize.Enabled;
         enabled = !enabled;
         _posterizeMaterial->SetFloat1("Enabled", enabled ? 1.0f : 0.0f);
     }
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_P) && !_dying) {
+    if (_game->Input->GetKeyDown(GLFW_KEY_P) && !_dying) {
         if (_delivery) ExitPlayMode();
         else EnterPlayMode();
     }
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_F1)) _showDebug = !_showDebug;
+    if (_game->Input->GetKeyDown(GLFW_KEY_F1)) _showDebug = !_showDebug;
 
-    const bool cheatMod = _gameIns->Input->GetKey(GLFW_KEY_LEFT_CONTROL) && _gameIns->Input->GetKey(GLFW_KEY_LEFT_ALT);
+    const bool cheatMod = _game->Input->GetKey(GLFW_KEY_LEFT_CONTROL) && _game->Input->GetKey(GLFW_KEY_LEFT_ALT);
     if (cheatMod && _delivery) {
-        if (_gameIns->Input->GetKeyDown(GLFW_KEY_EQUAL)) _delivery->SetCredits(_delivery->GetCredits() + 1000);
-        if (_gameIns->Input->GetKeyDown(GLFW_KEY_MINUS)) _delivery->SetCredits(_delivery->GetCredits() - 1000);
-        if (_gameIns->Input->GetKeyDown(GLFW_KEY_LEFT_BRACKET)) _meta.SetElapsed(_meta.GetElapsed() - 30.0f);
-        if (_gameIns->Input->GetKeyDown(GLFW_KEY_RIGHT_BRACKET)) _meta.SetElapsed(_meta.GetElapsed() + 30.0f);
+        if (_game->Input->GetKeyDown(GLFW_KEY_EQUAL)) _delivery->SetCredits(_delivery->GetCredits() + 1000);
+        if (_game->Input->GetKeyDown(GLFW_KEY_MINUS)) _delivery->SetCredits(_delivery->GetCredits() - 1000);
+        if (_game->Input->GetKeyDown(GLFW_KEY_LEFT_BRACKET)) _meta.SetElapsed(_meta.GetElapsed() - 30.0f);
+        if (_game->Input->GetKeyDown(GLFW_KEY_RIGHT_BRACKET)) _meta.SetElapsed(_meta.GetElapsed() + 30.0f);
     }
 
     if (_delivery) {
         _meta.Update(deltaTime, *_delivery);
         if (_meta.WantsClose()) {
-            _gameIns->Window->RequestClose();
+            _game->Window->RequestClose();
             return;
         }
     }
 
     const bool uiOpen = _meta.IsPaused() || _stationUiOpen;
     _shipCameraController->SetControlsEnabled(!uiOpen && !_dying);
-    _gameIns->Input->SetMouseCapture(!uiOpen);
+    _game->Input->SetMouseCapture(!uiOpen);
 
-    _shipCameraController->Update(deltaTime, _gameIns->Input.get());
+    _shipCameraController->Update(deltaTime, _game->Input.get());
     _hudMaterial->SetFloat2("AimOffset", _shipCameraController->GetAim());
 
     const glm::vec3 worldUp = { 0.0f, 1.0f, 0.0f };
@@ -325,15 +325,15 @@ void RiftScene::Tick(float deltaTime) {
             SetStationUiOpen(true);
         }
 
-        if (_gameIns->Input->GetKeyDown(GLFW_KEY_C)) {
+        if (_game->Input->GetKeyDown(GLFW_KEY_C)) {
             _shipCameraController->Uncapture();
             _delivery->NotifyUndocked();
             SetStationUiOpen(false);
         }
     }
 
-    const float screenW = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelWidth());
-    const float screenH = static_cast<float>(_gameIns->Renderer->GetSwapchainPixelHeight());
+    const float screenW = static_cast<float>(_game->Renderer->GetSwapchainPixelWidth());
+    const float screenH = static_cast<float>(_game->Renderer->GetSwapchainPixelHeight());
     _hudMaterial->SetFloat2("ScreenSize", { screenW, screenH });
     const auto& marker = RiftStore::Get().Delivery.Marker;
     float targetState = 0.0f;
@@ -380,5 +380,5 @@ void RiftScene::Tick(float deltaTime) {
         }
     }
 
-    FullScene::Tick(deltaTime);
+    BeStandardFullScene::Tick(deltaTime);
 }

@@ -8,18 +8,18 @@
 #include "BeInput.h"
 #include "BeRenderer.h"
 #include "BeWindow.h"
-#include "Game.h"
+#include "standard-game/BeStandardGame.h"
 #include "imgui/BeImGuiPass.h"
 #include "imgui/imgui.h"
 
-MenuScene::MenuScene(Game* game) : BaseScene(game) {}
+MenuScene::MenuScene(BeStandardGame* game) : BeStandardBaseScene(game) {}
 MenuScene::~MenuScene() = default;
 
 auto MenuScene::OnLoad() -> void {
 
-    auto imguiPass = std::make_unique<BeImGuiPass>(_gameIns->Window);
+    auto imguiPass = std::make_unique<BeImGuiPass>(_game->Window);
     imguiPass->SetUICallback([this](){RunUI();});
-    imguiPass->Initialise(*_gameIns->Renderer);
+    imguiPass->Initialise(*_game->Renderer);
     _sequence.Passes.clear();
     _sequence.Passes.push_back(std::move(imguiPass));
 
@@ -28,12 +28,12 @@ auto MenuScene::OnLoad() -> void {
 }
 
 auto MenuScene::Render() -> void {
-    _gameIns->Renderer->SetSequence(&_sequence);
+    _game->Renderer->SetSequence(&_sequence);
 }
 
 auto MenuScene::Tick(float deltaTime) -> void {
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
-        _gameIns->Window->RequestClose();
+    if (_game->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        _game->Window->RequestClose();
     }
 }
 
@@ -93,7 +93,7 @@ auto MenuScene::RunUI() -> void {
         ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
         ImGui::SetCursorPosY(startY + i * (buttonHeight + spacing));
         if (ImGui::Button(scenes[i], ImVec2(buttonWidth, buttonHeight))) {
-            _gameIns->SceneManager->RequestSceneChange(scenes[i]);
+            _game->SceneManager->RequestSceneChange(scenes[i]);
         }
     }
 

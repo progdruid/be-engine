@@ -7,7 +7,7 @@
 
 #include <umbrellas/common.hpp>
 
-#include "BaseScene.h"
+#include "BeStandardBaseScene.h"
 #include "BeAssetRegistry.h"
 #include "BeFileWatcher.h"
 #include "coroutine/BeCoroutineScheduler.h"
@@ -30,7 +30,7 @@ enum class ReloadMask : uint8_t {
 };
 ENABLE_BITMASK(ReloadMask);
 
-class FullScene : public BaseScene {
+class BeStandardFullScene : public BeStandardBaseScene {
 
     protect
     BeAssetRegistry _assetRegistry;
@@ -47,8 +47,8 @@ class FullScene : public BaseScene {
     BeFileWatcher::WatchId _sceneWatch = 0;
 
     expose
-    explicit FullScene(Game* game);
-    ~FullScene() override;
+    explicit BeStandardFullScene(BeStandardGame* game);
+    ~BeStandardFullScene() override;
 
     auto OnLoad() -> void override;
     auto OnUnload() -> void override;

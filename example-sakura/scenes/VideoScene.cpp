@@ -6,18 +6,18 @@
 #include "BeInput.h"
 #include "FreeCameraController.h"
 #include "OrbitCameraController.h"
-#include "Game.h"
+#include "standard-game/BeStandardGame.h"
 #include "lua/BeLua.h"
 #include "scenes/BeSceneManager.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
-VideoScene::VideoScene(Game* game) : FullScene(game) {}
+VideoScene::VideoScene(BeStandardGame* game) : BeStandardFullScene(game) {}
 VideoScene::~VideoScene() = default;
 
 auto VideoScene::Prepare() -> void {
     SetWatchFile("assets/lua-scenes/video_scene.lua", [this] -> void { Reload(); });
 
-    FullScene::Prepare();
+    BeStandardFullScene::Prepare();
 
     _freeCameraController = std::make_unique<FreeCameraController>(_camera.get());
     _orbitCameraController = std::make_unique<OrbitCameraController>(_camera.get(), glm::vec3(0.f), 30.f, 30.f);
@@ -70,22 +70,22 @@ auto VideoScene::DefinePasses() -> void {
 }
 
 auto VideoScene::Tick(float deltaTime) -> void {
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
-        _gameIns->Input->SetMouseCapture(false);
-        _gameIns->SceneManager->RequestSceneChange("menu");
+    if (_game->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        _game->Input->SetMouseCapture(false);
+        _game->SceneManager->RequestSceneChange("menu");
         return;
     }
 
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_C)) {
+    if (_game->Input->GetKeyDown(GLFW_KEY_C)) {
         _useOrbitCamera = !_useOrbitCamera;
     }
 
     if (_useOrbitCamera) {
-        _gameIns->Input->SetMouseCapture(false);
-        _orbitCameraController->Update(deltaTime, _gameIns->Input.get());
+        _game->Input->SetMouseCapture(false);
+        _orbitCameraController->Update(deltaTime, _game->Input.get());
     } else {
-        _freeCameraController->Update(deltaTime, _gameIns->Input.get());
+        _freeCameraController->Update(deltaTime, _game->Input.get());
     }
 
-    FullScene::Tick(deltaTime);
+    BeStandardFullScene::Tick(deltaTime);
 }

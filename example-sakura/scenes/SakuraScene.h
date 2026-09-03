@@ -4,7 +4,7 @@
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 
-#include "FullScene.h"
+#include "standard-game/BeStandardFullScene.h"
 #include "FpsCounter.h"
 
 struct BeProp;
@@ -41,7 +41,7 @@ struct SakuraSceneSettings {
     } DepthOfField;
 };
 
-class SakuraScene : public FullScene {
+class SakuraScene : public BeStandardFullScene {
     expose
     SakuraSceneSettings Settings;
 
@@ -56,7 +56,7 @@ class SakuraScene : public FullScene {
     FpsCounter _fpsCounter;
 
     expose
-    explicit SakuraScene(Game* game);
+    explicit SakuraScene(BeStandardGame* game);
     ~SakuraScene() override;
     
     expose auto Prepare() -> void override;

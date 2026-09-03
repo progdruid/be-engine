@@ -3,7 +3,7 @@
 #include <memory>
 #include <umbrellas/common.hpp>
 
-#include "BaseScene.h"
+#include "standard-game/BeStandardBaseScene.h"
 #include "BePassSequence.h"
 
 class BeInput;
@@ -13,14 +13,14 @@ class BeSceneManager;
 
 struct ImFont;
 
-class MenuScene : public BaseScene {
+class MenuScene : public BeStandardBaseScene {
     hide
     BePassSequence _sequence;
     ImFont* _bodyFont = nullptr;
     ImFont* _titleFont = nullptr;
 
     expose
-    explicit MenuScene(Game* game);
+    explicit MenuScene(BeStandardGame* game);
     ~MenuScene() override;
 
     auto Prepare() -> void override {}

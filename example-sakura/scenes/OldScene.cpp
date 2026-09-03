@@ -14,11 +14,11 @@
 #include "BeShaderLibrary.h"
 #include "BeTexture.h"
 #include "BeWindow.h"
-#include "Game.h"
+#include "standard-game/BeStandardGame.h"
 #include "scenes/BeSceneManager.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
 
-OldScene::OldScene(Game* game) : FullScene(game) {}
+OldScene::OldScene(BeStandardGame* game) : BeStandardFullScene(game) {}
 OldScene::~OldScene() = default;
 
 auto OldScene::DefinePasses() -> void {
@@ -167,47 +167,47 @@ auto OldScene::DefineScene() -> void {
 }
 
 auto OldScene::Tick(float deltaTime) -> void {
-    if (_gameIns->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
-        _gameIns->Input->SetMouseCapture(false);
-        _gameIns->SceneManager->RequestSceneChange("menu");
+    if (_game->Input->GetKeyDown(GLFW_KEY_ESCAPE)) {
+        _game->Input->SetMouseCapture(false);
+        _game->SceneManager->RequestSceneChange("menu");
         return;
     }
 
     constexpr float moveSpeed = 5.0f;
     float speed = moveSpeed * deltaTime;
-    if (_gameIns->Input->GetKey(GLFW_KEY_LEFT_SHIFT) || (_gameIns->Input->IsGamepadConnected() && _gameIns->Input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) {
+    if (_game->Input->GetKey(GLFW_KEY_LEFT_SHIFT) || (_game->Input->IsGamepadConnected() && _game->Input->GetGamepadButton(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER))) {
         speed *= 2.0f;
     }
-    if (_gameIns->Input->GetKey(GLFW_KEY_W)) { _camera->Position += _camera->GetFront() * speed; }
-    if (_gameIns->Input->GetKey(GLFW_KEY_S)) { _camera->Position -= _camera->GetFront() * speed; }
-    if (_gameIns->Input->GetKey(GLFW_KEY_D)) { _camera->Position += _camera->GetRight() * speed; }
-    if (_gameIns->Input->GetKey(GLFW_KEY_A)) { _camera->Position -= _camera->GetRight() * speed; }
-    if (_gameIns->Input->GetKey(GLFW_KEY_E)) { _camera->Position += glm::vec3(0, 1, 0) * speed; }
-    if (_gameIns->Input->GetKey(GLFW_KEY_Q)) { _camera->Position -= glm::vec3(0, 1, 0) * speed; }
+    if (_game->Input->GetKey(GLFW_KEY_W)) { _camera->Position += _camera->GetFront() * speed; }
+    if (_game->Input->GetKey(GLFW_KEY_S)) { _camera->Position -= _camera->GetFront() * speed; }
+    if (_game->Input->GetKey(GLFW_KEY_D)) { _camera->Position += _camera->GetRight() * speed; }
+    if (_game->Input->GetKey(GLFW_KEY_A)) { _camera->Position -= _camera->GetRight() * speed; }
+    if (_game->Input->GetKey(GLFW_KEY_E)) { _camera->Position += glm::vec3(0, 1, 0) * speed; }
+    if (_game->Input->GetKey(GLFW_KEY_Q)) { _camera->Position -= glm::vec3(0, 1, 0) * speed; }
 
-    if (_gameIns->Input->IsGamepadConnected()) {
-        const glm::vec2 leftStick = _gameIns->Input->GetGamepadLeftStick();
+    if (_game->Input->IsGamepadConnected()) {
+        const glm::vec2 leftStick = _game->Input->GetGamepadLeftStick();
         _camera->Position += _camera->GetFront() * (leftStick.y * speed);
         _camera->Position += _camera->GetRight() * (leftStick.x * speed);
 
-        const float verticalInput = _gameIns->Input->GetGamepadRightTrigger() - _gameIns->Input->GetGamepadLeftTrigger();
+        const float verticalInput = _game->Input->GetGamepadRightTrigger() - _game->Input->GetGamepadLeftTrigger();
         _camera->Position += glm::vec3(0, 1, 0) * (verticalInput * speed);
     }
 
     glm::vec3 euler = _camera->GetEuler();
 
     bool captureMouse = false;
-    if (_gameIns->Input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
+    if (_game->Input->GetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)) {
         constexpr float mouseSens = 0.1f;
         captureMouse = true;
-        const glm::vec2 mouseDelta = _gameIns->Input->GetMouseDelta();
+        const glm::vec2 mouseDelta = _game->Input->GetMouseDelta();
         euler.x += mouseDelta.x * mouseSens;
         euler.y -= mouseDelta.y * mouseSens;
     }
-    _gameIns->Input->SetMouseCapture(captureMouse);
+    _game->Input->SetMouseCapture(captureMouse);
 
-    if (_gameIns->Input->IsGamepadConnected()) {
-        const glm::vec2 rightStick = _gameIns->Input->GetGamepadRightStick();
+    if (_game->Input->IsGamepadConnected()) {
+        const glm::vec2 rightStick = _game->Input->GetGamepadRightStick();
         constexpr float gamepadCameraSens = 100.0f;
         euler.x += rightStick.x * gamepadCameraSens * deltaTime;
         euler.y += rightStick.y * gamepadCameraSens * deltaTime;
@@ -216,7 +216,7 @@ auto OldScene::Tick(float deltaTime) -> void {
     euler.y = glm::clamp(euler.y, -89.0f, 89.0f);
     _camera->SetEuler(euler.x, euler.y);
 
-    const glm::vec2 scrollDelta = _gameIns->Input->GetScrollDelta();
+    const glm::vec2 scrollDelta = _game->Input->GetScrollDelta();
     if (scrollDelta.y != 0.0f) {
         _camera->Fov -= scrollDelta.y;
         _camera->Fov = glm::clamp(_camera->Fov, 20.0f, 90.0f);
@@ -240,6 +240,6 @@ auto OldScene::Tick(float deltaTime) -> void {
         }
     }
 
-    FullScene::Tick(deltaTime);
+    BeStandardFullScene::Tick(deltaTime);
     _machine->UniformMaterial->SetFloat1("Time", _time);
 }
