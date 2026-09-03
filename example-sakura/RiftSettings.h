@@ -131,9 +131,9 @@ struct RiftSettings {
         float GroundEffectDragHigh = 1.0f;
         float GroundEffectResponse = 2.0f;
 
-        float CollisionRadius = 2.0f;
+        float CollisionRadius = 1.7f;
         float GroundFriction = 3.0f;
-        float CrashImpactSpeed = 25.0f;
+        float CrashImpactSpeed = 35.0f;
         float DeathFadeOutTime = 0.5f;
         float DeathHoldTime = 1.0f;
         float DeathFadeInTime = 0.3f;
@@ -244,7 +244,7 @@ struct RiftSettings {
             { .Name = "Antimatter",  .AverageValue = 820.0f },
         };
         int CargoCapacity = 40;
-        int DeathFee = 1000;
+        int DeathFee = 500;
         float PriceDeviation = 0.28f;
         int MarketMinCommodities = 2;
         int MarketMaxCommodities = 5;
