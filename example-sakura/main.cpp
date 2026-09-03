@@ -7,7 +7,6 @@
 #include "scenes/ShowcaseScene.h"
 #include "scenes/MenuScene.h"
 #include "scenes/SakuraScene.h"
-#include "scenes/RiftScene.h"
 #include "scenes/OldScene.h"
 #include "scenes/VideoScene.h"
 
@@ -23,14 +22,12 @@ int main() {
     scenes.RegisterScene("menu", std::make_unique<MenuScene>(&game));
     scenes.RegisterScene("sakura", std::make_unique<SakuraScene>(&game));
     scenes.RegisterScene("showcase", std::make_unique<ShowcaseScene>(&game));
-    scenes.RegisterScene("rift", std::make_unique<RiftScene>(&game));
     scenes.RegisterScene("old", std::make_unique<OldScene>(&game));
     scenes.RegisterScene("video", std::make_unique<VideoScene>(&game));
 
     scenes.GetScene<BeStandardBaseScene>("menu")->Prepare();
     scenes.GetScene<BeStandardBaseScene>("sakura")->Prepare();
     scenes.GetScene<BeStandardBaseScene>("showcase")->Prepare();
-    scenes.GetScene<BeStandardBaseScene>("rift")->Prepare();
     scenes.GetScene<BeStandardBaseScene>("old")->Prepare();
     scenes.GetScene<BeStandardBaseScene>("video")->Prepare();
 
