@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.25)
 project(be CXX C)
 
+set(BE_ENGINE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "be-engine root")
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -39,16 +41,16 @@ function(be_copy_runtime_deps target)
     if(WIN32)
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_SOURCE_DIR}/vendor/slang/bin/slang-compiler.dll"
+                "${BE_ENGINE_DIR}/vendor/slang/bin/slang-compiler.dll"
                 "$<TARGET_FILE_DIR:${target}>")
     else()
         set_target_properties(${target} PROPERTIES
             BUILD_RPATH  "$ORIGIN"
             INSTALL_RPATH "$ORIGIN")
         add_custom_command(TARGET ${target} POST_BUILD
-            COMMAND bash -c "cp -P '${CMAKE_SOURCE_DIR}/vendor/slang/linux-x64/lib/'*.so* '$<TARGET_FILE_DIR:${target}>'"
+            COMMAND bash -c "cp -P '${BE_ENGINE_DIR}/vendor/slang/linux-x64/lib/'*.so* '$<TARGET_FILE_DIR:${target}>'"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_SOURCE_DIR}/vendor/vulkan-sdk/lib/linux-x64/libvulkan.so.1"
+                "${BE_ENGINE_DIR}/vendor/vulkan-sdk/lib/linux-x64/libvulkan.so.1"
                 "$<TARGET_FILE_DIR:${target}>")
     endif()
 
@@ -56,7 +58,7 @@ function(be_copy_runtime_deps target)
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${CMAKE_SOURCE_DIR}/vendor/vulkan-sdk/share/vulkan/explicit_layer.d/$<IF:$<PLATFORM_ID:Windows>,windows,linux>"
+                "${BE_ENGINE_DIR}/vendor/vulkan-sdk/share/vulkan/explicit_layer.d/$<IF:$<PLATFORM_ID:Windows>,windows,linux>"
                 "$<TARGET_FILE_DIR:${target}>/layers")
     endif()
 endfunction()
@@ -68,5 +70,9 @@ add_subdirectory(vendor)
 add_subdirectory(core)
 add_subdirectory(toolkit)
 add_subdirectory(devtools/bechef)
-add_subdirectory(example-sakura)
-add_subdirectory(example-vulkan)
+
+option(BE_BUILD_EXAMPLES "Build be-engine examples" OFF)
+if(BE_BUILD_EXAMPLES)
+    add_subdirectory(example-sakura)
+    add_subdirectory(example-vulkan)
+endif()
