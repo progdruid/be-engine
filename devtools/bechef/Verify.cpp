@@ -36,8 +36,8 @@ static auto ProjectErrors(const Project& project, std::vector<std::string>& erro
         }
     }
 
-    if (!project.FlatShaders) {
-        errors.push_back(std::format("project '{}': {}", project.Name, project.FlatShaders.error()));
+    if (!project.ScopedShaders) {
+        errors.push_back(std::format("project '{}': {}", project.Name, project.ScopedShaders.error()));
     }
 }
 
@@ -51,16 +51,15 @@ auto VerifyProject(const Project& project) -> std::expected<void, std::string> {
 
 auto VerifyApp(const std::string& name) -> std::expected<const Project*, std::string> {
     const auto& workspace = Workspace::Get();
-    if (!workspace.Config.Apps.contains(name)) {
-        return std::unexpected(std::format("'{}' is not an app in workspace.bechef", name));
-    }
-
     const auto* entry = workspace.FindProject(name);
     if (!entry) {
-        return std::unexpected(std::format("'{}' has no project directory", name));
+        return std::unexpected(std::format("'{}' is not a project in the workspace", name));
     }
     if (!*entry) {
         return std::unexpected(entry->error());
+    }
+    if ((*entry)->Kind != ProjectKind::App) {
+        return std::unexpected(std::format("'{}' is a module, not an app", name));
     }
 
     const auto& app = **entry;

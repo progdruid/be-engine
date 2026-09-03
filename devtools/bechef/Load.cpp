@@ -28,9 +28,8 @@ static auto LoadWorkspaceConfig(const std::filesystem::path& rootDir) -> std::ex
     }
 
     static const auto grammar = CommandGrammar{ {
-        { .Verb = "modules", .AllowPositionals = true },
-        { .Verb = "apps",    .AllowPositionals = true },
-        { .Verb = "ignore",  .AllowPositionals = true },
+        { .Verb = "roots",  .AllowPositionals = true },
+        { .Verb = "ignore", .AllowPositionals = true },
     } };
 
     auto ws = WorkspaceConfig();
@@ -39,21 +38,18 @@ static auto LoadWorkspaceConfig(const std::filesystem::path& rootDir) -> std::ex
         bechef_try(const auto parsed, grammar.Parse(command), "workspace.bechef: {}");
 
         const auto& values = parsed.Positionals;
-        if (command.Verb == "modules")     ws.Modules.insert(values.begin(), values.end());
-        else if (command.Verb == "apps")   ws.Apps.insert(values.begin(), values.end());
-        else if (command.Verb == "ignore") ws.Ignores.insert(ws.Ignores.end(), values.begin(), values.end());
+        if (command.Verb == "roots")        ws.Roots.insert(ws.Roots.end(), values.begin(), values.end());
+        else if (command.Verb == "ignore")  ws.Ignores.insert(ws.Ignores.end(), values.begin(), values.end());
     }
+    if (ws.Roots.empty()) ws.Roots.push_back(".");
     return ws;
 }
 
-static auto LoadProject(const std::filesystem::path& rootDir, const std::string& name) -> std::expected<Project, std::string> {
-    const auto dir = rootDir / name;
+static auto LoadProject(const std::filesystem::path& dir, const std::string& name) -> std::expected<Project, std::string> {
     const auto file = dir / "project.bechef";
-    if (!std::filesystem::exists(file)) {
-        return std::unexpected(std::format("project '{}': missing {}", name, file.string()));
-    }
 
     static const auto grammar = CommandGrammar{ {
+        { .Verb = "kind",    .AllowPositionals = true },
         { .Verb = "depends", .AllowPositionals = true },
         { .Verb = "shaders", .AllowPositionals = true },
         { .Verb = "assets",  .AllowPositionals = true },
@@ -66,9 +62,15 @@ static auto LoadProject(const std::filesystem::path& rootDir, const std::string&
         bechef_try(const auto parsed, grammar.Parse(command), "{}/project.bechef: {}", name);
 
         const auto& values = parsed.Positionals;
-        if (command.Verb == "depends")      project.Dependencies.insert(project.Dependencies.end(), values.begin(), values.end());
-        else if (command.Verb == "shaders") project.LocalShaderDirs.insert(project.LocalShaderDirs.end(), values.begin(), values.end());
-        else if (command.Verb == "assets")  project.LocalAssetDirs.insert(project.LocalAssetDirs.end(), values.begin(), values.end());
+        if (command.Verb == "kind") {
+            if (values.size() != 1 || (values[0] != "app" && values[0] != "module")) {
+                return std::unexpected(std::format("{}/project.bechef: kind must be 'app' or 'module'", name));
+            }
+            project.Kind = values[0] == "app" ? ProjectKind::App : ProjectKind::Module;
+        }
+        else if (command.Verb == "depends")  project.Dependencies.insert(project.Dependencies.end(), values.begin(), values.end());
+        else if (command.Verb == "shaders")  project.LocalShaderDirs.insert(project.LocalShaderDirs.end(), values.begin(), values.end());
+        else if (command.Verb == "assets")   project.LocalAssetDirs.insert(project.LocalAssetDirs.end(), values.begin(), values.end());
     }
     return project;
 }
@@ -142,11 +144,11 @@ static auto ParseShader(const std::filesystem::path& path) -> std::expected<Shad
     return data;
 }
 
-static auto ParseShaders(const std::vector<SourceFile>& files) -> std::vector<ShaderFile> {
+static auto ParseShaders(const std::string& collection, const std::vector<SourceFile>& files) -> std::vector<ShaderFile> {
     auto shaders = std::vector<ShaderFile>();
 
     for (const auto& source : files) {
-        shaders.push_back({ source.Path, ParseShader(source.Path) });
+        shaders.push_back({ collection, source.Path, ParseShader(source.Path) });
     }
     return shaders;
 }
@@ -203,7 +205,7 @@ static auto BuildVisibleSchemes(const Project& project) -> std::expected<Visible
                     return std::unexpected(std::format("scheme name collision '{}':\n  {}\n  {}",
                         material.Name, it->second.File.string(), shader.Path.string()));
                 }
-                visible.Schemes.emplace(material.Name, SchemeEntry{ shader.Path, material });
+                visible.Schemes.emplace(material.Name, SchemeEntry{ shader.Collection, shader.Path, material });
             }
         }
     }
@@ -228,37 +230,77 @@ static auto ResolveBinds(const ShaderFile& shader, const VisibleSchemes& visible
     return resolved;
 }
 
-static auto BuildFlatShaders(const Project& project) -> std::expected<std::vector<const ShaderFile*>, std::string> {
+static auto BuildScopedShaders(const Project& project) -> std::expected<std::vector<const ShaderFile*>, std::string> {
     bechef_try(const auto& scope, project.Scope);
 
-    auto flat = std::vector<const ShaderFile*>();
+    auto scoped = std::vector<const ShaderFile*>();
     auto claimed = std::unordered_map<std::string, std::filesystem::path>();
 
     for (const auto* dependency : scope) {
         for (const auto& shader : dependency->LocalShaders) {
-            const auto base = shader.Path.filename().string();
-            const auto it = claimed.find(base);
+            const auto key = shader.Collection + "/" + shader.Path.filename().string();
+            const auto it = claimed.find(key);
             if (it != claimed.end()) {
                 return std::unexpected(std::format("shader name collision '{}':\n  {}\n  {}",
-                    base, it->second.string(), shader.Path.string()));
+                    key, it->second.string(), shader.Path.string()));
             }
-            claimed.emplace(base, shader.Path);
-            flat.push_back(&shader);
+            claimed.emplace(key, shader.Path);
+            scoped.push_back(&shader);
         }
     }
-    return flat;
+    return scoped;
 }
 
 static auto LoadProjectEntry(
-    const std::filesystem::path& rootDir,
+    const std::filesystem::path& dir,
     const std::string& name,
     const std::vector<std::string>& ignore
 ) -> ProjectOrError {
-    bechef_try(auto project, LoadProject(rootDir, name));
+    bechef_try(auto project, LoadProject(dir, name));
     bechef_try(const auto shaderFiles, CollectProjectFiles(project, project.LocalShaderDirs, ignore));
     bechef_try(project.LocalAssetFiles, CollectProjectFiles(project, project.LocalAssetDirs, ignore));
-    project.LocalShaders = ParseShaders(shaderFiles);
+    project.LocalShaders = ParseShaders(name, shaderFiles);
     return project;
+}
+
+struct DiscoveredProject {
+    std::string Name;
+    std::filesystem::path Dir;
+};
+
+static auto DiscoverProjects(const WorkspaceConfig& config) -> std::vector<DiscoveredProject> {
+    auto found = std::map<std::string, DiscoveredProject>();
+
+    auto skip = [&](const std::filesystem::path& name) {
+        const auto s = name.string();
+        if (!s.empty() && s.front() == '.') return true;
+        for (const auto& pattern : config.Ignores) {
+            if (MatchGlob(pattern, s)) return true;
+        }
+        return false;
+    };
+
+    for (const auto& root : config.Roots) {
+        const auto rootDir = std::filesystem::weakly_canonical(config.Root / root);
+        if (!std::filesystem::is_directory(rootDir)) continue;
+
+        auto it = std::filesystem::recursive_directory_iterator(rootDir);
+        const auto end = std::filesystem::recursive_directory_iterator();
+        for (; it != end; ++it) {
+            if (it->is_directory() && skip(it->path().filename())) {
+                it.disable_recursion_pending();
+                continue;
+            }
+            if (!it->is_regular_file() || it->path().filename() != "project.bechef") continue;
+
+            const auto dir = it->path().parent_path();
+            found.insert({ dir.filename().string(), { dir.filename().string(), dir } });
+        }
+    }
+
+    auto projects = std::vector<DiscoveredProject>();
+    for (auto& [name, project] : found) projects.push_back(std::move(project));
+    return projects;
 }
 
 auto LoadWorkspace(const std::filesystem::path& rootDir) -> std::expected<void, std::string> {
@@ -266,11 +308,8 @@ auto LoadWorkspace(const std::filesystem::path& rootDir) -> std::expected<void, 
 
     bechef_try(workspace.Config, LoadWorkspaceConfig(rootDir));
 
-    auto names = std::vector<std::string>(workspace.Config.Modules.begin(), workspace.Config.Modules.end());
-    names.insert(names.end(), workspace.Config.Apps.begin(), workspace.Config.Apps.end());
-
-    for (const auto& name : names) {
-        workspace.Projects.emplace(name, LoadProjectEntry(rootDir, name, workspace.Config.Ignores));
+    for (const auto& discovered : DiscoverProjects(workspace.Config)) {
+        workspace.Projects.emplace(discovered.Name, LoadProjectEntry(discovered.Dir, discovered.Name, workspace.Config.Ignores));
     }
 
     for (auto& [name, entry] : workspace.Projects) {
@@ -281,7 +320,7 @@ auto LoadWorkspace(const std::filesystem::path& rootDir) -> std::expected<void, 
     for (auto& [name, entry] : workspace.Projects) {
         if (!entry) continue;
         entry->Schemes = BuildVisibleSchemes(*entry);
-        entry->FlatShaders = BuildFlatShaders(*entry);
+        entry->ScopedShaders = BuildScopedShaders(*entry);
     }
 
     for (auto& [name, entry] : workspace.Projects) {

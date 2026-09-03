@@ -29,7 +29,7 @@ struct PixelOutput {
 /*========================================================*/
 
 #include "ibl-common.hlsli"
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 float GeometrySchlickGGX(float NdotV, float roughness) {
     float r = (roughness + 1.0);

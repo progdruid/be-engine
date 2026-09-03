@@ -24,7 +24,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 cbuffer CBuffer_0 : register(b0, space0) {
     uniform_material _Frame;
@@ -40,7 +40,7 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 // ---------------------------------------------------------------------------
 // FXAA 3.11 — Timothy Lottes (NVIDIA)

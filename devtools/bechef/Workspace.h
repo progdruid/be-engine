@@ -23,6 +23,7 @@ struct ShaderData {
 };
 
 struct SchemeEntry {
+    std::string Collection;
     std::filesystem::path File;
     BeShaderTools::ParsedMaterial Material;
 };
@@ -37,13 +38,20 @@ struct ResolvedBind {
 };
 
 struct ShaderFile {
+    std::string Collection;
     std::filesystem::path Path;
     std::expected<ShaderData, std::string> Data;
     std::expected<std::vector<ResolvedBind>, std::string> Binds;
 };
 
+enum class ProjectKind {
+    Module,
+    App,
+};
+
 struct Project {
     std::string Name;
+    ProjectKind Kind = ProjectKind::Module;
     std::filesystem::path Dir;
     std::vector<std::string> Dependencies;
     std::vector<std::string> LocalShaderDirs;
@@ -54,18 +62,13 @@ struct Project {
 
     std::expected<std::vector<const Project*>, std::string> Scope;
     std::expected<VisibleSchemes, std::string> Schemes;
-    std::expected<std::vector<const ShaderFile*>, std::string> FlatShaders;
+    std::expected<std::vector<const ShaderFile*>, std::string> ScopedShaders;
 };
 
 struct WorkspaceConfig {
     std::filesystem::path Root;
-    std::unordered_set<std::string> Modules;
-    std::unordered_set<std::string> Apps;
+    std::vector<std::string> Roots;
     std::vector<std::string> Ignores;
-
-    auto IsMember(const std::string& name) const -> bool {
-        return Modules.contains(name) || Apps.contains(name);
-    }
 };
 
 using ProjectOrError = std::expected<Project, std::string>;

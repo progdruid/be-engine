@@ -33,8 +33,8 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
-#include "objectMaterial.hlsl"
+#include "core/uniform-material.hlsl"
+#include "core/objectMaterial.hlsl"
 
 struct tesselated_main_material_for_geometry_pass {
     float3 DiffuseColor;

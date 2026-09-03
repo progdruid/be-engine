@@ -30,8 +30,8 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
-#include "objectMaterial.hlsl"
+#include "core/uniform-material.hlsl"
+#include "core/objectMaterial.hlsl"
 
 struct dock_ring_material {
     float3 EmissiveColor;

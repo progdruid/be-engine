@@ -24,12 +24,12 @@
 
 */
 
-#include "BeFunctions.hlsli"
-#include "fullscreen-vertex.hlsl"
+#include "core/BeFunctions.hlsli"
+#include "core/fullscreen-vertex.hlsl"
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct skybox_material {
     float ClampRadiance;

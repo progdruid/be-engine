@@ -33,7 +33,7 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 inputColor = InputTexture.Sample(InputSampler, input.UV).rgb;

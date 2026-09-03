@@ -30,7 +30,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct batched_lights_material {
     float LightCount;
@@ -59,7 +59,7 @@ struct PixelOutput {
 /*========================================================*/
 
 #include "light-common.hlsli"
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 PixelOutput PixelFunction(FullscreenVSOutput input) {
     float depth          = Depth.Sample(InputSampler, input.UV).r;

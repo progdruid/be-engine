@@ -26,7 +26,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct bloom_upsample_material {
     float2 TexelSize;
@@ -50,7 +50,7 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 // 3x3 tent upsample, additively blended up the pyramid. Spread is fixed in source texels.
 

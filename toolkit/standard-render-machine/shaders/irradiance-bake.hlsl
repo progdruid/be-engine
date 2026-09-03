@@ -44,7 +44,7 @@ struct PixelOutput {
 /*========================================================*/
 
 #include "ibl-common.hlsli"
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 N = DirectionForFace((int)_Main.FaceIndex, input.UV);

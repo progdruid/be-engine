@@ -38,11 +38,11 @@ static auto CollectAssets(const std::vector<const Project*>& projects) -> CookFi
     return collected;
 }
 
-static auto CollectShaders(const std::vector<const ShaderFile*>& flatShaders) -> CookFiles {
+static auto CollectShaders(const std::vector<const ShaderFile*>& scopedShaders) -> CookFiles {
     auto collected = CookFiles();
 
-    for (const auto* shader : flatShaders) {
-        collected.Entries.push_back({ shader->Path, shader->Path.filename() });
+    for (const auto* shader : scopedShaders) {
+        collected.Entries.push_back({ shader->Path, std::filesystem::path(shader->Collection) / shader->Path.filename() });
     }
 
     return collected;
@@ -123,11 +123,11 @@ auto Cook(
 ) -> std::expected<void, std::string> {
 
     bechef_try(const auto* project, VerifyApp(app));
-    bechef_try(const auto& flatShaders, project->FlatShaders);
+    bechef_try(const auto& scopedShaders, project->ScopedShaders);
 
     const auto& closure = *project->Scope;
     const auto assets = CollectAssets(closure);
-    const auto shaders = CollectShaders(flatShaders);
+    const auto shaders = CollectShaders(scopedShaders);
 
     const auto assetsOut = out / "assets";
     if (mode == Mode::Symlink && assets.SourceDirs.size() == 1) {

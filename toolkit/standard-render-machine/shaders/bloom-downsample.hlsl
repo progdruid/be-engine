@@ -26,7 +26,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct bloom_downsample_material {
     float2 TexelSize;
@@ -50,7 +50,7 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 // COD/Jimenez 13-tap downsample, Karis average on the first mip to kill fireflies.
 

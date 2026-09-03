@@ -25,7 +25,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct tonemapper_material {
     float Exposure;
@@ -49,8 +49,8 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include <BeTonemappers.hlsli>
-#include "fullscreen-vertex.hlsl"
+#include "BeTonemappers.hlsli"
+#include "core/fullscreen-vertex.hlsl"
 
 PixelOutput PixelFunction(FullscreenVSOutput input) {
     float3 hdrColor = HDRInput.Sample(InputSampler, input.UV).rgb;

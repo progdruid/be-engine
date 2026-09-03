@@ -32,7 +32,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct batched_point_light_shadowed_material {
     float LightCount;
@@ -63,7 +63,7 @@ struct PixelOutput {
 /*========================================================*/
 
 #include "light-common.hlsli"
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 float SamplePointShadow(
     TextureCubeArray shadowMap, 

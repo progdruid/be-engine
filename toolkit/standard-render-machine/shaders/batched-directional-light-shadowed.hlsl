@@ -37,7 +37,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct batched_directional_light_shadowed_material {
     float LightCount;
@@ -70,7 +70,7 @@ struct PixelOutput {
 /*========================================================*/
 
 #include "light-common.hlsli"
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 float PCFShadow(
     Texture2DArray shadowMap, 

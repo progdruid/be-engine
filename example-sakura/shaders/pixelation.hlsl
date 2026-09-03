@@ -29,7 +29,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct pixelation_material {
     float PixelSize;
@@ -56,7 +56,7 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 float LinearDepth(float d) {
     float near = _Frame.NearFarPlane.x;

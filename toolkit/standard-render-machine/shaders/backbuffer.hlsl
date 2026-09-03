@@ -27,7 +27,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct backbuffer_material {
     float DiscardFar;
@@ -51,7 +51,7 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 PixelOutput PixelFunction(FullscreenVSOutput input) {
     if (_Main.DiscardFar > 0.5) {

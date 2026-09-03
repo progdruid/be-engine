@@ -1,3 +1,2 @@
-modules core toolkit
-apps example-sakura example-vulkan
-ignore .tmp_* *.zip *.aseprite
+roots .
+ignore .tmp_* *.zip *.aseprite out vendor

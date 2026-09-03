@@ -31,7 +31,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct ambient_ibl_material {
     float MaxMipLevel;
@@ -60,8 +60,8 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "fullscreen-vertex.hlsl"
-#include "BeFunctions.hlsli"
+#include "core/fullscreen-vertex.hlsl"
+#include "core/BeFunctions.hlsli"
 
 float3 FresnelSchlickRoughness(float cosTheta, float3 F0, float roughness) {
     return F0 + (max((1.0).xxx - roughness, F0) - F0) * pow(1.0 - cosTheta, 5.0);

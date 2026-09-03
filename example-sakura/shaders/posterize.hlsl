@@ -35,7 +35,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct posterize_material {
     float PixelSize;
@@ -68,8 +68,8 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "fullscreen-vertex.hlsl"
-#include "BeFunctions.hlsli"
+#include "core/fullscreen-vertex.hlsl"
+#include "core/BeFunctions.hlsli"
 
 static const float BAYER8[64] = {
      0, 32,  8, 40,  2, 34, 10, 42,

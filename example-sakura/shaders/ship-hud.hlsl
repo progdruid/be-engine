@@ -43,7 +43,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct ship_hud_material {
     float2 ScreenSize;
@@ -83,7 +83,7 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 PixelOutput PS(FullscreenVSOutput input) {
     float ps = _Main.PixelSize;

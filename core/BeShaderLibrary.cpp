@@ -72,7 +72,7 @@ auto BeShaderLibrary::LoadShaderDirectory(const std::filesystem::path& dir) -> v
     SenShaderCompiler::AddSearchPath(dir);
 
     auto filePaths = std::vector<std::filesystem::path>();
-    for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(dir)) {
         if (entry.is_regular_file() && entry.path().extension() == ".hlsl") {
             filePaths.push_back(entry.path());
         }

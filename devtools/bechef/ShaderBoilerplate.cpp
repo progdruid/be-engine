@@ -83,7 +83,7 @@ static auto IsTexture(const std::string& type) -> bool {
         || type == "texture2d[]" || type == "textureCube[]";
 }
 
-static auto GenerateIncludes(const std::filesystem::path& path, const std::vector<ResolvedBind>& binds) -> std::vector<std::string> {
+static auto GenerateIncludes(const std::string& ownCollection, const std::filesystem::path& path, const std::vector<ResolvedBind>& binds) -> std::vector<std::string> {
     const auto ownFile = path.filename().string();
 
     auto includes = std::vector<std::string>();
@@ -91,7 +91,11 @@ static auto GenerateIncludes(const std::filesystem::path& path, const std::vecto
         const auto declaredIn = bind.Scheme->File.filename().string();
         if (declaredIn == ownFile) continue;
 
-        auto include = "#include \"" + declaredIn + "\"";
+        const auto target = bind.Scheme->Collection == ownCollection
+            ? declaredIn
+            : bind.Scheme->Collection + "/" + declaredIn;
+
+        auto include = "#include \"" + target + "\"";
         if (std::ranges::find(includes, include) != includes.end()) continue;
         includes.push_back(std::move(include));
     }
@@ -195,10 +199,10 @@ static auto GeneratePixelOutput(const std::vector<BeShaderTools::ParsedTarget>& 
     return text;
 }
 
-static auto GenerateBoilerplate(const std::filesystem::path& path, const ShaderData& data, const std::vector<ResolvedBind>& binds) -> std::vector<std::string> {
+static auto GenerateBoilerplate(const std::string& collection, const std::filesystem::path& path, const ShaderData& data, const std::vector<ResolvedBind>& binds) -> std::vector<std::string> {
     auto parts = std::vector<std::string>();
 
-    const auto includes = GenerateIncludes(path, binds);
+    const auto includes = GenerateIncludes(collection, path, binds);
     if (!includes.empty()) {
         parts.push_back(JoinLines(includes));
     }
@@ -286,7 +290,7 @@ auto GenerateShaderSource(const ShaderFile& shader) -> std::optional<std::string
         return std::nullopt;
     }
 
-    const auto block = GenerateBoilerplate(shader.Path, data, *shader.Binds);
+    const auto block = GenerateBoilerplate(shader.Collection, shader.Path, data, *shader.Binds);
 
     lines.erase(lines.begin() + span->First, lines.begin() + span->Last + 1);
     lines.insert(lines.begin() + span->First, block.begin(), block.end());

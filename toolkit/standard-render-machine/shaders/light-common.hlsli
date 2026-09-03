@@ -1,4 +1,4 @@
-#include "BeFunctions.hlsli"
+#include "core/BeFunctions.hlsli"
 
 struct BeSurfacePoint {
     float3 WorldPosition;

@@ -29,7 +29,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "uniform-material.hlsl"
+#include "core/uniform-material.hlsl"
 
 struct dof_material {
     float FocalDistance;
@@ -56,7 +56,7 @@ struct PixelOutput {
 // endregion
 /*========================================================*/
 
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 #define NUM_SAMPLES  48
 #define GOLDEN_ANGLE 2.39996322972865332

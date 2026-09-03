@@ -18,7 +18,7 @@ auto Workspace::AllProjects() const -> std::vector<const Project*> {
 auto Workspace::AppProjects() const -> std::vector<const Project*> {
     auto apps = std::vector<const Project*>();
     for (const auto& [name, project] : Projects) {
-        if (project && Config.Apps.contains(name)) apps.push_back(&*project);
+        if (project && project->Kind == ProjectKind::App) apps.push_back(&*project);
     }
     return apps;
 }
@@ -31,22 +31,27 @@ auto Workspace::FindProject(const std::string& name) const -> const ProjectOrErr
 auto Workspace::FindOwningProject(const std::filesystem::path& file) const -> std::expected<const Project*, std::string> {
     auto ec = std::error_code();
     const auto absolute = std::filesystem::weakly_canonical(std::filesystem::absolute(file), ec);
-    const auto root = std::filesystem::weakly_canonical(Config.Root, ec);
 
-    const auto relativePath = absolute.lexically_relative(root);
-    if (relativePath.empty() || *relativePath.begin() == "..") {
-        return std::unexpected(std::format("'{}' is outside the workspace at {}", file.string(), root.string()));
+    const Project* best = nullptr;
+    auto bestLength = size_t{ 0 };
+    for (const auto& [name, entry] : Projects) {
+        if (!entry) continue;
+
+        const auto dir = std::filesystem::weakly_canonical(entry->Dir, ec);
+        const auto relative = absolute.lexically_relative(dir);
+        if (relative.empty() || *relative.begin() == "..") continue;
+
+        const auto length = dir.string().size();
+        if (length > bestLength) {
+            best = &*entry;
+            bestLength = length;
+        }
     }
 
-    const auto name = relativePath.begin()->string();
-    const auto* entry = FindProject(name);
-    if (!entry) {
-        return std::unexpected(std::format("'{}' belongs to '{}', which is not a project in workspace.bechef", file.string(), name));
+    if (!best) {
+        return std::unexpected(std::format("'{}' is not inside any known project", file.string()));
     }
-    if (!*entry) {
-        return std::unexpected(entry->error());
-    }
-    return &**entry;
+    return best;
 }
 
 auto Workspace::AllErrors() const -> std::vector<std::string> {

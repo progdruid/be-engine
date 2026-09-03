@@ -43,7 +43,7 @@ struct PixelOutput {
 /*========================================================*/
 
 #include "ibl-common.hlsli"
-#include "fullscreen-vertex.hlsl"
+#include "core/fullscreen-vertex.hlsl"
 
 float2 SampleSphericalMap(float3 dir) {
     float2 uv = float2(atan2(dir.z, dir.x) * INV_TWO_PI, -asin(dir.y) * INV_PI);
