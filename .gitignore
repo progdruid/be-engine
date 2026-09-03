@@ -6,7 +6,7 @@
 *.DotSettings.user
 
 # Devtools binaries
-devtools/bechef/bechef
+/bechef
 
 # Build outputs
 bin/
