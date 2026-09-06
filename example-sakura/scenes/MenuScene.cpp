@@ -68,7 +68,7 @@ auto MenuScene::RunUI() -> void {
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
 
-    const char* scenes[] = { "sakura", "showcase", "old", "video" };
+    const char* scenes[] = { "sakura", "showcase", "old" };
     const int sceneCount = static_cast<int>(std::size(scenes));
 
     const float windowWidth = ImGui::GetWindowWidth();
