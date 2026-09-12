@@ -316,6 +316,8 @@ struct SenPipeline {
     auto IsValid() const -> bool { return ID != 0; }
 };
 
+inline constexpr uint32_t SenMaxRootConstantSize = 128;
+
 struct SenPipelineDesc {
     // Shader stages
     SenShader VertexShader;
@@ -337,6 +339,9 @@ struct SenPipelineDesc {
     // Bind group layouts (ordered by set index: 0, 1, 2, ...)
     // Pipeline only cares about structure (slot vectors), not actual resources
     std::vector<SenBindGroupDesc> BindGroupLayouts;
+
+    // Bindless: layout = heap set 0 + a root push-constant range, no bind groups.
+    bool Bindless = false;
 
     std::vector<SenFormat> RenderTargetFormats;
     SenFormat DepthStencilFormat;

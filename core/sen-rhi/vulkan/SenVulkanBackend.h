@@ -62,6 +62,7 @@ struct SenVulkanPipelineEntry {
     VkPipeline Pipeline = VK_NULL_HANDLE;
     VkPipelineLayout Layout = VK_NULL_HANDLE;
     VkPipelineBindPoint BindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    bool Bindless = false;
     SenPipelineDesc Desc;
 };
 

@@ -13,23 +13,45 @@ auto SenVulkanBackend::MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulk
     SenVulkanPipelineEntry entry {};
     entry.Desc = desc;
 
-    // ── pipeline layout (from bind group layout descriptors) ──────────────────────────────
-    std::vector<VkDescriptorSetLayout> setLayouts;
-    setLayouts.reserve(desc.BindGroupLayouts.size());
-    for (const auto& bgl : desc.BindGroupLayouts) {
-        setLayouts.push_back(CreateDescriptorSetLayoutFromDesc(bgl));
-    }
+    // ── pipeline layout ───────────────────────────────────────────────────────
+    VkResult result;
+    if (desc.Bindless) {
+        // Bindless: set 0 is the persistent heap, all per-draw data arrives as root push constants.
+        be_assert(desc.BindGroupLayouts.empty(), "CreatePipeline: bindless pipeline must not declare bind groups");
+        entry.Bindless = true;
 
-    VkPipelineLayoutCreateInfo layoutInfo {
-        .sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = uint32_t(setLayouts.size()),
-        .pSetLayouts    = setLayouts.data(),
-    };
-    VkResult result = vkCreatePipelineLayout(_device, &layoutInfo, nullptr, &entry.Layout);
-    be_assert(result == VK_SUCCESS, "Failed to create pipeline layout!");
+        const VkPushConstantRange rootRange {
+            .stageFlags = VK_SHADER_STAGE_ALL,
+            .offset     = 0,
+            .size       = SenMaxRootConstantSize,
+        };
+        VkPipelineLayoutCreateInfo layoutInfo {
+            .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            .setLayoutCount         = 1,
+            .pSetLayouts            = &_bindlessLayout,
+            .pushConstantRangeCount = 1,
+            .pPushConstantRanges    = &rootRange,
+        };
+        result = vkCreatePipelineLayout(_device, &layoutInfo, nullptr, &entry.Layout);
+        be_assert(result == VK_SUCCESS, "Failed to create bindless pipeline layout!");
+    } else {
+        std::vector<VkDescriptorSetLayout> setLayouts;
+        setLayouts.reserve(desc.BindGroupLayouts.size());
+        for (const auto& bgl : desc.BindGroupLayouts) {
+            setLayouts.push_back(CreateDescriptorSetLayoutFromDesc(bgl));
+        }
 
-    for (auto layout : setLayouts) {
-        vkDestroyDescriptorSetLayout(_device, layout, nullptr);
+        VkPipelineLayoutCreateInfo layoutInfo {
+            .sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            .setLayoutCount = uint32_t(setLayouts.size()),
+            .pSetLayouts    = setLayouts.data(),
+        };
+        result = vkCreatePipelineLayout(_device, &layoutInfo, nullptr, &entry.Layout);
+        be_assert(result == VK_SUCCESS, "Failed to create pipeline layout!");
+
+        for (auto layout : setLayouts) {
+            vkDestroyDescriptorSetLayout(_device, layout, nullptr);
+        }
     }
 
     // ── compute pipeline ───────────────────────────────────────────────────────
