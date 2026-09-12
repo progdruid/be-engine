@@ -174,6 +174,7 @@ class SenVulkanBackend {
     static auto CreateBuffer  (const SenBufferDesc& desc) -> SenBuffer;
     static auto RetireBuffer (SenBuffer handle) -> void;
     static auto LookupBuffer  (SenBuffer handle) -> SenVulkanBufferEntry&;
+    static auto GetBufferGpuAddress(SenBuffer handle) -> SenBufferGpuAddress;
     static auto WriteBuffer   (SenBuffer handle, const void* data, uint32_t size, uint32_t dstOffset = 0) -> void;
     hide static auto UploadToDeviceBuffer(VkBuffer dst, const void* data, uint32_t size, uint32_t dstOffset) -> void;
 

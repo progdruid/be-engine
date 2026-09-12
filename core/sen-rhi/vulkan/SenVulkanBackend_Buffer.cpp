@@ -15,6 +15,8 @@ auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
         case SenBufferUsage::Constant: usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; break;
     }
 
+    usageFlags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
     VkBufferCreateInfo bufferInfo {
         .sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size        = desc.Size,
@@ -64,6 +66,14 @@ auto SenVulkanBackend::RetireBuffer(SenBuffer handle) -> void {
 
 auto SenVulkanBackend::LookupBuffer(SenBuffer handle) -> SenVulkanBufferEntry& {
     return _buffers.at(handle.ID);
+}
+
+auto SenVulkanBackend::GetBufferGpuAddress(SenBuffer handle) -> SenBufferGpuAddress {
+    VkBufferDeviceAddressInfo info {
+        .sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = _buffers.at(handle.ID).Buffer,
+    };
+    return { vkGetBufferDeviceAddress(_device, &info) };
 }
 
 auto SenVulkanBackend::WriteBuffer(SenBuffer handle, const void* data, uint32_t size, uint32_t dstOffset) -> void {

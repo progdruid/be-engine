@@ -95,6 +95,12 @@ struct SenBuffer {
     auto IsValid() const -> bool { return ID != 0; }
 };
 
+struct SenBufferGpuAddress {
+    uint64_t Value = 0;
+    auto IsValid() const -> bool { return Value != 0; }
+    auto operator+(uint64_t offset) const -> SenBufferGpuAddress { return { Value + offset }; }
+};
+
 struct SenBufferDesc {
     SenBufferUsage  Usage  = SenBufferUsage::Constant;
     SenBufferAccess Access = SenBufferAccess::Dynamic;
