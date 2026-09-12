@@ -62,6 +62,7 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
             desc.Cubemap ? (desc.ArrayLength > 1 ? VK_IMAGE_VIEW_TYPE_CUBE_ARRAY : VK_IMAGE_VIEW_TYPE_CUBE)
                          : (isLayered            ? VK_IMAGE_VIEW_TYPE_2D_ARRAY    : VK_IMAGE_VIEW_TYPE_2D);
         entry.SRV = CreateImageView(entry.Image, format, srvType, aspect, 0, desc.Mips, 0, layerCount);
+        HeapRegisterTexture(entry, entry.SRV, srvType);
         if (!isLayered) {
             entry.MipSRVs.resize(desc.Mips);
             for (uint32_t mip = 0; mip < desc.Mips; ++mip) {

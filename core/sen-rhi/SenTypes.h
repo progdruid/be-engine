@@ -46,6 +46,16 @@ enum class SenTextureUsage : uint32_t {
 };
 ENABLE_BITMASK(SenTextureUsage);
 
+enum class SenHeapBinding : uint32_t {
+    Texture2D        = 0,
+    Texture2DArray   = 1,
+    TextureCube      = 2,
+    TextureCubeArray = 3,
+    StorageTexture2D = 4,
+    Sampler          = 5,
+    Count            = 6,
+};
+
 enum class SenResourceState : uint8_t {
     Undefined,
     ShaderRead,

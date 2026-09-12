@@ -175,6 +175,23 @@ namespace Sen::Vulkan {
         return flags;
     }
 
+    inline auto ToHeapDescriptorType(SenHeapBinding binding) -> VkDescriptorType {
+        switch (binding) {
+            case SenHeapBinding::StorageTexture2D: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            case SenHeapBinding::Sampler:          return VK_DESCRIPTOR_TYPE_SAMPLER;
+            default:                               return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        }
+    }
+
+    inline auto ToHeapBinding(VkImageViewType viewType) -> SenHeapBinding {
+        switch (viewType) {
+            case VK_IMAGE_VIEW_TYPE_2D_ARRAY:   return SenHeapBinding::Texture2DArray;
+            case VK_IMAGE_VIEW_TYPE_CUBE:       return SenHeapBinding::TextureCube;
+            case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY: return SenHeapBinding::TextureCubeArray;
+            default:                            return SenHeapBinding::Texture2D;
+        }
+    }
+
     inline auto ToImageLayout(SenResourceState state) -> VkImageLayout {
         switch (state) {
             case SenResourceState::Undefined:        return VK_IMAGE_LAYOUT_UNDEFINED;

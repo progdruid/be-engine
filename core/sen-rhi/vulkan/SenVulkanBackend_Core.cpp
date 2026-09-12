@@ -32,6 +32,13 @@ std::unordered_map<uint32_t, SenVulkanSwapchainEntry> SenVulkanBackend::_swapcha
 std::unordered_map<uint32_t, SenVulkanBindGroupEntry> SenVulkanBackend::_bindGroups; uint32_t SenVulkanBackend::_nextBindGroupId = 1;
 std::vector<SenVulkanRetirementNote> SenVulkanBackend::_retirements;
 
+VkDescriptorSetLayout SenVulkanBackend::_bindlessLayout = VK_NULL_HANDLE;
+VkDescriptorPool      SenVulkanBackend::_bindlessPool   = VK_NULL_HANDLE;
+VkDescriptorSet       SenVulkanBackend::_bindlessSet    = VK_NULL_HANDLE;
+std::array<uint32_t, size_t(SenHeapBinding::Count)>              SenVulkanBackend::_heapNext {};
+std::array<std::vector<uint32_t>, size_t(SenHeapBinding::Count)> SenVulkanBackend::_heapFree {};
+std::array<uint32_t, size_t(SenHeapBinding::Count)>              SenVulkanBackend::_heapCapacity {};
+
 // ─── device lifecycle ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     SenShaderCompiler::Launch();
@@ -230,6 +237,8 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     };
     result = vkCreateDescriptorPool(_device, &descPoolInfo, nullptr, &_descriptorPool);
     be_assert(result == VK_SUCCESS, "Failed to create descriptor pool!");
+
+    InitBindlessHeap();
 }
 
 auto SenVulkanBackend::Shutdown() -> void {
@@ -273,6 +282,7 @@ auto SenVulkanBackend::Shutdown() -> void {
 
     FlushRetirements(UINT64_MAX);
 
+    ShutdownBindlessHeap();
     if (_timeline)         { vkDestroySemaphore(_device, _timeline, nullptr); _timeline = VK_NULL_HANDLE; }
     if (_commandPool)      { vkDestroyCommandPool(_device, _commandPool, nullptr); _commandPool = VK_NULL_HANDLE; }
     if (_descriptorPool)   { vkDestroyDescriptorPool(_device, _descriptorPool, nullptr); _descriptorPool = VK_NULL_HANDLE; }

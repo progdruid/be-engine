@@ -32,6 +32,8 @@ struct SenVulkanTextureEntry {
     uint32_t Height     = 0;
     uint32_t MipLevels  = 1;
     uint32_t LayerCount = 1;                                // 1 for 2D, N for 2D array, 6 for cube, 6*N for cube array
+    uint32_t HeapBinding = UINT32_MAX;
+    uint32_t HeapIndex   = UINT32_MAX;
 };
 
 struct SenVulkanBufferEntry {
@@ -44,6 +46,7 @@ struct SenVulkanBufferEntry {
 
 struct SenVulkanSamplerEntry {
     VkSampler Sampler = VK_NULL_HANDLE;
+    uint32_t HeapIndex = UINT32_MAX;
 };
 
 struct SenVulkanShaderEntry {
@@ -125,7 +128,15 @@ class SenVulkanBackend {
     static std::unordered_map<uint32_t, SenVulkanShaderEntry> _shaders;         static uint32_t _nextShaderId;
     static std::unordered_map<uint32_t, SenVulkanPipelineEntry> _pipelines;     static uint32_t _nextPipelineId;
     static std::vector<SenVulkanRetirementNote> _retirements;
-    
+
+    hide
+    static VkDescriptorSetLayout _bindlessLayout;
+    static VkDescriptorPool      _bindlessPool;
+    static VkDescriptorSet       _bindlessSet;
+    static std::array<uint32_t, size_t(SenHeapBinding::Count)>              _heapNext;
+    static std::array<std::vector<uint32_t>, size_t(SenHeapBinding::Count)> _heapFree;
+    static std::array<uint32_t, size_t(SenHeapBinding::Count)>              _heapCapacity;
+
     expose
     static auto Init      (const SenDeviceDesc& desc) -> void;
     static auto Shutdown  () -> void;
@@ -182,6 +193,19 @@ class SenVulkanBackend {
     static auto CreateSampler  (const SenSamplerDesc& desc) -> SenSampler;
     static auto RetireSampler (SenSampler handle) -> void;
     static auto LookupSampler  (SenSampler handle) -> SenVulkanSamplerEntry&;
+
+    expose // bindless heap
+    static auto GetTextureHeapIndex (SenTexture handle) -> uint32_t;
+    static auto GetSamplerHeapIndex (SenSampler handle) -> uint32_t;
+    static auto GetBindlessSet      () -> VkDescriptorSet { return _bindlessSet; }
+    static auto GetBindlessLayout   () -> VkDescriptorSetLayout { return _bindlessLayout; }
+    hide static auto InitBindlessHeap     () -> void;
+    hide static auto ShutdownBindlessHeap () -> void;
+    hide static auto HeapRegisterTexture  (SenVulkanTextureEntry& entry, VkImageView view, VkImageViewType viewType) -> void;
+    hide static auto HeapRegisterSampler  (SenVulkanSamplerEntry& entry) -> void;
+    hide static auto HeapReleaseTexture   (SenVulkanTextureEntry& entry) -> void;
+    hide static auto HeapReleaseSampler   (SenVulkanSamplerEntry& entry) -> void;
+    hide static auto HeapAllocSlot        (SenHeapBinding binding) -> uint32_t;
 
     expose // bind groups
     static auto CreateBindGroup  (const SenBindGroupDesc& desc) -> SenBindGroup;

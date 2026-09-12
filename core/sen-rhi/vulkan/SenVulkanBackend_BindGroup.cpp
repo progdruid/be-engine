@@ -173,6 +173,7 @@ auto SenVulkanBackend::FlushRetirements(uint64_t completedValue) -> void {
                 const auto it = _textures.find(note.Id);
                 if (it != _textures.end()) {
                     auto& entry = it->second;
+                    HeapReleaseTexture(entry);
                     auto destroy = [&](VkImageView v) -> void { if (v) { vkDestroyImageView(_device, v, nullptr); } };
                     destroy(entry.SRV);
                     destroy(entry.DSV);
@@ -196,6 +197,7 @@ auto SenVulkanBackend::FlushRetirements(uint64_t completedValue) -> void {
             case SenVulkanRetirementNote::Kind::Sampler: {
                 const auto it = _samplers.find(note.Id);
                 if (it != _samplers.end()) {
+                    HeapReleaseSampler(it->second);
                     vkDestroySampler(_device, it->second.Sampler, nullptr);
                     _samplers.erase(it);
                 }

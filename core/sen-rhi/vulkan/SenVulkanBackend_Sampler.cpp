@@ -26,6 +26,8 @@ auto SenVulkanBackend::CreateSampler(const SenSamplerDesc& desc) -> SenSampler {
     VkResult result = vkCreateSampler(_device, &samplerInfo, nullptr, &entry.Sampler);
     be_assert(result == VK_SUCCESS, "Failed to create sampler!");
 
+    HeapRegisterSampler(entry);
+
     return handle;
 }
 
