@@ -135,11 +135,9 @@ static auto ParseShader(const std::filesystem::path& path) -> std::expected<Shad
     auto data = ShaderData();
     data.Source = BeShaderTools::ReadFile(path);
 
-    if (data.Source.find("@be-shader") != std::string::npos) {
-        bechef_try(data.Shader, BeShaderTools::ParseShader(data.Source), "@be-shader -> {}");
-    }
-
-    bechef_try(data.Materials, BeShaderTools::ParseMaterials(data.Source), "@be-material -> {}");
+    bechef_try(auto parsed, BeShaderTools::ParseShaderFile(data.Source, path), "shader file -> {}");
+    data.Shader = std::move(parsed.Shader);
+    data.Materials = std::move(parsed.Materials);
 
     return data;
 }
@@ -226,7 +224,6 @@ static auto ResolveBinds(const ShaderFile& shader, const VisibleSchemes& visible
         resolved.push_back({ bind, &it->second });
     }
 
-    std::ranges::sort(resolved, {}, [](const ResolvedBind& resolvedBind) { return resolvedBind.Bind.Slot; });
     return resolved;
 }
 

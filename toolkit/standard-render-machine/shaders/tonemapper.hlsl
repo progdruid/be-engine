@@ -8,7 +8,6 @@
 }
 
 @be-shader tonemapper {
-    bindless
     topology triangle-strip
     rasterizer back-solid
     blend disable
@@ -24,6 +23,8 @@
 }
 */
 
+/*========================================================*/
+// region @be-auto-boilerplate
 #include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 
@@ -33,21 +34,24 @@ struct tonemapper_material {
 };
 
 struct DrawRoot {
-    uniform_material*    Frame;
+    uniform_material* Frame;
     tonemapper_material* Main;
     uint HDRInput;
     uint InputSampler;
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property uniform_material    _Frame       { get { return *Root.Frame; } }
-property tonemapper_material _Main        { get { return *Root.Main; } }
-property Texture2D           HDRInput     { get { return Tex2DHeap[Root.HDRInput]; } }
-property SamplerState        InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
+property uniform_material _Frame { get { return *Root.Frame; } }
+property tonemapper_material _Main { get { return *Root.Main; } }
+property Texture2D HDRInput { get { return Tex2DHeap[Root.HDRInput]; } }
+property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct PixelOutput {
     float3 HDRTarget : SV_Target0;
 };
+
+// endregion
+/*========================================================*/
 
 #include "BeTonemappers.hlsli"
 #include "core/fullscreen-vertex.hlsl"

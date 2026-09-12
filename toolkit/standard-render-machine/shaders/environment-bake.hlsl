@@ -25,15 +25,22 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
+
 struct environment_bake_material {
     float FaceIndex;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    environment_bake_material _Main;
+struct DrawRoot {
+    environment_bake_material* Main;
+    uint Equirect;
+    uint EquirectSampler;
 };
-SamplerState EquirectSampler : register(s1, space0);
-Texture2D Equirect : register(t2, space0);
+[[vk::push_constant]] DrawRoot Root;
+
+property environment_bake_material _Main { get { return *Root.Main; } }
+property Texture2D Equirect { get { return Tex2DHeap[Root.Equirect]; } }
+property SamplerState EquirectSampler { get { return SamplerHeap[Root.EquirectSampler]; } }
 
 struct PixelOutput {
     float4 EnvFace : SV_Target0;

@@ -23,14 +23,19 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material* Frame;
+    uint InputEmissive;
+    uint InputSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-SamplerState InputSampler : register(s1, space1);
-Texture2D InputEmissive : register(t2, space1);
+property uniform_material _Frame { get { return *Root.Frame; } }
+property Texture2D InputEmissive { get { return Tex2DHeap[Root.InputEmissive]; } }
+property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct PixelOutput {
     float3 HDROutput : SV_Target0;

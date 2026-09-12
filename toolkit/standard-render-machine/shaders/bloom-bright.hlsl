@@ -29,6 +29,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct bloom_bright_material {
@@ -38,15 +39,18 @@ struct bloom_bright_material {
     float Clamp;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material* Frame;
+    bloom_bright_material* Main;
+    uint HDRInput;
+    uint InputSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-cbuffer CBuffer_1 : register(b0, space1) {
-    bloom_bright_material _Main;
-};
-SamplerState InputSampler : register(s1, space1);
-Texture2D HDRInput : register(t2, space1);
+property uniform_material _Frame { get { return *Root.Frame; } }
+property bloom_bright_material _Main { get { return *Root.Main; } }
+property Texture2D HDRInput { get { return Tex2DHeap[Root.HDRInput]; } }
+property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct PixelOutput {
     float3 BloomMip : SV_Target0;

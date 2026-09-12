@@ -9,6 +9,7 @@
 
 #include "umbrellas/include-libassert.h"
 #include "BeMaterialScheme.h"
+#include "BeShaderTools.h"
 
 class BeShaderIncludeHandler;
 
@@ -25,7 +26,7 @@ ENABLE_BITMASK(BeShaderType);
 class BeShader {
     // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
     hide static uint32_t _shaderCount;
-    expose static auto Create(const std::filesystem::path& filePath) -> std::unique_ptr<BeShader>;
+    expose static auto Create(const BeShaderTools::ParsedShader& meta) -> std::unique_ptr<BeShader>;
     
     
     // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -1,5 +1,7 @@
 #include "BeShaderTools.h"
 
+#include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <sstream>
 
@@ -12,6 +14,42 @@ namespace {
             tok = tok.substr(1);
         }
         return static_cast<uint8_t>(std::stoi(std::string(tok)));
+    }
+
+    auto KebabToSnake(const std::string& text) -> std::string {
+        auto result = text;
+        std::ranges::replace(result, '-', '_');
+        return result;
+    }
+
+    auto KebabToPascal(const std::string& text) -> std::string {
+        auto result = std::string();
+        auto capitalise = true;
+        for (const unsigned char c : text) {
+            if (c == '-') {
+                capitalise = true;
+                continue;
+            }
+            result += capitalise ? char(std::toupper(c)) : char(c);
+            capitalise = false;
+        }
+        return result;
+    }
+
+    auto TextureSlangType(const std::string& type) -> std::string {
+        if (type == "storage texture2d") return "RWTexture2D<float4>";
+        if (type == "textureCube")       return "TextureCube";
+        if (type == "texture2d[]")       return "Texture2DArray";
+        if (type == "textureCube[]")     return "TextureCubeArray";
+        return "Texture2D";
+    }
+
+    auto TextureHeapArray(const std::string& type) -> std::string {
+        if (type == "storage texture2d") return "RWTex2DHeap";
+        if (type == "textureCube")       return "TexCubeHeap";
+        if (type == "texture2d[]")       return "Tex2DArrayHeap";
+        if (type == "textureCube[]")     return "TexCubeArrayHeap";
+        return "Tex2DHeap";
     }
 }
 
@@ -69,38 +107,33 @@ auto BeShaderTools::ParseMaterialProperty(const std::string& text) -> std::expec
     return result;
 }
 
-auto BeShaderTools::ParseMaterials(const std::string& src) -> std::expected<std::vector<ParsedMaterial>, std::string> {
-    auto result = std::vector<ParsedMaterial>();
-
-    auto pos = size_t(0);
-    while (const auto block = FindBlock(src, "@be-material:", pos)) {
-        auto mat = ParsedMaterial();
-        mat.Name = block->Name;
-        for (const auto& line : block->Lines) {
-            auto property = ParseMaterialProperty(line);
-            if (!property) {
-                return std::unexpected("material '" + mat.Name + "' -> " + property.error());
-            }
-            mat.Properties.push_back(std::move(*property));
+auto BeShaderTools::ParseMaterialBlock(const Block& block) -> std::expected<ParsedMaterial, std::string> {
+    auto material = ParsedMaterial();
+    material.Name = block.Name;
+    for (const auto& line : block.Lines) {
+        auto property = ParseMaterialProperty(line);
+        if (!property) {
+            return std::unexpected("material '" + material.Name + "' -> " + property.error());
         }
-
-        result.push_back(std::move(mat));
-        pos = block->End;
+        material.Properties.push_back(std::move(*property));
     }
-
-    return result;
+    return material;
 }
 
-auto BeShaderTools::ParseShader(const std::string& src) -> std::expected<ParsedShader, std::string> {
+auto BeShaderTools::IsSampler(const std::string& type) -> bool {
+    return type == "sampler" || type == "comparison sampler";
+}
+
+auto BeShaderTools::IsTexture(const std::string& type) -> bool {
+    return type == "texture2d" || type == "textureCube" || type == "storage texture2d"
+        || type == "texture2d[]" || type == "textureCube[]";
+}
+
+auto BeShaderTools::ParseShaderBlock(const Block& block) -> std::expected<ParsedShader, std::string> {
     auto result = ParsedShader();
+    result.Name = block.Name;
 
-    auto block = FindBlock(src, "@be-shader", 0);
-    if (!block) {
-        return std::unexpected(std::string("no @be-shader block found"));
-    }
-    result.Name = block->Name;
-
-    for (const auto& line : block->Lines) {
+    for (const auto& line : block.Lines) {
         const auto ws = line.find_first_of(" \t");
         const auto keyword = std::string_view(line).substr(0, ws);
         const auto rest =
@@ -166,33 +199,147 @@ auto BeShaderTools::ParseShader(const std::string& src) -> std::expected<ParsedS
     return result;
 }
 
-auto BeShaderTools::FindBlock(const std::string& src, const std::string& tag, size_t from) -> std::optional<Block> {
-    const auto tagPos = src.find(tag, from);
-    if (tagPos == std::string::npos) {
-        return std::nullopt;
+auto BeShaderTools::FindBlocks(const std::string& src) -> SourceBlocks {
+    auto extract = [&](const std::string& tag, size_t from) -> std::optional<Block> {
+        const auto tagPos = src.find(tag, from);
+        if (tagPos == std::string::npos) {
+            return std::nullopt;
+        }
+        const auto openPos = src.find('{', tagPos + tag.size());
+        if (openPos == std::string::npos) {
+            return std::nullopt;
+        }
+        const auto closePos = src.find('}', openPos + 1);
+        if (closePos == std::string::npos) {
+            return std::nullopt;
+        }
+
+        auto block = Block();
+        block.Name = std::string(Trim(Take(src, tagPos + tag.size(), openPos), " \t\r\n"));
+        for (const auto lineView : Split(Take(src, openPos + 1, closePos), "\n")) {
+            const auto line = Trim(lineView, " \t\r");
+            if (!line.empty()) {
+                block.Lines.emplace_back(line);
+            }
+        }
+        block.End = closePos + 1;
+        return block;
+    };
+
+    auto result = SourceBlocks();
+    result.Shader = extract("@be-shader", 0);
+
+    auto pos = size_t(0);
+    while (auto block = extract("@be-material:", pos)) {
+        pos = block->End;
+        result.Materials.push_back(std::move(*block));
     }
 
-    const auto openPos = src.find('{', tagPos + tag.size());
-    if (openPos == std::string::npos) {
-        return std::nullopt;
+    return result;
+}
+
+auto BeShaderTools::ParseShaderFile(const std::string& src, const std::filesystem::path& path) -> std::expected<ParsedShaderFile, std::string> {
+    const auto blocks = FindBlocks(src);
+
+    auto result = ParsedShaderFile();
+
+    if (blocks.Shader) {
+        auto shader = ParseShaderBlock(*blocks.Shader);
+        if (!shader) {
+            return std::unexpected(shader.error());
+        }
+        shader->SourceFile = path;
+        result.Shader = std::move(*shader);
     }
 
-    const auto closePos = src.find('}', openPos + 1);
-    if (closePos == std::string::npos) {
-        return std::nullopt;
+    for (const auto& block : blocks.Materials) {
+        auto material = ParseMaterialBlock(block);
+        if (!material) {
+            return std::unexpected(material.error());
+        }
+        material->SourceFile = path;
+        result.Materials.push_back(std::move(*material));
     }
 
-    auto block = Block();
-    block.Name = std::string(Trim(Take(src, tagPos + tag.size(), openPos), " \t\r\n"));
+    return result;
+}
 
-    for (const auto lineView : Split(Take(src, openPos + 1, closePos), "\n")) {
-        const auto line = Trim(lineView, " \t\r");
-        if (!line.empty()) {
-            block.Lines.emplace_back(line);
+auto BeShaderTools::SchemeStructName(const std::string& schemeName) -> std::string {
+    return KebabToSnake(schemeName);
+}
+
+auto BeShaderTools::BuildRootLayout(const ParsedShader& shader, const std::vector<ParsedMaterial>& materials) -> RootLayout {
+    be_assert(shader.Binds.size() == materials.size(), "BuildRootLayout: bind/material count mismatch");
+
+    auto layout = RootLayout();
+    uint32_t offset = 0;
+
+    for (size_t i = 0; i < shader.Binds.size(); ++i) {
+        const auto& link = shader.Binds[i].Link;
+        const auto& material = materials[i];
+
+        auto hasCbuffer = false;
+        for (const auto& property : material.Properties) {
+            if (!IsSampler(property.Type) && !IsTexture(property.Type)) {
+                hasCbuffer = true;
+                break;
+            }
+        }
+        if (!hasCbuffer) {
+            continue;
+        }
+
+        layout.Fields.push_back(RootField {
+            .Kind      = RootFieldKind::Pointer,
+            .Link      = link,
+            .FieldName = KebabToPascal(link),
+            .AliasName = "_" + KebabToPascal(link),
+            .TypeName  = SchemeStructName(material.Name),
+            .Offset    = offset,
+        });
+        offset += 8;
+    }
+
+    for (size_t i = 0; i < shader.Binds.size(); ++i) {
+        for (const auto& property : materials[i].Properties) {
+            if (!IsTexture(property.Type)) {
+                continue;
+            }
+            layout.Fields.push_back(RootField {
+                .Kind         = RootFieldKind::TextureIndex,
+                .Link         = shader.Binds[i].Link,
+                .FieldName    = property.Name,
+                .AliasName    = property.Name,
+                .TypeName     = TextureSlangType(property.Type),
+                .HeapArray    = TextureHeapArray(property.Type),
+                .PropertyName = property.Name,
+                .Offset       = offset,
+            });
+            offset += 4;
         }
     }
-    block.End = closePos + 1;
-    return block;
+
+    for (size_t i = 0; i < shader.Binds.size(); ++i) {
+        for (const auto& property : materials[i].Properties) {
+            if (!IsSampler(property.Type)) {
+                continue;
+            }
+            layout.Fields.push_back(RootField {
+                .Kind         = RootFieldKind::SamplerIndex,
+                .Link         = shader.Binds[i].Link,
+                .FieldName    = property.Name,
+                .AliasName    = property.Name,
+                .TypeName     = property.Type == "comparison sampler" ? "SamplerComparisonState" : "SamplerState",
+                .HeapArray    = "SamplerHeap",
+                .PropertyName = property.Name,
+                .Offset       = offset,
+            });
+            offset += 4;
+        }
+    }
+
+    layout.Size = offset;
+    return layout;
 }
 
 auto BeShaderTools::ParseFloat(const std::string& text) -> std::expected<float, std::string> {

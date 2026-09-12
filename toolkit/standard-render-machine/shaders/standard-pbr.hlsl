@@ -38,6 +38,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 #include "core/objectMaterial.hlsl"
 
@@ -49,22 +50,26 @@ struct standard_pbr_material {
     float3 EmissiveColor;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material* Frame;
+    object_material_for_geometry_pass* GeometryObject;
+    standard_pbr_material* GeometryMain;
+    uint Diffuse_or_Albedo;
+    uint ORM_RGB;
+    uint Emissive_RGB;
+    uint NormalMap;
+    uint InputSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-cbuffer CBuffer_1 : register(b0, space1) {
-    object_material_for_geometry_pass _GeometryObject;
-};
-
-cbuffer CBuffer_2 : register(b0, space2) {
-    standard_pbr_material _GeometryMain;
-};
-SamplerState InputSampler : register(s1, space2);
-Texture2D Diffuse_or_Albedo : register(t2, space2);
-Texture2D ORM_RGB : register(t3, space2);
-Texture2D Emissive_RGB : register(t4, space2);
-Texture2D NormalMap : register(t5, space2);
+property uniform_material _Frame { get { return *Root.Frame; } }
+property object_material_for_geometry_pass _GeometryObject { get { return *Root.GeometryObject; } }
+property standard_pbr_material _GeometryMain { get { return *Root.GeometryMain; } }
+property Texture2D Diffuse_or_Albedo { get { return Tex2DHeap[Root.Diffuse_or_Albedo]; } }
+property Texture2D ORM_RGB { get { return Tex2DHeap[Root.ORM_RGB]; } }
+property Texture2D Emissive_RGB { get { return Tex2DHeap[Root.Emissive_RGB]; } }
+property Texture2D NormalMap { get { return Tex2DHeap[Root.NormalMap]; } }
+property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct VertexInput {
     float3 Position : POSITION;

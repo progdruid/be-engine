@@ -27,22 +27,27 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct backbuffer_material {
     float DiscardFar;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material* Frame;
+    backbuffer_material* Main;
+    uint InputTexture;
+    uint DepthTexture;
+    uint InputSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-cbuffer CBuffer_1 : register(b0, space1) {
-    backbuffer_material _Main;
-};
-SamplerState InputSampler : register(s1, space1);
-Texture2D InputTexture : register(t2, space1);
-Texture2D DepthTexture : register(t3, space1);
+property uniform_material _Frame { get { return *Root.Frame; } }
+property backbuffer_material _Main { get { return *Root.Main; } }
+property Texture2D InputTexture { get { return Tex2DHeap[Root.InputTexture]; } }
+property Texture2D DepthTexture { get { return Tex2DHeap[Root.DepthTexture]; } }
+property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct PixelOutput {
     float4 BackbufferColor : SV_Target0;

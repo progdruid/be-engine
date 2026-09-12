@@ -37,6 +37,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct batched_directional_light_shadowed_material {
@@ -48,19 +49,26 @@ struct batched_directional_light_shadowed_material {
     float4x4 LightProjectionView[8];
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material* Frame;
+    batched_directional_light_shadowed_material* Main;
+    uint Depth;
+    uint Albedo_RGB;
+    uint WorldNormal_XYZ;
+    uint ORM_RGB;
+    uint ShadowMap;
+    uint InputSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-cbuffer CBuffer_1 : register(b0, space1) {
-    batched_directional_light_shadowed_material _Main;
-};
-SamplerState InputSampler : register(s1, space1);
-Texture2D Depth : register(t2, space1);
-Texture2D Albedo_RGB : register(t3, space1);
-Texture2D WorldNormal_XYZ : register(t4, space1);
-Texture2D ORM_RGB : register(t5, space1);
-Texture2DArray ShadowMap : register(t6, space1);
+property uniform_material _Frame { get { return *Root.Frame; } }
+property batched_directional_light_shadowed_material _Main { get { return *Root.Main; } }
+property Texture2D Depth { get { return Tex2DHeap[Root.Depth]; } }
+property Texture2D Albedo_RGB { get { return Tex2DHeap[Root.Albedo_RGB]; } }
+property Texture2D WorldNormal_XYZ { get { return Tex2DHeap[Root.WorldNormal_XYZ]; } }
+property Texture2D ORM_RGB { get { return Tex2DHeap[Root.ORM_RGB]; } }
+property Texture2DArray ShadowMap { get { return Tex2DArrayHeap[Root.ShadowMap]; } }
+property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct PixelOutput {
     float3 LightHDR : SV_Target0;

@@ -44,26 +44,6 @@ static auto FindLine(const std::vector<std::string>& lines, std::string_view tex
     return std::nullopt;
 }
 
-static auto KebabToSnakeCase(const std::string& text) -> std::string {
-    auto result = text;
-    std::ranges::replace(result, '-', '_');
-    return result;
-}
-
-static auto KebabToPascalCase(const std::string& text) -> std::string {
-    auto result = std::string();
-    auto capitalise = true;
-    for (const unsigned char c : text) {
-        if (c == '-') {
-            capitalise = true;
-            continue;
-        }
-        result += capitalise ? char(std::toupper(c)) : char(c);
-        capitalise = false;
-    }
-    return result;
-}
-
 static auto VertexFieldForLayout(const std::string& layout) -> std::string {
     if (layout == "position") return "float3 Position : POSITION;";
     if (layout == "normal") return "float3 Normal : NORMAL;";
@@ -72,15 +52,6 @@ static auto VertexFieldForLayout(const std::string& layout) -> std::string {
     if (layout == "uv0") return "float2 UV : TEXCOORD0;";
     if (layout == "tangent") return "float4 Tangent : TANGENT;";
     return "// unknown layout: " + layout;
-}
-
-static auto IsSampler(const std::string& type) -> bool {
-    return type == "sampler" || type == "comparison sampler";
-}
-
-static auto IsTexture(const std::string& type) -> bool {
-    return type == "texture2d" || type == "textureCube" || type == "storage texture2d"
-        || type == "texture2d[]" || type == "textureCube[]";
 }
 
 static auto GenerateIncludes(const std::string& ownCollection, const std::filesystem::path& path, const std::vector<ResolvedBind>& binds) -> std::vector<std::string> {
@@ -105,7 +76,7 @@ static auto GenerateIncludes(const std::string& ownCollection, const std::filesy
 static auto GenerateMaterialStruct(const BeShaderTools::ParsedMaterial& material) -> std::optional<std::string> {
     auto fields = std::string();
     for (const auto& property : material.Properties) {
-        if (IsSampler(property.Type) || IsTexture(property.Type)) continue;
+        if (BeShaderTools::IsSampler(property.Type) || BeShaderTools::IsTexture(property.Type)) continue;
         const auto type = property.Type == "matrix" ? std::string("float4x4") : property.Type;
         const auto suffix = property.ArrayLength > 1 ? "[" + std::to_string(property.ArrayLength) + "]" : std::string();
         fields += "    " + type + " " + property.Name + suffix + ";\n";
@@ -114,66 +85,41 @@ static auto GenerateMaterialStruct(const BeShaderTools::ParsedMaterial& material
     if (fields.empty()) {
         return std::nullopt;
     }
-    return "struct " + KebabToSnakeCase(material.Name) + " {\n" + fields + "};";
+    return "struct " + BeShaderTools::SchemeStructName(material.Name) + " {\n" + fields + "};";
 }
 
-static auto GenerateBindings(const ResolvedBind& bind) -> std::optional<std::string> {
-    const auto space = std::to_string(bind.Bind.Slot);
-    const auto& scheme = bind.Scheme->Material;
+static auto GenerateRoot(const BeShaderTools::ParsedShader& shader, const std::vector<ResolvedBind>& binds) -> std::optional<std::string> {
+    auto materials = std::vector<BeShaderTools::ParsedMaterial>();
+    materials.reserve(binds.size());
+    for (const auto& bind : binds) {
+        materials.push_back(bind.Scheme->Material);
+    }
 
-    auto scalars = std::vector<BeShaderTools::ParsedMaterialProperty>();
-    auto samplers = std::vector<BeShaderTools::ParsedMaterialProperty>();
-    auto textures = std::vector<BeShaderTools::ParsedMaterialProperty>();
+    const auto layout = BeShaderTools::BuildRootLayout(shader, materials);
+    if (layout.Fields.empty()) {
+        return std::nullopt;
+    }
 
-    for (const auto& property : scheme.Properties) {
-        if (IsSampler(property.Type)) samplers.push_back(property);
-        else if (IsTexture(property.Type)) textures.push_back(property);
-        else scalars.push_back(property);
+    auto structBody = std::string();
+    auto accessors  = std::string();
+    for (const auto& field : layout.Fields) {
+        if (field.Kind == BeShaderTools::RootFieldKind::Pointer) {
+            structBody += "    " + field.TypeName + "* " + field.FieldName + ";\n";
+            accessors  += "property " + field.TypeName + " " + field.AliasName
+                       +  " { get { return *Root." + field.FieldName + "; } }\n";
+        } else {
+            structBody += "    uint " + field.FieldName + ";\n";
+            accessors  += "property " + field.TypeName + " " + field.AliasName
+                       +  " { get { return " + field.HeapArray + "[Root." + field.FieldName + "]; } }\n";
+        }
     }
 
     auto code = std::string();
-
-    if (!scalars.empty()) {
-        const auto structName = KebabToSnakeCase(scheme.Name);
-        const auto varName = bind.Bind.Var.empty() ? KebabToPascalCase(bind.Bind.Link) : bind.Bind.Var;
-        code += "cbuffer CBuffer_" + space + " : register(b0, space" + space + ") {\n"
-             +  "    " + structName + " _" + varName + ";\n"
-             +  "};";
-    }
-
-    for (size_t i = 0; i < samplers.size(); i++) {
-        if (!code.empty()) code += "\n";
-        const auto samplerType = samplers[i].Type == "comparison sampler" ? std::string("SamplerComparisonState") : std::string("SamplerState");
-        code += samplerType + " " + samplers[i].Name
-             +  " : register(s" + std::to_string(1 + i) + ", space" + space + ");";
-    }
-
-    for (size_t i = 0; i < textures.size(); i++) {
-        if (!code.empty()) code += "\n";
-        const auto reg = std::to_string(1 + samplers.size() + i);
-
-        auto type = std::string("Texture2D");
-        auto letter = std::string("t");
-        if (textures[i].Type == "storage texture2d") {
-            type = "RWTexture2D<float4>";
-            letter = "u";
-        }
-        else if (textures[i].Type == "textureCube") {
-            type = "TextureCube";
-        }
-        else if (textures[i].Type == "texture2d[]") {
-            type = "Texture2DArray";
-        }
-        else if (textures[i].Type == "textureCube[]") {
-            type = "TextureCubeArray";
-        }
-
-        code += type + " " + textures[i].Name
-             +  " : register(" + letter + reg + ", space" + space + ");";
-    }
-
-    if (code.empty()) {
-        return std::nullopt;
+    code += "struct DrawRoot {\n" + structBody + "};\n";
+    code += "[[vk::push_constant]] DrawRoot Root;\n\n";
+    code += accessors;
+    if (!code.empty() && code.back() == '\n') {
+        code.pop_back();
     }
     return code;
 }
@@ -202,7 +148,10 @@ static auto GeneratePixelOutput(const std::vector<BeShaderTools::ParsedTarget>& 
 static auto GenerateBoilerplate(const std::string& collection, const std::filesystem::path& path, const ShaderData& data, const std::vector<ResolvedBind>& binds) -> std::vector<std::string> {
     auto parts = std::vector<std::string>();
 
-    const auto includes = GenerateIncludes(collection, path, binds);
+    auto includes = GenerateIncludes(collection, path, binds);
+    if (!binds.empty()) {
+        includes.insert(includes.begin(), "#include \"core/be-heap.hlsl\"");
+    }
     if (!includes.empty()) {
         parts.push_back(JoinLines(includes));
     }
@@ -214,8 +163,8 @@ static auto GenerateBoilerplate(const std::string& collection, const std::filesy
         }
     }
 
-    for (const auto& bind : binds) {
-        auto text = GenerateBindings(bind);
+    if (data.Shader) {
+        auto text = GenerateRoot(*data.Shader, binds);
         if (text) {
             parts.push_back(std::move(*text));
         }

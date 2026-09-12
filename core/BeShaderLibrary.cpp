@@ -45,22 +45,27 @@ auto BeShaderLibrary::LoadShaderFiles(const std::vector<std::filesystem::path>& 
         sourcesToIndex.emplace_back(path, src);
     }
 
-    // index material schemes
-    for (const auto& src : sourcesToIndex | std::views::values) {
-        auto materials = BeShaderTools::ParseMaterials(src);
-        be_assert(materials.has_value(), materials.error());
+    // parse every source file once
+    auto parsedFiles = std::vector<std::pair<std::filesystem::path, BeShaderTools::ParsedShaderFile>>();
+    for (const auto& [path, src] : sourcesToIndex) {
+        auto parsed = BeShaderTools::ParseShaderFile(src, path);
+        be_assert(parsed.has_value(), parsed.error());
+        parsedFiles.emplace_back(path, std::move(*parsed));
+    }
 
-        for (const auto& material : materials.value()) {
+    // index material schemes (all, before any shader resolves its binds)
+    for (const auto& parsed : parsedFiles | std::views::values) {
+        for (const auto& material : parsed.Materials) {
             _materialSchemes[material.Name] = BeMaterialScheme::Create(material.Name, material.Properties);
         }
     }
 
     // index shaders
-    for (const auto& [path, src] : sourcesToIndex) {
-        if (src.find("@be-shader") == std::string::npos)
+    for (const auto& parsed : parsedFiles | std::views::values) {
+        if (!parsed.Shader) {
             continue;
-
-        auto shader = BeShader::Create(path);
+        }
+        auto shader = BeShader::Create(*parsed.Shader);
         auto name = shader->Name;
         _shaders[std::move(name)] = std::move(shader);
     }

@@ -29,22 +29,27 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct skybox_material {
     float ClampRadiance;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material* Frame;
+    skybox_material* Main;
+    uint Depth;
+    uint EnvCubemap;
+    uint InputSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-cbuffer CBuffer_1 : register(b0, space1) {
-    skybox_material _Main;
-};
-SamplerState InputSampler : register(s1, space1);
-Texture2D Depth : register(t2, space1);
-TextureCube EnvCubemap : register(t3, space1);
+property uniform_material _Frame { get { return *Root.Frame; } }
+property skybox_material _Main { get { return *Root.Main; } }
+property Texture2D Depth { get { return Tex2DHeap[Root.Depth]; } }
+property TextureCube EnvCubemap { get { return TexCubeHeap[Root.EnvCubemap]; } }
+property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct PixelOutput {
     float3 SkyHDR : SV_Target0;

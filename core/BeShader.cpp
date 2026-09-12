@@ -121,7 +121,8 @@ namespace {
 
 
 uint32_t BeShader::_shaderCount = 0;
-auto BeShader::Create(const std::filesystem::path& filePath) -> std::unique_ptr<BeShader> {
+auto BeShader::Create(const BeShaderTools::ParsedShader& meta) -> std::unique_ptr<BeShader> {
+    const auto& filePath = meta.SourceFile;
     be_assert(
         std::filesystem::exists(filePath),
         "Shader file doesn't exist: " + filePath.string()
@@ -130,10 +131,6 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::unique_ptr<
     auto shader = std::make_unique<BeShader>();
     shader->ShaderID = ++_shaderCount;
 
-    auto src = BeShaderTools::ReadFile(filePath);
-    auto parsed = BeShaderTools::ParseShader(src);
-    be_assert(parsed.has_value(), "Failed to parse @be-shader", filePath, parsed.error());
-    const auto& meta = parsed.value();
     shader->Name = meta.Name;
 
     shader->_pipelineDesc.Bindless = meta.Bindless;
@@ -210,7 +207,7 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::unique_ptr<
             "2. Path to shader: " + filePath.string() + "\n"
             "3. Shader stage that failed: " + stage + "\n"
             "4. Compiler output:\n" + err + "\n"
-            "5. Source code:\n\n" + src;
+            "5. Source code:\n\n" + BeShaderTools::ReadFile(filePath);
     };
 
     if (!meta.VertexFn.empty()) {

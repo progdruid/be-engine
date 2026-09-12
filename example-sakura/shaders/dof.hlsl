@@ -29,6 +29,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct dof_material {
@@ -37,17 +38,22 @@ struct dof_material {
     float MaxBokehRadius;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material* Frame;
+    dof_material* Main;
+    uint ColorInput;
+    uint DepthInput;
+    uint LinearSampler;
+    uint PointSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-cbuffer CBuffer_1 : register(b0, space1) {
-    dof_material _Main;
-};
-SamplerState LinearSampler : register(s1, space1);
-SamplerState PointSampler : register(s2, space1);
-Texture2D ColorInput : register(t3, space1);
-Texture2D DepthInput : register(t4, space1);
+property uniform_material _Frame { get { return *Root.Frame; } }
+property dof_material _Main { get { return *Root.Main; } }
+property Texture2D ColorInput { get { return Tex2DHeap[Root.ColorInput]; } }
+property Texture2D DepthInput { get { return Tex2DHeap[Root.DepthInput]; } }
+property SamplerState LinearSampler { get { return SamplerHeap[Root.LinearSampler]; } }
+property SamplerState PointSampler { get { return SamplerHeap[Root.PointSampler]; } }
 
 struct PixelOutput {
     float3 DofOutput : SV_Target0;

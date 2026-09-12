@@ -31,27 +31,37 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct ambient_ibl_material {
     float MaxMipLevel;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material* Frame;
+    ambient_ibl_material* Main;
+    uint Albedo_RGB;
+    uint WorldNormal_XYZ;
+    uint ORM_RGB;
+    uint Depth_Tex;
+    uint IrradianceCubemap;
+    uint PrefilteredCubemap;
+    uint BrdfLut;
+    uint InputSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-cbuffer CBuffer_1 : register(b0, space1) {
-    ambient_ibl_material _Main;
-};
-SamplerState InputSampler : register(s1, space1);
-Texture2D Albedo_RGB : register(t2, space1);
-Texture2D WorldNormal_XYZ : register(t3, space1);
-Texture2D ORM_RGB : register(t4, space1);
-Texture2D Depth_Tex : register(t5, space1);
-TextureCube IrradianceCubemap : register(t6, space1);
-TextureCube PrefilteredCubemap : register(t7, space1);
-Texture2D BrdfLut : register(t8, space1);
+property uniform_material _Frame { get { return *Root.Frame; } }
+property ambient_ibl_material _Main { get { return *Root.Main; } }
+property Texture2D Albedo_RGB { get { return Tex2DHeap[Root.Albedo_RGB]; } }
+property Texture2D WorldNormal_XYZ { get { return Tex2DHeap[Root.WorldNormal_XYZ]; } }
+property Texture2D ORM_RGB { get { return Tex2DHeap[Root.ORM_RGB]; } }
+property Texture2D Depth_Tex { get { return Tex2DHeap[Root.Depth_Tex]; } }
+property TextureCube IrradianceCubemap { get { return TexCubeHeap[Root.IrradianceCubemap]; } }
+property TextureCube PrefilteredCubemap { get { return TexCubeHeap[Root.PrefilteredCubemap]; } }
+property Texture2D BrdfLut { get { return Tex2DHeap[Root.BrdfLut]; } }
+property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct PixelOutput {
     float3 AmbientHDR : SV_Target0;

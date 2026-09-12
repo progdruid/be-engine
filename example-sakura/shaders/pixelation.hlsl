@@ -29,6 +29,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct pixelation_material {
@@ -38,16 +39,20 @@ struct pixelation_material {
     float EdgeFarCutoff;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material* Frame;
+    pixelation_material* Main;
+    uint ColorTexture;
+    uint DepthTexture;
+    uint PointSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-cbuffer CBuffer_1 : register(b0, space1) {
-    pixelation_material _Main;
-};
-SamplerState PointSampler : register(s1, space1);
-Texture2D ColorTexture : register(t2, space1);
-Texture2D DepthTexture : register(t3, space1);
+property uniform_material _Frame { get { return *Root.Frame; } }
+property pixelation_material _Main { get { return *Root.Main; } }
+property Texture2D ColorTexture { get { return Tex2DHeap[Root.ColorTexture]; } }
+property Texture2D DepthTexture { get { return Tex2DHeap[Root.DepthTexture]; } }
+property SamplerState PointSampler { get { return SamplerHeap[Root.PointSampler]; } }
 
 struct PixelOutput {
     float3 PixelOutput : SV_Target0;

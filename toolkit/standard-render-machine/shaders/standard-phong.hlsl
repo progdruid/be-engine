@@ -37,6 +37,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 #include "core/objectMaterial.hlsl"
 
@@ -47,22 +48,26 @@ struct standard_phong_material {
     float3 EmissiveColor;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material* Frame;
+    object_material_for_geometry_pass* GeometryObject;
+    standard_phong_material* GeometryMain;
+    uint DiffuseTexture;
+    uint SpecularTexture;
+    uint EmissiveTexture;
+    uint NormalMap;
+    uint InputSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-cbuffer CBuffer_1 : register(b0, space1) {
-    object_material_for_geometry_pass _GeometryObject;
-};
-
-cbuffer CBuffer_2 : register(b0, space2) {
-    standard_phong_material _GeometryMain;
-};
-SamplerState InputSampler : register(s1, space2);
-Texture2D DiffuseTexture : register(t2, space2);
-Texture2D SpecularTexture : register(t3, space2);
-Texture2D EmissiveTexture : register(t4, space2);
-Texture2D NormalMap : register(t5, space2);
+property uniform_material _Frame { get { return *Root.Frame; } }
+property object_material_for_geometry_pass _GeometryObject { get { return *Root.GeometryObject; } }
+property standard_phong_material _GeometryMain { get { return *Root.GeometryMain; } }
+property Texture2D DiffuseTexture { get { return Tex2DHeap[Root.DiffuseTexture]; } }
+property Texture2D SpecularTexture { get { return Tex2DHeap[Root.SpecularTexture]; } }
+property Texture2D EmissiveTexture { get { return Tex2DHeap[Root.EmissiveTexture]; } }
+property Texture2D NormalMap { get { return Tex2DHeap[Root.NormalMap]; } }
+property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct VertexInput {
     float3 Position : POSITION;

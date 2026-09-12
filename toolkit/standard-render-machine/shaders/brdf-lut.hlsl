@@ -21,6 +21,8 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
+
 struct PixelOutput {
     float2 BrdfLut : SV_Target0;
 };

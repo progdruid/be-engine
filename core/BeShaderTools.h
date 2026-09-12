@@ -12,28 +12,41 @@ class BeShaderTools {
     expose
     static auto ReadFile (const std::filesystem::path& path) -> std::string;
 
+    struct Block {
+        std::string Name;
+        std::vector<std::string> Lines;
+        size_t End = 0;
+    };
+
+    struct SourceBlocks {
+        std::optional<Block> Shader;
+        std::vector<Block>   Materials;
+    };
+    static auto FindBlocks (const std::string& src) -> SourceBlocks;
+
     struct ParsedMaterialProperty {
         std::string Name;
-        std::string Type;         // "float".."float4", "matrix", "texture2d", "textureCube", "storage texture2d", "sampler", "comparison sampler"
-        uint32_t    ArrayLength = 1; // element count; a trailing "[N]" on the type is stripped into this
-        std::string Default;      // raw default token(s); empty when omitted
+        std::string Type;
+        uint32_t    ArrayLength = 1;
+        std::string Default;
     };
     static auto ParseMaterialProperty (const std::string& text) -> std::expected<ParsedMaterialProperty, std::string>;
-    // Parses a single "Name: type[ [N] ] = default" property line.
 
     struct ParsedMaterial {
         std::string Name;
         std::vector<ParsedMaterialProperty> Properties;
+        std::filesystem::path SourceFile;
     };
-    static auto ParseMaterials (const std::string& src) -> std::expected<std::vector<ParsedMaterial>, std::string>;
-    // Parses every `@be-material` block found in a source file.
+    static auto ParseMaterialBlock (const Block& block) -> std::expected<ParsedMaterial, std::string>;
 
-    
+    static auto IsSampler (const std::string& type) -> bool;
+    static auto IsTexture (const std::string& type) -> bool;
+
     struct ParsedBind {
         std::string Link;
         std::string Scheme;
         uint8_t     Slot = 0;
-        std::string Var;   // optional generated-variable-name override; empty = derive from Link
+        std::string Var;
     };
     struct ParsedTarget {
         std::string Name;
@@ -55,27 +68,37 @@ class BeShaderTools {
         std::string DomainFn;
         std::vector<ParsedBind> Binds;
         std::vector<ParsedTarget> Targets;
+        std::filesystem::path SourceFile;
     };
-    // Parses the single `@be-shader` block found in a source file.
-    static auto ParseShader (const std::string& src) -> std::expected<ParsedShader, std::string>;
+    static auto ParseShaderBlock (const Block& block) -> std::expected<ParsedShader, std::string>;
 
-    
-    // A brace-delimited metadata block: `@tag <Name> { <Body> }`
-    struct Block {
-        std::string Name;
-        std::vector<std::string> Lines;
-        size_t End = 0;
+    struct ParsedShaderFile {
+        std::optional<ParsedShader> Shader;
+        std::vector<ParsedMaterial> Materials;
     };
-    static auto FindBlock (const std::string& src, const std::string& tag, size_t from = 0) -> std::optional<Block>;
+    static auto ParseShaderFile (const std::string& src, const std::filesystem::path& path) -> std::expected<ParsedShaderFile, std::string>;
+
+    enum class RootFieldKind { Pointer, TextureIndex, SamplerIndex };
+    struct RootField {
+        RootFieldKind Kind;
+        std::string   Link;
+        std::string   FieldName;
+        std::string   AliasName;
+        std::string   TypeName;
+        std::string   HeapArray;
+        std::string   PropertyName;
+        uint32_t      Offset = 0;
+    };
+    struct RootLayout {
+        std::vector<RootField> Fields;
+        uint32_t Size = 0;
+    };
+    static auto BuildRootLayout (const ParsedShader& shader, const std::vector<ParsedMaterial>& materials) -> RootLayout;
+    static auto SchemeStructName (const std::string& schemeName) -> std::string;
 
     static auto ParseFloat (const std::string& text) -> std::expected<float, std::string>;
-    // Parses a single scalar "0.5".
-
     static auto ParseTuple (const std::string& text) -> std::expected<std::vector<float>, std::string>;
-    // Parses "(a, b, c)", "#RRGGBB", or "#RRGGBBAA" into a flat list of components.
-
     static auto ParseFloatArray (const std::string& text, uint32_t componentCount) -> std::expected<std::vector<float>, std::string>;
-    // Parses "[e, e, ...]"; each element is a scalar (componentCount == 1) or a ParseTuple element.
 
     static auto Take (std::string_view str, size_t start, size_t end) -> std::string_view;
     static auto Trim (std::string_view str, const char* trimmedChars) -> std::string_view;

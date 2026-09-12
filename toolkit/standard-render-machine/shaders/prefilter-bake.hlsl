@@ -26,17 +26,24 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
+
 struct prefilter_bake_material {
     float FaceIndex;
     float Roughness;
     float MaxSampleRadiance;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    prefilter_bake_material _Main;
+struct DrawRoot {
+    prefilter_bake_material* Main;
+    uint EnvCubemap;
+    uint EnvSampler;
 };
-SamplerState EnvSampler : register(s1, space0);
-TextureCube EnvCubemap : register(t2, space0);
+[[vk::push_constant]] DrawRoot Root;
+
+property prefilter_bake_material _Main { get { return *Root.Main; } }
+property TextureCube EnvCubemap { get { return TexCubeHeap[Root.EnvCubemap]; } }
+property SamplerState EnvSampler { get { return SamplerHeap[Root.EnvSampler]; } }
 
 struct PixelOutput {
     float4 PrefilteredFace : SV_Target0;

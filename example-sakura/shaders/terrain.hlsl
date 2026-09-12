@@ -34,6 +34,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 #include "core/objectMaterial.hlsl"
 
@@ -47,19 +48,20 @@ struct terrain_main_material_for_geometry_pass {
     float Speed;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material* Frame;
+    object_material_for_geometry_pass* GeometryObject;
+    terrain_main_material_for_geometry_pass* GeometryMain;
+    uint DiffuseTexture;
+    uint InputSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-cbuffer CBuffer_1 : register(b0, space1) {
-    object_material_for_geometry_pass _GeometryObject;
-};
-
-cbuffer CBuffer_2 : register(b0, space2) {
-    terrain_main_material_for_geometry_pass _Terrain;
-};
-SamplerState InputSampler : register(s1, space2);
-Texture2D DiffuseTexture : register(t2, space2);
+property uniform_material _Frame { get { return *Root.Frame; } }
+property object_material_for_geometry_pass _GeometryObject { get { return *Root.GeometryObject; } }
+property terrain_main_material_for_geometry_pass _GeometryMain { get { return *Root.GeometryMain; } }
+property Texture2D DiffuseTexture { get { return Tex2DHeap[Root.DiffuseTexture]; } }
+property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct VertexInput {
     float3 Position : POSITION;

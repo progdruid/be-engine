@@ -23,8 +23,16 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-SamplerState InputSampler : register(s1, space2);
-Texture2D InputTexture : register(t2, space2);
+#include "core/be-heap.hlsl"
+
+struct DrawRoot {
+    uint InputTexture;
+    uint InputSampler;
+};
+[[vk::push_constant]] DrawRoot Root;
+
+property Texture2D InputTexture { get { return Tex2DHeap[Root.InputTexture]; } }
+property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct PixelOutput {
     float4 BackbufferColor : SV_Target0;
