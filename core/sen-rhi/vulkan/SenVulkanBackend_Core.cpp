@@ -143,9 +143,18 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     };
     // 1.2 core features
     VkPhysicalDeviceVulkan12Features enabled12Features {
-        .sType             = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-        .pNext             = &enabled11Features,
-        .timelineSemaphore = VK_TRUE,
+        .sType                                        = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .pNext                                        = &enabled11Features,
+        .descriptorIndexing                           = VK_TRUE,  // bindless: descriptor-indexing umbrella
+        .shaderSampledImageArrayNonUniformIndexing    = VK_TRUE,  // bindless: index sampled-image heap by non-uniform id
+        .shaderStorageImageArrayNonUniformIndexing    = VK_TRUE,  // bindless: index storage-image (RWTexture2D) heap
+        .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,  // bindless: write heap slots after the set is bound
+        .descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,  // bindless: same for storage-image heap
+        .descriptorBindingPartiallyBound              = VK_TRUE,  // bindless: unwritten heap slots need not be valid
+        .descriptorBindingVariableDescriptorCount     = VK_TRUE,  // bindless: heap sized at set-alloc time, not layout time
+        .runtimeDescriptorArray                       = VK_TRUE,  // bindless: unbounded Texture2D[] etc. in shaders
+        .timelineSemaphore                            = VK_TRUE,
+        .bufferDeviceAddress                          = VK_TRUE,  // BDA: buffers as GpuAddress pointers
     };
     // 1.3 core features
     VkPhysicalDeviceVulkan13Features enabled13Features {
@@ -194,6 +203,7 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
 
     // VMA allocator
     VmaAllocatorCreateInfo allocatorInfo {
+        .flags          = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
         .physicalDevice = _physicalDevice,
         .device         = _device,
         .instance       = _instance,
