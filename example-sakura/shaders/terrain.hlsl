@@ -59,7 +59,7 @@ struct DrawRoot {
 
 property uniform_material _Frame { get { return *Root.Frame; } }
 property object_material_for_geometry_pass _GeometryObject { get { return *Root.GeometryObject; } }
-property terrain_main_material_for_geometry_pass _GeometryMain { get { return *Root.GeometryMain; } }
+property terrain_main_material_for_geometry_pass _Terrain { get { return *Root.GeometryMain; } }
 property Texture2D DiffuseTexture { get { return Tex2DHeap[Root.DiffuseTexture]; } }
 property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 

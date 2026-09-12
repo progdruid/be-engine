@@ -135,23 +135,16 @@ auto BeShader::Create(const BeShaderTools::ParsedShader& meta) -> std::unique_pt
     be_assert(meta.Root.has_value(), "BeShader::Create: shader not linked (no root layout)", meta.Name);
     shader->_rootLayout = *meta.Root;
 
-    shader->_pipelineDesc.Bindless = meta.Bindless;
+    shader->_pipelineDesc.Bindless = true;
 
     if (!meta.Binds.empty()) {
         shader->HasMaterial = true;
 
-        if (!meta.Bindless) {
-            shader->_pipelineDesc.BindGroupLayouts.resize(meta.Binds.size());
-        }
         for (const auto& bind : meta.Binds) {
             auto& entry = shader->_materialSchemes.emplace_back();
             entry.Link   = bind.Link;
             entry.Scheme = BeShaderLibrary::GetMaterialScheme(bind.Scheme);
             entry.Index  = bind.Slot;
-
-            if (!meta.Bindless) {
-                shader->_pipelineDesc.BindGroupLayouts[entry.Index] = entry.Scheme.BindGroupLayout;
-            }
         }
     }
 

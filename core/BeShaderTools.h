@@ -72,7 +72,6 @@ class BeShaderTools {
 
     struct ParsedShader {
         std::string Name;
-        bool Bindless = false;
         std::string Topology;
         std::string Rasterizer;
         std::string Blend;

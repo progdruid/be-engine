@@ -8,6 +8,7 @@
 
 class BeTexture;
 class BeMaterial;
+class BeShader;
 class BeStandardRenderMachine;
 
 class BeStandardSkyboxPass final : public BeRenderPass {
@@ -19,6 +20,7 @@ class BeStandardSkyboxPass final : public BeRenderPass {
     std::shared_ptr<BeTexture> _output;
 
     std::shared_ptr<BeMaterial> _material;
+    raw_ptr<BeShader> _shader;
     SenPipeline _pipeline;
 
     expose

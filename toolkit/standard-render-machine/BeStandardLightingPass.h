@@ -10,6 +10,7 @@
 
 class BeTexture;
 class BeMaterial;
+class BeShader;
 class BeStandardRenderMachine;
 
 class BeStandardLightingPass final : public BeRenderPass {
@@ -25,22 +26,27 @@ class BeStandardLightingPass final : public BeRenderPass {
 
     BeMaterialScheme _batchedScheme;
     std::shared_ptr<BeMaterial> _batchedMaterial;
+    raw_ptr<BeShader> _batchedShader;
     SenPipeline _batchedPipeline;
     uint32_t _batchedCapacity = 0;
 
     BeMaterialScheme _dirShadowBatchScheme;
     std::shared_ptr<BeMaterial> _dirShadowBatchMaterial;
+    raw_ptr<BeShader> _dirShadowBatchShader;
     SenPipeline _dirShadowBatchPipeline;
     uint32_t _dirShadowBatchCapacity = 0;
 
     BeMaterialScheme _pointShadowBatchScheme;
     std::shared_ptr<BeMaterial> _pointShadowBatchMaterial;
+    raw_ptr<BeShader> _pointShadowBatchShader;
     SenPipeline _pointShadowBatchPipeline;
     uint32_t _pointShadowBatchCapacity = 0;
-    
+
     std::shared_ptr<BeMaterial> _emissiveMaterial;
+    raw_ptr<BeShader> _emissiveShader;
     SenPipeline _emissivePipeline;
     std::shared_ptr<BeMaterial> _ambientMaterial;
+    raw_ptr<BeShader> _ambientShader;
     SenPipeline _ambientPipeline;
 
     expose

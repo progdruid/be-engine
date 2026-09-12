@@ -8,6 +8,7 @@
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
+#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeShaderLibrary.h"
 #include "BeTexture.h"
@@ -54,8 +55,7 @@ auto BeStandardShadowPass::RenderDirectionalShadows(
 
     cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
     cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
-    cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
-    
+
     BePass pass(cmd);
     pass.SetDepthTarget(shadowArray, SenLoadOp::Clear, 1.0f, static_cast<int16_t>(slice));
     pass.SetViewport({ 0, 0, resolution, resolution, 0, 1 });
@@ -69,7 +69,6 @@ auto BeStandardShadowPass::RenderDirectionalShadows(
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
         _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
-        cmd.SetBindGroup(_objectMaterial->GetBindGroup(), 1);
 
         const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
         for (size_t j = 0; j < meshSlices.size(); ++j) {
@@ -81,9 +80,13 @@ auto BeStandardShadowPass::RenderDirectionalShadows(
                 .SetDepthFormat(shadowArray->Format)
                 .Build()
             ;
-            
+
             cmd.SetPipeline(pipeline);
-            cmd.SetBindGroup(propSlice.Material->GetBindGroup(), 2);
+            BeRoot(*entry.Prop->Shader)
+            .Use("frame", *uniformMat)
+            .Use("geometry-object", *_objectMaterial)
+            .Use("geometry-main", *propSlice.Material)
+            .Push(cmd);
             cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }
     }
@@ -103,7 +106,6 @@ auto BeStandardShadowPass::RenderPointLightShadows(
 
     cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
     cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
-    cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
 
     for (int face = 0; face < 6; ++face) {
         const glm::mat4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
@@ -122,7 +124,6 @@ auto BeStandardShadowPass::RenderPointLightShadows(
             _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
             _objectMaterial->SetMatrix("ProjectionView", faceViewProj);
             _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
-            cmd.SetBindGroup(_objectMaterial->GetBindGroup(), 1);
 
             const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
             for (size_t j = 0; j < meshSlices.size(); ++j) {
@@ -133,9 +134,13 @@ auto BeStandardShadowPass::RenderPointLightShadows(
                     .SetDepthFormat(shadowArray->Format)
                     .Build()
                 ;
-                
+
                 cmd.SetPipeline(pipeline);
-                cmd.SetBindGroup(propSlice.Material->GetBindGroup(), 2);
+                BeRoot(*entry.Prop->Shader)
+                .Use("frame", *uniformMat)
+                .Use("geometry-object", *_objectMaterial)
+                .Use("geometry-main", *propSlice.Material)
+                .Push(cmd);
                 cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
             }
         }

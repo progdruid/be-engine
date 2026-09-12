@@ -141,8 +141,7 @@ auto BeShaderTools::ParseShaderBlock(const Block& block) -> std::expected<Parsed
             ? std::string_view()
             : Trim(std::string_view(line).substr(ws), " \t\r");
 
-        if      (keyword == "bindless")   { result.Bindless   = true; }
-        else if (keyword == "topology")   { result.Topology   = std::string(rest); }
+        if      (keyword == "topology")   { result.Topology   = std::string(rest); }
         else if (keyword == "rasterizer") { result.Rasterizer = std::string(rest); }
         else if (keyword == "blend")      { result.Blend      = std::string(rest); }
         else if (keyword == "depth")      { result.Depth      = std::string(rest); }
@@ -276,6 +275,7 @@ auto BeShaderTools::BuildRootLayout(const ParsedShader& shader, const std::vecto
 
     for (size_t i = 0; i < shader.Binds.size(); ++i) {
         const auto& link = shader.Binds[i].Link;
+        const auto& var  = shader.Binds[i].Var;
         const auto& material = materials[i];
 
         auto hasCbuffer = false;
@@ -293,7 +293,7 @@ auto BeShaderTools::BuildRootLayout(const ParsedShader& shader, const std::vecto
             .Kind      = RootFieldKind::Pointer,
             .Link      = link,
             .FieldName = KebabToPascal(link),
-            .AliasName = "_" + KebabToPascal(link),
+            .AliasName = "_" + (var.empty() ? KebabToPascal(link) : var),
             .TypeName  = SchemeStructName(material.Name),
             .Offset    = offset,
         });

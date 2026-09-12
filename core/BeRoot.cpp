@@ -45,10 +45,13 @@ auto BeRoot::Use(const std::string& link, BeMaterial& material) -> BeRoot& {
 }
 
 auto BeRoot::Push(SenCommandBuffer& cmd) -> void {
+    if (_layout->Size == 0) {
+        return;
+    }
     for (size_t i = 0; i < _written.size(); ++i) {
         be_assert(
-            _written[i], 
-            "BeRoot: field not filled before Push", 
+            _written[i],
+            "BeRoot: field not filled before Push",
             _layout->Fields[i].FieldName
         );
     }

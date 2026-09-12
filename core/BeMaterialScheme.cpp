@@ -5,7 +5,8 @@
 #include "sen-rhi/SenBackend.h"
 #include "umbrellas/include-libassert.h"
 
-// std140 layout, matches Vulkan UBOs, WebGPU/WGSL, and Slang's HLSL output.
+// Scalar (natural) layout, matching Slang's layout for BDA pointer-backed cbuffers.
+// Every member aligns to its scalar component (4 bytes); arrays are tightly packed.
 static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> SizeMap = {
     {BeMaterialPropertyDescriptor::Type::Float,  uint32_t(1 * sizeof(float))},
     {BeMaterialPropertyDescriptor::Type::Float2, uint32_t(2 * sizeof(float))},
@@ -15,14 +16,11 @@ static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> Si
 };
 static const std::unordered_map<BeMaterialPropertyDescriptor::Type, uint32_t> AlignMap = {
     {BeMaterialPropertyDescriptor::Type::Float,  4},
-    {BeMaterialPropertyDescriptor::Type::Float2, 8},
-    {BeMaterialPropertyDescriptor::Type::Float3, 16},
-    {BeMaterialPropertyDescriptor::Type::Float4, 16},
-    {BeMaterialPropertyDescriptor::Type::Matrix, 16},
+    {BeMaterialPropertyDescriptor::Type::Float2, 4},
+    {BeMaterialPropertyDescriptor::Type::Float3, 4},
+    {BeMaterialPropertyDescriptor::Type::Float4, 4},
+    {BeMaterialPropertyDescriptor::Type::Matrix, 4},
 };
-
-// std140 array rule: every element starts on a 16-byte boundary, so the stride is 16 bytes.
-static constexpr uint32_t ArrayElementStride = 16;
 
 
 auto BeMaterialScheme::Create(
@@ -190,10 +188,10 @@ auto BeMaterialScheme::Create(
     uint32_t offsetBytes = 0;
     for (const auto& property : materialScheme.Properties) {
         const bool isArray = property.ArrayLength > 1;
-        // std140 array element stride: the element size rounded up to a 16-byte boundary (float..float4 -> 16, matrix -> 64).
-        const uint32_t elementStride = (SizeMap.at(property.PropertyType) + ArrayElementStride - 1) / ArrayElementStride * ArrayElementStride;
+        // Scalar layout: array elements are tightly packed at their natural size.
+        const uint32_t elementStride = SizeMap.at(property.PropertyType);
         const uint32_t size  = isArray ? elementStride * property.ArrayLength : SizeMap.at(property.PropertyType);
-        const uint32_t align = isArray ? ArrayElementStride : AlignMap.at(property.PropertyType);
+        const uint32_t align = AlignMap.at(property.PropertyType);
 
         offsetBytes = (offsetBytes + align - 1) / align * align;
 

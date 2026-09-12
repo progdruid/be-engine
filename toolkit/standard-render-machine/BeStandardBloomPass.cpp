@@ -9,6 +9,7 @@
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
+#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
@@ -26,17 +27,17 @@ BeStandardBloomPass::BeStandardBloomPass(
 auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
     const SenFormat mipFormat = _bloomTexture->Format;
 
-    const auto  brightShader = BeShaderLibrary::GetShader("bloom-bright");
-    be_assert(  brightShader, "BeStandardBloomPass: bloom-bright shader not found");
-    const auto& brightScheme = brightShader->GetMaterialScheme("main");
+    _brightShader = BeShaderLibrary::GetShader("bloom-bright");
+    be_assert(  _brightShader, "BeStandardBloomPass: bloom-bright shader not found");
+    const auto& brightScheme = _brightShader->GetMaterialScheme("main");
     _brightMaterial = BeMaterial::Create(brightScheme);
     _brightMaterial->SetTexture("HDRInput", _inputHDR);
-    _brightPipeline = BePipelineBuilder::Start(*brightShader).SetColorFormats({ mipFormat }).Build();
+    _brightPipeline = BePipelineBuilder::Start(*_brightShader).SetColorFormats({ mipFormat }).Build();
 
     // Downsample mipTarget i (1..mipCount-1) reads source mip i-1 of the same texture.
-    const auto  downsampleShader = BeShaderLibrary::GetShader("bloom-downsample");
-    be_assert(  downsampleShader, "BeStandardBloomPass: bloom-downsample shader not found");
-    const auto& downsampleScheme = downsampleShader->GetMaterialScheme("main");
+    _downsampleShader = BeShaderLibrary::GetShader("bloom-downsample");
+    be_assert(  _downsampleShader, "BeStandardBloomPass: bloom-downsample shader not found");
+    const auto& downsampleScheme = _downsampleShader->GetMaterialScheme("main");
     _downsampleMaterials.resize(_mipCount);
     for (uint32_t mipTarget = 1; mipTarget < _mipCount; ++mipTarget) {
         const auto& source = _bloomTexture->GetMipViewport(mipTarget - 1);
@@ -47,12 +48,12 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
         _downsampleMaterials[mipTarget] = mat;
     }
 
-    _downsamplePipeline = BePipelineBuilder::Start(*downsampleShader).SetColorFormats({ mipFormat }).Build();
+    _downsamplePipeline = BePipelineBuilder::Start(*_downsampleShader).SetColorFormats({ mipFormat }).Build();
 
     // Upsample mipTarget i (0..mipCount-2) reads source mip i+1 of the same texture.
-    const auto  upsampleShader = BeShaderLibrary::GetShader("bloom-upsample");
-    be_assert(  upsampleShader, "BeStandardBloomPass: bloom-upsample shader not found");
-    const auto& upsampleScheme = upsampleShader->GetMaterialScheme("main");
+    _upsampleShader = BeShaderLibrary::GetShader("bloom-upsample");
+    be_assert(  _upsampleShader, "BeStandardBloomPass: bloom-upsample shader not found");
+    const auto& upsampleScheme = _upsampleShader->GetMaterialScheme("main");
     _upsampleMaterials.resize(_mipCount);
     for (uint32_t mipTarget = 0; mipTarget < _mipCount - 1; ++mipTarget) {
         const auto& source = _bloomTexture->GetMipViewport(mipTarget + 1);
@@ -61,7 +62,7 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
         mat->SetTexture("BloomMipInput", _bloomTexture, mipTarget + 1);
         _upsampleMaterials[mipTarget] = mat;
     }
-    _upsamplePipeline = BePipelineBuilder::Start(*upsampleShader)
+    _upsamplePipeline = BePipelineBuilder::Start(*_upsampleShader)
         .SetBlend({
             .Enable = true,
             .SrcBlend = SenBlendFactor::One, .DstBlend = SenBlendFactor::One, .BlendOp = SenBlendOp::Add,
@@ -69,14 +70,14 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
         })
         .SetColorFormats({ mipFormat }).Build();
 
-    const auto addShader = BeShaderLibrary::GetShader("bloom-add");
-    be_assert( addShader, "BeStandardBloomPass: bloom-add shader not found");
-    const auto addScheme = addShader->GetMaterialScheme("main");
+    _addShader = BeShaderLibrary::GetShader("bloom-add");
+    be_assert( _addShader, "BeStandardBloomPass: bloom-add shader not found");
+    const auto addScheme = _addShader->GetMaterialScheme("main");
     _addMaterial = BeMaterial::Create(addScheme);
     _addMaterial->SetTexture("HDRInput", _inputHDR);
     _addMaterial->SetTexture("BloomInput", _bloomTexture);
     _addMaterial->SetTexture("DirtTexture", _dirtTexture);
-    _addPipeline = BePipelineBuilder::Start(*addShader).SetColorFormats({ mipFormat }).Build();
+    _addPipeline = BePipelineBuilder::Start(*_addShader).SetColorFormats({ mipFormat }).Build();
 }
 
 auto BeStandardBloomPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
@@ -89,7 +90,6 @@ auto BeStandardBloomPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) ->
         _upsampleMaterials[mipTarget]->SetFloat1("Radius", settings.UpsampleRadius);
     }
 
-    cmd.SetBindGroup(_srm->UniformMaterial->GetBindGroup(), 0);
     RenderBrightPass(cmd);
     RenderDownsamplePasses(cmd);
     RenderUpsamplePasses(cmd);
@@ -104,7 +104,10 @@ auto BeStandardBloomPass::RenderBrightPass(SenCommandBuffer& cmd) const -> void 
     pass.SetViewport(_bloomTexture->GetViewport());
     pass.Begin();
     cmd.SetPipeline(_brightPipeline);
-    cmd.SetBindGroup(_brightMaterial->GetBindGroup(), 1);
+    BeRoot(*_brightShader)
+    .Use("frame", *_srm->UniformMaterial)
+    .Use("main", *_brightMaterial)
+    .Push(cmd);
     cmd.Draw(4, 0);
     pass.End();
 }
@@ -117,7 +120,10 @@ auto BeStandardBloomPass::RenderDownsamplePasses(SenCommandBuffer& cmd) const ->
         pass.AddColorTarget(_bloomTexture, SenLoadOp::DontCare, {}, mipTarget);
         pass.SetViewport(_bloomTexture->GetMipViewport(mipTarget));
         pass.Begin();
-        cmd.SetBindGroup(_downsampleMaterials[mipTarget]->GetBindGroup(), 1);
+        BeRoot(*_downsampleShader)
+        .Use("frame", *_srm->UniformMaterial)
+        .Use("main", *_downsampleMaterials[mipTarget])
+        .Push(cmd);
         cmd.Draw(4, 0);
         pass.End();
     }
@@ -131,7 +137,10 @@ auto BeStandardBloomPass::RenderUpsamplePasses(SenCommandBuffer& cmd) const -> v
         pass.AddColorTarget(_bloomTexture, SenLoadOp::Load, {}, mipTarget);
         pass.SetViewport(_bloomTexture->GetMipViewport(mipTarget));
         pass.Begin();
-        cmd.SetBindGroup(_upsampleMaterials[mipTarget]->GetBindGroup(), 1);
+        BeRoot(*_upsampleShader)
+        .Use("frame", *_srm->UniformMaterial)
+        .Use("main", *_upsampleMaterials[mipTarget])
+        .Push(cmd);
         cmd.Draw(4, 0);
         pass.End();
     }
@@ -144,7 +153,10 @@ auto BeStandardBloomPass::RenderAddPass(BeRenderer& renderer, SenCommandBuffer& 
     pass.SetViewport(_output->GetViewport());
     pass.Begin();
     cmd.SetPipeline(_addPipeline);
-    cmd.SetBindGroup(_addMaterial->GetBindGroup(), 1);
+    BeRoot(*_addShader)
+    .Use("frame", *_srm->UniformMaterial)
+    .Use("main", *_addMaterial)
+    .Push(cmd);
     cmd.Draw(4, 0);
     pass.End();
 }

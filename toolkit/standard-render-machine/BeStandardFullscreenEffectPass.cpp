@@ -1,13 +1,12 @@
 #include "BeStandardFullscreenEffectPass.h"
 
-#include <array>
-#include <cstring>
 #include <umbrellas/include-libassert.h>
 #include <sen-rhi/SenBackend.h>
 
 #include "BePass.h"
 #include "BeMaterial.h"
 #include "BeRenderer.h"
+#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
@@ -44,30 +43,16 @@ auto BeStandardFullscreenEffectPass::Render(BeRenderer& renderer, SenCommandBuff
     pass.SetViewport(_outputs[0]->GetViewport());
     pass.Begin();
 
-    if (_shader->GetPipelineDesc().Bindless) {
-        auto root = std::array<std::byte, SenMaxRootConstantSize>{};
-        uint32_t cursor = 0;
-        auto put64 = [&](uint64_t value) -> void { std::memcpy(root.data() + cursor, &value, 8); cursor += 8; };
-        auto put32 = [&](uint32_t value) -> void { std::memcpy(root.data() + cursor, &value, 4); cursor += 4; };
+    cmd.SetPipeline(_pipeline);
 
-        put64(_srm->UniformMaterial->GetCbufferAddress().Value);
-        put64(_material ? _material->GetCbufferAddress().Value : 0);
-        if (_material) {
-            for (const auto index : _material->GetTextureHeapIndices()) { put32(index); }
-            for (const auto index : _material->GetSamplerHeapIndices()) { put32(index); }
-        }
-
-        cmd.SetPipeline(_pipeline);
-        cmd.PushRoot(root.data(), cursor);
-        cmd.Draw(4, 0);
-    } else {
-        cmd.SetBindGroup(_srm->UniformMaterial->GetBindGroup(), 0);
-        cmd.SetPipeline(_pipeline);
-        if (_material) {
-            cmd.SetBindGroup(_material->GetBindGroup(), 1);
-        }
-        cmd.Draw(4, 0);
+    BeRoot root(*_shader);
+    root.Use("frame", *_srm->UniformMaterial);
+    if (_material) {
+        root.Use("main", *_material);
     }
+    root.Push(cmd);
+
+    cmd.Draw(4, 0);
 
     pass.End();
 }

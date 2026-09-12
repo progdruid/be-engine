@@ -9,6 +9,7 @@
 
 class BeTexture;
 class BeMaterial;
+class BeShader;
 class BeStandardRenderMachine;
 
 class BeStandardBackbufferPass final : public BeRenderPass {
@@ -19,6 +20,7 @@ class BeStandardBackbufferPass final : public BeRenderPass {
     std::shared_ptr<BeTexture> _depth;
     std::shared_ptr<BeTexture> _activeInput;
     std::shared_ptr<BeMaterial> _material;
+    raw_ptr<BeShader> _shader;
     SenPipeline _pipeline;
 
     expose

@@ -6,6 +6,7 @@
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
+#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeShaderLibrary.h"
 #include "BeTexture.h"
@@ -34,8 +35,6 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
         colorFormats.push_back(tex->Format);
     }
 
-    cmd.SetBindGroup(uniformMat->GetBindGroup(), 0);
-
     BePass pass(cmd);
     pass.AddColorTargets(_colorTargets);
     pass.SetDepthTarget(_depthTarget);
@@ -51,7 +50,6 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", uniformMat->GetMatrix("CameraProjectionView"));
         _objectMaterial->SetFloat3("ViewerPosition", uniformMat->GetFloat3("CameraPosition"));
-        cmd.SetBindGroup(_objectMaterial->GetBindGroup(), 1);
 
         const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
         for (size_t j = 0; j < meshSlices.size(); ++j) {
@@ -66,7 +64,12 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
             ;
             cmd.SetPipeline(pipeline);
 
-            cmd.SetBindGroup(propSlice.Material->GetBindGroup(), 2);
+            BeRoot(*entry.Prop->Shader)
+            .Use("frame", *uniformMat)
+            .Use("geometry-object", *_objectMaterial)
+            .Use("geometry-main", *propSlice.Material)
+            .Push(cmd);
+
             cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }
     }

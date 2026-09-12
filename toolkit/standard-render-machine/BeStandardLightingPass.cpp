@@ -10,6 +10,7 @@
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
+#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
@@ -32,9 +33,9 @@ BeStandardLightingPass::BeStandardLightingPass(
 , _output(std::move(output)) {}
 
 auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
-    const auto dirShadowBatchShader   = BeShaderLibrary::GetShader("batched-directional-light-shadowed");
-    const auto pointShadowBatchShader = BeShaderLibrary::GetShader("batched-point-light-shadowed");
-    const auto emissiveAddShader      = BeShaderLibrary::GetShader("emissive-add");
+    _dirShadowBatchShader   = BeShaderLibrary::GetShader("batched-directional-light-shadowed");
+    _pointShadowBatchShader = BeShaderLibrary::GetShader("batched-point-light-shadowed");
+    _emissiveShader         = BeShaderLibrary::GetShader("emissive-add");
 
     constexpr SenBlendState additiveBlend = {
         .Enable = true,
@@ -47,8 +48,8 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
     };
     const SenFormat outputFormat = _output->Format;
 
-    const auto batchedShader = BeShaderLibrary::GetShader("batched-lights");
-    _batchedScheme = batchedShader->GetMaterialScheme("main");
+    _batchedShader = BeShaderLibrary::GetShader("batched-lights");
+    _batchedScheme = _batchedShader->GetMaterialScheme("main");
     _batchedCapacity = _batchedScheme.PropertyArrayLengths.at("LightPositionRadius");
     be_assert(
         _batchedCapacity == _batchedScheme.PropertyArrayLengths.at("LightColorPower"),
@@ -59,49 +60,49 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
     _batchedMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
     _batchedMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
     _batchedMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
-    _batchedPipeline = BePipelineBuilder::Start(*batchedShader)
+    _batchedPipeline = BePipelineBuilder::Start(*_batchedShader)
         .SetBlend(additiveBlend)
         .SetColorFormats({ outputFormat })
         .Build()
     ;
 
-    _dirShadowBatchScheme = dirShadowBatchShader->GetMaterialScheme("main");
+    _dirShadowBatchScheme = _dirShadowBatchShader->GetMaterialScheme("main");
     _dirShadowBatchCapacity = _dirShadowBatchScheme.PropertyArrayLengths.at("LightDirection");
     _dirShadowBatchMaterial = BeMaterial::Create(_dirShadowBatchScheme);
     _dirShadowBatchMaterial->SetTexture("Depth", _depthInput);
     _dirShadowBatchMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
     _dirShadowBatchMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
     _dirShadowBatchMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
-    _dirShadowBatchPipeline = BePipelineBuilder::Start(*dirShadowBatchShader)
+    _dirShadowBatchPipeline = BePipelineBuilder::Start(*_dirShadowBatchShader)
         .SetBlend(additiveBlend)
         .SetColorFormats({ outputFormat })
         .Build()
     ;
 
-    _pointShadowBatchScheme = pointShadowBatchShader->GetMaterialScheme("main");
+    _pointShadowBatchScheme = _pointShadowBatchShader->GetMaterialScheme("main");
     _pointShadowBatchCapacity = _pointShadowBatchScheme.PropertyArrayLengths.at("LightPositionRadius");
     _pointShadowBatchMaterial = BeMaterial::Create(_pointShadowBatchScheme);
     _pointShadowBatchMaterial->SetTexture("Depth", _depthInput);
     _pointShadowBatchMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
     _pointShadowBatchMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
     _pointShadowBatchMaterial->SetTexture("ORM_RGB", _gbufferInputs[2]);
-    _pointShadowBatchPipeline = BePipelineBuilder::Start(*pointShadowBatchShader)
+    _pointShadowBatchPipeline = BePipelineBuilder::Start(*_pointShadowBatchShader)
         .SetBlend(additiveBlend)
         .SetColorFormats({ outputFormat })
         .Build()
     ;
 
-    const auto& emissiveAddScheme = emissiveAddShader->GetMaterialScheme("main");
+    const auto& emissiveAddScheme = _emissiveShader->GetMaterialScheme("main");
     _emissiveMaterial = BeMaterial::Create(emissiveAddScheme);
     _emissiveMaterial->SetTexture("InputEmissive", _gbufferInputs[3]);
-    _emissivePipeline = BePipelineBuilder::Start(*emissiveAddShader)
+    _emissivePipeline = BePipelineBuilder::Start(*_emissiveShader)
         .SetBlend(additiveBlend)
         .SetColorFormats({ outputFormat })
         .Build()
     ;
 
-    const auto ambientShader = BeShaderLibrary::GetShader("ambient-ibl");
-    const auto& ambientScheme = ambientShader->GetMaterialScheme("main");
+    _ambientShader = BeShaderLibrary::GetShader("ambient-ibl");
+    const auto& ambientScheme = _ambientShader->GetMaterialScheme("main");
     _ambientMaterial = BeMaterial::Create(ambientScheme);
     _ambientMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
     _ambientMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);
@@ -117,7 +118,7 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
     if (_brdfLutTexture) {
         _ambientMaterial->SetTexture("BrdfLut", _brdfLutTexture);
     }
-    _ambientPipeline = BePipelineBuilder::Start(*ambientShader)
+    _ambientPipeline = BePipelineBuilder::Start(*_ambientShader)
         .SetBlend(additiveBlend)
         .SetColorFormats({ outputFormat })
         .Build()
@@ -129,8 +130,6 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     const auto& sunLights = srm.GetSunLightEntries();
     const auto& pointLights = srm.GetPointLightEntries();
 
-    cmd.SetBindGroup(srm.UniformMaterial->GetBindGroup(), 0);
-    
     const auto directionalShadowArray = srm.GetDirectionalShadowArray();
     const auto pointShadowArray = srm.GetPointShadowArray();
 
@@ -173,7 +172,10 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
         _batchedMaterial->SetFloat4Array("LightColorPower", std::span(unshadowedColorPower).subspan(first, chunkSize));
         _batchedMaterial->SetFloat1("LightCount", static_cast<float>(chunkSize));
         cmd.SetPipeline(_batchedPipeline);
-        cmd.SetBindGroup(_batchedMaterial->GetBindGroup(), 1);
+        BeRoot(*_batchedShader)
+        .Use("frame", *srm.UniformMaterial)
+        .Use("main", *_batchedMaterial)
+        .Push(cmd);
         cmd.Draw(4, 0);
     }
 
@@ -207,7 +209,10 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
                 _dirShadowBatchMaterial->SetMatrixArray("LightProjectionView", std::span(projectionViews).subspan(first, chunkSize));
                 _dirShadowBatchMaterial->SetFloat1("LightCount", static_cast<float>(chunkSize));
                 cmd.SetPipeline(_dirShadowBatchPipeline);
-                cmd.SetBindGroup(_dirShadowBatchMaterial->GetBindGroup(), 1);
+                BeRoot(*_dirShadowBatchShader)
+                .Use("frame", *srm.UniformMaterial)
+                .Use("main", *_dirShadowBatchMaterial)
+                .Push(cmd);
                 cmd.Draw(4, 0);
             }
         }
@@ -241,7 +246,10 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
                 _pointShadowBatchMaterial->SetFloat4Array("LightShadowParams", std::span(shadowParams).subspan(first, chunkSize));
                 _pointShadowBatchMaterial->SetFloat1("LightCount", static_cast<float>(chunkSize));
                 cmd.SetPipeline(_pointShadowBatchPipeline);
-                cmd.SetBindGroup(_pointShadowBatchMaterial->GetBindGroup(), 1);
+                BeRoot(*_pointShadowBatchShader)
+                .Use("frame", *srm.UniformMaterial)
+                .Use("main", *_pointShadowBatchMaterial)
+                .Push(cmd);
                 cmd.Draw(4, 0);
             }
         }
@@ -249,12 +257,18 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
 
     // Emissive
     cmd.SetPipeline(_emissivePipeline);
-    cmd.SetBindGroup(_emissiveMaterial->GetBindGroup(), 1);
+    BeRoot(*_emissiveShader)
+    .Use("frame", *srm.UniformMaterial)
+    .Use("main", *_emissiveMaterial)
+    .Push(cmd);
     cmd.Draw(4, 0);
 
     if (_ambientMaterial) {
         cmd.SetPipeline(_ambientPipeline);
-        cmd.SetBindGroup(_ambientMaterial->GetBindGroup(), 1);
+        BeRoot(*_ambientShader)
+        .Use("frame", *srm.UniformMaterial)
+        .Use("main", *_ambientMaterial)
+        .Push(cmd);
         cmd.Draw(4, 0);
     }
 

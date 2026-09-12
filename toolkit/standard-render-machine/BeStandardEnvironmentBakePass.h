@@ -10,6 +10,7 @@
 
 class BeTexture;
 class BeMaterial;
+class BeShader;
 class BeStandardRenderMachine;
 
 class BeStandardEnvironmentBakePass final : public BeRenderPass {
@@ -24,15 +25,19 @@ class BeStandardEnvironmentBakePass final : public BeRenderPass {
     std::shared_ptr<BeTexture> _prefilteredCubemap;
     std::shared_ptr<BeTexture> _brdfLutTexture;
 
+    raw_ptr<BeShader> _envShader;
     SenPipeline _envPipeline;
     std::array<std::shared_ptr<BeMaterial>, FaceCount> _envFaceMaterials;
 
+    raw_ptr<BeShader> _irradianceShader;
     SenPipeline _irradiancePipeline;
     std::array<std::shared_ptr<BeMaterial>, FaceCount> _irradianceFaceMaterials;
 
+    raw_ptr<BeShader> _prefilterShader;
     SenPipeline _prefilterPipeline;
     std::vector<std::array<std::shared_ptr<BeMaterial>, FaceCount>> _prefilterFaceMaterials;
 
+    raw_ptr<BeShader> _brdfLutShader;
     SenPipeline _brdfLutPipeline;
     std::shared_ptr<BeMaterial> _brdfLutMaterial;
 

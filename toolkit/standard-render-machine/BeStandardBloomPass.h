@@ -9,6 +9,7 @@
 
 class BeTexture;
 class BeMaterial;
+class BeShader;
 class BeStandardRenderMachine;
 
 class BeStandardBloomPass final : public BeRenderPass {
@@ -22,12 +23,16 @@ class BeStandardBloomPass final : public BeRenderPass {
     uint32_t _mipCount;
 
     std::shared_ptr<BeMaterial> _brightMaterial;
+    raw_ptr<BeShader> _brightShader;
     SenPipeline _brightPipeline;
     std::vector<std::shared_ptr<BeMaterial>> _downsampleMaterials;
     std::vector<std::shared_ptr<BeMaterial>> _upsampleMaterials;
+    raw_ptr<BeShader> _downsampleShader;
+    raw_ptr<BeShader> _upsampleShader;
     SenPipeline _downsamplePipeline;
     SenPipeline _upsamplePipeline;
     std::shared_ptr<BeMaterial> _addMaterial;
+    raw_ptr<BeShader> _addShader;
     SenPipeline _addPipeline;
 
     expose

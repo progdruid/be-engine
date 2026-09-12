@@ -160,6 +160,7 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
         .descriptorBindingPartiallyBound              = VK_TRUE,  // bindless: unwritten heap slots need not be valid
         .descriptorBindingVariableDescriptorCount     = VK_TRUE,  // bindless: heap sized at set-alloc time, not layout time
         .runtimeDescriptorArray                       = VK_TRUE,  // bindless: unbounded Texture2D[] etc. in shaders
+        .scalarBlockLayout                            = VK_TRUE,  // BDA: scalar (natural) layout for pointer-backed cbuffers
         .timelineSemaphore                            = VK_TRUE,
         .bufferDeviceAddress                          = VK_TRUE,  // BDA: buffers as GpuAddress pointers
     };

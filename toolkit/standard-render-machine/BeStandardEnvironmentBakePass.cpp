@@ -9,6 +9,7 @@
 #include "BeMaterial.h"
 #include "BePipelineBuilder.h"
 #include "BeRenderer.h"
+#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
@@ -26,22 +27,22 @@ BeStandardEnvironmentBakePass::BeStandardEnvironmentBakePass(
 
 auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
 
-    const auto envShader = BeShaderLibrary::GetShader("environment-bake");
-    be_assert(envShader, "BeStandardEnvironmentBakePass: environment-bake shader not found");
+    _envShader = BeShaderLibrary::GetShader("environment-bake");
+    be_assert(_envShader, "BeStandardEnvironmentBakePass: environment-bake shader not found");
 
-    const auto& envScheme = envShader->GetMaterialScheme("main");
+    const auto& envScheme = _envShader->GetMaterialScheme("main");
     for (uint32_t face = 0; face < FaceCount; ++face) {
         const auto mat = BeMaterial::Create(envScheme);
         mat->SetFloat1("FaceIndex", static_cast<float>(face));
         mat->SetTexture("Equirect", _equirect);
         _envFaceMaterials[face] = mat;
     }
-    _envPipeline = BePipelineBuilder::Start(*envShader).SetColorFormats({ _envCubemap->Format }).Build();
+    _envPipeline = BePipelineBuilder::Start(*_envShader).SetColorFormats({ _envCubemap->Format }).Build();
 
-    const auto irradianceShader = BeShaderLibrary::GetShader("irradiance-bake");
-    be_assert(irradianceShader, "BeStandardEnvironmentBakePass: irradiance-bake shader not found");
+    _irradianceShader = BeShaderLibrary::GetShader("irradiance-bake");
+    be_assert(_irradianceShader, "BeStandardEnvironmentBakePass: irradiance-bake shader not found");
 
-    const auto& irradianceScheme = irradianceShader->GetMaterialScheme("main");
+    const auto& irradianceScheme = _irradianceShader->GetMaterialScheme("main");
     for (uint32_t face = 0; face < FaceCount; ++face) {
         const auto mat = BeMaterial::Create(irradianceScheme);
         mat->SetFloat1("FaceIndex", static_cast<float>(face));
@@ -49,12 +50,12 @@ auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
         mat->SetTexture("EnvCubemap", _envCubemap);
         _irradianceFaceMaterials[face] = mat;
     }
-    _irradiancePipeline = BePipelineBuilder::Start(*irradianceShader).SetColorFormats({ _irradianceCubemap->Format }).Build();
+    _irradiancePipeline = BePipelineBuilder::Start(*_irradianceShader).SetColorFormats({ _irradianceCubemap->Format }).Build();
 
-    const auto prefilterShader = BeShaderLibrary::GetShader("prefilter-bake");
-    be_assert(prefilterShader, "BeStandardEnvironmentBakePass: prefilter-bake shader not found");
+    _prefilterShader = BeShaderLibrary::GetShader("prefilter-bake");
+    be_assert(_prefilterShader, "BeStandardEnvironmentBakePass: prefilter-bake shader not found");
 
-    const auto& prefilterScheme = prefilterShader->GetMaterialScheme("main");
+    const auto& prefilterScheme = _prefilterShader->GetMaterialScheme("main");
     const uint32_t mipCount = _prefilteredCubemap->Mips;
     _prefilterFaceMaterials.resize(mipCount);
     for (uint32_t mip = 0; mip < mipCount; ++mip) {
@@ -68,14 +69,14 @@ auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
             _prefilterFaceMaterials[mip][face] = mat;
         }
     }
-    _prefilterPipeline = BePipelineBuilder::Start(*prefilterShader).SetColorFormats({ _prefilteredCubemap->Format }).Build();
+    _prefilterPipeline = BePipelineBuilder::Start(*_prefilterShader).SetColorFormats({ _prefilteredCubemap->Format }).Build();
 
-    const auto brdfLutShader = BeShaderLibrary::GetShader("brdf-lut");
-    be_assert(brdfLutShader, "BeStandardEnvironmentBakePass: brdf-lut shader not found");
+    _brdfLutShader = BeShaderLibrary::GetShader("brdf-lut");
+    be_assert(_brdfLutShader, "BeStandardEnvironmentBakePass: brdf-lut shader not found");
 
-    const auto& brdfLutScheme = brdfLutShader->GetMaterialScheme("main");
+    const auto& brdfLutScheme = _brdfLutShader->GetMaterialScheme("main");
     _brdfLutMaterial = BeMaterial::Create(brdfLutScheme);
-    _brdfLutPipeline = BePipelineBuilder::Start(*brdfLutShader).SetColorFormats({ _brdfLutTexture->Format }).Build();
+    _brdfLutPipeline = BePipelineBuilder::Start(*_brdfLutShader).SetColorFormats({ _brdfLutTexture->Format }).Build();
 }
 
 auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
@@ -86,7 +87,9 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffe
         pass.AddColorTarget(_envCubemap, SenLoadOp::DontCare, {}, 0, static_cast<int8_t>(face));
         pass.SetViewport(_envCubemap->GetViewport());
         pass.Begin();
-        cmd.SetBindGroup(_envFaceMaterials[face]->GetBindGroup(), 0);
+        BeRoot(*_envShader)
+        .Use("main", *_envFaceMaterials[face])
+        .Push(cmd);
         cmd.Draw(4, 0);
         pass.End();
     }
@@ -98,7 +101,9 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffe
         pass.AddColorTarget(_irradianceCubemap, SenLoadOp::DontCare, {}, 0, static_cast<int8_t>(face));
         pass.SetViewport(_irradianceCubemap->GetViewport());
         pass.Begin();
-        cmd.SetBindGroup(_irradianceFaceMaterials[face]->GetBindGroup(), 0);
+        BeRoot(*_irradianceShader)
+        .Use("main", *_irradianceFaceMaterials[face])
+        .Push(cmd);
         cmd.Draw(4, 0);
         pass.End();
     }
@@ -112,7 +117,9 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffe
             pass.AddColorTarget(_prefilteredCubemap, SenLoadOp::DontCare, {}, static_cast<uint8_t>(mip), static_cast<int8_t>(face));
             pass.SetViewport(_prefilteredCubemap->GetMipViewport(mip));
             pass.Begin();
-            cmd.SetBindGroup(_prefilterFaceMaterials[mip][face]->GetBindGroup(), 0);
+            BeRoot(*_prefilterShader)
+            .Use("main", *_prefilterFaceMaterials[mip][face])
+            .Push(cmd);
             cmd.Draw(4, 0);
             pass.End();
         }
@@ -124,7 +131,9 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffe
         pass.AddColorTarget(_brdfLutTexture, SenLoadOp::DontCare, {});
         pass.SetViewport(_brdfLutTexture->GetViewport());
         pass.Begin();
-        cmd.SetBindGroup(_brdfLutMaterial->GetBindGroup(), 0);
+        BeRoot(*_brdfLutShader)
+        .Use("main", *_brdfLutMaterial)
+        .Push(cmd);
         cmd.Draw(4, 0);
         pass.End();
     }
