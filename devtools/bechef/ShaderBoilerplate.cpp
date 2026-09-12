@@ -102,8 +102,8 @@ static auto GenerateRoot(const BeShaderTools::ParsedShader& shader) -> std::opti
     for (const auto& field : layout.Fields) {
         if (field.Kind == BeShaderTools::RootFieldKind::Pointer) {
             structBody += "    " + field.TypeName + "* " + field.FieldName + ";\n";
-            accessors  += "property " + field.TypeName + " " + field.AliasName
-                       +  " { get { return *Root." + field.FieldName + "; } }\n";
+            accessors  += "property " + field.TypeName + "* " + field.AliasName
+                       +  " { get { return Root." + field.FieldName + "; } }\n";
         } else {
             structBody += "    uint " + field.FieldName + ";\n";
             accessors  += "property " + field.TypeName + " " + field.AliasName

@@ -25,10 +25,11 @@ auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
     };
 
     if (desc.Access == SenBufferAccess::Dynamic) {
-        // Host-visible, persistently mapped — CPU writes via memcpy, GPU reads after submit.
+        // Device-local host-visible (ReBAR) where available so BDA-dereferenced reads hit VRAM,
+        // falling back to system RAM otherwise. CPU writes via memcpy, GPU reads after submit.
         VmaAllocationCreateInfo allocInfo {
             .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            .usage = VMA_MEMORY_USAGE_AUTO,
+            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
         };
         VmaAllocationInfo allocResult;
         VkResult result = vmaCreateBuffer(_allocator, &bufferInfo, &allocInfo, &entry.Buffer, &entry.Allocation, &allocResult);
@@ -55,6 +56,12 @@ auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
         }
     }
 
+    const VkBufferDeviceAddressInfo addressInfo {
+        .sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = entry.Buffer,
+    };
+    entry.GpuAddress = vkGetBufferDeviceAddress(_device, &addressInfo);
+
     return handle;
 }
 
@@ -69,11 +76,7 @@ auto SenVulkanBackend::LookupBuffer(SenBuffer handle) -> SenVulkanBufferEntry& {
 }
 
 auto SenVulkanBackend::GetBufferGpuAddress(SenBuffer handle) -> SenBufferGpuAddress {
-    VkBufferDeviceAddressInfo info {
-        .sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-        .buffer = _buffers.at(handle.ID).Buffer,
-    };
-    return { vkGetBufferDeviceAddress(_device, &info) };
+    return { _buffers.at(handle.ID).GpuAddress };
 }
 
 auto SenVulkanBackend::WriteBuffer(SenBuffer handle, const void* data, uint32_t size, uint32_t dstOffset) -> void {

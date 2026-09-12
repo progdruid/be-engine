@@ -41,7 +41,7 @@ struct DrawRoot {
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property prefilter_bake_material _Main { get { return *Root.Main; } }
+property prefilter_bake_material* _Main { get { return Root.Main; } }
 property TextureCube EnvCubemap { get { return TexCubeHeap[Root.EnvCubemap]; } }
 property SamplerState EnvSampler { get { return SamplerHeap[Root.EnvSampler]; } }
 

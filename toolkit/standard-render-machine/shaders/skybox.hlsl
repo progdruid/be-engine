@@ -45,8 +45,8 @@ struct DrawRoot {
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property uniform_material _Frame { get { return *Root.Frame; } }
-property skybox_material _Main { get { return *Root.Main; } }
+property uniform_material* _Frame { get { return Root.Frame; } }
+property skybox_material* _Main { get { return Root.Main; } }
 property Texture2D Depth { get { return Tex2DHeap[Root.Depth]; } }
 property TextureCube EnvCubemap { get { return TexCubeHeap[Root.EnvCubemap]; } }
 property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }

@@ -1,8 +1,8 @@
 #pragma once
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <string>
-#include <vector>
 #include <umbrellas/common.hpp>
 
 #include "BeShaderTools.h"
@@ -16,7 +16,7 @@ class BeRoot {
     hide
     const BeShaderTools::RootLayout* _layout;
     std::array<std::byte, SenMaxRootConstantSize> _data {};
-    std::vector<bool> _written;
+    uint32_t _written = 0;
 
     expose
     explicit BeRoot(const BeShader& shader);

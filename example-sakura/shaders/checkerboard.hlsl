@@ -53,9 +53,9 @@ struct DrawRoot {
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property uniform_material _Frame { get { return *Root.Frame; } }
-property object_material_for_geometry_pass _GeometryObject { get { return *Root.GeometryObject; } }
-property checkerboard_material_for_geometry_pass _GeometryMain { get { return *Root.GeometryMain; } }
+property uniform_material* _Frame { get { return Root.Frame; } }
+property object_material_for_geometry_pass* _GeometryObject { get { return Root.GeometryObject; } }
+property checkerboard_material_for_geometry_pass* _GeometryMain { get { return Root.GeometryMain; } }
 property Texture2D DiffuseTexture { get { return Tex2DHeap[Root.DiffuseTexture]; } }
 property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 

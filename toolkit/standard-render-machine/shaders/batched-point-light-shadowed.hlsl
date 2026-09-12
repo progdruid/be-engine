@@ -54,8 +54,8 @@ struct DrawRoot {
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property uniform_material _Frame { get { return *Root.Frame; } }
-property batched_point_light_shadowed_material _Main { get { return *Root.Main; } }
+property uniform_material* _Frame { get { return Root.Frame; } }
+property batched_point_light_shadowed_material* _Main { get { return Root.Main; } }
 property Texture2D Depth { get { return Tex2DHeap[Root.Depth]; } }
 property Texture2D Albedo_RGB { get { return Tex2DHeap[Root.Albedo_RGB]; } }
 property Texture2D WorldNormal_XYZ { get { return Tex2DHeap[Root.WorldNormal_XYZ]; } }

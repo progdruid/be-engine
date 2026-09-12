@@ -33,7 +33,7 @@ struct DrawRoot {
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property uniform_material _Frame { get { return *Root.Frame; } }
+property uniform_material* _Frame { get { return Root.Frame; } }
 property Texture2D InputEmissive { get { return Tex2DHeap[Root.InputEmissive]; } }
 property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 

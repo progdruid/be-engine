@@ -15,6 +15,7 @@ int main() {
         .WindowMode = BeWindowMode::Fullscreen,
         .Width = 800,
         .Height = 600,
+        .PresentMode = SenPresentMode::Immediate,
     });
 
     auto& scenes = *game.SceneManager;

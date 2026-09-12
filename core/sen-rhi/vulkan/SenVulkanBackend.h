@@ -34,6 +34,7 @@ struct SenVulkanTextureEntry {
     uint32_t LayerCount = 1;                                // 1 for 2D, N for 2D array, 6 for cube, 6*N for cube array
     uint32_t HeapBinding = UINT32_MAX;
     uint32_t HeapIndex   = UINT32_MAX;
+    std::vector<uint32_t> MipHeapIndices;                   // [mip] — per-mip sampling slots (2D)
 };
 
 struct SenVulkanBufferEntry {
@@ -42,6 +43,7 @@ struct SenVulkanBufferEntry {
     SenBufferAccess Access     = SenBufferAccess::Dynamic;
     uint32_t        Size       = 0;
     void*           MappedPtr  = nullptr;  // non-null for Dynamic buffers (persistently mapped)
+    uint64_t        GpuAddress = 0;        // cached device address
 };
 
 struct SenVulkanSamplerEntry {
@@ -196,12 +198,13 @@ class SenVulkanBackend {
     static auto LookupSampler  (SenSampler handle) -> SenVulkanSamplerEntry&;
 
     expose // bindless heap
-    static auto GetTextureHeapIndex (SenTexture handle) -> uint32_t;
+    static auto GetTextureHeapIndex (SenTexture handle, uint32_t mip = SEN_FULL_MIPS) -> uint32_t;
     static auto GetSamplerHeapIndex (SenSampler handle) -> uint32_t;
     static auto GetBindlessSet      () -> VkDescriptorSet { return _bindlessSet; }
     static auto GetBindlessLayout   () -> VkDescriptorSetLayout { return _bindlessLayout; }
     hide static auto InitBindlessHeap     () -> void;
     hide static auto ShutdownBindlessHeap () -> void;
+    hide static auto HeapRegisterView     (SenHeapBinding binding, VkImageView view) -> uint32_t;
     hide static auto HeapRegisterTexture  (SenVulkanTextureEntry& entry, VkImageView view, VkImageViewType viewType) -> void;
     hide static auto HeapRegisterSampler  (SenVulkanSamplerEntry& entry) -> void;
     hide static auto HeapReleaseTexture   (SenVulkanTextureEntry& entry) -> void;

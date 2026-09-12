@@ -50,6 +50,12 @@ auto BeImGuiPass::Initialise(BeRenderer& renderer) -> void {
     init_info.QueueFamily     = SenBackend::GetNativeQueueFamilyIndex();
     init_info.Queue           = static_cast<VkQueue>(SenBackend::GetNativeQueue());
     init_info.DescriptorPoolSize = 16;
+    init_info.MinAllocationSize = 1024 * 1024;
+    init_info.CheckVkResultFn = [](VkResult err) {
+        if (err != VK_SUCCESS) {
+            std::fprintf(stderr, "[ImGui-Vulkan] VkResult = %d\n", static_cast<int>(err));
+        }
+    };
     init_info.MinImageCount   = 2;
     init_info.ImageCount      = 2;
     init_info.UseDynamicRendering = true;

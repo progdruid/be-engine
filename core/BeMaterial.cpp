@@ -97,7 +97,7 @@ auto BeMaterial::GetTextureHeapIndex(const std::string& propertyName) const -> u
     be_assert(it != _textures.end(), "GetTextureHeapIndex: no texture property", propertyName);
     const auto& binding = it->second;
     be_assert(binding.Texture && binding.Texture->Handle.IsValid(), "GetTextureHeapIndex: texture unset", propertyName);
-    return SenBackend::GetTextureHeapIndex(binding.Texture->Handle);
+    return SenBackend::GetTextureHeapIndex(binding.Texture->Handle, binding.Mip);
 }
 
 auto BeMaterial::GetSamplerHeapIndex(const std::string& propertyName) const -> uint32_t {

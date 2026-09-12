@@ -37,7 +37,7 @@ struct DrawRoot {
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property uniform_material _Frame { get { return *Root.Frame; } }
+property uniform_material* _Frame { get { return Root.Frame; } }
 property Texture2D HDRInput { get { return Tex2DHeap[Root.HDRInput]; } }
 property Texture2D BloomInput { get { return Tex2DHeap[Root.BloomInput]; } }
 property Texture2D DirtTexture { get { return Tex2DHeap[Root.DirtTexture]; } }

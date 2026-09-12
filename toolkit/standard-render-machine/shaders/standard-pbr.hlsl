@@ -62,9 +62,9 @@ struct DrawRoot {
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property uniform_material _Frame { get { return *Root.Frame; } }
-property object_material_for_geometry_pass _GeometryObject { get { return *Root.GeometryObject; } }
-property standard_pbr_material _GeometryMain { get { return *Root.GeometryMain; } }
+property uniform_material* _Frame { get { return Root.Frame; } }
+property object_material_for_geometry_pass* _GeometryObject { get { return Root.GeometryObject; } }
+property standard_pbr_material* _GeometryMain { get { return Root.GeometryMain; } }
 property Texture2D Diffuse_or_Albedo { get { return Tex2DHeap[Root.Diffuse_or_Albedo]; } }
 property Texture2D ORM_RGB { get { return Tex2DHeap[Root.ORM_RGB]; } }
 property Texture2D Emissive_RGB { get { return Tex2DHeap[Root.Emissive_RGB]; } }

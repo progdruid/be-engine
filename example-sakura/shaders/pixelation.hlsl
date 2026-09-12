@@ -48,8 +48,8 @@ struct DrawRoot {
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property uniform_material _Frame { get { return *Root.Frame; } }
-property pixelation_material _Main { get { return *Root.Main; } }
+property uniform_material* _Frame { get { return Root.Frame; } }
+property pixelation_material* _Main { get { return Root.Main; } }
 property Texture2D ColorTexture { get { return Tex2DHeap[Root.ColorTexture]; } }
 property Texture2D DepthTexture { get { return Tex2DHeap[Root.DepthTexture]; } }
 property SamplerState PointSampler { get { return SamplerHeap[Root.PointSampler]; } }

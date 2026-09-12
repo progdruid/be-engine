@@ -42,8 +42,8 @@ struct DrawRoot {
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property uniform_material _Frame { get { return *Root.Frame; } }
-property bloom_downsample_material _Main { get { return *Root.Main; } }
+property uniform_material* _Frame { get { return Root.Frame; } }
+property bloom_downsample_material* _Main { get { return Root.Main; } }
 property Texture2D BloomMipInput { get { return Tex2DHeap[Root.BloomMipInput]; } }
 property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 

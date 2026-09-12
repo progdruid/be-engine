@@ -38,7 +38,7 @@ struct DrawRoot {
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property environment_bake_material _Main { get { return *Root.Main; } }
+property environment_bake_material* _Main { get { return Root.Main; } }
 property Texture2D Equirect { get { return Tex2DHeap[Root.Equirect]; } }
 property SamplerState EquirectSampler { get { return SamplerHeap[Root.EquirectSampler]; } }
 

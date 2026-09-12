@@ -12,7 +12,7 @@ BeRoot::BeRoot(const BeShader& shader) : _layout(&shader.GetRootLayout()) {
         "BeRoot: root exceeds push-constant capacity", 
         _layout->Size
     );
-    _written.assign(_layout->Fields.size(), false);
+    be_assert(_layout->Fields.size() <= 32, "BeRoot: too many root fields to track");
 }
 
 auto BeRoot::Use(const std::string& link, BeMaterial& material) -> BeRoot& {
@@ -39,7 +39,7 @@ auto BeRoot::Use(const std::string& link, BeMaterial& material) -> BeRoot& {
                 break;
             }
         }
-        _written[i] = true;
+        _written |= (uint32_t(1) << i);
     }
     return *this;
 }
@@ -48,9 +48,9 @@ auto BeRoot::Push(SenCommandBuffer& cmd) -> void {
     if (_layout->Size == 0) {
         return;
     }
-    for (size_t i = 0; i < _written.size(); ++i) {
+    for (size_t i = 0; i < _layout->Fields.size(); ++i) {
         be_assert(
-            _written[i],
+            _written & (uint32_t(1) << i),
             "BeRoot: field not filled before Push",
             _layout->Fields[i].FieldName
         );

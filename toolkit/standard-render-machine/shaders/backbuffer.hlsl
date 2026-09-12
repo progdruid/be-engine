@@ -43,8 +43,8 @@ struct DrawRoot {
 };
 [[vk::push_constant]] DrawRoot Root;
 
-property uniform_material _Frame { get { return *Root.Frame; } }
-property backbuffer_material _Main { get { return *Root.Main; } }
+property uniform_material* _Frame { get { return Root.Frame; } }
+property backbuffer_material* _Main { get { return Root.Main; } }
 property Texture2D InputTexture { get { return Tex2DHeap[Root.InputTexture]; } }
 property Texture2D DepthTexture { get { return Tex2DHeap[Root.DepthTexture]; } }
 property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }

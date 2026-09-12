@@ -104,8 +104,7 @@ auto SenVulkanBackend::HeapAllocSlot(SenHeapBinding binding) -> uint32_t {
     return slot;
 }
 
-auto SenVulkanBackend::HeapRegisterTexture(SenVulkanTextureEntry& entry, VkImageView view, VkImageViewType viewType) -> void {
-    const SenHeapBinding binding = Sen::Vulkan::ToHeapBinding(viewType);
+auto SenVulkanBackend::HeapRegisterView(SenHeapBinding binding, VkImageView view) -> uint32_t {
     const uint32_t slot = HeapAllocSlot(binding);
 
     VkDescriptorImageInfo imageInfo {
@@ -122,9 +121,13 @@ auto SenVulkanBackend::HeapRegisterTexture(SenVulkanTextureEntry& entry, VkImage
         .pImageInfo      = &imageInfo,
     };
     vkUpdateDescriptorSets(_device, 1, &write, 0, nullptr);
+    return slot;
+}
 
+auto SenVulkanBackend::HeapRegisterTexture(SenVulkanTextureEntry& entry, VkImageView view, VkImageViewType viewType) -> void {
+    const SenHeapBinding binding = Sen::Vulkan::ToHeapBinding(viewType);
     entry.HeapBinding = uint32_t(binding);
-    entry.HeapIndex   = slot;
+    entry.HeapIndex   = HeapRegisterView(binding, view);
 }
 
 auto SenVulkanBackend::HeapRegisterSampler(SenVulkanSamplerEntry& entry) -> void {
@@ -148,6 +151,13 @@ auto SenVulkanBackend::HeapRegisterSampler(SenVulkanSamplerEntry& entry) -> void
 }
 
 auto SenVulkanBackend::HeapReleaseTexture(SenVulkanTextureEntry& entry) -> void {
+    for (const uint32_t mipSlot : entry.MipHeapIndices) {
+        if (mipSlot != UINT32_MAX) {
+            _heapFree[size_t(SenHeapBinding::Texture2D)].push_back(mipSlot);
+        }
+    }
+    entry.MipHeapIndices.clear();
+
     if (entry.HeapIndex == UINT32_MAX) { return; }
     _heapFree[entry.HeapBinding].push_back(entry.HeapIndex);
     entry.HeapBinding = UINT32_MAX;
@@ -160,8 +170,12 @@ auto SenVulkanBackend::HeapReleaseSampler(SenVulkanSamplerEntry& entry) -> void 
     entry.HeapIndex = UINT32_MAX;
 }
 
-auto SenVulkanBackend::GetTextureHeapIndex(SenTexture handle) -> uint32_t {
+auto SenVulkanBackend::GetTextureHeapIndex(SenTexture handle, uint32_t mip) -> uint32_t {
     auto& entry = _textures.at(handle.ID);
+    if (mip != SEN_FULL_MIPS && mip < entry.MipHeapIndices.size()) {
+        be_assert(entry.MipHeapIndices[mip] != UINT32_MAX, "GetTextureHeapIndex: texture mip has no heap slot");
+        return entry.MipHeapIndices[mip];
+    }
     be_assert(entry.HeapIndex != UINT32_MAX, "GetTextureHeapIndex: texture has no heap slot (not a shader resource?)");
     return entry.HeapIndex;
 }

@@ -65,8 +65,10 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
         HeapRegisterTexture(entry, entry.SRV, srvType);
         if (!isLayered) {
             entry.MipSRVs.resize(desc.Mips);
+            entry.MipHeapIndices.resize(desc.Mips, UINT32_MAX);
             for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
                 entry.MipSRVs[mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, 0, 1);
+                entry.MipHeapIndices[mip] = HeapRegisterView(SenHeapBinding::Texture2D, entry.MipSRVs[mip]);
             }
         }
     }
