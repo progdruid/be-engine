@@ -4,6 +4,8 @@
 #include <optional>
 #include <algorithm>
 
+#include <umbrellas/include-libassert.h>
+
 static const char* RegionBegin = "// region @be-auto-boilerplate";
 static const char* RegionEnd = "// endregion";
 static const char* SingleLineTrigger = "@be-auto-boilerplate";
@@ -88,14 +90,9 @@ static auto GenerateMaterialStruct(const BeShaderTools::ParsedMaterial& material
     return "struct " + BeShaderTools::SchemeStructName(material.Name) + " {\n" + fields + "};";
 }
 
-static auto GenerateRoot(const BeShaderTools::ParsedShader& shader, const std::vector<ResolvedBind>& binds) -> std::optional<std::string> {
-    auto materials = std::vector<BeShaderTools::ParsedMaterial>();
-    materials.reserve(binds.size());
-    for (const auto& bind : binds) {
-        materials.push_back(bind.Scheme->Material);
-    }
-
-    const auto layout = BeShaderTools::BuildRootLayout(shader, materials);
+static auto GenerateRoot(const BeShaderTools::ParsedShader& shader) -> std::optional<std::string> {
+    be_assert(shader.Root.has_value(), "GenerateRoot: shader not linked (no root layout)", shader.Name);
+    const auto& layout = *shader.Root;
     if (layout.Fields.empty()) {
         return std::nullopt;
     }
@@ -164,7 +161,7 @@ static auto GenerateBoilerplate(const std::string& collection, const std::filesy
     }
 
     if (data.Shader) {
-        auto text = GenerateRoot(*data.Shader, binds);
+        auto text = GenerateRoot(*data.Shader);
         if (text) {
             parts.push_back(std::move(*text));
         }

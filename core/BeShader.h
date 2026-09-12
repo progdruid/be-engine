@@ -51,6 +51,7 @@ class BeShader {
         expose uint8_t Index;
     };
     hide std::vector<MaterialSchemeEntry> _materialSchemes;
+    hide BeShaderTools::RootLayout _rootLayout;
 
     // lifecycle ///////////////////////////////////////////////////////////////////////////////////////////////////////
     expose BeShader() = default;
@@ -78,6 +79,10 @@ class BeShader {
 
     expose auto GetPipelineDesc() const -> const SenPipelineDesc& {
         return _pipelineDesc;
+    }
+
+    expose auto GetRootLayout() const -> const BeShaderTools::RootLayout& {
+        return _rootLayout;
     }
 };
 

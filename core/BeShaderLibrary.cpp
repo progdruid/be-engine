@@ -54,17 +54,25 @@ auto BeShaderLibrary::LoadShaderFiles(const std::vector<std::filesystem::path>& 
     }
 
     // index material schemes (all, before any shader resolves its binds)
+    auto parsedMaterials = std::unordered_map<std::string, const BeShaderTools::ParsedMaterial*>();
     for (const auto& parsed : parsedFiles | std::views::values) {
         for (const auto& material : parsed.Materials) {
             _materialSchemes[material.Name] = BeMaterialScheme::Create(material.Name, material.Properties);
+            parsedMaterials[material.Name] = &material;
         }
     }
 
-    // index shaders
-    for (const auto& parsed : parsedFiles | std::views::values) {
+    // link + index shaders
+    for (auto& parsed : parsedFiles | std::views::values) {
         if (!parsed.Shader) {
             continue;
         }
+        auto boundMaterials = std::vector<BeShaderTools::ParsedMaterial>();
+        for (const auto& bind : parsed.Shader->Binds) {
+            boundMaterials.push_back(*parsedMaterials.at(bind.Scheme));
+        }
+        parsed.Shader->Root = BeShaderTools::BuildRootLayout(*parsed.Shader, boundMaterials);
+
         auto shader = BeShader::Create(*parsed.Shader);
         auto name = shader->Name;
         _shaders[std::move(name)] = std::move(shader);

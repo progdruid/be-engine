@@ -132,6 +132,8 @@ auto BeShader::Create(const BeShaderTools::ParsedShader& meta) -> std::unique_pt
     shader->ShaderID = ++_shaderCount;
 
     shader->Name = meta.Name;
+    be_assert(meta.Root.has_value(), "BeShader::Create: shader not linked (no root layout)", meta.Name);
+    shader->_rootLayout = *meta.Root;
 
     shader->_pipelineDesc.Bindless = meta.Bindless;
 

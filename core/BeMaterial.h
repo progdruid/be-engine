@@ -65,8 +65,8 @@ class BeMaterial {
     auto GetBindGroupLayout () const -> SenBindGroupDesc;
 
     auto GetCbufferAddress () -> SenBufferGpuAddress;
-    auto GetTextureHeapIndices () const -> std::vector<uint32_t>;
-    auto GetSamplerHeapIndices () const -> std::vector<uint32_t>;
+    auto GetTextureHeapIndex (const std::string& propertyName) const -> uint32_t;
+    auto GetSamplerHeapIndex (const std::string& propertyName) const -> uint32_t;
 
     auto Print() const -> std::string;
     

@@ -53,30 +53,6 @@ class BeShaderTools {
         std::string Type;
         uint8_t     Slot = 0;
     };
-    struct ParsedShader {
-        std::string Name;
-        bool Bindless = false;
-        std::string Topology;
-        std::string Rasterizer;
-        std::string Blend;
-        std::string Depth;
-        std::string VertexFn;
-        std::vector<std::string> VertexLayout;
-        std::string PixelFn;
-        std::string ComputeFn;
-        std::string HullFn;
-        std::string DomainFn;
-        std::vector<ParsedBind> Binds;
-        std::vector<ParsedTarget> Targets;
-        std::filesystem::path SourceFile;
-    };
-    static auto ParseShaderBlock (const Block& block) -> std::expected<ParsedShader, std::string>;
-
-    struct ParsedShaderFile {
-        std::optional<ParsedShader> Shader;
-        std::vector<ParsedMaterial> Materials;
-    };
-    static auto ParseShaderFile (const std::string& src, const std::filesystem::path& path) -> std::expected<ParsedShaderFile, std::string>;
 
     enum class RootFieldKind { Pointer, TextureIndex, SamplerIndex };
     struct RootField {
@@ -93,6 +69,33 @@ class BeShaderTools {
         std::vector<RootField> Fields;
         uint32_t Size = 0;
     };
+
+    struct ParsedShader {
+        std::string Name;
+        bool Bindless = false;
+        std::string Topology;
+        std::string Rasterizer;
+        std::string Blend;
+        std::string Depth;
+        std::string VertexFn;
+        std::vector<std::string> VertexLayout;
+        std::string PixelFn;
+        std::string ComputeFn;
+        std::string HullFn;
+        std::string DomainFn;
+        std::vector<ParsedBind> Binds;
+        std::vector<ParsedTarget> Targets;
+        std::filesystem::path SourceFile;
+        std::optional<RootLayout> Root;
+    };
+    static auto ParseShaderBlock (const Block& block) -> std::expected<ParsedShader, std::string>;
+
+    struct ParsedShaderFile {
+        std::optional<ParsedShader> Shader;
+        std::vector<ParsedMaterial> Materials;
+    };
+    static auto ParseShaderFile (const std::string& src, const std::filesystem::path& path) -> std::expected<ParsedShaderFile, std::string>;
+
     static auto BuildRootLayout (const ParsedShader& shader, const std::vector<ParsedMaterial>& materials) -> RootLayout;
     static auto SchemeStructName (const std::string& schemeName) -> std::string;
 

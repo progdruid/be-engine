@@ -92,34 +92,19 @@ auto BeMaterial::GetCbufferAddress() -> SenBufferGpuAddress {
     return SenBackend::GetBufferGpuAddress(_arena->GetBuffer(_chunk)) + _arena->GetOffset(_chunk);
 }
 
-auto BeMaterial::GetTextureHeapIndices() const -> std::vector<uint32_t> {
-    const auto& layout = _scheme.BindGroupLayout;
-    auto indices = std::vector<uint32_t>();
-    indices.reserve(layout.TextureSlots.size());
-    for (const auto slot : layout.TextureSlots) {
-        for (const auto& binding : _textures | std::views::values) {
-            if (!binding.IsStorage && binding.Slot == slot && binding.Texture && binding.Texture->Handle.IsValid()) {
-                indices.push_back(SenBackend::GetTextureHeapIndex(binding.Texture->Handle));
-                break;
-            }
-        }
-    }
-    return indices;
+auto BeMaterial::GetTextureHeapIndex(const std::string& propertyName) const -> uint32_t {
+    const auto it = _textures.find(propertyName);
+    be_assert(it != _textures.end(), "GetTextureHeapIndex: no texture property", propertyName);
+    const auto& binding = it->second;
+    be_assert(binding.Texture && binding.Texture->Handle.IsValid(), "GetTextureHeapIndex: texture unset", propertyName);
+    return SenBackend::GetTextureHeapIndex(binding.Texture->Handle);
 }
 
-auto BeMaterial::GetSamplerHeapIndices() const -> std::vector<uint32_t> {
-    const auto& layout = _scheme.BindGroupLayout;
-    auto indices = std::vector<uint32_t>();
-    indices.reserve(layout.SamplerSlots.size());
-    for (const auto slot : layout.SamplerSlots) {
-        for (const auto& [sampler, samplerSlot] : _samplers | std::views::values) {
-            if (samplerSlot == slot && sampler.IsValid()) {
-                indices.push_back(SenBackend::GetSamplerHeapIndex(sampler));
-                break;
-            }
-        }
-    }
-    return indices;
+auto BeMaterial::GetSamplerHeapIndex(const std::string& propertyName) const -> uint32_t {
+    const auto it = _samplers.find(propertyName);
+    be_assert(it != _samplers.end(), "GetSamplerHeapIndex: no sampler property", propertyName);
+    be_assert(it->second.first.IsValid(), "GetSamplerHeapIndex: sampler unset", propertyName);
+    return SenBackend::GetSamplerHeapIndex(it->second.first);
 }
 
 auto BeMaterial::CommitChunk() -> void {

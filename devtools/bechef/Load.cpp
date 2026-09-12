@@ -324,6 +324,13 @@ auto LoadWorkspace(const std::filesystem::path& rootDir) -> std::expected<void, 
         if (!entry || !entry->Schemes) continue;
         for (auto& shader : entry->LocalShaders) {
             shader.Binds = ResolveBinds(shader, *entry->Schemes);
+            if (shader.Binds && shader.Data && shader.Data->Shader) {
+                auto materials = std::vector<BeShaderTools::ParsedMaterial>();
+                for (const auto& bind : *shader.Binds) {
+                    materials.push_back(bind.Scheme->Material);
+                }
+                shader.Data->Shader->Root = BeShaderTools::BuildRootLayout(*shader.Data->Shader, materials);
+            }
         }
     }
 
