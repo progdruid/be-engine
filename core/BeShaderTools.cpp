@@ -108,7 +108,8 @@ auto BeShaderTools::ParseShader(const std::string& src) -> std::expected<ParsedS
             ? std::string_view()
             : Trim(std::string_view(line).substr(ws), " \t\r");
 
-        if      (keyword == "topology")   { result.Topology   = std::string(rest); }
+        if      (keyword == "bindless")   { result.Bindless   = true; }
+        else if (keyword == "topology")   { result.Topology   = std::string(rest); }
         else if (keyword == "rasterizer") { result.Rasterizer = std::string(rest); }
         else if (keyword == "blend")      { result.Blend      = std::string(rest); }
         else if (keyword == "depth")      { result.Depth      = std::string(rest); }

@@ -41,7 +41,8 @@ class BeShaderTools {
         uint8_t     Slot = 0;
     };
     struct ParsedShader {
-        std::string Name; 
+        std::string Name;
+        bool Bindless = false;
         std::string Topology;
         std::string Rasterizer;
         std::string Blend;

@@ -136,17 +136,23 @@ auto BeShader::Create(const std::filesystem::path& filePath) -> std::unique_ptr<
     const auto& meta = parsed.value();
     shader->Name = meta.Name;
 
+    shader->_pipelineDesc.Bindless = meta.Bindless;
+
     if (!meta.Binds.empty()) {
         shader->HasMaterial = true;
 
-        shader->_pipelineDesc.BindGroupLayouts.resize(meta.Binds.size());
+        if (!meta.Bindless) {
+            shader->_pipelineDesc.BindGroupLayouts.resize(meta.Binds.size());
+        }
         for (const auto& bind : meta.Binds) {
             auto& entry = shader->_materialSchemes.emplace_back();
             entry.Link   = bind.Link;
             entry.Scheme = BeShaderLibrary::GetMaterialScheme(bind.Scheme);
             entry.Index  = bind.Slot;
 
-            shader->_pipelineDesc.BindGroupLayouts[entry.Index] = entry.Scheme.BindGroupLayout;
+            if (!meta.Bindless) {
+                shader->_pipelineDesc.BindGroupLayouts[entry.Index] = entry.Scheme.BindGroupLayout;
+            }
         }
     }
 

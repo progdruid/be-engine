@@ -8,6 +8,7 @@
 }
 
 @be-shader tonemapper {
+    bindless
     topology triangle-strip
     rasterizer back-solid
     blend disable
@@ -23,8 +24,7 @@
 }
 */
 
-/*========================================================*/
-// region @be-auto-boilerplate
+#include "core/be-heap.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct tonemapper_material {
@@ -32,22 +32,22 @@ struct tonemapper_material {
     float Contrast;
 };
 
-cbuffer CBuffer_0 : register(b0, space0) {
-    uniform_material _Frame;
+struct DrawRoot {
+    uniform_material*    Frame;
+    tonemapper_material* Main;
+    uint HDRInput;
+    uint InputSampler;
 };
+[[vk::push_constant]] DrawRoot Root;
 
-cbuffer CBuffer_1 : register(b0, space1) {
-    tonemapper_material _Main;
-};
-SamplerState InputSampler : register(s1, space1);
-Texture2D HDRInput : register(t2, space1);
+property uniform_material    _Frame       { get { return *Root.Frame; } }
+property tonemapper_material _Main        { get { return *Root.Main; } }
+property Texture2D           HDRInput     { get { return Tex2DHeap[Root.HDRInput]; } }
+property SamplerState        InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
 
 struct PixelOutput {
     float3 HDRTarget : SV_Target0;
 };
-
-// endregion
-/*========================================================*/
 
 #include "BeTonemappers.hlsli"
 #include "core/fullscreen-vertex.hlsl"
@@ -57,7 +57,7 @@ PixelOutput PixelFunction(FullscreenVSOutput input) {
 
     float3 graded = ApplyContrast(hdrColor * _Main.Exposure, _Main.Contrast);
     float3 finalColor = LinearToSrgb(Tonemap_ACES_Knarkowicz(graded));
-    
+
     PixelOutput output;
     output.HDRTarget = finalColor;
     return output;

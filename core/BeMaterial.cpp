@@ -84,6 +84,44 @@ auto BeMaterial::GetBindGroup() -> SenBindGroupBinding {
     return { AcquireBindGroup(_arena->GetBuffer(_chunk)), _dynamicOffsets };
 }
 
+auto BeMaterial::GetCbufferAddress() -> SenBufferGpuAddress {
+    if (_arena == nullptr) {
+        return {};
+    }
+    CommitChunk();
+    return SenBackend::GetBufferGpuAddress(_arena->GetBuffer(_chunk)) + _arena->GetOffset(_chunk);
+}
+
+auto BeMaterial::GetTextureHeapIndices() const -> std::vector<uint32_t> {
+    const auto& layout = _scheme.BindGroupLayout;
+    auto indices = std::vector<uint32_t>();
+    indices.reserve(layout.TextureSlots.size());
+    for (const auto slot : layout.TextureSlots) {
+        for (const auto& binding : _textures | std::views::values) {
+            if (!binding.IsStorage && binding.Slot == slot && binding.Texture && binding.Texture->Handle.IsValid()) {
+                indices.push_back(SenBackend::GetTextureHeapIndex(binding.Texture->Handle));
+                break;
+            }
+        }
+    }
+    return indices;
+}
+
+auto BeMaterial::GetSamplerHeapIndices() const -> std::vector<uint32_t> {
+    const auto& layout = _scheme.BindGroupLayout;
+    auto indices = std::vector<uint32_t>();
+    indices.reserve(layout.SamplerSlots.size());
+    for (const auto slot : layout.SamplerSlots) {
+        for (const auto& [sampler, samplerSlot] : _samplers | std::views::values) {
+            if (samplerSlot == slot && sampler.IsValid()) {
+                indices.push_back(SenBackend::GetSamplerHeapIndex(sampler));
+                break;
+            }
+        }
+    }
+    return indices;
+}
+
 auto BeMaterial::CommitChunk() -> void {
     const uint64_t frame = BeRenderer::GetCurrentFrame();
     const bool rewound = !_chunk.IsValid() || frame - _chunk.Frame >= BeRenderer::FramesInFlight;
