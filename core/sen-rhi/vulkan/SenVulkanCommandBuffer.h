@@ -10,16 +10,8 @@ class SenVulkanCommandBuffer {
     hide
     VkCommandBuffer     _cmd                 = VK_NULL_HANDLE;
     VkPipelineLayout    _boundPipelineLayout = VK_NULL_HANDLE;
-    VkPipelineBindPoint _boundBindPoint      = VK_PIPELINE_BIND_POINT_GRAPHICS;
     SenPipeline _boundPipeline;
     bool        _pipelineDirty    = false;
-    bool        _boundPipelineBindless = false;
-
-    static constexpr uint8_t MaxBindGroups = 8;
-    std::array<SenBindGroup, MaxBindGroups> _boundGroups           = {};
-    std::array<bool,         MaxBindGroups> _boundGroupsDirtyFlags = {};
-    std::array<std::vector<uint32_t>, MaxBindGroups> _boundGroupOffsets = {};
-
 
     expose
     SenVulkanCommandBuffer() = default;
@@ -48,7 +40,6 @@ class SenVulkanCommandBuffer {
 
     expose
     auto SetPipeline     (SenPipeline pipeline) -> void;
-    auto SetBindGroup    (const SenBindGroupBinding& binding, uint8_t index) -> void;
     auto PushRoot        (const void* data, uint32_t size) -> void;
     auto SetVertexBuffer (SenBuffer buffer) -> void;
     auto SetIndexBuffer  (SenBuffer buffer) -> void;

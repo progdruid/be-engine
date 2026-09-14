@@ -170,11 +170,8 @@ auto SenVulkanCommandBuffer::End() -> void {
 
 auto SenVulkanCommandBuffer::ResetPerFrameState() -> void {
     _boundPipelineLayout = VK_NULL_HANDLE;
-    _boundBindPoint      = VK_PIPELINE_BIND_POINT_GRAPHICS;
     _boundPipeline       = {};
     _pipelineDirty       = false;
-    _boundPipelineBindless = false;
-    _boundGroupsDirtyFlags = {};
 }
 
 
@@ -187,55 +184,25 @@ auto SenVulkanCommandBuffer::SetPipeline(SenPipeline pipeline) -> void {
 
     const auto& entry = SenVulkanBackend::LookupPipeline(pipeline);
     _boundPipelineLayout = entry.Layout;
-    _boundBindPoint = entry.BindPoint;
-    _boundPipelineBindless = entry.Bindless;
     _boundPipeline = pipeline;
     _pipelineDirty = true;
 }
 
 auto SenVulkanCommandBuffer::PushRoot(const void* data, uint32_t size) -> void {
     be_assert(_boundPipelineLayout != VK_NULL_HANDLE, "PushRoot: no pipeline bound");
-    be_assert(_boundPipelineBindless, "PushRoot: bound pipeline is not bindless");
     be_assert(size <= SenMaxRootConstantSize, "PushRoot: root struct exceeds {} bytes", SenMaxRootConstantSize);
     vkCmdPushConstants(_cmd, _boundPipelineLayout, VK_SHADER_STAGE_ALL, 0, size, data);
 }
 
-auto SenVulkanCommandBuffer::SetBindGroup(const SenBindGroupBinding& binding, uint8_t index) -> void {
-    be_assert(binding.Group.IsValid(), "SetBindGroup: invalid SenBindGroup handle (index={})", index);
-
-    _boundGroups[index] = binding.Group;
-    _boundGroupOffsets[index].assign(binding.DynamicOffsets.begin(), binding.DynamicOffsets.end());
-    _boundGroupsDirtyFlags[index] = true;
-}
-
 auto SenVulkanCommandBuffer::FlushState() -> void {
-    if (_pipelineDirty) {
-        const auto& entry = SenVulkanBackend::LookupPipeline(_boundPipeline);
-        vkCmdBindPipeline(_cmd, entry.BindPoint, entry.Pipeline);
-        if (entry.Bindless) {
-            VkDescriptorSet heap = SenVulkanBackend::GetBindlessSet();
-            vkCmdBindDescriptorSets(_cmd, entry.BindPoint, entry.Layout, 0, 1, &heap, 0, nullptr);
-        }
-        _pipelineDirty = false;
+    if (!_pipelineDirty) {
+        return;
     }
-
-
-    for (uint8_t i = 0; i < MaxBindGroups; ++i) {
-        if (!_boundGroupsDirtyFlags[i]) {
-            continue;
-        }
-        auto& groupEntry = SenVulkanBackend::LookupBindGroup(_boundGroups[i]);
-        const auto& offsets = _boundGroupOffsets[i];
-        vkCmdBindDescriptorSets(
-            _cmd,
-            _boundBindPoint,
-            _boundPipelineLayout,
-            i,
-            1, &groupEntry.Set,
-            uint32_t(offsets.size()), offsets.empty() ? nullptr : offsets.data()
-        );
-        _boundGroupsDirtyFlags[i] = false;
-    }
+    const auto& entry = SenVulkanBackend::LookupPipeline(_boundPipeline);
+    vkCmdBindPipeline(_cmd, entry.BindPoint, entry.Pipeline);
+    VkDescriptorSet heap = SenVulkanBackend::GetBindlessSet();
+    vkCmdBindDescriptorSets(_cmd, entry.BindPoint, entry.Layout, 0, 1, &heap, 0, nullptr);
+    _pipelineDirty = false;
 }
 
 auto SenVulkanCommandBuffer::SetVertexBuffer(SenBuffer buffer) -> void {

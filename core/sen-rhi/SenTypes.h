@@ -156,41 +156,6 @@ enum class SenShaderStageFlags : uint8_t {
 };
 ENABLE_BITMASK(SenShaderStageFlags);
 
-// Note: SenBindGroupLayout no longer exists as a handle type.
-// Descriptor set layouts are created on-demand from SenBindGroupDesc in the backend.
-
-
-// ─── bind group ──────────────────────────────────────────────────
-struct SenBindGroup {
-    uint32_t ID = 0;
-    auto IsValid() const -> bool { return ID != 0; }
-};
-
-struct SenBindGroupDesc {
-    SenShaderStageFlags Stages = SenShaderStageFlags::AllGraphics;
-    std::vector<uint8_t> BufferSlots;
-    std::vector<uint8_t> SamplerSlots;
-    std::vector<uint8_t> TextureSlots;
-    std::vector<uint8_t> StorageTextureSlots;
-    std::vector<uint8_t> StorageBufferSlots;
-    std::vector<uint32_t> BufferDynamicRanges = {}; // parallel to BufferSlots; 0 = whole buffer, else dynamic with that range
-    std::vector<SenBuffer> Buffers = {};
-    std::vector<SenSampler> Samplers = {};
-    std::vector<SenTexture> Textures = {};
-    std::vector<uint32_t> TextureMips = {}; // parallel to Textures; UINT32_MAX = use full-mip SRV
-    std::vector<SenTexture> StorageTextures = {};
-    std::vector<SenBuffer> StorageBuffers = {};
-};
-
-struct SenBindGroupBinding {
-    SenBindGroup Group;
-    std::span<const uint32_t> DynamicOffsets;
-
-    SenBindGroupBinding(SenBindGroup group) : Group(group) {}
-    SenBindGroupBinding(SenBindGroup group, std::span<const uint32_t> dynamicOffsets)
-        : Group(group), DynamicOffsets(dynamicOffsets) {}
-};
-
 
 // ─── blend state ───────────────────────────────────────────────
 enum class SenBlendFactor : uint8_t {
@@ -335,13 +300,6 @@ struct SenPipelineDesc {
     SenRasterizerState    RasterizerState;
     SenBlendState         BlendState;
     SenDepthStencilState  DepthStencilState;
-
-    // Bind group layouts (ordered by set index: 0, 1, 2, ...)
-    // Pipeline only cares about structure (slot vectors), not actual resources
-    std::vector<SenBindGroupDesc> BindGroupLayouts;
-
-    // Bindless: layout = heap set 0 + a root push-constant range, no bind groups.
-    bool Bindless = false;
 
     std::vector<SenFormat> RenderTargetFormats;
     SenFormat DepthStencilFormat;

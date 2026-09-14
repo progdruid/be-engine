@@ -24,14 +24,12 @@ struct BeMaterialPropertyDescriptor {
 
 struct BeMaterialTextureDescriptor {
     std::string Name;
-    uint8_t SlotIndex;
     std::string DefaultTexturePath;
     bool IsStorage = false;
 };
 
 struct BeMaterialSamplerDescriptor {
     std::string Name;
-    uint8_t SlotIndex;
     std::string DefaultSamplerDescString;
 };
 
@@ -46,7 +44,6 @@ class BeMaterialScheme {
     std::vector<BeMaterialPropertyDescriptor> Properties;
     std::vector<BeMaterialTextureDescriptor> Textures;
     std::vector<BeMaterialSamplerDescriptor> Samplers;
-    SenBindGroupDesc BindGroupLayout;
 
     std::unordered_map<std::string, uint32_t> PropertyOffsets;      // in floats
     std::unordered_map<std::string, uint32_t> PropertyArrayLengths;

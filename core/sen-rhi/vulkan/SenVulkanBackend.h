@@ -21,20 +21,20 @@ struct SenVulkanTextureEntry {
     VkImage Image = VK_NULL_HANDLE;
     VmaAllocation Allocation = VK_NULL_HANDLE;
     VkFormat Format = VK_FORMAT_UNDEFINED;
-    VkImageView SRV = VK_NULL_HANDLE;                       // for shader sampling (all mips, all layers)
-    VkImageView DSV = VK_NULL_HANDLE;                       // depth attachment (2D or per-face for cubemap — see below)
-    std::vector<VkImageView> MipSRVs;                       // [mip]        — single-mip sampling view (2D)
-    std::vector<VkImageView> MipRTVs;                       // [mip]        — color attachment per mip (2D)
-    std::vector<VkImageView> LayerDSVs;                     // [layer]      — depth attachment per array/cube image layer
-    std::vector<std::vector<VkImageView>> LayerMipRTVs;     // [layer][mip] — colour attachment per image layer per mip
+    VkImageView SRV = VK_NULL_HANDLE;                   // for shader sampling (all mips, all layers)
+    VkImageView DSV = VK_NULL_HANDLE;                   // depth attachment (2D or per-face for cubemap — see below)
+    std::vector<VkImageView> MipSRVs;                   // [mip]        — single-mip sampling view (2D)
+    std::vector<VkImageView> MipRTVs;                   // [mip]        — color attachment per mip (2D)
+    std::vector<VkImageView> LayerDSVs;                 // [layer]      — depth attachment per array/cube image layer
+    std::vector<std::vector<VkImageView>> LayerMipRTVs; // [layer][mip] — colour attachment per image layer per mip
     std::vector<VkImageLayout> MipLayouts;                  
-    uint32_t Width      = 0;                                // mip-0 dimensions, kept for mip generation
+    uint32_t Width      = 0;                            // mip-0 dimensions, kept for mip generation
     uint32_t Height     = 0;
     uint32_t MipLevels  = 1;
-    uint32_t LayerCount = 1;                                // 1 for 2D, N for 2D array, 6 for cube, 6*N for cube array
+    uint32_t LayerCount = 1;                            // 1 for 2D, N for 2D array, 6 for cube, 6*N for cube array
     uint32_t HeapBinding = UINT32_MAX;
     uint32_t HeapIndex   = UINT32_MAX;
-    std::vector<uint32_t> MipHeapIndices;                   // [mip] — per-mip sampling slots (2D)
+    std::vector<uint32_t> MipHeapIndices;               // [mip] — per-mip sampling slots (2D)
 };
 
 struct SenVulkanBufferEntry {
@@ -64,17 +64,11 @@ struct SenVulkanPipelineEntry {
     VkPipeline Pipeline = VK_NULL_HANDLE;
     VkPipelineLayout Layout = VK_NULL_HANDLE;
     VkPipelineBindPoint BindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    bool Bindless = false;
     SenPipelineDesc Desc;
 };
 
-struct SenVulkanBindGroupEntry {
-    VkDescriptorSet Set = VK_NULL_HANDLE;
-    SenBindGroupDesc BindGroupDesc;
-};
-
 struct SenVulkanRetirementNote {
-    enum class Kind { BindGroup, Texture, Buffer, Sampler, Pipeline };
+    enum class Kind { Texture, Buffer, Sampler, Pipeline };
     Kind ResourceKind;
     uint32_t Id = 0;
     uint64_t RetireValue = 0;
@@ -117,9 +111,7 @@ class SenVulkanBackend {
     static uint32_t _queueFamilyIndex;
     static VkSemaphore _timeline;
     static uint64_t _timelineValue;
-    static uint32_t _minUniformBufferOffsetAlignment;
     static VkCommandPool _commandPool;
-    static VkDescriptorPool _descriptorPool;
     static VmaAllocator _allocator;
 
     hide
@@ -127,7 +119,6 @@ class SenVulkanBackend {
     static std::unordered_map<uint32_t, SenVulkanTextureEntry> _textures;       static uint32_t _nextTextureId;
     static std::unordered_map<uint32_t, SenVulkanBufferEntry> _buffers;         static uint32_t _nextBufferId;
     static std::unordered_map<uint32_t, SenVulkanSamplerEntry> _samplers;       static uint32_t _nextSamplerId;
-    static std::unordered_map<uint32_t, SenVulkanBindGroupEntry> _bindGroups;   static uint32_t _nextBindGroupId;
     static std::unordered_map<uint32_t, SenVulkanShaderEntry> _shaders;         static uint32_t _nextShaderId;
     static std::unordered_map<uint32_t, SenVulkanPipelineEntry> _pipelines;     static uint32_t _nextPipelineId;
     static std::vector<SenVulkanRetirementNote> _retirements;
@@ -136,16 +127,14 @@ class SenVulkanBackend {
     static VkDescriptorSetLayout _bindlessLayout;
     static VkDescriptorPool      _bindlessPool;
     static VkDescriptorSet       _bindlessSet;
-    static std::array<uint32_t, size_t(SenHeapBinding::Count)>              _heapNext;
-    static std::array<std::vector<uint32_t>, size_t(SenHeapBinding::Count)> _heapFree;
-    static std::array<uint32_t, size_t(SenHeapBinding::Count)>              _heapCapacity;
+    static std::array<uint32_t,              static_cast<size_t>(SenHeapBinding::Count)> _heapNext;
+    static std::array<std::vector<uint32_t>, static_cast<size_t>(SenHeapBinding::Count)> _heapFree;
+    static std::array<uint32_t,              static_cast<size_t>(SenHeapBinding::Count)> _heapCapacity;
 
     expose
     static auto Init      (const SenDeviceDesc& desc) -> void;
     static auto Shutdown  () -> void;
     static auto WaitIdle  () -> void;
-
-    static auto GetMinUniformBufferOffsetAlignment () -> uint32_t { return _minUniformBufferOffsetAlignment; }
     
     expose // swapchain lifecycle
     static auto CreateSwapchain       (const SenSwapchainDesc& desc) -> SenSwapchain;
@@ -211,13 +200,9 @@ class SenVulkanBackend {
     hide static auto HeapReleaseSampler   (SenVulkanSamplerEntry& entry) -> void;
     hide static auto HeapAllocSlot        (SenHeapBinding binding) -> uint32_t;
 
-    expose // bind groups
-    static auto CreateBindGroup  (const SenBindGroupDesc& desc) -> SenBindGroup;
-    static auto RetireBindGroup (SenBindGroup handle) -> void;
-    static auto LookupBindGroup  (SenBindGroup handle) -> SenVulkanBindGroupEntry&;
-    hide static auto FlushRetirements(uint64_t completedValue) -> void;
-    hide static auto CreateDescriptorSetLayoutFromDesc(const SenBindGroupDesc& desc) -> VkDescriptorSetLayout;
-    
+    hide // retirement
+    static auto FlushRetirements(uint64_t completedValue) -> void;
+
     expose // shaders
     static auto CreateShader (const SenShaderSourceDesc& sourceDesc) -> SenShader;
     static auto DestroyShader (SenShader handle) -> void;
@@ -232,7 +217,4 @@ class SenVulkanBackend {
     static auto LookupPipeline  (SenPipeline handle) -> SenVulkanPipelineEntry&;
     hide static auto MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulkanPipelineEntry;
     hide static auto ReloadPipeline(SenPipeline handle) -> void;
-
-    expose // debug print helpers
-    static auto PrintBindGroup (SenBindGroup handle) -> std::string;
 };

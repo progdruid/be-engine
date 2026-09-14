@@ -187,7 +187,6 @@ auto BeTexture::Resize(uint32_t width, uint32_t height) -> void {
     senDesc.Data        = nullptr;
 
     Handle = SenBackend::CreateTexture(senDesc);
-    ++Generation;
 
     CreateMipViewports();
 }

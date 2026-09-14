@@ -201,34 +201,5 @@ auto BeMaterialScheme::Create(
     }
     materialScheme.CbufferSize = (offsetBytes + 15) / 16 * 16;
 
-    SenBindGroupDesc desc = {};
-    desc.Stages = SenShaderStageFlags::AllGraphics | SenShaderStageFlags::Compute;
-
-    if (!materialScheme.Properties.empty()) {
-        desc.BufferSlots = { 0 };
-        desc.BufferDynamicRanges = { materialScheme.CbufferSize };
-    }
-
-    uint8_t textureSlotsStart = 1 + materialScheme.Samplers.size();
-    if (!materialScheme.Samplers.empty()) {
-        auto samplerRange = std::views::iota(uint8_t(1), textureSlotsStart);
-        desc.SamplerSlots = std::vector<uint8_t>(samplerRange.begin(), samplerRange.end());
-        for (size_t i = 0; i < materialScheme.Samplers.size(); ++i) {
-            materialScheme.Samplers[i].SlotIndex = 1 + uint8_t(i);
-        }
-    }
-
-    uint8_t nextSlot = textureSlotsStart;
-    for (auto& texture : materialScheme.Textures) {
-        texture.SlotIndex = nextSlot;
-        if (texture.IsStorage) {
-            desc.StorageTextureSlots.push_back(nextSlot);
-        } else {
-            desc.TextureSlots.push_back(nextSlot);
-        }
-        ++nextSlot;
-    }
-
-    materialScheme.BindGroupLayout = desc;
     return materialScheme;
 }

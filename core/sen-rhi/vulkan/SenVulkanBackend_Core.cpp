@@ -18,8 +18,6 @@ VkQueue SenVulkanBackend::_queue;
 uint32_t SenVulkanBackend::_queueFamilyIndex;
 VkSemaphore SenVulkanBackend::_timeline = VK_NULL_HANDLE;
 uint64_t SenVulkanBackend::_timelineValue = 0;
-uint32_t SenVulkanBackend::_minUniformBufferOffsetAlignment = 256;
-VkDescriptorPool SenVulkanBackend::_descriptorPool = VK_NULL_HANDLE;
 VkCommandPool SenVulkanBackend::_commandPool;
 VmaAllocator SenVulkanBackend::_allocator;
 
@@ -29,7 +27,6 @@ std::unordered_map<uint32_t, SenVulkanSamplerEntry> SenVulkanBackend::_samplers;
 std::unordered_map<uint32_t, SenVulkanShaderEntry> SenVulkanBackend::_shaders;       uint32_t SenVulkanBackend::_nextShaderId = 1;
 std::unordered_map<uint32_t, SenVulkanPipelineEntry> SenVulkanBackend::_pipelines;   uint32_t SenVulkanBackend::_nextPipelineId = 1;
 std::unordered_map<uint32_t, SenVulkanSwapchainEntry> SenVulkanBackend::_swapchains; uint32_t SenVulkanBackend::_nextSwapchainId = 1;
-std::unordered_map<uint32_t, SenVulkanBindGroupEntry> SenVulkanBackend::_bindGroups; uint32_t SenVulkanBackend::_nextBindGroupId = 1;
 std::vector<SenVulkanRetirementNote> SenVulkanBackend::_retirements;
 
 VkDescriptorSetLayout SenVulkanBackend::_bindlessLayout = VK_NULL_HANDLE;
@@ -108,8 +105,6 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(_physicalDevice, &deviceProperties);
     std::fprintf(stderr, "[vulkan] selected: %s\n", deviceProperties.deviceName);
-
-    _minUniformBufferOffsetAlignment = uint32_t(deviceProperties.limits.minUniformBufferOffsetAlignment);
 
     // graphics queue family
     uint32_t queueFamilyCount = 0;
@@ -219,26 +214,6 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     result = vmaCreateAllocator(&allocatorInfo, &_allocator);
     be_assert(result == VK_SUCCESS, "Failed to create VMA allocator!");
 
-    // A material needs one descriptor set per arena chain it has landed in, so counts scale
-    // with FramesInFlight rather than with the material count alone.
-    std::array<VkDescriptorPoolSize, 6> poolSizes {
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          8192 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER,                8192 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         4096 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 8192 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          2048 },
-        VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         2048 },
-    };
-    VkDescriptorPoolCreateInfo descPoolInfo {
-        .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-        .maxSets       = 8192,
-        .poolSizeCount = uint32_t(poolSizes.size()),
-        .pPoolSizes    = poolSizes.data(),
-    };
-    result = vkCreateDescriptorPool(_device, &descPoolInfo, nullptr, &_descriptorPool);
-    be_assert(result == VK_SUCCESS, "Failed to create descriptor pool!");
-
     InitBindlessHeap();
 }
 
@@ -271,11 +246,6 @@ auto SenVulkanBackend::Shutdown() -> void {
         DestroyShader(SenShader { id });
     }
 
-    auto bindGroups = _bindGroups;
-    for (const auto& id : bindGroups | std::views::keys) {
-        RetireBindGroup(SenBindGroup { id });
-    }
-
     auto samplers = _samplers;
     for (const auto& id : samplers | std::views::keys) {
         RetireSampler(SenSampler { id });
@@ -286,7 +256,6 @@ auto SenVulkanBackend::Shutdown() -> void {
     ShutdownBindlessHeap();
     if (_timeline)         { vkDestroySemaphore(_device, _timeline, nullptr); _timeline = VK_NULL_HANDLE; }
     if (_commandPool)      { vkDestroyCommandPool(_device, _commandPool, nullptr); _commandPool = VK_NULL_HANDLE; }
-    if (_descriptorPool)   { vkDestroyDescriptorPool(_device, _descriptorPool, nullptr); _descriptorPool = VK_NULL_HANDLE; }
     if (_allocator)        { vmaDestroyAllocator(_allocator); _allocator = VK_NULL_HANDLE; }
     if (_device)           { vkDestroyDevice(_device, nullptr); _device = VK_NULL_HANDLE; }
     SenVulkanValidation::DestroyMessenger(_instance);
@@ -295,6 +264,61 @@ auto SenVulkanBackend::Shutdown() -> void {
 
 auto SenVulkanBackend::WaitIdle() -> void {
     vkDeviceWaitIdle(_device);
+}
+
+// ─── retirement ────────────────────────────────────────────────────────────────
+auto SenVulkanBackend::FlushRetirements(uint64_t completedValue) -> void {
+    size_t flushed = 0;
+    while (flushed < _retirements.size() && _retirements[flushed].RetireValue <= completedValue) {
+        const auto& note = _retirements[flushed];
+        switch (note.ResourceKind) {
+            case SenVulkanRetirementNote::Kind::Texture: {
+                const auto it = _textures.find(note.Id);
+                if (it != _textures.end()) {
+                    auto& entry = it->second;
+                    HeapReleaseTexture(entry);
+                    auto destroy = [&](VkImageView v) -> void { if (v) { vkDestroyImageView(_device, v, nullptr); } };
+                    destroy(entry.SRV);
+                    destroy(entry.DSV);
+                    for (auto v : entry.MipSRVs) { destroy(v); }
+                    for (auto v : entry.MipRTVs) { destroy(v); }
+                    for (auto v : entry.LayerDSVs) { destroy(v); }
+                    for (auto& mips : entry.LayerMipRTVs) { for (auto v : mips) { destroy(v); } }
+                    vmaDestroyImage(_allocator, entry.Image, entry.Allocation);
+                    _textures.erase(it);
+                }
+                break;
+            }
+            case SenVulkanRetirementNote::Kind::Buffer: {
+                const auto it = _buffers.find(note.Id);
+                if (it != _buffers.end()) {
+                    vmaDestroyBuffer(_allocator, it->second.Buffer, it->second.Allocation);
+                    _buffers.erase(it);
+                }
+                break;
+            }
+            case SenVulkanRetirementNote::Kind::Sampler: {
+                const auto it = _samplers.find(note.Id);
+                if (it != _samplers.end()) {
+                    HeapReleaseSampler(it->second);
+                    vkDestroySampler(_device, it->second.Sampler, nullptr);
+                    _samplers.erase(it);
+                }
+                break;
+            }
+            case SenVulkanRetirementNote::Kind::Pipeline: {
+                const auto it = _pipelines.find(note.Id);
+                if (it != _pipelines.end()) {
+                    vkDestroyPipeline(_device, it->second.Pipeline, nullptr);
+                    vkDestroyPipelineLayout(_device, it->second.Layout, nullptr);
+                    _pipelines.erase(it);
+                }
+                break;
+            }
+        }
+        ++flushed;
+    }
+    _retirements.erase(_retirements.begin(), _retirements.begin() + flushed);
 }
 
 // ─── command buffer ────────────────────────────────────────────────────────────────

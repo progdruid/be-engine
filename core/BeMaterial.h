@@ -22,29 +22,21 @@ class BeMaterial {
     hide uint32_t _uniqueID;
 
     BeMaterialScheme _scheme;
-    std::unordered_map<uint32_t, SenBindGroup> _bindGroups; // keyed by the arena block's SenBuffer.ID, 0 when the scheme has no cbuffer
-    bool _bindGroupDirty = false;
 
     struct TextureBinding {
         std::shared_ptr<BeTexture> Texture;
-        uint8_t Slot;
         bool IsStorage;
         uint32_t Mip = SEN_FULL_MIPS; // SEN_FULL_MIPS = full-mip SRV
-        uint64_t CachedGeneration = 0;
     };
     std::unordered_map<std::string, TextureBinding> _textures;
-    std::unordered_map<std::string, std::pair<SenSampler, uint8_t>> _samplers;
+    std::unordered_map<std::string, SenSampler> _samplers;
     std::vector<float> _bufferData;
     bool _cbufferDirty = false;
 
-    BeMaterialArena* _arena = nullptr; // null when the scheme has no cbuffer
     BeMaterialArena::Chunk _chunk;
-    std::vector<uint32_t> _dynamicOffsets;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose
-    ~BeMaterial();
-
     BeMaterial(const BeMaterial& other) = default;
     BeMaterial(BeMaterial&& other) noexcept = default;
     BeMaterial& operator=(const BeMaterial& other) = default;
@@ -60,9 +52,6 @@ class BeMaterial {
     auto GetSchemeName () const -> std::string { return _scheme.Name; }
     auto GetScheme () const -> const BeMaterialScheme& { return _scheme; }
     auto GetUniqueID () const -> uint32_t { return _uniqueID; }
-
-    auto GetBindGroup () -> SenBindGroupBinding;
-    auto GetBindGroupLayout () const -> SenBindGroupDesc;
 
     auto GetCbufferAddress () -> SenBufferGpuAddress;
     auto GetTextureHeapIndex (const std::string& propertyName) const -> uint32_t;
@@ -114,6 +103,4 @@ class BeMaterial {
     hide
     auto AssembleData        () -> void;
     auto CommitChunk         () -> void;
-    auto AcquireBindGroup    (SenBuffer cbuffer) -> SenBindGroup;
-    auto BuildBindGroupDesc  (SenBuffer cbuffer) const -> SenBindGroupDesc;
 };

@@ -75,7 +75,6 @@ class BeTexture {
     expose uint32_t Mips;
     expose SenTextureUsage Usage;
     expose SenFormat Format;
-    expose uint64_t Generation = 0;
 
     hide std::vector<SenViewport> _mipViewports;
 
