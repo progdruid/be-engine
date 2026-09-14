@@ -54,7 +54,6 @@ then per frame: `ClearFrame()`, submit geometry + lights, and let the renderer r
 * `core/`. rendering engine core (static lib): renderer, passes, pipeline builder, shaders, textures, materials, meshes, camera, input, window. `sen-rhi/` lives here.
 * `toolkit/`. higher-level abstractions (static lib, links core): the srm deferred pipeline, scenes, assimp import, imgui, entt.
 * `example-sakura/`. the up-to-date showcase: multi-scene, ecs, full deferred pipeline.
-* `example-vulkan/`. minimal raw vulkan/rhi example.
 * `devtools/bechef`. cli that cooks content, checks the workspace, and generates shader boilerplate (`shadergen`, with a `--watch` mode).
 
 ### shaders

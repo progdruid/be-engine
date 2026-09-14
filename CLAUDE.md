@@ -40,7 +40,6 @@ be-engine/
 │   ├── imgui/          # ImGui source + BeImGuiPass + backends
 │   └── entt/           # ECS header-only library
 ├── example-sakura/     # Advanced showcase (multi-scene, ECS, SRM)
-├── example-vulkan/     # Minimal raw Vulkan/RHI example
 ├── devtools/
 │   └── bechef/         # CLI — content cook, workspace check, shader boilerplate autogen
 ├── bechef              # Built CLI binary, copied to root by CMake (invoke as ./bechef)
