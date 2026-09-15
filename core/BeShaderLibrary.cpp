@@ -17,6 +17,15 @@ std::unordered_map<std::string, BeMaterialScheme>              BeShaderLibrary::
 std::unordered_map<std::string, std::shared_ptr<BeTexture>>    BeShaderLibrary::_defaultTextures;
 std::unordered_map<std::string, SenSampler>                    BeShaderLibrary::_samplers;
 
+
+auto BeShaderLibrary::Shutdown() -> void {
+    _shaders.clear();
+    _materialSchemes.clear();
+    _shaderSources.clear();
+    _defaultTextures.clear();
+    _samplers.clear();
+}
+
 auto BeShaderLibrary::LoadShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void {
 
     static bool hotReloadRegistered = false;
@@ -196,10 +205,3 @@ auto BeShaderLibrary::GetSampler(std::string_view samplerDescString) -> SenSampl
     return sampler;
 }
 
-auto BeShaderLibrary::Shutdown() -> void {
-    _shaders.clear();
-    _materialSchemes.clear();
-    _shaderSources.clear();
-    _defaultTextures.clear();
-    _samplers.clear();
-}

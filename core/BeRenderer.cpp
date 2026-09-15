@@ -1,6 +1,6 @@
 #include "BeRenderer.h"
 
-#include "BeMaterialArena.h"
+#include "BeBackend.h"
 #include "BePassSequence.h"
 #include "BeRenderPass.h"
 #include "BeShader.h"
@@ -20,7 +20,8 @@ BeRenderer::BeRenderer(
 {}
 
 BeRenderer::~BeRenderer() {
-    BeMaterialArena::DestroyAll();
+    BeShaderLibrary::Shutdown();
+    BeBackend::Shutdown();
     SenBackend::Shutdown();
 }
 
@@ -30,6 +31,7 @@ auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
         .DebugLayer = true,
         #endif
     });
+    BeBackend::Init();
 
     _swapchain = SenBackend::CreateSwapchain({
         .NativeWindowHandle = _nativeWindow,
@@ -106,7 +108,7 @@ auto BeRenderer::Render() -> void {
 
     // safe here, not earlier: BeginFrame waits on this slot's fence, so the GPU is done with
     // both the command buffer and the arena chunks about to be reused.
-    BeMaterialArena::ResetForFrame(_currentFrame);
+    BeBackend::ResetMaterialArena(_currentFrame);
 
     auto& cmd = _frameCmds[slot];
     cmd.Begin();

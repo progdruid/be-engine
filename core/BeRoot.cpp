@@ -39,7 +39,7 @@ auto BeRoot::Use(const std::string& link, BeMaterial& material) -> BeRoot& {
                 break;
             }
         }
-        _written |= (uint32_t(1) << i);
+        _written |= (static_cast<uint32_t>(1) << i);
     }
     return *this;
 }
@@ -50,7 +50,7 @@ auto BeRoot::Push(SenCommandBuffer& cmd) -> void {
     }
     for (size_t i = 0; i < _layout->Fields.size(); ++i) {
         be_assert(
-            _written & (uint32_t(1) << i),
+            _written & (static_cast<uint32_t>(1) << i),
             "BeRoot: field not filled before Push",
             _layout->Fields[i].FieldName
         );

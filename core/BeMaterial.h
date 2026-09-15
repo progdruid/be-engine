@@ -7,7 +7,7 @@
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 
-#include "BeMaterialArena.h"
+#include "BeBackend.h"
 #include "BeMaterialScheme.h"
 #include "sen-rhi/SenTypes.h"
 
@@ -33,7 +33,7 @@ class BeMaterial {
     std::vector<float> _bufferData;
     bool _cbufferDirty = false;
 
-    BeMaterialArena::Chunk _chunk;
+    BeBackend::MaterialArenaChunk _chunk;
 
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     expose

@@ -2,7 +2,6 @@
 
 #include <umbrellas/include-glfw.h>
 
-#include "BeShaderLibrary.h"
 #include "BeFileWatcher.h"
 #include "BeInput.h"
 #include "BeRenderer.h"
@@ -29,8 +28,6 @@ BeStandardGame::~BeStandardGame() = default;
 
 auto BeStandardGame::Run() -> int {
     MainLoop();
-
-    BeShaderLibrary::Shutdown();
 
     return 0;
 }

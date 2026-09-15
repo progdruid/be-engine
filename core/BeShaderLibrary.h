@@ -23,6 +23,9 @@ class BeShaderLibrary {
     static std::unordered_map<std::string, std::shared_ptr<BeTexture>> _defaultTextures;
     static std::unordered_map<std::string, SenSampler> _samplers;
 
+    expose // lifecycle
+    static auto Shutdown() -> void;
+
     expose // shaders + schemes
     static auto LoadShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void;
     static auto LoadShaderDirectory(const std::filesystem::path& dir) -> void;
@@ -40,7 +43,4 @@ class BeShaderLibrary {
     static auto GetDefaultTexture(std::string_view name) -> std::weak_ptr<BeTexture> { be_assert(_defaultTextures.contains(std::string(name))); return _defaultTextures.at(std::string(name)); }
     static auto HasDefaultTexture(std::string_view name) -> bool { return _defaultTextures.contains(std::string(name)); }
     static auto GetSampler(std::string_view samplerDescString) -> SenSampler;
-
-    expose // lifecycle
-    static auto Shutdown() -> void;
 };

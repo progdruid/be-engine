@@ -77,7 +77,7 @@ auto BeMaterial::CommitChunk() -> void {
         return;
     }
 
-    _chunk = BeMaterialArena::Allocate(frame, _scheme.CbufferSize);
+    _chunk = BeBackend::AllocateMaterialArenaChunk(frame, _scheme.CbufferSize);
     SenBackend::WriteBuffer(
         _chunk.Buffer,
         _bufferData.data(),

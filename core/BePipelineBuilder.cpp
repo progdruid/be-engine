@@ -1,24 +1,6 @@
 #include "BePipelineBuilder.h"
 
 #include "BeShader.h"
-#include "sen-rhi/SenBackend.h"
-#include <string_view>
-
-std::unordered_map<
-    BePipelineBuilder::CachedPipelineKey,
-    SenPipeline,
-    BePipelineBuilder::CachedPipelineHash
-> BePipelineBuilder::_cachedPipelines;
-
-std::unordered_map<uint32_t, SenPipeline> BePipelineBuilder::_cachedComputePipelines;
-
-auto BePipelineBuilder::CachedPipelineHash::operator()(const CachedPipelineKey& k) const -> size_t {
-    auto hasher         = std::hash<std::string_view>();
-    const auto* bytes   = reinterpret_cast<const char*>(&k);
-    const auto view     = std::string_view(bytes, sizeof(k));
-    auto hash = hasher(view);
-    return hash;
-}
 
 auto BePipelineBuilder::Start(const BeShader& shader) -> BePipelineBuilder {
     const auto& desc = shader.GetPipelineDesc();
@@ -98,34 +80,9 @@ auto BePipelineBuilder::SetDepthFormat(SenFormat depthFormat) -> BePipelineBuild
 }
 
 auto BePipelineBuilder::BuildCompute(const BeShader& shader) -> SenPipeline {
-    auto it = _cachedComputePipelines.find(shader.ShaderID);
-    if (it != _cachedComputePipelines.end()) {
-        return it->second;
-    }
-    auto pipeline = SenBackend::CreatePipeline(shader.GetPipelineDesc());
-    _cachedComputePipelines[shader.ShaderID] = pipeline;
-    return pipeline;
+    return BeBackend::GetComputePipeline(shader.ShaderID, shader.GetPipelineDesc());
 }
 
 auto BePipelineBuilder::Build() const -> SenPipeline {
-    auto it = _cachedPipelines.find(_key);
-    if (it != _cachedPipelines.end()) {
-        return it->second;
-    } else {
-        SenPipelineDesc desc = *_baseDesc;
-        desc.Topology = _key.Topology;
-        desc.RasterizerState = _key.RasterizerState;
-        desc.BlendState = _key.BlendState;
-        desc.DepthStencilState = _key.DepthStencilState;
-        desc.RenderTargetFormats.clear();
-        for (auto fmt : _key.ColorFormats) {
-            if (fmt == SenFormat::Unknown) break;
-            desc.RenderTargetFormats.push_back(fmt);
-        }
-        desc.DepthStencilFormat = _key.DepthFormat;
-
-        auto pipeline = SenBackend::CreatePipeline(desc);
-        _cachedPipelines[_key] = pipeline;
-        return pipeline;
-    }
+    return BeBackend::GetPipeline(_key, *_baseDesc);
 }
