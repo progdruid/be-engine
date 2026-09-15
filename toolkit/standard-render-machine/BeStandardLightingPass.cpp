@@ -49,7 +49,7 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
     const SenFormat outputFormat = _output->Format;
 
     _batchedShader = BeShaderLibrary::GetShader("batched-lights");
-    _batchedScheme = _batchedShader->GetMaterialScheme("main");
+    _batchedScheme = BeShaderLibrary::GetShaderScheme(*_batchedShader, "main");
     _batchedCapacity = _batchedScheme.PropertyArrayLengths.at("LightPositionRadius");
     be_assert(
         _batchedCapacity == _batchedScheme.PropertyArrayLengths.at("LightColorPower"),
@@ -66,7 +66,7 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
         .Build()
     ;
 
-    _dirShadowBatchScheme = _dirShadowBatchShader->GetMaterialScheme("main");
+    _dirShadowBatchScheme = BeShaderLibrary::GetShaderScheme(*_dirShadowBatchShader, "main");
     _dirShadowBatchCapacity = _dirShadowBatchScheme.PropertyArrayLengths.at("LightDirection");
     _dirShadowBatchMaterial = BeMaterial::Create(_dirShadowBatchScheme);
     _dirShadowBatchMaterial->SetTexture("Depth", _depthInput);
@@ -79,7 +79,7 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
         .Build()
     ;
 
-    _pointShadowBatchScheme = _pointShadowBatchShader->GetMaterialScheme("main");
+    _pointShadowBatchScheme = BeShaderLibrary::GetShaderScheme(*_pointShadowBatchShader, "main");
     _pointShadowBatchCapacity = _pointShadowBatchScheme.PropertyArrayLengths.at("LightPositionRadius");
     _pointShadowBatchMaterial = BeMaterial::Create(_pointShadowBatchScheme);
     _pointShadowBatchMaterial->SetTexture("Depth", _depthInput);
@@ -92,7 +92,7 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
         .Build()
     ;
 
-    const auto& emissiveAddScheme = _emissiveShader->GetMaterialScheme("main");
+    const auto& emissiveAddScheme = BeShaderLibrary::GetShaderScheme(*_emissiveShader, "main");
     _emissiveMaterial = BeMaterial::Create(emissiveAddScheme);
     _emissiveMaterial->SetTexture("InputEmissive", _gbufferInputs[3]);
     _emissivePipeline = BePipelineBuilder::Start(*_emissiveShader)
@@ -102,7 +102,7 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
     ;
 
     _ambientShader = BeShaderLibrary::GetShader("ambient-ibl");
-    const auto& ambientScheme = _ambientShader->GetMaterialScheme("main");
+    const auto& ambientScheme = BeShaderLibrary::GetShaderScheme(*_ambientShader, "main");
     _ambientMaterial = BeMaterial::Create(ambientScheme);
     _ambientMaterial->SetTexture("Albedo_RGB", _gbufferInputs[0]);
     _ambientMaterial->SetTexture("WorldNormal_XYZ", _gbufferInputs[1]);

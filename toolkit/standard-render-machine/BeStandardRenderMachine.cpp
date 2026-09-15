@@ -190,7 +190,7 @@ auto BeStandardRenderMachine::AddTonemapperPass(const std::string& inputName, co
     const auto shader = BeShaderLibrary::GetShader("tonemapper");
     be_assert(shader, "AddTonemapperPass: tonemapper shader not found");
 
-    const auto& scheme = shader->GetMaterialScheme("main");
+    const auto& scheme = BeShaderLibrary::GetShaderScheme(*shader, "main");
     _tonemapperMaterial = BeMaterial::Create(scheme);
     _tonemapperMaterial->SetTexture("HDRInput", GetRenderTexture(inputName));
 
@@ -384,7 +384,7 @@ auto BeStandardRenderMachine::LoadProp(
 
     if (model == BeSRMLightingModel::PBR) {
         materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
-            const auto scheme = shader->GetMaterialScheme("geometry-main");
+            const auto scheme = BeShaderLibrary::GetShaderScheme(*shader, "geometry-main");
             auto material = BeMaterial::Create(scheme);
 
             aiString texPath;
@@ -410,7 +410,7 @@ auto BeStandardRenderMachine::LoadProp(
         };
     } else {
         materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
-            const auto scheme = shader->GetMaterialScheme("geometry-main");
+            const auto scheme = BeShaderLibrary::GetShaderScheme(*shader, "geometry-main");
             auto material = BeMaterial::Create(scheme);
 
             aiString texPath;

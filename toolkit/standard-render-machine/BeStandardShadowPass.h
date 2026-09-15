@@ -8,7 +8,7 @@
 #include "BeRenderPass.h"
 
 class BeMaterial;
-class BeShader;
+struct BeShader;
 class BeTexture;
 class BeStandardRenderMachine;
 struct BeSRMSunLightEntry;

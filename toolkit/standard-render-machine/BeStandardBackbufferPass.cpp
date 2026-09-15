@@ -22,7 +22,7 @@ BeStandardBackbufferPass::BeStandardBackbufferPass(
 
 auto BeStandardBackbufferPass::Initialise(BeRenderer& renderer) -> void {
     _shader = BeShaderLibrary::GetShader("backbuffer");
-    const auto& scheme = _shader->GetMaterialScheme("main");
+    const auto& scheme = BeShaderLibrary::GetShaderScheme(*_shader, "main");
     _material = BeMaterial::Create(scheme);
     _material->SetTexture("InputTexture", _input);
     _material->SetTexture("DepthTexture", _depth);

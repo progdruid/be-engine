@@ -1,88 +1,51 @@
-﻿#pragma once
-
-#include <expected>
-#include <filesystem>
+#pragma once
 #include <string>
 #include <unordered_map>
+#include <vector>
 #include <umbrellas/common.hpp>
 #include <sen-rhi/SenTypes.h>
 
-#include "umbrellas/include-libassert.h"
 #include "BeMaterialScheme.h"
 #include "BeShaderTools.h"
 
-class BeShaderIncludeHandler;
-
 enum class BeShaderType : uint8_t {
-    None        = 0,
-    Vertex      = 1 << 0,
-    Pixel       = 1 << 1,
+    None = 0,
+    Vertex = 1 << 0,
+    Pixel = 1 << 1,
     Tesselation = 1 << 2,
-    Compute     = 1 << 3,
+    Compute = 1 << 3,
     AllGraphics = Vertex | Pixel | Tesselation,
 };
 ENABLE_BITMASK(BeShaderType);
 
-class BeShader {
-    // static part /////////////////////////////////////////////////////////////////////////////////////////////////////
-    hide static uint32_t _shaderCount;
-    expose static auto Create(const BeShaderTools::ParsedShader& meta) -> std::unique_ptr<BeShader>;
-    
-    
-    // fields //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose std::string Name;
-    expose uint32_t ShaderID;
-    expose BeShaderType ShaderType = BeShaderType::None;
-    expose SenTopology Topology = SenTopology::Undefined;
-    expose SenShader ShaderVertex;
-    expose SenShader ShaderHull;
-    expose SenShader ShaderDomain;
-    expose SenShader ShaderPixel;
-    expose SenShader ShaderCompute;
-    expose std::unordered_map<std::string, uint32_t> PixelTargets;
-    expose std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
-    
-    hide SenPipelineDesc _pipelineDesc;
-
-    expose bool HasMaterial = false;
-    expose struct MaterialSchemeEntry {
-        expose std::string Link;
-        expose BeMaterialScheme Scheme;
-        expose uint8_t Index;
+struct BeShader {
+    struct MaterialSchemeEntry {
+        std::string Link;
+        BeMaterialScheme Scheme;
+        uint8_t Index;
     };
-    hide std::vector<MaterialSchemeEntry> _materialSchemes;
-    hide BeShaderTools::RootLayout _rootLayout;
 
-    // lifecycle ///////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose BeShader() = default;
-    expose ~BeShader() = default;
+    std::string Name;
+    uint32_t ShaderID = 0;
+    BeShaderType ShaderType = BeShaderType::None;
 
-    // interface ///////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose auto GetMaterialScheme(const std::string& linkName) const -> const BeMaterialScheme& {
-        for (const auto& entry : _materialSchemes) {
-            if (entry.Link == linkName) {
-                return entry.Scheme;
-            }
-        }
-        be_assert(false, "BeShader: no material scheme under link name", linkName);
-        return _materialSchemes[0].Scheme;
-    }
-    expose auto GetMaterialSlot(const std::string& linkName) const -> uint8_t {
-        for (const auto& entry : _materialSchemes) {
-            if (entry.Link == linkName) {
-                return entry.Index;
-            }
-        }
-        be_assert(false, "BeShader: no material scheme under link name", linkName);
-        return {};
-    }
+    SenTopology Topology = SenTopology::Undefined;
+    SenRasterizerState RasterizerState;
+    SenBlendState BlendState;
+    SenDepthStencilState DepthStencilState;
+    std::vector<SenVertexLayoutElement> VertexLayout;
+    uint32_t VertexStride = 0;
 
-    expose auto GetPipelineDesc() const -> const SenPipelineDesc& {
-        return _pipelineDesc;
-    }
+    SenShader ShaderVertex;
+    SenShader ShaderHull;
+    SenShader ShaderDomain;
+    SenShader ShaderPixel;
+    SenShader ShaderCompute;
 
-    expose auto GetRootLayout() const -> const BeShaderTools::RootLayout& {
-        return _rootLayout;
-    }
+    std::unordered_map<std::string, uint32_t> PixelTargets;
+    std::unordered_map<uint32_t, std::string> PixelTargetsInverse;
+
+    bool HasMaterial = false;
+    std::vector<MaterialSchemeEntry> MaterialSchemes;
+    BeShaderTools::RootLayout RootLayout;
 };
-

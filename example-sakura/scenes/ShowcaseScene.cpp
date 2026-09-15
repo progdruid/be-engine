@@ -132,14 +132,14 @@ auto ShowcaseScene::DefinePasses() -> void {
     _machine->ClearPasses();
     _machine->AddGeometryPass();
 
-    const auto& fxaaScheme = BeShaderLibrary::GetShader("fxaa")->GetMaterialScheme("main");
+    const auto& fxaaScheme = BeShaderLibrary::GetShaderScheme(*BeShaderLibrary::GetShader("fxaa"), "main");
     const auto fxaaMaterial = BeMaterial::Create(fxaaScheme);
     fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_BaseColor"));
     _machine->AddFullscreenPass(BeShaderLibrary::GetShader("fxaa"), fxaaMaterial, { "Showcase_FXAAOutput" });
 
     const char* backbufferInput = "Showcase_FXAAOutput";
     if (_pixelationEnabled) {
-        const auto& pixelScheme = BeShaderLibrary::GetShader("pixelation")->GetMaterialScheme("main");
+        const auto& pixelScheme = BeShaderLibrary::GetShaderScheme(*BeShaderLibrary::GetShader("pixelation"), "main");
         const auto pixelMaterial = BeMaterial::Create(pixelScheme);
         pixelMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Showcase_FXAAOutput"));
         pixelMaterial->SetTexture("DepthTexture", _machine->GetRenderTexture("Showcase_Depth"));

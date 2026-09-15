@@ -9,7 +9,7 @@
 #include "sen-rhi/SenCommandBuffer.h"
 #include "sen-rhi/SenTypes.h"
 
-class BeShader;
+struct BeShader;
 class BeMaterial;
 
 class BeRoot {

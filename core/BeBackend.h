@@ -8,6 +8,8 @@
 #include "BeRenderer.h"
 #include "sen-rhi/SenTypes.h"
 
+struct BeShader;
+
 class BeBackend {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,8 +41,8 @@ class BeBackend {
     hide static std::unordered_map<PipelineKey, SenPipeline, PipelineKeyHash> _pipelines;
     hide static std::unordered_map<uint32_t, SenPipeline> _computePipelines;
     
-    expose static auto GetPipeline(const PipelineKey& key, const SenPipelineDesc& baseDesc) -> SenPipeline;
-    expose static auto GetComputePipeline(uint32_t shaderID, const SenPipelineDesc& desc) -> SenPipeline;
+    expose static auto GetPipeline(const BeShader& shader, const PipelineKey& key) -> SenPipeline;
+    expose static auto GetComputePipeline(const BeShader& shader) -> SenPipeline;
     
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -30,7 +30,7 @@ auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
     _envShader = BeShaderLibrary::GetShader("environment-bake");
     be_assert(_envShader, "BeStandardEnvironmentBakePass: environment-bake shader not found");
 
-    const auto& envScheme = _envShader->GetMaterialScheme("main");
+    const auto& envScheme = BeShaderLibrary::GetShaderScheme(*_envShader, "main");
     for (uint32_t face = 0; face < FaceCount; ++face) {
         const auto mat = BeMaterial::Create(envScheme);
         mat->SetFloat1("FaceIndex", static_cast<float>(face));
@@ -42,7 +42,7 @@ auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
     _irradianceShader = BeShaderLibrary::GetShader("irradiance-bake");
     be_assert(_irradianceShader, "BeStandardEnvironmentBakePass: irradiance-bake shader not found");
 
-    const auto& irradianceScheme = _irradianceShader->GetMaterialScheme("main");
+    const auto& irradianceScheme = BeShaderLibrary::GetShaderScheme(*_irradianceShader, "main");
     for (uint32_t face = 0; face < FaceCount; ++face) {
         const auto mat = BeMaterial::Create(irradianceScheme);
         mat->SetFloat1("FaceIndex", static_cast<float>(face));
@@ -55,7 +55,7 @@ auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
     _prefilterShader = BeShaderLibrary::GetShader("prefilter-bake");
     be_assert(_prefilterShader, "BeStandardEnvironmentBakePass: prefilter-bake shader not found");
 
-    const auto& prefilterScheme = _prefilterShader->GetMaterialScheme("main");
+    const auto& prefilterScheme = BeShaderLibrary::GetShaderScheme(*_prefilterShader, "main");
     const uint32_t mipCount = _prefilteredCubemap->Mips;
     _prefilterFaceMaterials.resize(mipCount);
     for (uint32_t mip = 0; mip < mipCount; ++mip) {
@@ -74,7 +74,7 @@ auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
     _brdfLutShader = BeShaderLibrary::GetShader("brdf-lut");
     be_assert(_brdfLutShader, "BeStandardEnvironmentBakePass: brdf-lut shader not found");
 
-    const auto& brdfLutScheme = _brdfLutShader->GetMaterialScheme("main");
+    const auto& brdfLutScheme = BeShaderLibrary::GetShaderScheme(*_brdfLutShader, "main");
     _brdfLutMaterial = BeMaterial::Create(brdfLutScheme);
     _brdfLutPipeline = BePipelineBuilder::Start(*_brdfLutShader).SetColorFormats({ _brdfLutTexture->Format }).Build();
 }

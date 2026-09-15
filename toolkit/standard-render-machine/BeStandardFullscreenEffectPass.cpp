@@ -1,9 +1,9 @@
 #include "BeStandardFullscreenEffectPass.h"
 
 #include <umbrellas/include-libassert.h>
-#include <sen-rhi/SenBackend.h>
 
 #include "BePass.h"
+#include "BePipelineBuilder.h"
 #include "BeMaterial.h"
 #include "BeRenderer.h"
 #include "BeRoot.h"
@@ -26,11 +26,11 @@ auto BeStandardFullscreenEffectPass::Initialise(BeRenderer& renderer) -> void {
     auto shader = _shader;
     be_assert(shader, "BeStandardFullscreenEffectPass: shader not set");
 
-    auto pipelineDesc = shader->GetPipelineDesc();
+    auto formats = std::vector<SenFormat>();
     for (const auto& tex : _outputs) {
-        pipelineDesc.RenderTargetFormats.push_back(tex->Format);
+        formats.push_back(tex->Format);
     }
-    _pipeline = SenBackend::CreatePipeline(pipelineDesc);
+    _pipeline = BePipelineBuilder::Start(*shader).SetColorFormats(formats).Build();
     be_assert(_pipeline.IsValid(), "BeStandardFullscreenEffectPass: failed to create pipeline");
 }
 

@@ -10,7 +10,7 @@ struct BeProp;
 class BeTexture;
 class BeMaterial;
 class BeRenderer;
-class BeShader;
+struct BeShader;
 
 class BeAssimpImporter {
     hide

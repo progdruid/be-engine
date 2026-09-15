@@ -6,16 +6,16 @@
 #include "BeBackend.h"
 #include "sen-rhi/SenTypes.h"
 
-class BeShader;
+struct BeShader;
 
 class BePipelineBuilder {
 
     expose static auto Start(const BeShader& shader) -> BePipelineBuilder;
     expose static auto BuildCompute(const BeShader& shader) -> SenPipeline;
 
-    hide const SenPipelineDesc* _baseDesc;
+    hide const BeShader* _shader;
     hide BeBackend::PipelineKey _key;
-    hide explicit BePipelineBuilder(const SenPipelineDesc& desc, uint32_t shaderID);
+    hide explicit BePipelineBuilder(const BeShader& shader);
     expose ~BePipelineBuilder();
 
     expose

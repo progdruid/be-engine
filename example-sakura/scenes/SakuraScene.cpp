@@ -183,7 +183,7 @@ auto SakuraScene::DefinePasses() -> void {
 
     if (Settings.DepthOfField.Enabled) {
         if (!_dofMaterial) {
-            const auto& dofScheme = BeShaderLibrary::GetShader("dof")->GetMaterialScheme("main");
+            const auto& dofScheme = BeShaderLibrary::GetShaderScheme(*BeShaderLibrary::GetShader("dof"), "main");
             _dofMaterial = BeMaterial::Create(dofScheme);
         }
         _dofMaterial->SetTexture("ColorInput", _machine->GetRenderTexture("Sakura_Bloom"));
@@ -194,7 +194,7 @@ auto SakuraScene::DefinePasses() -> void {
 
     _machine->AddTonemapperPass(tonemapperInput, "Sakura_Tonemapper");
 
-    const auto& fxaaScheme = BeShaderLibrary::GetShader("fxaa")->GetMaterialScheme("main");
+    const auto& fxaaScheme = BeShaderLibrary::GetShaderScheme(*BeShaderLibrary::GetShader("fxaa"), "main");
     const auto fxaaMaterial = BeMaterial::Create(fxaaScheme);
     fxaaMaterial->SetTexture("ColorTexture", _machine->GetRenderTexture("Sakura_Tonemapper"));
     _machine->AddFullscreenPass(BeShaderLibrary::GetShader("fxaa"), fxaaMaterial, { "Sakura_FXAA" });

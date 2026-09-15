@@ -3,21 +3,15 @@
 #include "BeShader.h"
 
 auto BePipelineBuilder::Start(const BeShader& shader) -> BePipelineBuilder {
-    const auto& desc = shader.GetPipelineDesc();
-    BePipelineBuilder builder(desc, shader.ShaderID);
-    return builder;
+    return BePipelineBuilder(shader);
 }
 
-BePipelineBuilder::BePipelineBuilder(const SenPipelineDesc& desc, uint32_t shaderID) : _baseDesc(&desc) {
-    _key.ShaderID = shaderID;
-    _key.Topology = desc.Topology;
-    _key.RasterizerState = desc.RasterizerState;
-    _key.BlendState = desc.BlendState;
-    _key.DepthStencilState = desc.DepthStencilState;
-    for (size_t i = 0; i < desc.RenderTargetFormats.size(); ++i) {
-        _key.ColorFormats[i] = desc.RenderTargetFormats[i];
-    }
-    _key.DepthFormat = desc.DepthStencilFormat;
+BePipelineBuilder::BePipelineBuilder(const BeShader& shader) : _shader(&shader) {
+    _key.ShaderID = shader.ShaderID;
+    _key.Topology = shader.Topology;
+    _key.RasterizerState = shader.RasterizerState;
+    _key.BlendState = shader.BlendState;
+    _key.DepthStencilState = shader.DepthStencilState;
 }
 
 BePipelineBuilder::~BePipelineBuilder() = default;
@@ -80,9 +74,9 @@ auto BePipelineBuilder::SetDepthFormat(SenFormat depthFormat) -> BePipelineBuild
 }
 
 auto BePipelineBuilder::BuildCompute(const BeShader& shader) -> SenPipeline {
-    return BeBackend::GetComputePipeline(shader.ShaderID, shader.GetPipelineDesc());
+    return BeBackend::GetComputePipeline(shader);
 }
 
 auto BePipelineBuilder::Build() const -> SenPipeline {
-    return BeBackend::GetPipeline(_key, *_baseDesc);
+    return BeBackend::GetPipeline(*_shader, _key);
 }

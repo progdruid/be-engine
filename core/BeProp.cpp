@@ -1,6 +1,7 @@
 #include "BeProp.h"
 
 #include "BeShader.h"
+#include "BeShaderLibrary.h"
 #include "BeMaterial.h"
 
 auto BeProp::FromMesh(std::shared_ptr<BeMesh> mesh, raw_ptr<BeShader> shader, const std::string& schemeLink) -> std::shared_ptr<BeProp> {
@@ -8,7 +9,7 @@ auto BeProp::FromMesh(std::shared_ptr<BeMesh> mesh, raw_ptr<BeShader> shader, co
     prop->Mesh = std::move(mesh);
     prop->Shader = shader;
 
-    const auto& scheme = prop->Shader->GetMaterialScheme(schemeLink);
+    const auto& scheme = BeShaderLibrary::GetShaderScheme(*prop->Shader, schemeLink);
     for (size_t i = 0; i < prop->Mesh->Slices.size(); ++i) {
         auto material = BeMaterial::Create(scheme);
         prop->Materials.push_back(material);

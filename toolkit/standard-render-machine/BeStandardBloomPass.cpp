@@ -29,7 +29,7 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
 
     _brightShader = BeShaderLibrary::GetShader("bloom-bright");
     be_assert(  _brightShader, "BeStandardBloomPass: bloom-bright shader not found");
-    const auto& brightScheme = _brightShader->GetMaterialScheme("main");
+    const auto& brightScheme = BeShaderLibrary::GetShaderScheme(*_brightShader, "main");
     _brightMaterial = BeMaterial::Create(brightScheme);
     _brightMaterial->SetTexture("HDRInput", _inputHDR);
     _brightPipeline = BePipelineBuilder::Start(*_brightShader).SetColorFormats({ mipFormat }).Build();
@@ -37,7 +37,7 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
     // Downsample mipTarget i (1..mipCount-1) reads source mip i-1 of the same texture.
     _downsampleShader = BeShaderLibrary::GetShader("bloom-downsample");
     be_assert(  _downsampleShader, "BeStandardBloomPass: bloom-downsample shader not found");
-    const auto& downsampleScheme = _downsampleShader->GetMaterialScheme("main");
+    const auto& downsampleScheme = BeShaderLibrary::GetShaderScheme(*_downsampleShader, "main");
     _downsampleMaterials.resize(_mipCount);
     for (uint32_t mipTarget = 1; mipTarget < _mipCount; ++mipTarget) {
         const auto& source = _bloomTexture->GetMipViewport(mipTarget - 1);
@@ -53,7 +53,7 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
     // Upsample mipTarget i (0..mipCount-2) reads source mip i+1 of the same texture.
     _upsampleShader = BeShaderLibrary::GetShader("bloom-upsample");
     be_assert(  _upsampleShader, "BeStandardBloomPass: bloom-upsample shader not found");
-    const auto& upsampleScheme = _upsampleShader->GetMaterialScheme("main");
+    const auto& upsampleScheme = BeShaderLibrary::GetShaderScheme(*_upsampleShader, "main");
     _upsampleMaterials.resize(_mipCount);
     for (uint32_t mipTarget = 0; mipTarget < _mipCount - 1; ++mipTarget) {
         const auto& source = _bloomTexture->GetMipViewport(mipTarget + 1);
@@ -72,7 +72,7 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
 
     _addShader = BeShaderLibrary::GetShader("bloom-add");
     be_assert( _addShader, "BeStandardBloomPass: bloom-add shader not found");
-    const auto addScheme = _addShader->GetMaterialScheme("main");
+    const auto addScheme = BeShaderLibrary::GetShaderScheme(*_addShader, "main");
     _addMaterial = BeMaterial::Create(addScheme);
     _addMaterial->SetTexture("HDRInput", _inputHDR);
     _addMaterial->SetTexture("BloomInput", _bloomTexture);

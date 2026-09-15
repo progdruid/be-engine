@@ -5,7 +5,7 @@
 #include "BeMesh.h"
 #include <umbrellas/common.hpp>
 
-class BeShader;
+struct BeShader;
 class BeMaterial;
 
 struct BePropSlice {

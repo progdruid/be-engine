@@ -10,7 +10,7 @@
 
 class BeTexture;
 class BeMaterial;
-class BeShader;
+struct BeShader;
 class BeStandardRenderMachine;
 
 class BeStandardEnvironmentBakePass final : public BeRenderPass {

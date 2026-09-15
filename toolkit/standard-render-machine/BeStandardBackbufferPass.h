@@ -9,7 +9,7 @@
 
 class BeTexture;
 class BeMaterial;
-class BeShader;
+struct BeShader;
 class BeStandardRenderMachine;
 
 class BeStandardBackbufferPass final : public BeRenderPass {

@@ -6,7 +6,7 @@
 #include "BeMaterial.h"
 #include "BeShader.h"
 
-BeRoot::BeRoot(const BeShader& shader) : _layout(&shader.GetRootLayout()) {
+BeRoot::BeRoot(const BeShader& shader) : _layout(&shader.RootLayout) {
     be_assert(
         _layout->Size <= SenMaxRootConstantSize, 
         "BeRoot: root exceeds push-constant capacity", 

@@ -10,7 +10,7 @@
 class BeWindow;
 class BeRenderPass;
 struct BePassSequence;
-class BeShader;
+struct BeShader;
 
 
 class BeRenderer {

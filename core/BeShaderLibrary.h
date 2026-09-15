@@ -10,8 +10,9 @@
 #include <sen-rhi/SenTypes.h>
 #include "umbrellas/include-libassert.h"
 #include "BeMaterialScheme.h"
+#include "BeShaderTools.h"
 
-class BeShader;
+struct BeShader;
 class BeTexture;
 
 class BeShaderLibrary {
@@ -22,6 +23,7 @@ class BeShaderLibrary {
     static std::unordered_map<std::string, BeMaterialScheme> _materialSchemes;
     static std::unordered_map<std::string, std::shared_ptr<BeTexture>> _defaultTextures;
     static std::unordered_map<std::string, SenSampler> _samplers;
+    static uint32_t _shaderCount;
 
     expose // lifecycle
     static auto Shutdown() -> void;
@@ -36,6 +38,11 @@ class BeShaderLibrary {
 
     static auto GetMaterialScheme(std::string_view name) -> const BeMaterialScheme&;
     static auto HasMaterialScheme(std::string_view name) -> bool { return _materialSchemes.contains(std::string(name)); }
+
+    static auto GetShaderScheme(const BeShader& shader, std::string_view link) -> const BeMaterialScheme&;
+
+    hide
+    static auto CreateShader(const BeShaderTools::ParsedShader& meta) -> std::unique_ptr<BeShader>;
 
     expose // default textures + samplers
     static auto RegisterBuiltinDefaultTextures() -> void;

@@ -5,17 +5,103 @@
 #include <ranges>
 
 #include "BeFileWatcher.h"
+#include "BeMesh.h"
 #include "BeShader.h"
 #include "BeShaderTools.h"
 #include "BeTexture.h"
 #include "sen-rhi/SenBackend.h"
 #include "sen-rhi/SenShaderCompiler.h"
 
+namespace {
+    auto ParseCullMode(const std::string& str) -> SenCullMode {
+        if (str == "none") return SenCullMode::None;
+        if (str == "front") return SenCullMode::Front;
+        if (str == "back") return SenCullMode::Back;
+        be_assert(false, "Unknown cull mode: " + str);
+        return SenCullMode::Back;
+    }
+
+    auto ParseFillMode(const std::string& str) -> SenFillMode {
+        if (str == "solid") return SenFillMode::Solid;
+        if (str == "wireframe") return SenFillMode::Wireframe;
+        be_assert(false, "Unknown fill mode: " + str);
+        return SenFillMode::Solid;
+    }
+
+    auto ParseRasterizerString(const std::string& str) -> SenRasterizerState {
+        auto state = SenRasterizerState();
+        const auto parts = BeShaderTools::Split(str, "-");
+        be_assert(!parts.empty(), "Invalid rasterizer state format: " + str);
+
+        state.CullMode = ParseCullMode(std::string(parts[0]));
+        if (parts.size() > 1) {
+            state.FillMode = ParseFillMode(std::string(parts[1]));
+        }
+        return state;
+    }
+
+    auto ParseBlendString(const std::string& str) -> SenBlendState {
+        auto state = SenBlendState();
+        if (str == "disable") {
+            state.Enable = false;
+            return state;
+        }
+        if (str == "alpha") {
+            state.Enable = true;
+            state.SrcBlend = SenBlendFactor::SrcAlpha;
+            state.DstBlend = SenBlendFactor::InvSrcAlpha;
+            state.BlendOp = SenBlendOp::Add;
+            return state;
+        }
+        if (str == "additive") {
+            state.Enable = true;
+            state.SrcBlend = SenBlendFactor::One;
+            state.DstBlend = SenBlendFactor::One;
+            state.BlendOp = SenBlendOp::Add;
+            return state;
+        }
+        if (str == "multiply") {
+            state.Enable = true;
+            state.SrcBlend = SenBlendFactor::DstColor;
+            state.DstBlend = SenBlendFactor::Zero;
+            state.BlendOp = SenBlendOp::Add;
+            return state;
+        }
+        be_assert(false, "Unknown blend preset: " + str);
+        return state;
+    }
+
+    auto ParseComparisonFunc(const std::string& str) -> SenComparisonFunc {
+        if (str == "never") return SenComparisonFunc::Never;
+        if (str == "less") return SenComparisonFunc::Less;
+        if (str == "equal") return SenComparisonFunc::Equal;
+        if (str == "less-equal") return SenComparisonFunc::LessEqual;
+        if (str == "greater") return SenComparisonFunc::Greater;
+        if (str == "not-equal") return SenComparisonFunc::NotEqual;
+        if (str == "greater-equal") return SenComparisonFunc::GreaterEqual;
+        if (str == "always") return SenComparisonFunc::Always;
+        be_assert(false, "Unknown comparison func: " + str);
+        return SenComparisonFunc::Less;
+    }
+
+    auto ParseDepthStencilString(const std::string& str) -> SenDepthStencilState {
+        auto state = SenDepthStencilState();
+        if (str == "disable") {
+            state.DepthEnable = false;
+            return state;
+        }
+        state.DepthEnable = true;
+        state.DepthFunc = ParseComparisonFunc(str);
+        return state;
+    }
+}
+
 std::unordered_map<std::filesystem::path, std::string>          BeShaderLibrary::_shaderSources;
 std::unordered_map<std::string, std::unique_ptr<BeShader>>      BeShaderLibrary::_shaders;
 std::unordered_map<std::string, BeMaterialScheme>              BeShaderLibrary::_materialSchemes;
 std::unordered_map<std::string, std::shared_ptr<BeTexture>>    BeShaderLibrary::_defaultTextures;
 std::unordered_map<std::string, SenSampler>                    BeShaderLibrary::_samplers;
+uint32_t BeShaderLibrary::_shaderCount = 0;
 
 
 auto BeShaderLibrary::Shutdown() -> void {
@@ -82,7 +168,7 @@ auto BeShaderLibrary::LoadShaderFiles(const std::vector<std::filesystem::path>& 
         }
         parsed.Shader->Root = BeShaderTools::BuildRootLayout(*parsed.Shader, boundMaterials);
 
-        auto shader = BeShader::Create(*parsed.Shader);
+        auto shader = CreateShader(*parsed.Shader);
         auto name = shader->Name;
         _shaders[std::move(name)] = std::move(shader);
     }
@@ -111,6 +197,149 @@ auto BeShaderLibrary::GetShader(std::string_view name) -> raw_ptr<BeShader> {
 auto BeShaderLibrary::GetMaterialScheme(std::string_view name) -> const BeMaterialScheme& {
     be_assert(_materialSchemes.contains(std::string(name)), name);
     return _materialSchemes.at(std::string(name));
+}
+
+auto BeShaderLibrary::GetShaderScheme(const BeShader& shader, std::string_view link) -> const BeMaterialScheme& {
+    for (const auto& entry : shader.MaterialSchemes) {
+        if (entry.Link == link) {
+            return entry.Scheme;
+        }
+    }
+    be_assert(false, "BeShaderLibrary: shader has no material scheme under link", shader.Name, link);
+    return shader.MaterialSchemes[0].Scheme;
+}
+
+auto BeShaderLibrary::CreateShader(const BeShaderTools::ParsedShader& meta) -> std::unique_ptr<BeShader> {
+    const auto& filePath = meta.SourceFile;
+    be_assert(
+        std::filesystem::exists(filePath), 
+        "Shader file doesn't exist: " + filePath.string()
+    );
+    be_assert(
+        meta.Root.has_value(), 
+        "BeShaderLibrary::CreateShader: shader not linked (no root layout)", 
+        meta.Name
+    );
+
+    auto shader = std::make_unique<BeShader>();
+    shader->ShaderID = ++_shaderCount;
+    shader->Name = meta.Name;
+    shader->RootLayout = *meta.Root;
+
+    if (!meta.Binds.empty()) {
+        shader->HasMaterial = true;
+        for (const auto& bind : meta.Binds) {
+            auto& entry = shader->MaterialSchemes.emplace_back();
+            entry.Link = bind.Link;
+            entry.Scheme = GetMaterialScheme(bind.Scheme);
+            entry.Index = bind.Slot;
+        }
+    }
+
+    if (!meta.ComputeFn.empty()) {
+        shader->ShaderType = BeShaderType::Compute;
+        shader->ShaderCompute = SenBackend::CreateShader({
+            .SourcePath = filePath,
+            .FunctionName = meta.ComputeFn,
+            .Stage = SenShaderStage::Compute,
+        });
+        return shader;
+    }
+
+    be_assert(!meta.Topology.empty(), "", filePath);
+    if (meta.Topology == "triangle-list") {
+        shader->Topology = SenTopology::TriangleList;
+    } else if (meta.Topology == "triangle-strip") {
+        shader->Topology = SenTopology::TriangleStrip;
+    } else if (meta.Topology == "patch-list-3") {
+        shader->Topology = SenTopology::PatchList3;
+    } else {
+        be_assert(false, "Unsupported topology", filePath);
+    }
+
+    if (!meta.Rasterizer.empty()) {
+        shader->RasterizerState = ParseRasterizerString(meta.Rasterizer);
+    }
+    if (!meta.Blend.empty()) {
+        shader->BlendState = ParseBlendString(meta.Blend);
+    }
+    if (!meta.Depth.empty()) {
+        shader->DepthStencilState = ParseDepthStencilString(meta.Depth);
+    }
+
+    if (!meta.VertexFn.empty()) {
+        shader->ShaderType = BeShaderType::Vertex;
+        shader->ShaderVertex = SenBackend::CreateShader({
+            .SourcePath = filePath,
+            .FunctionName = meta.VertexFn,
+            .Stage = SenShaderStage::Vertex,
+        });
+
+        if (!meta.VertexLayout.empty()) {
+            static const std::unordered_map<std::string, SenFormat> ElementFormats = {
+                { "position", SenFormat::RGB32_Float },
+                { "normal", SenFormat::RGB32_Float },
+                { "color3", SenFormat::RGB32_Float },
+                { "color4", SenFormat::RGBA32_Float },
+                { "uv0", SenFormat::RG32_Float },
+                { "tangent", SenFormat::RGBA32_Float },
+            };
+            static const std::unordered_map<std::string, uint32_t> ElementOffsets = {
+                { "position", 0 },
+                { "normal", 12 },
+                { "color3", 24 },
+                { "color4", 24 },
+                { "uv0", 40 },
+                { "tangent", 48 },
+            };
+
+            uint32_t location = 0;
+            for (const auto& semantic : meta.VertexLayout) {
+                shader->VertexLayout.push_back({
+                    .Semantic = semantic,
+                    .Location = location,
+                    .Format = ElementFormats.at(semantic),
+                    .Offset = ElementOffsets.at(semantic),
+                });
+                ++location;
+            }
+            shader->VertexStride = sizeof(BeFullVertex);
+        }
+    }
+
+    if (!meta.HullFn.empty() || !meta.DomainFn.empty()) {
+        shader->ShaderType = shader->ShaderType | BeShaderType::Tesselation;
+        shader->ShaderHull = SenBackend::CreateShader({
+            .SourcePath = filePath,
+            .FunctionName = meta.HullFn,
+            .Stage = SenShaderStage::Hull,
+        });
+        shader->ShaderDomain = SenBackend::CreateShader({
+            .SourcePath = filePath,
+            .FunctionName = meta.DomainFn,
+            .Stage = SenShaderStage::Domain,
+        });
+    }
+
+    if (!meta.PixelFn.empty()) {
+        be_assert(!meta.Targets.empty(), "", filePath);
+        shader->ShaderType = shader->ShaderType | BeShaderType::Pixel;
+        shader->ShaderPixel = SenBackend::CreateShader({
+            .SourcePath = filePath,
+            .FunctionName = meta.PixelFn,
+            .Stage = SenShaderStage::Pixel,
+        });
+
+        for (const auto& target : meta.Targets) {
+            const uint32_t targetSlot = target.Slot;
+            be_assert(!shader->PixelTargets.contains(target.Name), "", filePath);
+            be_assert(!shader->PixelTargetsInverse.contains(targetSlot), "", filePath);
+            shader->PixelTargets[target.Name] = targetSlot;
+            shader->PixelTargetsInverse[targetSlot] = target.Name;
+        }
+    }
+
+    return shader;
 }
 
 auto BeShaderLibrary::RegisterBuiltinDefaultTextures() -> void {

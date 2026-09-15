@@ -4,6 +4,7 @@
 #include <ranges>
 #include <string_view>
 
+#include "BeShader.h"
 #include "sen-rhi/SenBackend.h"
 #include <umbrellas/include-libassert.h>
 
@@ -39,18 +40,23 @@ auto BeBackend::PipelineKeyHash::operator()(const PipelineKey& key) const -> siz
     return std::hash<std::string_view>()(bytes);
 }
 
-auto BeBackend::GetPipeline(const PipelineKey& key, const SenPipelineDesc& baseDesc) -> SenPipeline {
+auto BeBackend::GetPipeline(const BeShader& shader, const PipelineKey& key) -> SenPipeline {
     const auto it = _pipelines.find(key);
     if (it != _pipelines.end()) {
         return it->second;
     }
 
-    auto desc = baseDesc;
+    auto desc = SenPipelineDesc();
+    desc.VertexShader = shader.ShaderVertex;
+    desc.HullShader = shader.ShaderHull;
+    desc.DomainShader = shader.ShaderDomain;
+    desc.PixelShader = shader.ShaderPixel;
+    desc.VertexLayout = shader.VertexLayout;
+    desc.VertexStride = shader.VertexStride;
     desc.Topology = key.Topology;
     desc.RasterizerState = key.RasterizerState;
     desc.BlendState = key.BlendState;
     desc.DepthStencilState = key.DepthStencilState;
-    desc.RenderTargetFormats.clear();
     for (const auto format : key.ColorFormats) {
         if (format == SenFormat::Unknown) {
             break;
@@ -64,14 +70,16 @@ auto BeBackend::GetPipeline(const PipelineKey& key, const SenPipelineDesc& baseD
     return pipeline;
 }
 
-auto BeBackend::GetComputePipeline(uint32_t shaderID, const SenPipelineDesc& desc) -> SenPipeline {
-    const auto it = _computePipelines.find(shaderID);
+auto BeBackend::GetComputePipeline(const BeShader& shader) -> SenPipeline {
+    const auto it = _computePipelines.find(shader.ShaderID);
     if (it != _computePipelines.end()) {
         return it->second;
     }
 
+    auto desc = SenPipelineDesc();
+    desc.ComputeShader = shader.ShaderCompute;
     const auto pipeline = SenBackend::CreatePipeline(desc);
-    _computePipelines[shaderID] = pipeline;
+    _computePipelines[shader.ShaderID] = pipeline;
     return pipeline;
 }
 

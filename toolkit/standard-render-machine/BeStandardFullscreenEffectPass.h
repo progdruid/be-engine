@@ -9,7 +9,7 @@
 
 class BeTexture;
 class BeMaterial;
-class BeShader;
+struct BeShader;
 class BeStandardRenderMachine;
 
 class BeStandardFullscreenEffectPass final : public BeRenderPass {

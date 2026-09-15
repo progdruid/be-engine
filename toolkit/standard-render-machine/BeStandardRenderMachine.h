@@ -15,7 +15,7 @@
 
 class BeTexture;
 class BeRenderer;
-class BeShader;
+struct BeShader;
 class BeRenderPass;
 class BeAssetRegistry;
 
