@@ -3,7 +3,6 @@
 #include <umbrellas/include-libassert.h>
 
 #include "BePass.h"
-#include "BePipelineBuilder.h"
 #include "BeMaterial.h"
 #include "BeRenderer.h"
 #include "BeRoot.h"
@@ -23,15 +22,8 @@ BeStandardFullscreenEffectPass::BeStandardFullscreenEffectPass(
 , _outputs(std::move(outputs)) {}
 
 auto BeStandardFullscreenEffectPass::Initialise(BeRenderer& renderer) -> void {
-    auto shader = _shader;
-    be_assert(shader, "BeStandardFullscreenEffectPass: shader not set");
-
-    auto formats = std::vector<SenFormat>();
-    for (const auto& tex : _outputs) {
-        formats.push_back(tex->Format);
-    }
-    _pipeline = BePipelineBuilder::Start(*shader).SetColorFormats(formats).Build();
-    be_assert(_pipeline.IsValid(), "BeStandardFullscreenEffectPass: failed to create pipeline");
+    be_assert(_shader, "BeStandardFullscreenEffectPass: shader not set");
+    _state = BeDrawState::Create(*_shader).Build();
 }
 
 auto BeStandardFullscreenEffectPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
@@ -42,15 +34,14 @@ auto BeStandardFullscreenEffectPass::Render(BeRenderer& renderer, SenCommandBuff
     pass.AddColorTargets(_outputs, SenLoadOp::Load);
     pass.SetViewport(_outputs[0]->GetViewport());
     pass.Begin();
-
-    cmd.SetPipeline(_pipeline);
+    pass.SetState(_state);
 
     BeRoot root(*_shader);
     root.Use("frame", *_srm->UniformMaterial);
     if (_material) {
         root.Use("main", *_material);
     }
-    root.Push(cmd);
+    pass.Push(root);
 
     cmd.Draw(4, 0);
 

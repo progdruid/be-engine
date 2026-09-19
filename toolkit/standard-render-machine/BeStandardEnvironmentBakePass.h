@@ -6,6 +6,7 @@
 #include <umbrellas/common.hpp>
 #include <sen-rhi/SenTypes.h>
 
+#include "BeDrawState.h"
 #include "BeRenderPass.h"
 
 class BeTexture;
@@ -26,19 +27,19 @@ class BeStandardEnvironmentBakePass final : public BeRenderPass {
     std::shared_ptr<BeTexture> _brdfLutTexture;
 
     raw_ptr<BeShader> _envShader;
-    SenPipeline _envPipeline;
+    BeDrawState _envState;
     std::array<std::shared_ptr<BeMaterial>, FaceCount> _envFaceMaterials;
 
     raw_ptr<BeShader> _irradianceShader;
-    SenPipeline _irradiancePipeline;
+    BeDrawState _irradianceState;
     std::array<std::shared_ptr<BeMaterial>, FaceCount> _irradianceFaceMaterials;
 
     raw_ptr<BeShader> _prefilterShader;
-    SenPipeline _prefilterPipeline;
+    BeDrawState _prefilterState;
     std::vector<std::array<std::shared_ptr<BeMaterial>, FaceCount>> _prefilterFaceMaterials;
 
     raw_ptr<BeShader> _brdfLutShader;
-    SenPipeline _brdfLutPipeline;
+    BeDrawState _brdfLutState;
     std::shared_ptr<BeMaterial> _brdfLutMaterial;
 
     expose

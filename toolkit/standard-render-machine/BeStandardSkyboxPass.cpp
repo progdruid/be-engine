@@ -6,7 +6,6 @@
 #include "BeShaderLibrary.h"
 #include "BePass.h"
 #include "BeMaterial.h"
-#include "BePipelineBuilder.h"
 #include "BeRoot.h"
 #include "BeShader.h"
 #include "BeTexture.h"
@@ -30,7 +29,7 @@ auto BeStandardSkyboxPass::Initialise(BeRenderer& renderer) -> void {
     _material->SetTexture("Depth", _depth);
     _material->SetTexture("EnvCubemap", _envCubemap);
 
-    _pipeline = BePipelineBuilder::Start(*_shader).SetColorFormats({ _output->Format }).Build();
+    _state = BeDrawState::Create(*_shader).Build();
 }
 
 auto BeStandardSkyboxPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
@@ -42,12 +41,11 @@ auto BeStandardSkyboxPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -
     pass.AddColorTarget(_output, SenLoadOp::Load);
     pass.SetViewport(_output->GetViewport());
     pass.Begin();
-    cmd.SetPipeline(_pipeline);
-
-    BeRoot(*_shader)
-    .Use("frame", *_srm->UniformMaterial)
-    .Use("main", *_material)
-    .Push(cmd);
+    pass.SetState(_state);
+    pass.Push(BeRoot(*_shader)
+        .Use("frame", *_srm->UniformMaterial)
+        .Use("main", *_material)
+    );
 
     cmd.Draw(4, 0);
     pass.End();

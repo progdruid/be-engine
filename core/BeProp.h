@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 
+#include "BeDrawState.h"
 #include "BeMesh.h"
 #include <umbrellas/common.hpp>
 
@@ -16,7 +17,7 @@ struct BePropSlice {
 struct BeProp {
     std::shared_ptr<BeMesh> Mesh;
     std::vector<BePropSlice> Slices;
-    raw_ptr<BeShader> Shader;
+    BeDrawState State;
     std::vector<std::shared_ptr<BeMaterial>> Materials;
 
     static auto FromMesh(

@@ -5,6 +5,7 @@
 #include <umbrellas/common.hpp>
 #include <sen-rhi/SenTypes.h>
 
+#include "BeDrawState.h"
 #include "BeRenderPass.h"
 
 class BeTexture;
@@ -19,7 +20,7 @@ class BeStandardFullscreenEffectPass final : public BeRenderPass {
     raw_ptr<BeShader> _shader;
     std::shared_ptr<BeMaterial> _material;
     std::vector<std::shared_ptr<BeTexture>> _outputs;
-    SenPipeline _pipeline;
+    BeDrawState _state;
 
     expose
     explicit BeStandardFullscreenEffectPass(

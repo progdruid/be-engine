@@ -8,21 +8,26 @@
 #include "sen-rhi/SenBackend.h"
 #include <umbrellas/include-libassert.h>
 
-std::unordered_map<BeBackend::PipelineKey, SenPipeline, BeBackend::PipelineKeyHash> BeBackend::_pipelines;
-std::unordered_map<uint32_t, SenPipeline> BeBackend::_computePipelines;
+std::vector<BeBackend::StaticKey> BeBackend::_staticKeys;
+std::unordered_map<BeBackend::StaticKey, uint32_t, BeBackend::BytesHash> BeBackend::_staticKeyLookup;
+std::vector<BeBackend::FormatSet> BeBackend::_formatSets;
+std::unordered_map<BeBackend::FormatSet, uint32_t, BeBackend::BytesHash> BeBackend::_formatSetLookup;
+std::vector<std::vector<SenPipeline>> BeBackend::_pipelines;
 std::array<BeBackend::MaterialArenaChain, BeRenderer::FramesInFlight> BeBackend::_arenaChains;
 
 auto BeBackend::Init() -> void {}
 
 auto BeBackend::Shutdown() -> void {
-    for (const auto pipeline : _pipelines | std::views::values) {
-        SenBackend::RetirePipeline(pipeline);
-    }
-    for (const auto pipeline : _computePipelines | std::views::values) {
-        SenBackend::RetirePipeline(pipeline);
+    for (const auto pipeline : _pipelines | std::views::join) {
+        if (pipeline.IsValid()) {
+            SenBackend::RetirePipeline(pipeline);
+        }
     }
     _pipelines.clear();
-    _computePipelines.clear();
+    _staticKeys.clear();
+    _staticKeyLookup.clear();
+    _formatSets.clear();
+    _formatSetLookup.clear();
 
     for (auto& chain : _arenaChains) {
         for (const auto& block : chain.Blocks) {
@@ -35,52 +40,72 @@ auto BeBackend::Shutdown() -> void {
 
 
 
-auto BeBackend::PipelineKeyHash::operator()(const PipelineKey& key) const -> size_t {
-    const auto bytes = std::string_view(reinterpret_cast<const char*>(&key), sizeof(key));
-    return std::hash<std::string_view>()(bytes);
-}
-
-auto BeBackend::GetPipeline(const BeShader& shader, const PipelineKey& key) -> SenPipeline {
-    const auto it = _pipelines.find(key);
-    if (it != _pipelines.end()) {
+auto BeBackend::AcquireStaticKeyId(const StaticKey& key) -> uint32_t {
+    const auto it = _staticKeyLookup.find(key);
+    if (it != _staticKeyLookup.end()) {
         return it->second;
     }
+    const auto id = static_cast<uint32_t>(_staticKeys.size());
+    _staticKeys.push_back(key);
+    _staticKeyLookup.emplace(key, id);
+    _pipelines.emplace_back();
+    return id;
+}
+
+auto BeBackend::GetStaticKey(uint32_t staticKeyId) -> const StaticKey& {
+    return _staticKeys.at(staticKeyId);
+}
+
+auto BeBackend::AcquireFormatSetId(const FormatSet& formatSet) -> uint32_t {
+    const auto it = _formatSetLookup.find(formatSet);
+    if (it != _formatSetLookup.end()) {
+        return it->second;
+    }
+    const auto id = static_cast<uint32_t>(_formatSets.size());
+    _formatSets.push_back(formatSet);
+    _formatSetLookup.emplace(formatSet, id);
+    return id;
+}
+
+auto BeBackend::GetPipeline(const BeShader& shader, uint32_t staticKeyId, uint32_t formatSetId) -> SenPipeline {
+    auto& row = _pipelines[staticKeyId];
+    if (formatSetId < row.size() && row[formatSetId].IsValid()) {
+        return row[formatSetId];
+    }
+    if (formatSetId >= row.size()) {
+        row.resize(formatSetId + 1);
+    }
+
+    const auto& key = _staticKeys.at(staticKeyId);
+    const auto& formatSet = _formatSets.at(formatSetId);
+    be_assert(key.ShaderID == shader.ShaderID, "BeBackend::GetPipeline: static key belongs to another shader");
 
     auto desc = SenPipelineDesc();
-    desc.VertexShader = shader.ShaderVertex;
-    desc.HullShader = shader.ShaderHull;
-    desc.DomainShader = shader.ShaderDomain;
-    desc.PixelShader = shader.ShaderPixel;
-    desc.VertexLayout = shader.VertexLayout;
-    desc.VertexStride = shader.VertexStride;
-    desc.Topology = key.Topology;
-    desc.RasterizerState = key.RasterizerState;
-    desc.BlendState = key.BlendState;
-    desc.DepthStencilState = key.DepthStencilState;
-    for (const auto format : key.ColorFormats) {
-        if (format == SenFormat::Unknown) {
-            break;
+    if (HasAny(shader.ShaderType, BeShaderType::Compute)) {
+        desc.ComputeShader = shader.ShaderCompute;
+    }
+    else {
+        desc.VertexShader = shader.ShaderVertex;
+        desc.HullShader = shader.ShaderHull;
+        desc.DomainShader = shader.ShaderDomain;
+        desc.PixelShader = shader.ShaderPixel;
+        desc.VertexLayout = shader.VertexLayout;
+        desc.VertexStride = shader.VertexStride;
+        desc.Topology = key.Topology;
+        desc.RasterizerState = key.RasterizerState;
+        desc.BlendState = key.BlendState;
+        desc.DepthStencilState = key.DepthStencilState;
+        for (const auto format : formatSet.ColorFormats) {
+            if (format == SenFormat::Unknown) {
+                break;
+            }
+            desc.RenderTargetFormats.push_back(format);
         }
-        desc.RenderTargetFormats.push_back(format);
-    }
-    desc.DepthStencilFormat = key.DepthFormat;
-
-    const auto pipeline = SenBackend::CreatePipeline(desc);
-    _pipelines[key] = pipeline;
-    return pipeline;
-}
-
-auto BeBackend::GetComputePipeline(const BeShader& shader) -> SenPipeline {
-    const auto it = _computePipelines.find(shader.ShaderID);
-    if (it != _computePipelines.end()) {
-        return it->second;
+        desc.DepthStencilFormat = formatSet.DepthFormat;
     }
 
-    auto desc = SenPipelineDesc();
-    desc.ComputeShader = shader.ShaderCompute;
-    const auto pipeline = SenBackend::CreatePipeline(desc);
-    _computePipelines[shader.ShaderID] = pipeline;
-    return pipeline;
+    row[formatSetId] = SenBackend::CreatePipeline(desc);
+    return row[formatSetId];
 }
 
 

@@ -5,6 +5,7 @@
 #include <umbrellas/common.hpp>
 #include <sen-rhi/SenTypes.h>
 
+#include "BeDrawState.h"
 #include "BeRenderPass.h"
 #include "BeMaterialScheme.h"
 
@@ -27,27 +28,27 @@ class BeStandardLightingPass final : public BeRenderPass {
     BeMaterialScheme _batchedScheme;
     std::shared_ptr<BeMaterial> _batchedMaterial;
     raw_ptr<BeShader> _batchedShader;
-    SenPipeline _batchedPipeline;
+    BeDrawState _batchedState;
     uint32_t _batchedCapacity = 0;
 
     BeMaterialScheme _dirShadowBatchScheme;
     std::shared_ptr<BeMaterial> _dirShadowBatchMaterial;
     raw_ptr<BeShader> _dirShadowBatchShader;
-    SenPipeline _dirShadowBatchPipeline;
+    BeDrawState _dirShadowBatchState;
     uint32_t _dirShadowBatchCapacity = 0;
 
     BeMaterialScheme _pointShadowBatchScheme;
     std::shared_ptr<BeMaterial> _pointShadowBatchMaterial;
     raw_ptr<BeShader> _pointShadowBatchShader;
-    SenPipeline _pointShadowBatchPipeline;
+    BeDrawState _pointShadowBatchState;
     uint32_t _pointShadowBatchCapacity = 0;
 
     std::shared_ptr<BeMaterial> _emissiveMaterial;
     raw_ptr<BeShader> _emissiveShader;
-    SenPipeline _emissivePipeline;
+    BeDrawState _emissiveState;
     std::shared_ptr<BeMaterial> _ambientMaterial;
     raw_ptr<BeShader> _ambientShader;
-    SenPipeline _ambientPipeline;
+    BeDrawState _ambientState;
 
     expose
     explicit BeStandardLightingPass(

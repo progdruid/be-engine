@@ -5,6 +5,7 @@
 #include <umbrellas/include-glm.h>
 #include <sen-rhi/SenTypes.h>
 
+#include "BeDrawState.h"
 #include "BeRenderPass.h"
 
 class BeTexture;
@@ -21,7 +22,7 @@ class BeStandardBackbufferPass final : public BeRenderPass {
     std::shared_ptr<BeTexture> _activeInput;
     std::shared_ptr<BeMaterial> _material;
     raw_ptr<BeShader> _shader;
-    SenPipeline _pipeline;
+    BeDrawState _state;
 
     expose
     explicit BeStandardBackbufferPass(

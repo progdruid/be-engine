@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstring>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 #include <umbrellas/common.hpp>
@@ -19,30 +20,46 @@ class BeBackend {
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // pipelines ///////////////////////////////////////////////////////////////////////////////////////////////////////
-    expose struct PipelineKey {
+    expose struct StaticKey {
         uint32_t ShaderID;
         SenTopology Topology;
         SenRasterizerState RasterizerState;
         SenBlendState BlendState;
         SenDepthStencilState DepthStencilState;
+
+        StaticKey() { std::memset(this, 0, sizeof(StaticKey)); }
+        auto operator==(const StaticKey& other) const -> bool {
+            return std::memcmp(this, &other, sizeof(StaticKey)) == 0;
+        }
+    };
+
+    expose struct FormatSet {
         std::array<SenFormat, 8> ColorFormats;
         SenFormat DepthFormat;
 
-        PipelineKey() { std::memset(this, 0, sizeof(PipelineKey)); }
-        auto operator==(const PipelineKey& other) const -> bool {
-            return std::memcmp(this, &other, sizeof(PipelineKey)) == 0;
+        FormatSet() { std::memset(this, 0, sizeof(FormatSet)); }
+        auto operator==(const FormatSet& other) const -> bool {
+            return std::memcmp(this, &other, sizeof(FormatSet)) == 0;
         }
     };
-    
-    hide struct PipelineKeyHash {
-        auto operator()(const PipelineKey& key) const -> size_t;
+
+    hide struct BytesHash {
+        template <typename T>
+        auto operator()(const T& value) const -> size_t {
+            return std::hash<std::string_view>()(std::string_view(reinterpret_cast<const char*>(&value), sizeof(T)));
+        }
     };
-    
-    hide static std::unordered_map<PipelineKey, SenPipeline, PipelineKeyHash> _pipelines;
-    hide static std::unordered_map<uint32_t, SenPipeline> _computePipelines;
-    
-    expose static auto GetPipeline(const BeShader& shader, const PipelineKey& key) -> SenPipeline;
-    expose static auto GetComputePipeline(const BeShader& shader) -> SenPipeline;
+
+    hide static std::vector<StaticKey> _staticKeys;
+    hide static std::unordered_map<StaticKey, uint32_t, BytesHash> _staticKeyLookup;
+    hide static std::vector<FormatSet> _formatSets;
+    hide static std::unordered_map<FormatSet, uint32_t, BytesHash> _formatSetLookup;
+    hide static std::vector<std::vector<SenPipeline>> _pipelines;
+
+    expose static auto AcquireStaticKeyId(const StaticKey& key) -> uint32_t;
+    expose static auto GetStaticKey(uint32_t staticKeyId) -> const StaticKey&;
+    expose static auto AcquireFormatSetId(const FormatSet& formatSet) -> uint32_t;
+    expose static auto GetPipeline(const BeShader& shader, uint32_t staticKeyId, uint32_t formatSetId) -> SenPipeline;
     
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

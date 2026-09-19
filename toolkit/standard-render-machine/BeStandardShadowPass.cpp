@@ -6,7 +6,6 @@
 #include "BeAssetRegistry.h"
 #include "BePass.h"
 #include "BeMaterial.h"
-#include "BePipelineBuilder.h"
 #include "BeRenderer.h"
 #include "BeRoot.h"
 #include "BeShader.h"
@@ -75,18 +74,13 @@ auto BeStandardShadowPass::RenderDirectionalShadows(
             const auto& meshSlice = meshSlices[j];
             const auto& propSlice = entry.Prop->Slices[j];
 
-            const auto pipeline = BePipelineBuilder::Start(*entry.Prop->Shader)
-                .SetCullMode(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back)
-                .SetDepthFormat(shadowArray->Format)
-                .Build()
-            ;
-
-            cmd.SetPipeline(pipeline);
-            BeRoot(*entry.Prop->Shader)
-            .Use("frame", *uniformMat)
-            .Use("geometry-object", *_objectMaterial)
-            .Use("geometry-main", *propSlice.Material)
-            .Push(cmd);
+            pass.SetState(entry.Prop->State);
+            pass.OverrideCull(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back);
+            pass.Push(BeRoot(entry.Prop->State.GetShader())
+                .Use("frame", *uniformMat)
+                .Use("geometry-object", *_objectMaterial)
+                .Use("geometry-main", *propSlice.Material)
+            );
             cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }
     }
@@ -129,18 +123,13 @@ auto BeStandardShadowPass::RenderPointLightShadows(
             for (size_t j = 0; j < meshSlices.size(); ++j) {
                 const auto& meshSlice = meshSlices[j];
                 const auto& propSlice = entry.Prop->Slices[j];
-                const auto  pipeline = BePipelineBuilder::Start(*entry.Prop->Shader)
-                    .SetCullMode(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back)
-                    .SetDepthFormat(shadowArray->Format)
-                    .Build()
-                ;
-
-                cmd.SetPipeline(pipeline);
-                BeRoot(*entry.Prop->Shader)
-                .Use("frame", *uniformMat)
-                .Use("geometry-object", *_objectMaterial)
-                .Use("geometry-main", *propSlice.Material)
-                .Push(cmd);
+                pass.SetState(entry.Prop->State);
+                pass.OverrideCull(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back);
+                pass.Push(BeRoot(entry.Prop->State.GetShader())
+                    .Use("frame", *uniformMat)
+                    .Use("geometry-object", *_objectMaterial)
+                    .Use("geometry-main", *propSlice.Material)
+                );
                 cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
             }
         }

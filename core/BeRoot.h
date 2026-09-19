@@ -23,5 +23,9 @@ class BeRoot {
 
     expose
     auto Use(const std::string& link, BeMaterial& material) -> BeRoot&;
-    auto Push(SenCommandBuffer& cmd) -> void;
+
+    hide
+    auto Push(SenCommandBuffer& cmd) const -> void;
+
+    friend class BePass;
 };

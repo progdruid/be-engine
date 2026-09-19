@@ -4,7 +4,6 @@
 #include "BeShaderLibrary.h"
 #include "BePass.h"
 #include "BeMaterial.h"
-#include "BePipelineBuilder.h"
 #include "BeRenderer.h"
 #include "BeRoot.h"
 #include "BeShader.h"
@@ -27,10 +26,7 @@ auto BeStandardBackbufferPass::Initialise(BeRenderer& renderer) -> void {
     _material->SetTexture("InputTexture", _input);
     _material->SetTexture("DepthTexture", _depth);
     _activeInput = _input;
-    _pipeline = BePipelineBuilder::Start(*_shader)
-        .SetColorFormats({ renderer.GetSwapchainFormat() })
-        .Build()
-    ;
+    _state = BeDrawState::Create(*_shader).Build();
 }
 
 auto BeStandardBackbufferPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
@@ -38,15 +34,14 @@ auto BeStandardBackbufferPass::Render(BeRenderer& renderer, SenCommandBuffer& cm
 
     BePass pass(cmd);
     pass.UseMaterial(*_material);
-    pass.AddColorTarget(renderer.GetBackbufferTexture(), SenLoadOp::Clear, glm::vec4(_srm->Settings.Backbuffer.BackgroundColor, 1.0f));
+    pass.AddColorTarget(renderer.GetBackbufferTexture(), renderer.GetSwapchainFormat(), SenLoadOp::Clear, glm::vec4(_srm->Settings.Backbuffer.BackgroundColor, 1.0f));
     pass.SetViewport(renderer.GetViewport());
     pass.Begin();
-    cmd.SetPipeline(_pipeline);
-
-    BeRoot(*_shader)
-    .Use("frame", *_srm->UniformMaterial)
-    .Use("main", *_material)
-    .Push(cmd);
+    pass.SetState(_state);
+    pass.Push(BeRoot(*_shader)
+        .Use("frame", *_srm->UniformMaterial)
+        .Use("main", *_material)
+    );
 
     cmd.Draw(4, 0);
     pass.End();

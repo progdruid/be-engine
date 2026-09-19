@@ -7,8 +7,12 @@
 #include <sen-rhi/SenTypes.h>
 #include <sen-rhi/SenCommandBuffer.h>
 
+#include "BeBackend.h"
+
 class BeTexture;
 class BeMaterial;
+class BeDrawState;
+class BeRoot;
 
 class BePass {
     hide
@@ -26,6 +30,17 @@ class BePass {
     std::optional<SenDepthAttachment> _depthTarget;
     SenViewport _viewport {};
 
+    BeBackend::FormatSet _formatSet;
+    uint32_t _formatSetId = UINT32_MAX;
+    const BeDrawState* _state = nullptr;
+    uint32_t _staticKeyId = UINT32_MAX;
+    BeBackend::StaticKey _overrideKey;
+    bool _hasOverrides = false;
+    bool _isStateDirty = false;
+    SenPipeline _boundPipeline;
+
+    auto AcquireOverrideKey() -> BeBackend::StaticKey&;
+
     expose
     explicit BePass (SenCommandBuffer& cmd);
 
@@ -39,6 +54,7 @@ class BePass {
 
     auto AddColorTarget (
         SenTexture texture,
+        SenFormat format,
         SenLoadOp loadOp = SenLoadOp::Clear,
         glm::vec4 clearColor = {0, 0, 0, 0},
         uint8_t mipLevel = 0,
@@ -59,6 +75,7 @@ class BePass {
 
     auto SetDepthTarget (
         SenTexture texture,
+        SenFormat format,
         SenLoadOp loadOp = SenLoadOp::Clear,
         float clearDepth = 1.0f,
         int16_t arrayLayer = -1,
@@ -76,4 +93,11 @@ class BePass {
 
     auto Begin () -> void;
     auto End   () -> void;
+
+    auto SetState (const BeDrawState& state) -> BePass&;
+    auto OverrideCull (SenCullMode mode) -> BePass&;
+    auto OverrideFill (SenFillMode mode) -> BePass&;
+    auto OverrideBlend (const SenBlendState& blend) -> BePass&;
+    auto OverrideDepthStencil (const SenDepthStencilState& depthStencil) -> BePass&;
+    auto Push (const BeRoot& root) -> void;
 };

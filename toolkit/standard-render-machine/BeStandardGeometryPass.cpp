@@ -4,7 +4,6 @@
 
 #include "BePass.h"
 #include "BeMaterial.h"
-#include "BePipelineBuilder.h"
 #include "BeRenderer.h"
 #include "BeRoot.h"
 #include "BeShader.h"
@@ -29,12 +28,6 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     const auto uniformMat = _srm->UniformMaterial;
     const auto& entries = _srm->GetGeometryEntries();
 
-    std::vector<SenFormat> colorFormats;
-    colorFormats.reserve(_colorTargets.size());
-    for (const auto& tex : _colorTargets) {
-        colorFormats.push_back(tex->Format);
-    }
-
     BePass pass(cmd);
     pass.AddColorTargets(_colorTargets);
     pass.SetDepthTarget(_depthTarget);
@@ -45,7 +38,7 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     cmd.SetIndexBuffer (_srm->GetSharedIndexBuffer());
 
     for (const auto& entry : entries) {
-        be_assert(entry.Prop->Shader);
+        be_assert(entry.Prop->State.IsValid());
 
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         _objectMaterial->SetMatrix("ProjectionView", uniformMat->GetMatrix("CameraProjectionView"));
@@ -56,19 +49,13 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
             const auto& meshSlice = meshSlices[j];
             const auto& propSlice = entry.Prop->Slices[j];
 
-            const auto pipeline = BePipelineBuilder::Start(*entry.Prop->Shader)
-                .SetCullMode(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back)
-                .SetColorFormats(colorFormats)
-                .SetDepthFormat(_depthTarget->Format)
-                .Build()
-            ;
-            cmd.SetPipeline(pipeline);
-
-            BeRoot(*entry.Prop->Shader)
-            .Use("frame", *uniformMat)
-            .Use("geometry-object", *_objectMaterial)
-            .Use("geometry-main", *propSlice.Material)
-            .Push(cmd);
+            pass.SetState(entry.Prop->State);
+            pass.OverrideCull(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back);
+            pass.Push(BeRoot(entry.Prop->State.GetShader())
+                .Use("frame", *uniformMat)
+                .Use("geometry-object", *_objectMaterial)
+                .Use("geometry-main", *propSlice.Material)
+            );
 
             cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }

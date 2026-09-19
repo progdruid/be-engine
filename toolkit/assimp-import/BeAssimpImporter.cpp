@@ -32,7 +32,7 @@ auto BeAssimpImporter::LoadProp(
     
     auto prop = std::make_shared<BeProp>();
     prop->Mesh = std::make_shared<BeMesh>();
-    prop->Shader = usedShaderForMaterials;
+    prop->State = BeDrawState::Create(*usedShaderForMaterials).Build();
 
     std::unordered_map<uint32_t, std::shared_ptr<BeMaterial>> assimpIndexToMaterial;
     std::unordered_set<uint32_t> assimpIndexToTwoSided;

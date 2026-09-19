@@ -44,7 +44,7 @@ auto BeRoot::Use(const std::string& link, BeMaterial& material) -> BeRoot& {
     return *this;
 }
 
-auto BeRoot::Push(SenCommandBuffer& cmd) -> void {
+auto BeRoot::Push(SenCommandBuffer& cmd) const -> void {
     if (_layout->Size == 0) {
         return;
     }
