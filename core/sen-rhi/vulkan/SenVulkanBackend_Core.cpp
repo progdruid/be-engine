@@ -21,6 +21,7 @@ VkCommandPool SenVulkanBackend::_commandPool;
 VmaAllocator SenVulkanBackend::_allocator;
 
 SenSlotMap<SenVulkanTextureEntry, SenTexture> SenVulkanBackend::_textures;
+SenSlotMap<SenVulkanViewEntry, SenView> SenVulkanBackend::_views;
 SenSlotMap<SenVulkanBufferEntry, SenBuffer> SenVulkanBackend::_buffers;
 SenSlotMap<SenVulkanSamplerEntry, SenSampler> SenVulkanBackend::_samplers;
 SenSlotMap<SenVulkanPipelineEntry, SenPipeline> SenVulkanBackend::_pipelines;
@@ -217,6 +218,7 @@ auto SenVulkanBackend::Shutdown() -> void {
 
     // Destroy all swapchains first (they depend on device)
     for (const auto handle : _swapchains.GetLiveHandles()) { DestroySwapchain(handle); }
+    for (const auto handle : _views.GetLiveHandles())      { DestroyView(handle); }
     for (const auto handle : _textures.GetLiveHandles())   { DestroyTexture(handle); }
     for (const auto handle : _buffers.GetLiveHandles())    { DestroyBuffer(handle); }
     for (const auto handle : _pipelines.GetLiveHandles())  { DestroyPipeline(handle); }

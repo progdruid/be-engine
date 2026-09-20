@@ -34,7 +34,7 @@ auto BeStandardBackbufferPass::Render(BeRenderer& renderer, SenCommandBuffer& cm
 
     BePass pass(cmd);
     pass.UseMaterial(*_material);
-    pass.AddColorTarget(renderer.GetBackbufferTexture(), renderer.GetSwapchainFormat(), SenLoadOp::Clear, glm::vec4(_srm->Settings.Backbuffer.BackgroundColor, 1.0f));
+    pass.AddColorTarget(renderer.GetBackbufferView(), SenLoadOp::Clear, glm::vec4(_srm->Settings.Backbuffer.BackgroundColor, 1.0f));
     pass.SetViewport(renderer.GetViewport());
     pass.Begin();
     pass.SetState(_state);

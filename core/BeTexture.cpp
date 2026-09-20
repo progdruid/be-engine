@@ -160,6 +160,7 @@ BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
     senDesc.ArrayLength = descriptor.ArrayLength;
 
     Handle = SenBackend::CreateTexture(senDesc);
+    CreateViews();
 
     if (descriptor.Data) {
         // Callers supply one face; every layer of a cube or array gets a copy of it.
@@ -181,6 +182,7 @@ BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
 }
 
 BeTexture::~BeTexture() {
+    RetireViews();
     BeBackend::Retire(Handle);
 }
 
@@ -193,6 +195,7 @@ auto BeTexture::Resize(uint32_t width, uint32_t height) -> void {
         return;
     }
 
+    RetireViews();
     BeBackend::Retire(Handle);
 
     Width  = width;
@@ -208,10 +211,107 @@ auto BeTexture::Resize(uint32_t width, uint32_t height) -> void {
     senDesc.ArrayLength = ArrayLength;
 
     Handle = SenBackend::CreateTexture(senDesc);
+    CreateViews();
 
     CreateMipViewports();
 }
 
+
+auto BeTexture::CreateViews() -> void {
+    const uint32_t layerCount = (IsCubemap ? 6 : 1) * std::max(1u, ArrayLength);
+
+    if (HasAny(Usage, SenTextureUsage::ShaderResource)) {
+        const SenViewType sampledType =
+            IsCubemap ? (ArrayLength > 1 ? SenViewType::SampledCubeArray : SenViewType::SampledCube)
+                      : (layerCount > 1  ? SenViewType::Sampled2DArray   : SenViewType::Sampled2D);
+
+        _sampledView = SenBackend::CreateView({
+            .Texture = Handle,
+            .Type = sampledType,
+            .MipCount = Mips,
+            .LayerCount = layerCount,
+        });
+
+        _sampledMipViews.resize(Mips);
+        for (uint32_t mip = 0; mip < Mips; ++mip) {
+            _sampledMipViews[mip] = SenBackend::CreateView({
+                .Texture = Handle,
+                .Type = sampledType,
+                .BaseMip = mip,
+                .LayerCount = layerCount,
+            });
+        }
+    }
+
+    if (HasAny(Usage, SenTextureUsage::DepthStencil)) {
+        _depthTargetViews.resize(layerCount);
+        for (uint32_t layer = 0; layer < layerCount; ++layer) {
+            _depthTargetViews[layer] = SenBackend::CreateView({
+                .Texture = Handle,
+                .Type = SenViewType::Attachment2D,
+                .BaseLayer = layer,
+            });
+        }
+    }
+
+    if (HasAny(Usage, SenTextureUsage::RenderTarget)) {
+        _colorTargetViews.resize(layerCount);
+        for (uint32_t layer = 0; layer < layerCount; ++layer) {
+            _colorTargetViews[layer].resize(Mips);
+            for (uint32_t mip = 0; mip < Mips; ++mip) {
+                _colorTargetViews[layer][mip] = SenBackend::CreateView({
+                    .Texture = Handle,
+                    .Type = SenViewType::Attachment2D,
+                    .BaseMip = mip,
+                    .BaseLayer = layer,
+                });
+            }
+        }
+    }
+}
+
+auto BeTexture::RetireViews() -> void {
+    if (_sampledView.IsValid()) {
+        BeBackend::Retire(_sampledView);
+        _sampledView = {};
+    }
+    for (const auto view : _sampledMipViews) {
+        BeBackend::Retire(view);
+    }
+    for (const auto view : _depthTargetViews) {
+        BeBackend::Retire(view);
+    }
+    for (const auto& mips : _colorTargetViews) {
+        for (const auto view : mips) {
+            BeBackend::Retire(view);
+        }
+    }
+    _sampledMipViews.clear();
+    _depthTargetViews.clear();
+    _colorTargetViews.clear();
+}
+
+auto BeTexture::GetSampledView(uint32_t mip) const -> SenView {
+    if (mip == SEN_FULL_MIPS) {
+        be_assert(_sampledView.IsValid(), "GetSampledView: texture is not a shader resource", Name);
+        return _sampledView;
+    }
+    be_assert(mip < _sampledMipViews.size(), "GetSampledView: mip out of range", Name, mip);
+    return _sampledMipViews[mip];
+}
+
+auto BeTexture::GetColorTargetView(uint32_t mip, int16_t layer) const -> SenView {
+    const size_t layerIndex = layer < 0 ? 0 : size_t(layer);
+    be_assert(layerIndex < _colorTargetViews.size(), "GetColorTargetView: layer out of range", Name, layer);
+    be_assert(mip < _colorTargetViews[layerIndex].size(), "GetColorTargetView: mip out of range", Name, mip);
+    return _colorTargetViews[layerIndex][mip];
+}
+
+auto BeTexture::GetDepthTargetView(int16_t layer) const -> SenView {
+    const size_t layerIndex = layer < 0 ? 0 : size_t(layer);
+    be_assert(layerIndex < _depthTargetViews.size(), "GetDepthTargetView: layer out of range", Name, layer);
+    return _depthTargetViews[layerIndex];
+}
 
 auto BeTexture::CreateMipViewports() -> void {
     _mipViewports.resize(Mips);

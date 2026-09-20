@@ -13,6 +13,7 @@
 // ─── handles ──────────────────────────────────────────────────────
 enum class SenHandleKind : uint8_t {
     Texture,
+    View,
     Buffer,
     Sampler,
     Pipeline,
@@ -102,6 +103,25 @@ enum class SenResourceState : uint8_t {
 constexpr uint32_t SEN_FULL_MIPS = UINT32_MAX;
 
 using SenTexture = SenHandle<SenHandleKind::Texture>;
+using SenView = SenHandle<SenHandleKind::View>;
+
+enum class SenViewType : uint8_t {
+    Sampled2D,
+    Sampled2DArray,
+    SampledCube,
+    SampledCubeArray,
+    Storage2D,
+    Attachment2D,
+};
+
+struct SenViewDesc {
+    SenTexture  Texture;
+    SenViewType Type       = SenViewType::Sampled2D;
+    uint32_t    BaseMip    = 0;
+    uint32_t    MipCount   = 1;
+    uint32_t    BaseLayer  = 0;
+    uint32_t    LayerCount = 1;
+};
 
 struct SenTextureDesc {
     SenFormat       Format      = SenFormat::Unknown;
@@ -316,19 +336,16 @@ enum class SenLoadOp : uint8_t {
 };
 
 struct SenColorAttachment {
-    SenTexture Texture;
-    uint8_t    MipLevel    = 0;
-    int16_t    Layer       = -1;   // -1 = whole texture, >=0 = array/cube layer index
-    SenLoadOp  LoadOp      = SenLoadOp::Clear;
-    glm::vec4  ClearColor  = {0, 0, 0, 0};
+    SenView   View;
+    SenLoadOp LoadOp     = SenLoadOp::Clear;
+    glm::vec4 ClearColor = {0, 0, 0, 0};
 };
 
 struct SenDepthAttachment {
-    SenTexture Texture;
-    int16_t    Layer        = -1;   // -1 = whole texture, >=0 = array/cube layer index
-    SenLoadOp  LoadOp       = SenLoadOp::Clear;
-    float      ClearDepth   = 1.0f;
-    uint8_t    ClearStencil = 0;
+    SenView   View;
+    SenLoadOp LoadOp       = SenLoadOp::Clear;
+    float     ClearDepth   = 1.0f;
+    uint8_t   ClearStencil = 0;
 };
 
 struct SenPassDesc {

@@ -54,23 +54,21 @@ auto BePass::UseMaterial(const BeMaterial& material) -> BePass& {
     return *this;
 }
 
-auto BePass::AddColorTarget(SenTexture texture, SenFormat format, SenLoadOp loadOp, glm::vec4 clearColor, uint8_t mipLevel, int16_t arrayLayer) -> BePass& {
-    be_assert(texture.IsValid(), "BePass::AddColorTarget: invalid texture handle");
+auto BePass::AddColorTarget(SenView view, SenLoadOp loadOp, glm::vec4 clearColor) -> BePass& {
+    be_assert(view.IsValid(), "BePass::AddColorTarget: invalid view handle");
     be_assert(_colorTargets.size() < _formatSet.ColorFormats.size(), "BePass::AddColorTarget: too many color targets");
-    _formatSet.ColorFormats[_colorTargets.size()] = format;
+    _formatSet.ColorFormats[_colorTargets.size()] = SenBackend::GetViewFormat(view);
     _colorTargets.push_back(SenColorAttachment{
-        .Texture     = texture,
-        .MipLevel    = mipLevel,
-        .Layer       = arrayLayer,
-        .LoadOp      = loadOp,
-        .ClearColor  = clearColor,
+        .View       = view,
+        .LoadOp     = loadOp,
+        .ClearColor = clearColor,
     });
     return *this;
 }
 
 auto BePass::AddColorTarget(const std::shared_ptr<BeTexture>& texture, SenLoadOp loadOp, glm::vec4 clearColor, uint8_t mipLevel, int16_t arrayLayer) -> BePass& {
     be_assert(texture != nullptr, "BePass::AddColorTarget: null texture");
-    return AddColorTarget(texture->Handle, texture->Format, loadOp, clearColor, mipLevel, arrayLayer);
+    return AddColorTarget(texture->GetColorTargetView(mipLevel, arrayLayer), loadOp, clearColor);
 }
 
 auto BePass::AddColorTargets(const std::vector<std::shared_ptr<BeTexture>>& textures, SenLoadOp loadOp, glm::vec4 clearColor) -> BePass& {
@@ -80,12 +78,11 @@ auto BePass::AddColorTargets(const std::vector<std::shared_ptr<BeTexture>>& text
     return *this;
 }
 
-auto BePass::SetDepthTarget(SenTexture texture, SenFormat format, SenLoadOp loadOp, float clearDepth, int16_t arrayLayer, uint8_t clearStencil) -> BePass& {
-    be_assert(texture.IsValid(), "BePass::SetDepthTarget: invalid texture handle");
-    _formatSet.DepthFormat = format;
+auto BePass::SetDepthTarget(SenView view, SenLoadOp loadOp, float clearDepth, uint8_t clearStencil) -> BePass& {
+    be_assert(view.IsValid(), "BePass::SetDepthTarget: invalid view handle");
+    _formatSet.DepthFormat = SenBackend::GetViewFormat(view);
     _depthTarget = SenDepthAttachment{
-        .Texture      = texture,
-        .Layer        = arrayLayer,
+        .View         = view,
         .LoadOp       = loadOp,
         .ClearDepth   = clearDepth,
         .ClearStencil = clearStencil,
@@ -95,7 +92,7 @@ auto BePass::SetDepthTarget(SenTexture texture, SenFormat format, SenLoadOp load
 
 auto BePass::SetDepthTarget(const std::shared_ptr<BeTexture>& texture, SenLoadOp loadOp, float clearDepth, int16_t arrayLayer, uint8_t clearStencil) -> BePass& {
     be_assert(texture != nullptr, "BePass::SetDepthTarget: null texture");
-    return SetDepthTarget(texture->Handle, texture->Format, loadOp, clearDepth, arrayLayer, clearStencil);
+    return SetDepthTarget(texture->GetDepthTargetView(arrayLayer), loadOp, clearDepth, clearStencil);
 }
 
 auto BePass::SetViewport(SenViewport viewport) -> BePass& {
@@ -124,10 +121,12 @@ auto BePass::Begin() -> void {
         transitions.push_back({ texture, SenResourceState::UnorderedAccess });
     }
     for (const auto& target : _colorTargets) {
-        transitions.push_back({ target.Texture, SenResourceState::ColorAttachment, target.MipLevel, 1 });
+        const auto& view = SenBackend::GetViewDesc(target.View);
+        transitions.push_back({ view.Texture, SenResourceState::ColorAttachment, view.BaseMip, view.MipCount });
     }
     if (_depthTarget) {
-        transitions.push_back({ _depthTarget->Texture, SenResourceState::DepthAttachment });
+        const auto& view = SenBackend::GetViewDesc(_depthTarget->View);
+        transitions.push_back({ view.Texture, SenResourceState::DepthAttachment, view.BaseMip, view.MipCount });
     }
     _cmd.TransitionTextures(transitions);
     _formatSetId = BeBackend::AcquireFormatSetId(_formatSet);

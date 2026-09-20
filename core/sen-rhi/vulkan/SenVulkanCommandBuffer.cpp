@@ -22,15 +22,7 @@ auto SenVulkanCommandBuffer::BeginPass(const SenPassDesc& desc) -> void {
     colorAttachments.reserve(desc.ColorAttachments.size());
 
     for (const auto& attachment : desc.ColorAttachments) {
-        auto& texEntry = SenVulkanBackend::LookupTexture(attachment.Texture);
-
-        VkImageView view = VK_NULL_HANDLE;
-        if (attachment.Layer >= 0) {
-            be_assert(attachment.Layer < int16_t(texEntry.LayerCount), "BeginPass: color layer out of range");
-            view = texEntry.LayerMipRTVs[attachment.Layer][attachment.MipLevel];
-        } else {
-            view = texEntry.MipRTVs[attachment.MipLevel];
-        }
+        const VkImageView view = SenVulkanBackend::LookupView(attachment.View).View;
 
         VkClearValue clearValue;
         clearValue.color = { attachment.ClearColor.r, attachment.ClearColor.g, attachment.ClearColor.b, attachment.ClearColor.a };
@@ -52,15 +44,7 @@ auto SenVulkanCommandBuffer::BeginPass(const SenPassDesc& desc) -> void {
     bool hasDepth = desc.DepthAttachment.has_value();
     if (hasDepth) {
         const auto& depthAttach = desc.DepthAttachment.value();
-        auto& texEntry = SenVulkanBackend::LookupTexture(depthAttach.Texture);
-
-        VkImageView view = VK_NULL_HANDLE;
-        if (depthAttach.Layer >= 0) {
-            be_assert(depthAttach.Layer < int16_t(texEntry.LayerCount), "BeginPass: depth layer out of range");
-            view = texEntry.LayerDSVs[depthAttach.Layer];
-        } else {
-            view = texEntry.DSV;
-        }
+        const VkImageView view = SenVulkanBackend::LookupView(depthAttach.View).View;
 
         VkClearValue clearValue {};
         clearValue.depthStencil = { depthAttach.ClearDepth, depthAttach.ClearStencil };

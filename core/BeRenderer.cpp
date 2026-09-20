@@ -51,6 +51,10 @@ auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
     BeShaderLibrary::LoadShaders();
 }
 
+auto BeRenderer::GetBackbufferView() const -> SenView {
+    return SenBackend::GetSwapchainImageView(_swapchain);
+}
+
 auto BeRenderer::GetSwapchainFormat() const -> SenFormat {
     return SenBackend::GetSwapchainFormat(_swapchain);
 }

@@ -78,6 +78,11 @@ class BeTexture {
 
     hide std::vector<SenViewport> _mipViewports;
 
+    hide SenView _sampledView;                                  // all mips, all layers
+    hide std::vector<SenView> _sampledMipViews;                 // [mip], all layers
+    hide std::vector<SenView> _depthTargetViews;                // [layer]
+    hide std::vector<std::vector<SenView>> _colorTargetViews;   // [layer][mip]
+
     // lifetime ////////////////////////////////////////////////////////////////////////////////////////////////////////
     hide explicit BeTexture(const BeTextureDescriptor& descriptor);
     expose ~BeTexture();
@@ -87,8 +92,14 @@ class BeTexture {
     expose auto GetViewport () const -> const SenViewport& { return GetMipViewport(0); }
     expose auto Resize (uint32_t width, uint32_t height) -> void;
 
+    expose auto GetSampledView (uint32_t mip = SEN_FULL_MIPS) const -> SenView;
+    expose auto GetColorTargetView (uint32_t mip, int16_t layer) const -> SenView;
+    expose auto GetDepthTargetView (int16_t layer) const -> SenView;
+
     // private logic ///////////////////////////////////////////////////////////////////////////////////////////////////
     hide auto CreateMipViewports() -> void;
+    hide auto CreateViews() -> void;
+    hide auto RetireViews() -> void;
     
     // befriending shared_ptr for constructor/destructor access because ours are private
     friend class std::shared_ptr<BeTexture>;

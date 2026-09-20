@@ -56,6 +56,7 @@ class BeRenderer {
     auto RenderOnce(const std::vector<BeRenderPass*>& passes) -> void;
 
     [[nodiscard]] auto GetBackbufferTexture() const -> SenTexture { return _backbufferTexture; }
+    [[nodiscard]] auto GetBackbufferView() const -> SenView;
 
     [[nodiscard]] auto GetSwapchainPixelWidth () const -> uint32_t;
     [[nodiscard]] auto GetSwapchainPixelHeight () const -> uint32_t;

@@ -6,14 +6,11 @@
 auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     auto entry = SenVulkanTextureEntry();
 
-    const VkFormat           format  = Sen::Vulkan::ToFormat(desc.Format);
-    const VkImageUsageFlags  usage   = Sen::Vulkan::ToImageUsageFlags(desc.Usage);
-    const bool               isDepth = HasAny(desc.Usage, SenTextureUsage::DepthStencil);
-    const VkImageAspectFlags aspect  = isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    const VkFormat format = Sen::Vulkan::ToFormat(desc.Format);
+    const VkImageUsageFlags usage = Sen::Vulkan::ToImageUsageFlags(desc.Usage);
 
     const uint32_t cubeFactor = desc.Cubemap ? 6 : 1;
     const uint32_t layerCount = cubeFactor * (desc.ArrayLength > 0 ? desc.ArrayLength : 1);
-    const bool     isLayered  = layerCount > 1;
 
     entry.Format     = format;
     entry.Width      = desc.Width;
@@ -40,48 +37,6 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     VkResult result = vmaCreateImage(_allocator, &imageInfo, &allocInfo, &entry.Image, &entry.Allocation, nullptr);
     be_assert(result == VK_SUCCESS, "Failed to create image!");
 
-    if (HasAny(desc.Usage, SenTextureUsage::ShaderResource)) {
-        const VkImageViewType srvType =
-            desc.Cubemap ? (desc.ArrayLength > 1 ? VK_IMAGE_VIEW_TYPE_CUBE_ARRAY : VK_IMAGE_VIEW_TYPE_CUBE)
-                         : (isLayered            ? VK_IMAGE_VIEW_TYPE_2D_ARRAY    : VK_IMAGE_VIEW_TYPE_2D);
-        entry.SRV = CreateImageView(entry.Image, format, srvType, aspect, 0, desc.Mips, 0, layerCount);
-        HeapRegisterTexture(entry, entry.SRV, srvType);
-        if (!isLayered) {
-            entry.MipSRVs.resize(desc.Mips);
-            entry.MipHeapIndices.resize(desc.Mips, UINT32_MAX);
-            for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
-                entry.MipSRVs[mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, 0, 1);
-                entry.MipHeapIndices[mip] = HeapRegisterView(SenHeapBinding::Texture2D, entry.MipSRVs[mip]);
-            }
-        }
-    }
-    if (HasAny(desc.Usage, SenTextureUsage::DepthStencil)) {
-        if (isLayered) {
-            entry.LayerDSVs.resize(layerCount);
-            for (uint32_t layer = 0; layer < layerCount; ++layer) {
-                entry.LayerDSVs[layer] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, 1, layer, 1);
-            }
-        } else {
-            entry.DSV = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, 0, 1, 0, 1);
-        }
-    }
-    if (HasAny(desc.Usage, SenTextureUsage::RenderTarget)) {
-        if (isLayered) {
-            entry.LayerMipRTVs.resize(layerCount);
-            for (uint32_t layer = 0; layer < layerCount; ++layer) {
-                entry.LayerMipRTVs[layer].resize(desc.Mips);
-                for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
-                    entry.LayerMipRTVs[layer][mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, layer, 1);
-                }
-            }
-        } else {
-            entry.MipRTVs.resize(desc.Mips);
-            for (uint32_t mip = 0; mip < desc.Mips; ++mip) {
-                entry.MipRTVs[mip] = CreateImageView(entry.Image, format, VK_IMAGE_VIEW_TYPE_2D, aspect, mip, 1, 0, 1);
-            }
-        }
-    }
-
     return _textures.Create(std::move(entry));
 }
 
@@ -91,16 +46,6 @@ auto SenVulkanBackend::DestroyTexture(SenTexture handle) -> void {
     }
 
     auto& entry = _textures.Get(handle);
-    HeapReleaseTexture(entry);
-
-    auto destroy = [&](VkImageView view) -> void { if (view) { vkDestroyImageView(_device, view, nullptr); } };
-    destroy(entry.SRV);
-    destroy(entry.DSV);
-    for (auto view : entry.MipSRVs) { destroy(view); }
-    for (auto view : entry.MipRTVs) { destroy(view); }
-    for (auto view : entry.LayerDSVs) { destroy(view); }
-    for (auto& mips : entry.LayerMipRTVs) { for (auto view : mips) { destroy(view); } }
-
     vmaDestroyImage(_allocator, entry.Image, entry.Allocation);
     _textures.Destroy(handle);
 }

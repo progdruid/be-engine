@@ -93,7 +93,7 @@ auto BeImGuiPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
     ImGui::Render();
 
     BePass pass(cmd);
-    pass.AddColorTarget(renderer.GetBackbufferTexture(), renderer.GetSwapchainFormat(), SenLoadOp::Load);
+    pass.AddColorTarget(renderer.GetBackbufferView(), SenLoadOp::Load);
     pass.SetViewport(renderer.GetViewport());
     pass.Begin();
 

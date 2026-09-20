@@ -53,12 +53,9 @@ class BePass {
     auto UseMaterial (const BeMaterial& material) -> BePass&;
 
     auto AddColorTarget (
-        SenTexture texture,
-        SenFormat format,
+        SenView view,
         SenLoadOp loadOp = SenLoadOp::Clear,
-        glm::vec4 clearColor = {0, 0, 0, 0},
-        uint8_t mipLevel = 0,
-        int16_t arrayLayer = -1
+        glm::vec4 clearColor = {0, 0, 0, 0}
     ) -> BePass&;
     auto AddColorTarget (
         const std::shared_ptr<BeTexture>& texture,
@@ -74,11 +71,9 @@ class BePass {
     ) -> BePass&;
 
     auto SetDepthTarget (
-        SenTexture texture,
-        SenFormat format,
+        SenView view,
         SenLoadOp loadOp = SenLoadOp::Clear,
         float clearDepth = 1.0f,
-        int16_t arrayLayer = -1,
         uint8_t clearStencil = 0
     ) -> BePass&;
     auto SetDepthTarget (

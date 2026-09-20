@@ -118,33 +118,6 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     std::fprintf(stderr, "[vulkan] swapchain images requested=%u actual=%u  extent=%ux%u\n",
         minImageCount, imageCount, imageExtent.width, imageExtent.height);
 
-    // 5. Create image views
-    entry.ImageViews.resize(imageCount);
-    for (uint32_t i = 0; i < imageCount; i++) {
-        VkImageViewCreateInfo imageViewInfo {
-            .sType      = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image      = entry.Images[i],
-            .viewType   = VK_IMAGE_VIEW_TYPE_2D,
-            .format     = chosenFormat.format,
-            .components = {
-                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
-                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
-                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-                .a = VK_COMPONENT_SWIZZLE_IDENTITY,
-            },
-            .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-        };
-
-        result = vkCreateImageView(_device, &imageViewInfo, nullptr, &entry.ImageViews[i]);
-        be_assert(result == VK_SUCCESS, "Failed to create image view!");
-    }
-
     entry.NativeWindowHandle = desc.NativeWindowHandle;
     entry.Width       = imageExtent.width;
     entry.Height      = imageExtent.height;
@@ -152,19 +125,25 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     entry.Format      = Sen::Vulkan::FromVkFormat(chosenFormat.format);
     entry.PresentMode = desc.PresentMode;
 
-    // 6. Register each swapchain image as a SenTexture (MipRTVs[0] = image view)
+    // 5. Register each swapchain image as a SenTexture plus its attachment view
     entry.Textures.resize(imageCount);
+    entry.Views.resize(imageCount);
     for (uint32_t i = 0; i < imageCount; i++) {
         SenVulkanTextureEntry texEntry {};
         texEntry.Image  = entry.Images[i];
         texEntry.Format = chosenFormat.format;
-        texEntry.MipRTVs.push_back(entry.ImageViews[i]);
+        texEntry.Width  = imageExtent.width;
+        texEntry.Height = imageExtent.height;
         texEntry.MipLayouts.assign(1, VK_IMAGE_LAYOUT_UNDEFINED);
 
         entry.Textures[i] = _textures.Create(std::move(texEntry));
+        entry.Views[i] = CreateView({
+            .Texture = entry.Textures[i],
+            .Type = SenViewType::Attachment2D,
+        });
     }
 
-    // 7. Create sync objects
+    // 6. Create sync objects
     VkSemaphoreCreateInfo semaphoreInfo { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
     entry.FramesInFlight = desc.FramesInFlight;
@@ -192,11 +171,11 @@ auto SenVulkanBackend::DestroySwapchain(SenSwapchain handle) -> void {
 
     auto& entry = _swapchains.Get(handle);
 
-    // Remove swapchain texture entries (image views are owned by swapchain, not VMA)
+    // The images belong to the swapchain, so only their views and slot entries are ours to free.
+    for (const auto& view : entry.Views)                  { DestroyView(view); }
     for (const auto& tex : entry.Textures)                { _textures.Destroy(tex); }
     for (auto semaphore : entry.ImageAvailableSemaphores) { vkDestroySemaphore(_device, semaphore, nullptr); }
     for (auto semaphore : entry.RenderFinishedSemaphores) { vkDestroySemaphore(_device, semaphore, nullptr); }
-    for (auto imageView : entry.ImageViews)               { vkDestroyImageView(_device, imageView, nullptr); }
     if (entry.Swapchain) { vkDestroySwapchainKHR(_device, entry.Swapchain, nullptr); }
     if (entry.Surface)   { vkDestroySurfaceKHR(_instance, entry.Surface, nullptr); }
 
@@ -221,6 +200,11 @@ auto SenVulkanBackend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uin
 
 auto SenVulkanBackend::GetSwapchainFormat(SenSwapchain handle) -> SenFormat {
     return _swapchains.Get(handle).Format;
+}
+
+auto SenVulkanBackend::GetSwapchainImageView(SenSwapchain handle) -> SenView {
+    const auto& entry = _swapchains.Get(handle);
+    return entry.Views[entry.CurrentImageIndex];
 }
 
 auto SenVulkanBackend::GetSwapchainWidth(SenSwapchain handle) -> uint32_t {

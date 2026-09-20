@@ -22,20 +22,18 @@ struct SenVulkanTextureEntry {
     VkImage Image = VK_NULL_HANDLE;
     VmaAllocation Allocation = VK_NULL_HANDLE;
     VkFormat Format = VK_FORMAT_UNDEFINED;
-    VkImageView SRV = VK_NULL_HANDLE;                   // for shader sampling (all mips, all layers)
-    VkImageView DSV = VK_NULL_HANDLE;                   // depth attachment (2D or per-face for cubemap — see below)
-    std::vector<VkImageView> MipSRVs;                   // [mip]        — single-mip sampling view (2D)
-    std::vector<VkImageView> MipRTVs;                   // [mip]        — color attachment per mip (2D)
-    std::vector<VkImageView> LayerDSVs;                 // [layer]      — depth attachment per array/cube image layer
-    std::vector<std::vector<VkImageView>> LayerMipRTVs; // [layer][mip] — colour attachment per image layer per mip
-    std::vector<VkImageLayout> MipLayouts;                  
-    uint32_t Width      = 0;                            // mip-0 dimensions, kept for mip generation
+    std::vector<VkImageLayout> MipLayouts;
+    uint32_t Width      = 0;                            // mip-0 dimensions
     uint32_t Height     = 0;
     uint32_t MipLevels  = 1;
     uint32_t LayerCount = 1;                            // 1 for 2D, N for 2D array, 6 for cube, 6*N for cube array
-    uint32_t HeapBinding = UINT32_MAX;
-    uint32_t HeapIndex   = UINT32_MAX;
-    std::vector<uint32_t> MipHeapIndices;               // [mip] — per-mip sampling slots (2D)
+};
+
+struct SenVulkanViewEntry {
+    VkImageView View = VK_NULL_HANDLE;
+    SenViewDesc Desc;
+    uint32_t    HeapBinding = UINT32_MAX;
+    uint32_t    HeapIndex   = UINT32_MAX;
 };
 
 struct SenVulkanBufferEntry {
@@ -61,9 +59,9 @@ struct SenVulkanPipelineEntry {
 struct SenVulkanSwapchainEntry {
     VkSurfaceKHR   Surface   = VK_NULL_HANDLE;
     VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
-    std::vector<VkImage>     Images;
-    std::vector<VkImageView> ImageViews;
-    std::vector<SenTexture>  Textures;   // SenTexture handle per swapchain image
+    std::vector<VkImage>    Images;
+    std::vector<SenTexture> Textures;   // SenTexture handle per swapchain image
+    std::vector<SenView>    Views;      // attachment view per swapchain image
 
     // per frame slot
     std::vector<VkSemaphore> ImageAvailableSemaphores;
@@ -101,6 +99,7 @@ class SenVulkanBackend {
     hide
     static SenSlotMap<SenVulkanSwapchainEntry, SenSwapchain> _swapchains;
     static SenSlotMap<SenVulkanTextureEntry, SenTexture> _textures;
+    static SenSlotMap<SenVulkanViewEntry, SenView> _views;
     static SenSlotMap<SenVulkanBufferEntry, SenBuffer> _buffers;
     static SenSlotMap<SenVulkanSamplerEntry, SenSampler> _samplers;
     static SenSlotMap<SenVulkanPipelineEntry, SenPipeline> _pipelines;
@@ -126,6 +125,7 @@ class SenVulkanBackend {
     static auto BeginFrame            (SenSwapchain handle, uint32_t frameSlot) -> SenTexture;
     static auto EndFrame              (SenSwapchain handle, SenVulkanCommandBuffer& cmd, uint32_t frameSlot) -> SenSubmission;
     static auto GetSwapchainFormat    (SenSwapchain handle) -> SenFormat;
+    static auto GetSwapchainImageView (SenSwapchain handle) -> SenView;
     static auto GetSwapchainWidth     (SenSwapchain handle) -> uint32_t;
     static auto GetSwapchainHeight    (SenSwapchain handle) -> uint32_t;
     static auto GetSurfaceExtent      (SenSwapchain handle, uint32_t& outWidth, uint32_t& outHeight) -> void;
@@ -153,7 +153,15 @@ class SenVulkanBackend {
     expose static auto MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout, VkPipelineStageFlags2 srcStage, VkAccessFlags2 srcAccess, VkPipelineStageFlags2 dstStage, VkAccessFlags2 dstAccess) -> VkImageMemoryBarrier2;
     expose static auto MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout) -> VkImageMemoryBarrier2;
     expose static auto RecordImageBarrier(VkCommandBuffer cmd, const VkImageMemoryBarrier2& barrier) -> void;
-    
+
+    expose // views
+    static auto CreateView  (const SenViewDesc& desc) -> SenView;
+    static auto DestroyView (SenView handle) -> void;
+    static auto LookupView  (SenView handle) -> SenVulkanViewEntry&;
+    static auto GetViewDesc (SenView handle) -> const SenViewDesc&;
+    static auto GetViewFormat (SenView handle) -> SenFormat;
+    static auto GetViewHeapIndex (SenView handle) -> uint32_t;
+
     expose // buffers
     static auto CreateBuffer  (const SenBufferDesc& desc) -> SenBuffer;
     static auto DestroyBuffer (SenBuffer handle) -> void;
@@ -168,16 +176,13 @@ class SenVulkanBackend {
     static auto LookupSampler  (SenSampler handle) -> SenVulkanSamplerEntry&;
 
     expose // bindless heap
-    static auto GetTextureHeapIndex (SenTexture handle, uint32_t mip = SEN_FULL_MIPS) -> uint32_t;
     static auto GetSamplerHeapIndex (SenSampler handle) -> uint32_t;
     static auto GetBindlessSet      () -> VkDescriptorSet { return _bindlessSet; }
     static auto GetBindlessLayout   () -> VkDescriptorSetLayout { return _bindlessLayout; }
     hide static auto InitBindlessHeap     () -> void;
     hide static auto ShutdownBindlessHeap () -> void;
     hide static auto HeapRegisterView     (SenHeapBinding binding, VkImageView view) -> uint32_t;
-    hide static auto HeapRegisterTexture  (SenVulkanTextureEntry& entry, VkImageView view, VkImageViewType viewType) -> void;
     hide static auto HeapRegisterSampler  (SenVulkanSamplerEntry& entry) -> void;
-    hide static auto HeapReleaseTexture   (SenVulkanTextureEntry& entry) -> void;
     hide static auto HeapReleaseSampler   (SenVulkanSamplerEntry& entry) -> void;
     hide static auto HeapAllocSlot        (SenHeapBinding binding) -> uint32_t;
 

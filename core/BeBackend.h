@@ -80,6 +80,7 @@ class BeBackend {
     hide struct RetirementBucket {
         SenSubmission Submission;
         std::vector<SenTexture> Textures;
+        std::vector<SenView> Views;
         std::vector<SenBuffer> Buffers;
         std::vector<SenSampler> Samplers;
         std::vector<SenPipeline> Pipelines;
@@ -89,6 +90,7 @@ class BeBackend {
     hide static std::vector<RetirementBucket> _retired;
 
     expose static auto Retire(SenTexture handle) -> void;
+    expose static auto Retire(SenView handle) -> void;
     expose static auto Retire(SenBuffer handle) -> void;
     expose static auto Retire(SenSampler handle) -> void;
     expose static auto Retire(SenPipeline handle) -> void;

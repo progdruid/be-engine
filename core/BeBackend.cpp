@@ -237,6 +237,10 @@ auto BeBackend::Retire(SenTexture handle) -> void {
     _pending.Textures.push_back(handle);
 }
 
+auto BeBackend::Retire(SenView handle) -> void {
+    _pending.Views.push_back(handle);
+}
+
 auto BeBackend::Retire(SenBuffer handle) -> void {
     _pending.Buffers.push_back(handle);
 }
@@ -265,6 +269,7 @@ auto BeBackend::FlushRetirements() -> void {
 }
 
 auto BeBackend::DestroyBucket(const RetirementBucket& bucket) -> void {
+    for (const auto handle : bucket.Views)      SenBackend::DestroyView(handle);
     for (const auto handle : bucket.Textures)   SenBackend::DestroyTexture(handle);
     for (const auto handle : bucket.Buffers)    SenBackend::DestroyBuffer(handle);
     for (const auto handle : bucket.Samplers)   SenBackend::DestroySampler(handle);
