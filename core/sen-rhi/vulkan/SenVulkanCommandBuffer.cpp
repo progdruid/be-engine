@@ -2,6 +2,7 @@
 #include "SenVulkanBackend.h"
 #include "SenVulkanConvert.h"
 
+#include <algorithm>
 #include <umbrellas/include-libassert.h>
 #include <umbrellas/include-glm.h>
 
@@ -125,6 +126,33 @@ auto SenVulkanCommandBuffer::CopyBuffer(SenBuffer src, uint32_t srcOffset, uint3
         .size      = size,
     };
     vkCmdCopyBuffer(_cmd, SenVulkanBackend::LookupBuffer(src).Buffer, SenVulkanBackend::LookupBuffer(dst).Buffer, 1, &region);
+}
+
+auto SenVulkanCommandBuffer::CopyBufferToTexture(SenBuffer src, uint32_t srcOffset, SenTexture dst, uint32_t mip) -> void {
+    auto& entry = SenVulkanBackend::LookupTexture(dst);
+    be_assert(mip < entry.MipLevels, "CopyBufferToTexture: mip out of range");
+
+    const uint32_t mipWidth  = std::max(1u, entry.Width >> mip);
+    const uint32_t mipHeight = std::max(1u, entry.Height >> mip);
+    const uint32_t faceSize  = mipWidth * mipHeight * SenGetFormatBytes(Sen::Vulkan::FromVkFormat(entry.Format));
+
+    // Source is tightly packed, layers consecutive.
+    std::vector<VkBufferImageCopy> regions(entry.LayerCount);
+    for (uint32_t layer = 0; layer < entry.LayerCount; ++layer) {
+        regions[layer] = {
+            .bufferOffset      = VkDeviceSize(srcOffset + layer * faceSize),
+            .bufferRowLength   = 0,
+            .bufferImageHeight = 0,
+            .imageSubresource  = { VK_IMAGE_ASPECT_COLOR_BIT, mip, layer, 1 },
+            .imageOffset       = { 0, 0, 0 },
+            .imageExtent       = { mipWidth, mipHeight, 1 },
+        };
+    }
+
+    vkCmdCopyBufferToImage(
+        _cmd, SenVulkanBackend::LookupBuffer(src).Buffer, entry.Image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, uint32_t(regions.size()), regions.data()
+    );
 }
 
 auto SenVulkanCommandBuffer::TransitionTextures(const std::vector<TextureTransition>& transitions) -> void {

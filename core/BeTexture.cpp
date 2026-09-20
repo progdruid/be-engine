@@ -148,9 +148,24 @@ BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
     senDesc.Mips = descriptor.Mips;
     senDesc.Cubemap = descriptor.IsCubemap;
     senDesc.ArrayLength = descriptor.ArrayLength;
-    senDesc.Data = descriptor.Data;
 
     Handle = SenBackend::CreateTexture(senDesc);
+
+    if (descriptor.Data) {
+        // Callers supply one face; every layer of a cube or array gets a copy of it.
+        const uint32_t layerCount = (IsCubemap ? 6 : 1) * std::max(1u, ArrayLength);
+        const uint32_t faceSize = Width * Height * SenGetFormatBytes(Format);
+        if (layerCount == 1) {
+            BeBackend::WriteTexture(descriptor.Data, faceSize, Handle);
+        }
+        else {
+            auto expanded = std::vector<uint8_t>(size_t(faceSize) * layerCount);
+            for (uint32_t layer = 0; layer < layerCount; ++layer) {
+                std::memcpy(expanded.data() + size_t(layer) * faceSize, descriptor.Data, faceSize);
+            }
+            BeBackend::WriteTexture(expanded.data(), faceSize * layerCount, Handle);
+        }
+    }
 
     if (descriptor.GenerateMips && Mips > 1) {
         SenBackend::GenerateMips(Handle);
@@ -185,7 +200,6 @@ auto BeTexture::Resize(uint32_t width, uint32_t height) -> void {
     senDesc.Mips        = Mips;
     senDesc.Cubemap     = IsCubemap;
     senDesc.ArrayLength = ArrayLength;
-    senDesc.Data        = nullptr;
 
     Handle = SenBackend::CreateTexture(senDesc);
 

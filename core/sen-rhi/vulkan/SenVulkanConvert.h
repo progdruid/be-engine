@@ -6,28 +6,13 @@
 
 namespace Sen::Vulkan {
 
-    inline auto BytesPerPixel(SenFormat format) -> uint32_t {
-        switch (format) {
-            case SenFormat::RGBA8_Unorm:     return 4;
-            case SenFormat::BGRA8_Unorm:     return 4;
-            case SenFormat::RGBA16_Float:    return 8;
-            case SenFormat::R11G11B10_Float: return 4;
-            case SenFormat::Depth32:         return 4;
-            case SenFormat::RGB32_Float:     return 12;
-            case SenFormat::RGBA32_Float:    return 16;
-            case SenFormat::RG32_Float:      return 8;
-            case SenFormat::R32_Float:       return 4;
-            default:                         return 4;
-        }
-    }
-
-    inline auto ToImageUsageFlags(SenTextureUsage usage, bool hasInitialData) -> VkImageUsageFlags {
+    inline auto ToImageUsageFlags(SenTextureUsage usage) -> VkImageUsageFlags {
         VkImageUsageFlags flags = 0;
         if (HasAny(usage, SenTextureUsage::ShaderResource)) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
         if (HasAny(usage, SenTextureUsage::RenderTarget))   flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         if (HasAny(usage, SenTextureUsage::DepthStencil))   flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         if (HasAny(usage, SenTextureUsage::Storage))        flags |= VK_IMAGE_USAGE_STORAGE_BIT;
-        if (hasInitialData)                                  flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         return flags;
     }
 

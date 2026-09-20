@@ -7,7 +7,7 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     auto entry = SenVulkanTextureEntry();
 
     const VkFormat           format  = Sen::Vulkan::ToFormat(desc.Format);
-    const VkImageUsageFlags  usage   = Sen::Vulkan::ToImageUsageFlags(desc.Usage, desc.Data != nullptr);
+    const VkImageUsageFlags  usage   = Sen::Vulkan::ToImageUsageFlags(desc.Usage);
     const bool               isDepth = HasAny(desc.Usage, SenTextureUsage::DepthStencil);
     const VkImageAspectFlags aspect  = isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -42,19 +42,6 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE };
     VkResult result = vmaCreateImage(_allocator, &imageInfo, &allocInfo, &entry.Image, &entry.Allocation, nullptr);
     be_assert(result == VK_SUCCESS, "Failed to create image!");
-
-    if (desc.Data) {
-        const uint32_t faceSize = desc.Width * desc.Height * Sen::Vulkan::BytesPerPixel(desc.Format);
-        if (layerCount == 1) {
-            UploadToDeviceImage(entry.Image, aspect, desc.Data, faceSize, desc.Width, desc.Height, desc.Mips, 1);
-        } else {
-            std::vector<uint8_t> expanded(size_t(faceSize) * layerCount);
-            for (uint32_t layer = 0; layer < layerCount; ++layer)
-                memcpy(expanded.data() + size_t(layer) * faceSize, desc.Data, faceSize);
-            UploadToDeviceImage(entry.Image, aspect, expanded.data(), faceSize * layerCount, desc.Width, desc.Height, desc.Mips, layerCount);
-        }
-        entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    }
 
     if (HasAny(desc.Usage, SenTextureUsage::ShaderResource)) {
         const VkImageViewType srvType =
@@ -213,75 +200,6 @@ auto SenVulkanBackend::GenerateMips(SenTexture handle) -> void {
 
     vkDestroyFence(_device, fence, nullptr);
     vkFreeCommandBuffers(_device, _commandPool, 1, &cmd);
-}
-
-auto SenVulkanBackend::UploadToDeviceImage(VkImage image, VkImageAspectFlags aspect, const void* data, uint32_t dataSize, uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t layerCount) -> void {
-    VkBufferCreateInfo stagingInfo {
-        .sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size        = dataSize,
-        .usage       = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    };
-    VmaAllocationCreateInfo stagingAllocInfo {
-        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-        .usage = VMA_MEMORY_USAGE_AUTO,
-    };
-    VkBuffer stagingBuffer;
-    VmaAllocation stagingAlloc;
-    VmaAllocationInfo stagingResult;
-    VkResult result = vmaCreateBuffer(_allocator, &stagingInfo, &stagingAllocInfo, &stagingBuffer, &stagingAlloc, &stagingResult);
-    be_assert(result == VK_SUCCESS, "Failed to create texture staging buffer!");
-    memcpy(stagingResult.pMappedData, data, dataSize);
-
-    VkCommandBufferAllocateInfo cmdAlloc {
-        .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool        = _commandPool,
-        .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1,
-    };
-    VkCommandBuffer cmd;
-    vkAllocateCommandBuffers(_device, &cmdAlloc, &cmd);
-
-    VkCommandBufferBeginInfo beginInfo {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    };
-    vkBeginCommandBuffer(cmd, &beginInfo);
-
-    RecordImageBarrier(cmd, MakeImageBarrier(image, { aspect, 0, mipLevels, 0, layerCount },
-        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL));
-
-    // One copy region per layer (face), data expected to be laid out sequentially face0, face1, ...
-    std::vector<VkBufferImageCopy> regions(layerCount);
-    const uint32_t faceSize = dataSize / layerCount;
-    for (uint32_t layer = 0; layer < layerCount; ++layer) {
-        regions[layer] = {
-            .bufferOffset      = VkDeviceSize(layer * faceSize),
-            .bufferRowLength   = 0,
-            .bufferImageHeight = 0,
-            .imageSubresource  = { aspect, 0, layer, 1 },
-            .imageOffset       = { 0, 0, 0 },
-            .imageExtent       = { width, height, 1 },
-        };
-    }
-    vkCmdCopyBufferToImage(cmd, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layerCount, regions.data());
-
-    RecordImageBarrier(cmd, MakeImageBarrier(image, { aspect, 0, mipLevels, 0, layerCount },
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    ));
-
-    vkEndCommandBuffer(cmd);
-
-    VkFenceCreateInfo fenceInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    VkFence fence;
-    vkCreateFence(_device, &fenceInfo, nullptr, &fence);
-    VkSubmitInfo submitInfo { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .commandBufferCount = 1, .pCommandBuffers = &cmd };
-    vkQueueSubmit(_queue, 1, &submitInfo, fence);
-    vkWaitForFences(_device, 1, &fence, VK_TRUE, UINT64_MAX);
-
-    vkDestroyFence(_device, fence, nullptr);
-    vkFreeCommandBuffers(_device, _commandPool, 1, &cmd);
-    vmaDestroyBuffer(_allocator, stagingBuffer, stagingAlloc);
 }
 
 auto SenVulkanBackend::MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout,

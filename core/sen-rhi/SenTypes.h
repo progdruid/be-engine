@@ -54,6 +54,21 @@ enum class SenFormat : uint8_t {
     R32_Float,
 };
 
+inline auto SenGetFormatBytes(SenFormat format) -> uint32_t {
+    switch (format) {
+        case SenFormat::RGBA8_Unorm:     return 4;
+        case SenFormat::BGRA8_Unorm:     return 4;
+        case SenFormat::RGBA16_Float:    return 8;
+        case SenFormat::R11G11B10_Float: return 4;
+        case SenFormat::Depth32:         return 4;
+        case SenFormat::RGB32_Float:     return 12;
+        case SenFormat::RGBA32_Float:    return 16;
+        case SenFormat::RG32_Float:      return 8;
+        case SenFormat::R32_Float:       return 4;
+        default:                         return 4;
+    }
+}
+
 // ─── texture ─────────────────────────────────────────────────────
 enum class SenTextureUsage : uint32_t {
     None           = 0,
@@ -96,7 +111,6 @@ struct SenTextureDesc {
     uint32_t        Mips        = 1;
     bool            Cubemap     = false;
     uint32_t        ArrayLength = 1;
-    const uint8_t*  Data        = nullptr; // optional initial pixel data, not owned
 };
 
 

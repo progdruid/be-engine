@@ -40,6 +40,7 @@ class SenVulkanCommandBuffer {
 
     expose
     auto CopyBuffer (SenBuffer src, uint32_t srcOffset, uint32_t size, SenBuffer dst, uint32_t dstOffset) -> void;
+    auto CopyBufferToTexture (SenBuffer src, uint32_t srcOffset, SenTexture dst, uint32_t mip) -> void;
 
     expose
     auto SetPipeline     (SenPipeline pipeline) -> void;

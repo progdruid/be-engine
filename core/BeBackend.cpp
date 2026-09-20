@@ -44,6 +44,24 @@ auto BeBackend::WriteBuffer(const void* data, uint32_t size, SenBuffer dst, uint
     StampRetirements(submission);
 }
 
+auto BeBackend::WriteTexture(const void* data, uint32_t size, SenTexture dst) -> void {
+    const SenBuffer staging = SenBackend::CreateBuffer({
+        .Memory = SenMemory::Upload,
+        .Size = size,
+    });
+    std::memcpy(SenBackend::GetBufferPointer(staging), data, size);
+
+    _uploadCmd.Begin();
+    _uploadCmd.TransitionTextures({ { dst, SenResourceState::TransferDst } });
+    _uploadCmd.CopyBufferToTexture(staging, 0, dst, 0);
+    _uploadCmd.TransitionTextures({ { dst, SenResourceState::ShaderRead } });
+    _uploadCmd.End();
+
+    const SenSubmission submission = SenBackend::SubmitImmediate(_uploadCmd);
+    Retire(staging);
+    StampRetirements(submission);
+}
+
 auto BeBackend::Shutdown() -> void {
     SenBackend::WaitIdle();
 
