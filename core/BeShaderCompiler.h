@@ -5,9 +5,9 @@
 #include <vector>
 #include <expected>
 #include <umbrellas/common.hpp>
-#include "SenTypes.h"
+#include "sen-rhi/SenTypes.h"
 
-class SenShaderCompiler {
+class BeShaderCompiler {
     expose
     struct CompileResult {
         std::vector<uint32_t> Bytecode;

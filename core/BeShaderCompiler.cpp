@@ -1,4 +1,4 @@
-#include "SenShaderCompiler.h"
+#include "BeShaderCompiler.h"
 
 #include <slang.h>
 #include <slang-com-ptr.h>
@@ -18,29 +18,29 @@ namespace {
             case SenShaderStage::Pixel:   return SLANG_STAGE_PIXEL;
             case SenShaderStage::Compute: return SLANG_STAGE_COMPUTE;
         }
-        be_assert(false, "SenShaderCompiler: unsupported shader stage");
+        be_assert(false, "BeShaderCompiler: unsupported shader stage");
         return SLANG_STAGE_NONE;
     }
 }
 
-std::vector<std::filesystem::path> SenShaderCompiler::SearchPaths;
+std::vector<std::filesystem::path> BeShaderCompiler::SearchPaths;
 
-auto SenShaderCompiler::AddSearchPath(std::filesystem::path path) -> void {
+auto BeShaderCompiler::AddSearchPath(std::filesystem::path path) -> void {
     SearchPaths.push_back(std::move(path));
 }
 
-auto SenShaderCompiler::Launch() -> void {
+auto BeShaderCompiler::Launch() -> void {
     SlangResult result = slang::createGlobalSession(globalSession.writeRef());
     be_assert(SLANG_SUCCEEDED(result), "Failed to create Slang global session");
 }
 
-auto SenShaderCompiler::Compile(
+auto BeShaderCompiler::Compile(
     const std::filesystem::path& filePath,
     const std::string& entryPoint,
     SenShaderStage stage
 ) -> std::expected<CompileResult, std::string> {
 
-    be_assert(globalSession, "SenShaderCompiler was never initialized. Make sure to call Init.");
+    be_assert(globalSession, "BeShaderCompiler was never initialized. Make sure to call Launch.");
 
     const SlangStage slangStage = ToSlangStage(stage);
 
@@ -121,7 +121,7 @@ auto SenShaderCompiler::Compile(
     }
 
     const size_t byteSize = code->getBufferSize();
-    be_assert(byteSize % sizeof(uint32_t) == 0, "SenShaderCompiler: SPIR-V blob is not word-aligned");
+    be_assert(byteSize % sizeof(uint32_t) == 0, "BeShaderCompiler: SPIR-V blob is not word-aligned");
 
     auto result = CompileResult();
     result.Bytecode.resize(byteSize / sizeof(uint32_t));

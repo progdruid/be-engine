@@ -32,6 +32,7 @@ auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
         #endif
     });
     BeBackend::Init();
+    BeShaderLibrary::Init();
 
     _swapchain = SenBackend::CreateSwapchain({
         .NativeWindowHandle = _nativeWindow,

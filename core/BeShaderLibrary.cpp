@@ -7,10 +7,10 @@
 #include "BeFileWatcher.h"
 #include "BeMesh.h"
 #include "BeShader.h"
+#include "BeShaderCompiler.h"
 #include "BeShaderTools.h"
 #include "BeTexture.h"
 #include "sen-rhi/SenBackend.h"
-#include "sen-rhi/SenShaderCompiler.h"
 
 namespace {
     auto ParseCullMode(const std::string& str) -> SenCullMode {
@@ -104,6 +104,15 @@ std::unordered_map<std::string, SenSampler>                    BeShaderLibrary::
 uint32_t BeShaderLibrary::_shaderCount = 0;
 
 
+auto BeShaderLibrary::Init() -> void {
+    BeShaderCompiler::Launch();
+
+    BeFileWatcher::Register(
+        [] { return SenBackend::GetShaderSourcePaths(); },
+        [](std::span<const std::filesystem::path> changed) { SenBackend::ReloadSources(changed); }
+    );
+}
+
 auto BeShaderLibrary::Shutdown() -> void {
     _shaders.clear();
     _materialSchemes.clear();
@@ -113,15 +122,6 @@ auto BeShaderLibrary::Shutdown() -> void {
 }
 
 auto BeShaderLibrary::LoadShaderFiles(const std::vector<std::filesystem::path>& filePaths) -> void {
-
-    static bool hotReloadRegistered = false;
-    if (!hotReloadRegistered) {
-        hotReloadRegistered = true;
-        BeFileWatcher::Register(
-            [] { return SenBackend::GetShaderSourcePaths(); },
-            [](std::span<const std::filesystem::path> changed) { SenBackend::ReloadSources(changed); }
-        );
-    }
 
     // collect sources
     auto sourcesToIndex = std::vector<std::pair<std::filesystem::path, std::string>>();
@@ -177,7 +177,7 @@ auto BeShaderLibrary::LoadShaderFiles(const std::vector<std::filesystem::path>& 
 auto BeShaderLibrary::LoadShaderDirectory(const std::filesystem::path& dir) -> void {
     be_assert(std::filesystem::exists(dir), dir);
 
-    SenShaderCompiler::AddSearchPath(dir);
+    BeShaderCompiler::AddSearchPath(dir);
 
     auto filePaths = std::vector<std::filesystem::path>();
     for (const auto& entry : std::filesystem::recursive_directory_iterator(dir)) {

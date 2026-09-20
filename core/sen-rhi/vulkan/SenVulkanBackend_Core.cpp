@@ -2,7 +2,6 @@
 
 #include <umbrellas/include-glfw.h>  // glfwGetRequiredInstanceExtensions
 #include <sen-rhi/vulkan/SenVulkanValidation.h>
-#include <sen-rhi/SenShaderCompiler.h>
 
 #define VMA_IMPLEMENTATION
 #include <ranges>
@@ -38,8 +37,6 @@ std::array<uint32_t, size_t(SenHeapBinding::Count)>              SenVulkanBacken
 
 // ─── device lifecycle ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
-    SenShaderCompiler::Launch();
-
     // instance
     VkApplicationInfo appInfo {
         .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,

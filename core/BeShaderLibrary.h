@@ -26,6 +26,7 @@ class BeShaderLibrary {
     static uint32_t _shaderCount;
 
     expose // lifecycle
+    static auto Init() -> void;
     static auto Shutdown() -> void;
 
     expose // shaders + schemes

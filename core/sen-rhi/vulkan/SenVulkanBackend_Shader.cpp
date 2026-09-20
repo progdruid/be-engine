@@ -3,11 +3,11 @@
 #include <algorithm>
 #include <ranges>
 
-#include <sen-rhi/SenShaderCompiler.h>
+#include <BeShaderCompiler.h>
 #include <umbrellas/include-libassert.h>
 
 auto SenVulkanBackend::CreateShader(const SenShaderSourceDesc& sourceDesc) -> SenShader {
-    auto compileResult = SenShaderCompiler::Compile(sourceDesc.SourcePath, sourceDesc.FunctionName, sourceDesc.Stage);
+    auto compileResult = BeShaderCompiler::Compile(sourceDesc.SourcePath, sourceDesc.FunctionName, sourceDesc.Stage);
     be_assert(compileResult, "SenVulkanBackend::CreateShader: shader compilation failed: " + compileResult.error());
 
     auto& bytecode = compileResult.value().Bytecode;
@@ -34,7 +34,7 @@ auto SenVulkanBackend::CreateShader(const SenShaderSourceDesc& sourceDesc) -> Se
 auto SenVulkanBackend::ReloadShader(SenShader handle) -> bool {
     auto& entry = _shaders.at(handle.ID);
 
-    auto compileResult = SenShaderCompiler::Compile(entry.SourcePath, entry.FunctionName, entry.Stage);
+    auto compileResult = BeShaderCompiler::Compile(entry.SourcePath, entry.FunctionName, entry.Stage);
     if (!compileResult) {
         std::fprintf(
             stderr, "[shader] reload failed: %s:%s\n%s\n",
