@@ -12,7 +12,7 @@
 int main() {
     BeStandardGame game({
         .Title = "be: example sakura",
-        .WindowMode = BeWindowMode::Fullscreen,
+        .WindowMode = BeWindowMode::Windowed,
         .Width = 800,
         .Height = 600,
         .PresentMode = SenPresentMode::Immediate,

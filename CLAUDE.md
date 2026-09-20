@@ -61,8 +61,9 @@ and calls `be_cook_app(<exe>)` on its own app target.
 - **`BeRenderPass`** — abstract base: `Initialise(BeRenderer&)` and `Render(BeRenderer&, SenCommandBuffer&)`, plus `GetPassName()`. Passes are held in a `BePassSequence` (`vector<unique_ptr<BeRenderPass>>`).
 - **`BePass`** — fluent per-render command-scope helper built on a `SenCommandBuffer`: `.SetCompute(...)`, `.UseTexture(...)`/`.UseMaterial(...)` (read/storage bindings), `.AddColorTarget(...)`/`.SetDepthTarget(...)`, `.SetViewport(...)`, then `.SetState(state)`, `.Override*(...)` and `.Push(BeRoot(...))` per draw. A pass's `Render()` builds one or more of these to declare its I/O and issue draws/dispatches. This is the recording layer; `BeRenderPass` is the schedulable unit.
 - **`BeDrawState`**: immutable render state built at load, `BeDrawState::Create(shader).SetCull(...).SetBlend(...).Build()`. Target formats come from the `BePass`. State and overrides take effect at `BePass::Push`, which resolves the pipeline from `BeBackend`'s `[staticKeyId][formatSetId]` table.
-- **`BeShader`**: plain data (stages, render state, targets, material schemes, root layout). Created by `BeShaderLibrary` from the parsed `@be-shader` block, compiled at runtime by Slang to SPIR-V. Scheme lookup: `BeShaderLibrary::GetShaderScheme(shader, link)`.
-- **`BeShaderLibrary`** — `BeRenderer` loads every cooked shader in the runtime `shaders/` dir at init via `BeShaderLibrary::LoadShaders()`. Apps never load shader dirs themselves.
+- **`BeShader`**: plain data (per-stage SPIR-V, render state, targets, material schemes, root layout). Created by `BeShaderLibrary` from the parsed `@be-shader` block. Scheme lookup: `BeShaderLibrary::GetShaderScheme(shader, link)`.
+- **`BeShaderLibrary`** — `BeRenderer` loads every cooked shader in the runtime `shaders/` dir at init via `BeShaderLibrary::LoadShaders()`. Apps never load shader dirs themselves. Owns hot reload: on a source or include change it recompiles the shader's stages (all or nothing) and has `BeBackend::RebuildPipelines` recreate that shader's pipelines. Only bytecode reloads, the `@be-shader` and `@be-material` blocks are read once at load.
+- **`BeShaderCompiler`** — Slang-based HLSL→SPIR-V compiler. Pipelines are created from the bytecode; sen knows nothing about shader sources.
 - **`BeShaderTools`** — parses the `@be-material` and `@be-shader` DSL blocks from `.hlsl` comments.
 - **`BeBackend`**: static owner of Be's GPU-side state (pipeline cache, material arenas). `BeRenderer` drives `Init`/`Shutdown` in order: shader library, backend, sen.
 - **`BeFileWatcher`** — generic hot-reload: register a path-provider + handler `WatchId`, poll each frame. Used by `BeStandardFullScene` for live scene/shader reload.
@@ -81,7 +82,6 @@ and calls `be_cook_app(<exe>)` on its own app target.
 
 - **`SenBackend.h`** — selects active backend: `using SenBackend = SenVulkanBackend`.
 - **`SenTypes.h`** — GPU type definitions: formats, usage flags, topology, sampler modes, blend/depth states, buffer access.
-- **`SenShaderCompiler.h/cpp`** — Slang-based HLSL→SPIR-V compiler.
 - **`vulkan/`** — Vulkan backend: device, swapchain, textures, buffers, samplers, pipelines, bind groups, descriptor sets. Uses VMA for memory.
 
 ### Toolkit: Standard Render Machine (`toolkit/standard-render-machine/`)

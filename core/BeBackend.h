@@ -65,6 +65,28 @@ class BeBackend {
     
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // retirement //////////////////////////////////////////////////////////////////////////////////////////////////////
+    hide struct RetirementBucket {
+        SenSubmission Submission;
+        std::vector<SenTexture> Textures;
+        std::vector<SenBuffer> Buffers;
+        std::vector<SenSampler> Samplers;
+        std::vector<SenPipeline> Pipelines;
+    };
+
+    hide static RetirementBucket _pending;
+    hide static std::vector<RetirementBucket> _retired;
+
+    expose static auto Retire(SenTexture handle) -> void;
+    expose static auto Retire(SenBuffer handle) -> void;
+    expose static auto Retire(SenSampler handle) -> void;
+    expose static auto Retire(SenPipeline handle) -> void;
+    expose static auto StampRetirements(SenSubmission submission) -> void;
+    expose static auto FlushRetirements() -> void;
+    hide static auto DestroyBucket(const RetirementBucket& bucket) -> void;
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // material arenas /////////////////////////////////////////////////////////////////////////////////////////////////
     expose struct MaterialArenaChunk {
         uint64_t Frame = UINT64_MAX;

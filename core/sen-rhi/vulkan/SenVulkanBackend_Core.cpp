@@ -25,7 +25,6 @@ std::unordered_map<uint32_t, SenVulkanBufferEntry> SenVulkanBackend::_buffers;  
 std::unordered_map<uint32_t, SenVulkanSamplerEntry> SenVulkanBackend::_samplers;     uint32_t SenVulkanBackend::_nextSamplerId = 1;
 std::unordered_map<uint32_t, SenVulkanPipelineEntry> SenVulkanBackend::_pipelines;   uint32_t SenVulkanBackend::_nextPipelineId = 1;
 std::unordered_map<uint32_t, SenVulkanSwapchainEntry> SenVulkanBackend::_swapchains; uint32_t SenVulkanBackend::_nextSwapchainId = 1;
-std::vector<SenVulkanRetirementNote> SenVulkanBackend::_retirements;
 
 VkDescriptorSetLayout SenVulkanBackend::_bindlessLayout = VK_NULL_HANDLE;
 VkDescriptorPool      SenVulkanBackend::_bindlessPool   = VK_NULL_HANDLE;
@@ -224,25 +223,23 @@ auto SenVulkanBackend::Shutdown() -> void {
 
     auto textures = _textures;
     for (const auto& id : textures | std::views::keys) {
-        RetireTexture(SenTexture { id });
+        DestroyTexture(SenTexture { id });
     }
 
     auto buffers = _buffers;
     for (const auto& id : buffers | std::views::keys) {
-        RetireBuffer(SenBuffer { id });
+        DestroyBuffer(SenBuffer { id });
     }
 
     auto pipelines = _pipelines;
     for (const auto& id : pipelines | std::views::keys) {
-        RetirePipeline(SenPipeline { id });
+        DestroyPipeline(SenPipeline { id });
     }
 
     auto samplers = _samplers;
     for (const auto& id : samplers | std::views::keys) {
-        RetireSampler(SenSampler { id });
+        DestroySampler(SenSampler { id });
     }
-
-    FlushRetirements(UINT64_MAX);
 
     ShutdownBindlessHeap();
     if (_timeline)         { vkDestroySemaphore(_device, _timeline, nullptr); _timeline = VK_NULL_HANDLE; }
@@ -257,59 +254,10 @@ auto SenVulkanBackend::WaitIdle() -> void {
     vkDeviceWaitIdle(_device);
 }
 
-// ─── retirement ────────────────────────────────────────────────────────────────
-auto SenVulkanBackend::FlushRetirements(uint64_t completedValue) -> void {
-    size_t flushed = 0;
-    while (flushed < _retirements.size() && _retirements[flushed].RetireValue <= completedValue) {
-        const auto& note = _retirements[flushed];
-        switch (note.ResourceKind) {
-            case SenVulkanRetirementNote::Kind::Texture: {
-                const auto it = _textures.find(note.Id);
-                if (it != _textures.end()) {
-                    auto& entry = it->second;
-                    HeapReleaseTexture(entry);
-                    auto destroy = [&](VkImageView v) -> void { if (v) { vkDestroyImageView(_device, v, nullptr); } };
-                    destroy(entry.SRV);
-                    destroy(entry.DSV);
-                    for (auto v : entry.MipSRVs) { destroy(v); }
-                    for (auto v : entry.MipRTVs) { destroy(v); }
-                    for (auto v : entry.LayerDSVs) { destroy(v); }
-                    for (auto& mips : entry.LayerMipRTVs) { for (auto v : mips) { destroy(v); } }
-                    vmaDestroyImage(_allocator, entry.Image, entry.Allocation);
-                    _textures.erase(it);
-                }
-                break;
-            }
-            case SenVulkanRetirementNote::Kind::Buffer: {
-                const auto it = _buffers.find(note.Id);
-                if (it != _buffers.end()) {
-                    vmaDestroyBuffer(_allocator, it->second.Buffer, it->second.Allocation);
-                    _buffers.erase(it);
-                }
-                break;
-            }
-            case SenVulkanRetirementNote::Kind::Sampler: {
-                const auto it = _samplers.find(note.Id);
-                if (it != _samplers.end()) {
-                    HeapReleaseSampler(it->second);
-                    vkDestroySampler(_device, it->second.Sampler, nullptr);
-                    _samplers.erase(it);
-                }
-                break;
-            }
-            case SenVulkanRetirementNote::Kind::Pipeline: {
-                const auto it = _pipelines.find(note.Id);
-                if (it != _pipelines.end()) {
-                    vkDestroyPipeline(_device, it->second.Pipeline, nullptr);
-                    vkDestroyPipelineLayout(_device, it->second.Layout, nullptr);
-                    _pipelines.erase(it);
-                }
-                break;
-            }
-        }
-        ++flushed;
-    }
-    _retirements.erase(_retirements.begin(), _retirements.begin() + flushed);
+auto SenVulkanBackend::IsSubmissionComplete(SenSubmission submission) -> bool {
+    uint64_t completedValue = 0;
+    vkGetSemaphoreCounterValue(_device, _timeline, &completedValue);
+    return completedValue >= submission.Value;
 }
 
 // ─── command buffer ────────────────────────────────────────────────────────────────
@@ -326,7 +274,7 @@ auto SenVulkanBackend::AllocateCommandBuffer() -> SenVulkanCommandBuffer {
     return SenVulkanCommandBuffer(cmd);
 }
 
-auto SenVulkanBackend::SubmitImmediate(SenVulkanCommandBuffer& cmd) -> void {
+auto SenVulkanBackend::SubmitImmediate(SenVulkanCommandBuffer& cmd) -> SenSubmission {
     const VkCommandBufferSubmitInfo cmdInfo {
         .sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
         .commandBuffer = cmd.GetNativeHandle(),
@@ -354,8 +302,10 @@ auto SenVulkanBackend::SubmitImmediate(SenVulkanCommandBuffer& cmd) -> void {
         .semaphoreCount = 1,
         .pSemaphores    = &_timeline,
         .pValues        = &signalValue,
-    }; 
+    };
     vkWaitSemaphores(_device, &waitInfo, UINT64_MAX);
+
+    return SenSubmission { signalValue };
 }
 
 // ─── native escape hatches ────────────────────────────────────────────────────────────────

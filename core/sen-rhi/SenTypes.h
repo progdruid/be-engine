@@ -229,6 +229,13 @@ enum class SenTopology : uint8_t {
 };
 
 
+// ─── submission ─────────────────────────────────────────────────
+struct SenSubmission {
+    uint64_t Value = 0;
+    auto IsValid() const -> bool { return Value != 0; }
+};
+
+
 // ─── shader ─────────────────────────────────────────────────────
 struct SenShaderCode {
     const uint32_t* Code = nullptr;

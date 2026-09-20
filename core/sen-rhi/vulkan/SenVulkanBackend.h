@@ -57,13 +57,6 @@ struct SenVulkanPipelineEntry {
     VkPipelineBindPoint BindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 };
 
-struct SenVulkanRetirementNote {
-    enum class Kind { Texture, Buffer, Sampler, Pipeline };
-    Kind ResourceKind;
-    uint32_t Id = 0;
-    uint64_t RetireValue = 0;
-};
-
 struct SenVulkanSwapchainEntry {
     VkSurfaceKHR   Surface   = VK_NULL_HANDLE;
     VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
@@ -110,7 +103,6 @@ class SenVulkanBackend {
     static std::unordered_map<uint32_t, SenVulkanBufferEntry> _buffers;         static uint32_t _nextBufferId;
     static std::unordered_map<uint32_t, SenVulkanSamplerEntry> _samplers;       static uint32_t _nextSamplerId;
     static std::unordered_map<uint32_t, SenVulkanPipelineEntry> _pipelines;     static uint32_t _nextPipelineId;
-    static std::vector<SenVulkanRetirementNote> _retirements;
 
     hide
     static VkDescriptorSetLayout _bindlessLayout;
@@ -124,13 +116,14 @@ class SenVulkanBackend {
     static auto Init      (const SenDeviceDesc& desc) -> void;
     static auto Shutdown  () -> void;
     static auto WaitIdle  () -> void;
+    static auto IsSubmissionComplete(SenSubmission submission) -> bool;
     
     expose // swapchain lifecycle
     static auto CreateSwapchain       (const SenSwapchainDesc& desc) -> SenSwapchain;
     static auto DestroySwapchain      (SenSwapchain handle) -> void;
     static auto ResizeSwapchain       (SenSwapchain& handle, uint32_t width, uint32_t height) -> void;
     static auto BeginFrame            (SenSwapchain handle, uint32_t frameSlot) -> SenTexture;
-    static auto EndFrame              (SenSwapchain handle, SenVulkanCommandBuffer& cmd, uint32_t frameSlot) -> void;
+    static auto EndFrame              (SenSwapchain handle, SenVulkanCommandBuffer& cmd, uint32_t frameSlot) -> SenSubmission;
     static auto GetSwapchainFormat    (SenSwapchain handle) -> SenFormat;
     static auto GetSwapchainWidth     (SenSwapchain handle) -> uint32_t;
     static auto GetSwapchainHeight    (SenSwapchain handle) -> uint32_t;
@@ -138,7 +131,7 @@ class SenVulkanBackend {
 
     expose // command buffer factory
     static auto AllocateCommandBuffer () -> SenVulkanCommandBuffer;
-    static auto SubmitImmediate       (SenVulkanCommandBuffer& cmd) -> void;  // submit + fence-wait, no swapchain sync
+    static auto SubmitImmediate       (SenVulkanCommandBuffer& cmd) -> SenSubmission;  // submit + fence-wait, no swapchain sync
 
     expose // native API escape hatches (for ImGui, etc.)
     static auto GetNativeDevice          () -> void*;  // VkDevice
@@ -153,7 +146,7 @@ class SenVulkanBackend {
     
     expose // textures
     static auto CreateTexture  (const SenTextureDesc& desc) -> SenTexture;
-    static auto RetireTexture (SenTexture handle) -> void;
+    static auto DestroyTexture (SenTexture handle) -> void;
     static auto LookupTexture  (SenTexture handle) -> SenVulkanTextureEntry&;
     static auto GenerateMips   (SenTexture handle) -> void;   // blit-chain downsample of mip 0 into the rest
     hide static auto CreateImageView      (VkImage image, VkFormat format, VkImageViewType viewType, VkImageAspectFlags aspect, uint32_t baseMip, uint32_t mipLevels, uint32_t baseLayer, uint32_t layerCount) -> VkImageView;
@@ -164,7 +157,7 @@ class SenVulkanBackend {
     
     expose // buffers
     static auto CreateBuffer  (const SenBufferDesc& desc) -> SenBuffer;
-    static auto RetireBuffer (SenBuffer handle) -> void;
+    static auto DestroyBuffer (SenBuffer handle) -> void;
     static auto LookupBuffer  (SenBuffer handle) -> SenVulkanBufferEntry&;
     static auto GetBufferGpuAddress(SenBuffer handle) -> SenBufferGpuAddress;
     static auto WriteBuffer   (SenBuffer handle, const void* data, uint32_t size, uint32_t dstOffset = 0) -> void;
@@ -172,7 +165,7 @@ class SenVulkanBackend {
 
     expose // samplers
     static auto CreateSampler  (const SenSamplerDesc& desc) -> SenSampler;
-    static auto RetireSampler (SenSampler handle) -> void;
+    static auto DestroySampler (SenSampler handle) -> void;
     static auto LookupSampler  (SenSampler handle) -> SenVulkanSamplerEntry&;
 
     expose // bindless heap
@@ -189,11 +182,8 @@ class SenVulkanBackend {
     hide static auto HeapReleaseSampler   (SenVulkanSamplerEntry& entry) -> void;
     hide static auto HeapAllocSlot        (SenHeapBinding binding) -> uint32_t;
 
-    hide // retirement
-    static auto FlushRetirements(uint64_t completedValue) -> void;
-
     expose // pipelines
     static auto CreatePipeline  (const SenPipelineDesc& desc) -> SenPipeline;
-    static auto RetirePipeline (SenPipeline handle) -> void;
+    static auto DestroyPipeline (SenPipeline handle) -> void;
     static auto LookupPipeline  (SenPipeline handle) -> SenVulkanPipelineEntry&;
 };

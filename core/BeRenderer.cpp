@@ -110,6 +110,7 @@ auto BeRenderer::Render() -> void {
     // safe here, not earlier: BeginFrame waits on this slot's fence, so the GPU is done with
     // both the command buffer and the arena chunks about to be reused.
     BeBackend::ResetMaterialArena(_currentFrame);
+    BeBackend::FlushRetirements();
 
     auto& cmd = _frameCmds[slot];
     cmd.Begin();
@@ -123,7 +124,8 @@ auto BeRenderer::Render() -> void {
     cmd.TransitionTextures({ { _backbufferTexture, SenResourceState::Present } });
     cmd.End();
 
-    SenBackend::EndFrame(_swapchain, cmd, slot);
+    const SenSubmission submission = SenBackend::EndFrame(_swapchain, cmd, slot);
+    BeBackend::StampRetirements(submission);
     SenBackend::EndDebugEvent();
 
     ++_currentFrame;
@@ -142,6 +144,7 @@ auto BeRenderer::RenderOnce(const std::vector<BeRenderPass*>& passes) -> void {
 
     _immediateCmd.End();
 
-    SenBackend::SubmitImmediate(_immediateCmd);
+    const SenSubmission submission = SenBackend::SubmitImmediate(_immediateCmd);
+    BeBackend::StampRetirements(submission);
     SenBackend::EndDebugEvent();
 }

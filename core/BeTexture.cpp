@@ -6,6 +6,7 @@
 #include <stb_image/stb_image.h>
 #include "sen-rhi/SenBackend.h"
 #include "BeAssetRegistry.h"
+#include "BeBackend.h"
 
 BeTexture::Builder::Builder(std::string name) { _descriptor.Name = std::move(name); }
 
@@ -159,7 +160,7 @@ BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
 }
 
 BeTexture::~BeTexture() {
-    SenBackend::RetireTexture(Handle);
+    BeBackend::Retire(Handle);
 }
 
 
@@ -171,7 +172,7 @@ auto BeTexture::Resize(uint32_t width, uint32_t height) -> void {
         return;
     }
 
-    SenBackend::RetireTexture(Handle);
+    BeBackend::Retire(Handle);
 
     Width  = width;
     Height = height;

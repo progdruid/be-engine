@@ -227,10 +227,15 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     return handle;
 }
 
-auto SenVulkanBackend::RetirePipeline(SenPipeline handle) -> void {
-    if (_pipelines.contains(handle.ID)) {
-        _retirements.push_back({ SenVulkanRetirementNote::Kind::Pipeline, handle.ID, _timelineValue + 1 });
+auto SenVulkanBackend::DestroyPipeline(SenPipeline handle) -> void {
+    const auto it = _pipelines.find(handle.ID);
+    if (it == _pipelines.end()) {
+        return;
     }
+
+    vkDestroyPipeline(_device, it->second.Pipeline, nullptr);
+    vkDestroyPipelineLayout(_device, it->second.Layout, nullptr);
+    _pipelines.erase(it);
 }
 
 auto SenVulkanBackend::LookupPipeline(SenPipeline handle) -> SenVulkanPipelineEntry& {

@@ -13,14 +13,25 @@ std::unordered_map<BeBackend::StaticKey, uint32_t, BeBackend::BytesHash> BeBacke
 std::vector<BeBackend::FormatSet> BeBackend::_formatSets;
 std::unordered_map<BeBackend::FormatSet, uint32_t, BeBackend::BytesHash> BeBackend::_formatSetLookup;
 std::vector<std::vector<SenPipeline>> BeBackend::_pipelines;
+BeBackend::RetirementBucket BeBackend::_pending;
+std::vector<BeBackend::RetirementBucket> BeBackend::_retired;
 std::array<BeBackend::MaterialArenaChain, BeRenderer::FramesInFlight> BeBackend::_arenaChains;
 
 auto BeBackend::Init() -> void {}
 
 auto BeBackend::Shutdown() -> void {
+    SenBackend::WaitIdle();
+
+    for (const auto& bucket : _retired) {
+        DestroyBucket(bucket);
+    }
+    _retired.clear();
+    DestroyBucket(_pending);
+    _pending = {};
+
     for (const auto pipeline : _pipelines | std::views::join) {
         if (pipeline.IsValid()) {
-            SenBackend::RetirePipeline(pipeline);
+            SenBackend::DestroyPipeline(pipeline);
         }
     }
     _pipelines.clear();
@@ -31,10 +42,51 @@ auto BeBackend::Shutdown() -> void {
 
     for (auto& chain : _arenaChains) {
         for (const auto& block : chain.Blocks) {
-            SenBackend::RetireBuffer(block.Buffer);
+            SenBackend::DestroyBuffer(block.Buffer);
         }
         chain = {};
     }
+}
+
+
+
+
+auto BeBackend::Retire(SenTexture handle) -> void {
+    _pending.Textures.push_back(handle);
+}
+
+auto BeBackend::Retire(SenBuffer handle) -> void {
+    _pending.Buffers.push_back(handle);
+}
+
+auto BeBackend::Retire(SenSampler handle) -> void {
+    _pending.Samplers.push_back(handle);
+}
+
+auto BeBackend::Retire(SenPipeline handle) -> void {
+    _pending.Pipelines.push_back(handle);
+}
+
+auto BeBackend::StampRetirements(SenSubmission submission) -> void {
+    _pending.Submission = submission;
+    _retired.push_back(std::move(_pending));
+    _pending = {};
+}
+
+auto BeBackend::FlushRetirements() -> void {
+    size_t flushed = 0;
+    while (flushed < _retired.size() && SenBackend::IsSubmissionComplete(_retired[flushed].Submission)) {
+        DestroyBucket(_retired[flushed]);
+        ++flushed;
+    }
+    _retired.erase(_retired.begin(), _retired.begin() + flushed);
+}
+
+auto BeBackend::DestroyBucket(const RetirementBucket& bucket) -> void {
+    for (const auto handle : bucket.Textures)   SenBackend::DestroyTexture(handle);
+    for (const auto handle : bucket.Buffers)    SenBackend::DestroyBuffer(handle);
+    for (const auto handle : bucket.Samplers)   SenBackend::DestroySampler(handle);
+    for (const auto handle : bucket.Pipelines)  SenBackend::DestroyPipeline(handle);
 }
 
 
@@ -96,7 +148,7 @@ auto BeBackend::RebuildPipelines(const BeShader& shader) -> uint32_t {
             if (!row[formatSetId].IsValid()) {
                 continue;
             }
-            SenBackend::RetirePipeline(row[formatSetId]);
+            Retire(row[formatSetId]);
             row[formatSetId] = MakePipeline(shader, staticKeyId, formatSetId);
             ++count;
         }

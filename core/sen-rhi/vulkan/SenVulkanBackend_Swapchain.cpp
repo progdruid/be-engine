@@ -251,10 +251,6 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle, uint32_t frameSlot) -> Se
     auto& entry = _swapchains.at(handle.ID);
     be_assert(frameSlot < entry.FramesInFlight, "BeginFrame: frame slot out of range");
 
-    uint64_t completedValue = 0;
-    vkGetSemaphoreCounterValue(_device, _timeline, &completedValue);
-    FlushRetirements(completedValue);
-
     const uint64_t slotValue = entry.SlotTimelineValues[frameSlot];
     const VkSemaphoreWaitInfo slotWait {
         .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
@@ -285,7 +281,7 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle, uint32_t frameSlot) -> Se
     return entry.Textures[entry.CurrentImageIndex];
 }
 
-auto SenVulkanBackend::EndFrame(SenSwapchain handle, SenVulkanCommandBuffer& cmd, uint32_t frameSlot) -> void {
+auto SenVulkanBackend::EndFrame(SenSwapchain handle, SenVulkanCommandBuffer& cmd, uint32_t frameSlot) -> SenSubmission {
     auto& entry = _swapchains.at(handle.ID);
     be_assert(frameSlot < entry.FramesInFlight, "EndFrame: frame slot out of range");
 
@@ -339,4 +335,6 @@ auto SenVulkanBackend::EndFrame(SenSwapchain handle, SenVulkanCommandBuffer& cmd
         .pImageIndices      = &entry.CurrentImageIndex,
     };
     vkQueuePresentKHR(_queue, &presentInfo);
+
+    return SenSubmission { signalValue };
 }

@@ -65,10 +65,14 @@ auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
     return handle;
 }
 
-auto SenVulkanBackend::RetireBuffer(SenBuffer handle) -> void {
-    if (_buffers.contains(handle.ID)) {
-        _retirements.push_back({ SenVulkanRetirementNote::Kind::Buffer, handle.ID, _timelineValue + 1 });
+auto SenVulkanBackend::DestroyBuffer(SenBuffer handle) -> void {
+    const auto it = _buffers.find(handle.ID);
+    if (it == _buffers.end()) {
+        return;
     }
+
+    vmaDestroyBuffer(_allocator, it->second.Buffer, it->second.Allocation);
+    _buffers.erase(it);
 }
 
 auto SenVulkanBackend::LookupBuffer(SenBuffer handle) -> SenVulkanBufferEntry& {
