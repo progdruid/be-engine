@@ -1,9 +1,11 @@
 #include "BeShaderLibrary.h"
 
+#include <algorithm>
 #include <sstream>
 #include <fstream>
 #include <ranges>
 
+#include "BeBackend.h"
 #include "BeFileWatcher.h"
 #include "BeMesh.h"
 #include "BeShader.h"
@@ -108,9 +110,100 @@ auto BeShaderLibrary::Init() -> void {
     BeShaderCompiler::Launch();
 
     BeFileWatcher::Register(
-        [] { return SenBackend::GetShaderSourcePaths(); },
-        [](std::span<const std::filesystem::path> changed) { SenBackend::ReloadSources(changed); }
+        [] { return GetSourcePaths(); },
+        [](std::span<const std::filesystem::path> changed) { ReloadSources(changed); }
     );
+}
+
+auto BeShaderLibrary::GetSourcePaths() -> std::vector<std::filesystem::path> {
+    auto paths = std::vector<std::filesystem::path>();
+    for (const auto& shader : _shaders | std::views::values) {
+        paths.push_back(shader->SourcePath);
+        for (const auto& include : shader->Includes) {
+            paths.push_back(include);
+        }
+    }
+    std::ranges::sort(paths);
+    paths.erase(std::ranges::unique(paths).begin(), paths.end());
+    return paths;
+}
+
+auto BeShaderLibrary::ReloadSources(std::span<const std::filesystem::path> changed) -> void {
+    auto canonical = std::vector<std::filesystem::path>();
+    canonical.reserve(changed.size());
+    for (const auto& path : changed) {
+        canonical.push_back(std::filesystem::weakly_canonical(path));
+    }
+
+    auto touched = [&](const std::filesystem::path& path) -> bool {
+        return std::ranges::find(canonical, path) != canonical.end();
+    };
+
+    auto reloaded = std::vector<raw_ptr<BeShader>>();
+    for (const auto& shader : _shaders | std::views::values) {
+        if (!touched(shader->SourcePath) && !std::ranges::any_of(shader->Includes, touched)) {
+            continue;
+        }
+        if (RecompileShader(*shader)) {
+            reloaded.push_back(shader.get());
+        }
+    }
+
+    if (reloaded.empty()) {
+        return;
+    }
+
+    SenBackend::WaitIdle();
+
+    auto pipelineCount = uint32_t(0);
+    for (const auto shader : reloaded) {
+        pipelineCount += BeBackend::RebuildPipelines(*shader);
+    }
+
+    std::fprintf(
+        stderr, "[shader] reloaded %zu shaders, %u pipelines\n",
+        reloaded.size(), pipelineCount
+    );
+}
+
+auto BeShaderLibrary::RecompileShader(BeShader& shader) -> bool {
+    auto stages = std::array<raw_ptr<BeShaderStageCode>, 5> {
+        &shader.StageVertex, &shader.StageHull, &shader.StageDomain, &shader.StagePixel, &shader.StageCompute
+    };
+    auto stageKinds = std::array<BeShaderStage, 5> {
+        BeShaderStage::Vertex, BeShaderStage::Hull, BeShaderStage::Domain, BeShaderStage::Pixel, BeShaderStage::Compute
+    };
+
+    auto bytecodes = std::array<std::vector<uint32_t>, 5>();
+    auto includes = std::vector<std::filesystem::path>();
+
+    for (size_t i = 0; i < stages.size(); ++i) {
+        if (!stages[i]->IsValid()) {
+            continue;
+        }
+        auto result = BeShaderCompiler::Compile(shader.SourcePath, stages[i]->FunctionName, stageKinds[i]);
+        if (!result) {
+            std::fprintf(
+                stderr, "[shader] reload failed: %s:%s\n%s\n",
+                shader.SourcePath.filename().c_str(), stages[i]->FunctionName.c_str(), result.error().c_str()
+            );
+            return false;
+        }
+        bytecodes[i] = std::move(result.value().Bytecode);
+        for (auto& include : result.value().Includes) {
+            if (std::ranges::find(includes, include) == includes.end()) {
+                includes.push_back(std::move(include));
+            }
+        }
+    }
+
+    for (size_t i = 0; i < stages.size(); ++i) {
+        if (stages[i]->IsValid()) {
+            stages[i]->Bytecode = std::move(bytecodes[i]);
+        }
+    }
+    shader.Includes = std::move(includes);
+    return true;
 }
 
 auto BeShaderLibrary::Shutdown() -> void {
@@ -225,6 +318,22 @@ auto BeShaderLibrary::CreateShader(const BeShaderTools::ParsedShader& meta) -> s
     shader->ShaderID = ++_shaderCount;
     shader->Name = meta.Name;
     shader->RootLayout = *meta.Root;
+    shader->SourcePath = std::filesystem::weakly_canonical(filePath);
+
+    auto compileStage = [&](BeShaderStage stage, const std::string& functionName, BeShaderStageCode& code) -> void {
+        auto result = BeShaderCompiler::Compile(filePath, functionName, stage);
+        if (!result) {
+            be_assert(false, "BeShaderLibrary::CreateShader: compilation failed", filePath, functionName, result.error());
+            return;
+        }
+        code.FunctionName = functionName;
+        code.Bytecode = std::move(result.value().Bytecode);
+        for (auto& include : result.value().Includes) {
+            if (std::ranges::find(shader->Includes, include) == shader->Includes.end()) {
+                shader->Includes.push_back(std::move(include));
+            }
+        }
+    };
 
     if (!meta.Binds.empty()) {
         shader->HasMaterial = true;
@@ -238,11 +347,7 @@ auto BeShaderLibrary::CreateShader(const BeShaderTools::ParsedShader& meta) -> s
 
     if (!meta.ComputeFn.empty()) {
         shader->ShaderType = BeShaderType::Compute;
-        shader->ShaderCompute = SenBackend::CreateShader({
-            .SourcePath = filePath,
-            .FunctionName = meta.ComputeFn,
-            .Stage = SenShaderStage::Compute,
-        });
+        compileStage(BeShaderStage::Compute, meta.ComputeFn, shader->StageCompute);
         return shader;
     }
 
@@ -269,11 +374,7 @@ auto BeShaderLibrary::CreateShader(const BeShaderTools::ParsedShader& meta) -> s
 
     if (!meta.VertexFn.empty()) {
         shader->ShaderType = BeShaderType::Vertex;
-        shader->ShaderVertex = SenBackend::CreateShader({
-            .SourcePath = filePath,
-            .FunctionName = meta.VertexFn,
-            .Stage = SenShaderStage::Vertex,
-        });
+        compileStage(BeShaderStage::Vertex, meta.VertexFn, shader->StageVertex);
 
         if (!meta.VertexLayout.empty()) {
             static const std::unordered_map<std::string, SenFormat> ElementFormats = {
@@ -309,26 +410,14 @@ auto BeShaderLibrary::CreateShader(const BeShaderTools::ParsedShader& meta) -> s
 
     if (!meta.HullFn.empty() || !meta.DomainFn.empty()) {
         shader->ShaderType = shader->ShaderType | BeShaderType::Tesselation;
-        shader->ShaderHull = SenBackend::CreateShader({
-            .SourcePath = filePath,
-            .FunctionName = meta.HullFn,
-            .Stage = SenShaderStage::Hull,
-        });
-        shader->ShaderDomain = SenBackend::CreateShader({
-            .SourcePath = filePath,
-            .FunctionName = meta.DomainFn,
-            .Stage = SenShaderStage::Domain,
-        });
+        compileStage(BeShaderStage::Hull, meta.HullFn, shader->StageHull);
+        compileStage(BeShaderStage::Domain, meta.DomainFn, shader->StageDomain);
     }
 
     if (!meta.PixelFn.empty()) {
         be_assert(!meta.Targets.empty(), "", filePath);
         shader->ShaderType = shader->ShaderType | BeShaderType::Pixel;
-        shader->ShaderPixel = SenBackend::CreateShader({
-            .SourcePath = filePath,
-            .FunctionName = meta.PixelFn,
-            .Stage = SenShaderStage::Pixel,
-        });
+        compileStage(BeShaderStage::Pixel, meta.PixelFn, shader->StagePixel);
 
         for (const auto& target : meta.Targets) {
             const uint32_t targetSlot = target.Slot;

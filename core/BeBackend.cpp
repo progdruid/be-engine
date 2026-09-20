@@ -76,19 +76,47 @@ auto BeBackend::GetPipeline(const BeShader& shader, uint32_t staticKeyId, uint32
         row.resize(formatSetId + 1);
     }
 
+    be_assert(
+        _staticKeys.at(staticKeyId).ShaderID == shader.ShaderID,
+        "BeBackend::GetPipeline: static key belongs to another shader"
+    );
+
+    row[formatSetId] = MakePipeline(shader, staticKeyId, formatSetId);
+    return row[formatSetId];
+}
+
+auto BeBackend::RebuildPipelines(const BeShader& shader) -> uint32_t {
+    auto count = uint32_t(0);
+    for (uint32_t staticKeyId = 0; staticKeyId < _staticKeys.size(); ++staticKeyId) {
+        if (_staticKeys[staticKeyId].ShaderID != shader.ShaderID) {
+            continue;
+        }
+        auto& row = _pipelines[staticKeyId];
+        for (uint32_t formatSetId = 0; formatSetId < row.size(); ++formatSetId) {
+            if (!row[formatSetId].IsValid()) {
+                continue;
+            }
+            SenBackend::RetirePipeline(row[formatSetId]);
+            row[formatSetId] = MakePipeline(shader, staticKeyId, formatSetId);
+            ++count;
+        }
+    }
+    return count;
+}
+
+auto BeBackend::MakePipeline(const BeShader& shader, uint32_t staticKeyId, uint32_t formatSetId) -> SenPipeline {
     const auto& key = _staticKeys.at(staticKeyId);
     const auto& formatSet = _formatSets.at(formatSetId);
-    be_assert(key.ShaderID == shader.ShaderID, "BeBackend::GetPipeline: static key belongs to another shader");
 
     auto desc = SenPipelineDesc();
     if (HasAny(shader.ShaderType, BeShaderType::Compute)) {
-        desc.ComputeShader = shader.ShaderCompute;
+        desc.ComputeShader = shader.StageCompute.GetCode();
     }
     else {
-        desc.VertexShader = shader.ShaderVertex;
-        desc.HullShader = shader.ShaderHull;
-        desc.DomainShader = shader.ShaderDomain;
-        desc.PixelShader = shader.ShaderPixel;
+        desc.VertexShader = shader.StageVertex.GetCode();
+        desc.HullShader = shader.StageHull.GetCode();
+        desc.DomainShader = shader.StageDomain.GetCode();
+        desc.PixelShader = shader.StagePixel.GetCode();
         desc.VertexLayout = shader.VertexLayout;
         desc.VertexStride = shader.VertexStride;
         desc.Topology = key.Topology;
@@ -104,8 +132,7 @@ auto BeBackend::GetPipeline(const BeShader& shader, uint32_t staticKeyId, uint32
         desc.DepthStencilFormat = formatSet.DepthFormat;
     }
 
-    row[formatSetId] = SenBackend::CreatePipeline(desc);
-    return row[formatSetId];
+    return SenBackend::CreatePipeline(desc);
 }
 
 

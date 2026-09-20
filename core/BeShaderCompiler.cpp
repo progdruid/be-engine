@@ -10,13 +10,13 @@
 namespace {
     Slang::ComPtr<slang::IGlobalSession> globalSession;
 
-    auto ToSlangStage(SenShaderStage stage) -> SlangStage {
+    auto ToSlangStage(BeShaderStage stage) -> SlangStage {
         switch (stage) {
-            case SenShaderStage::Vertex:  return SLANG_STAGE_VERTEX;
-            case SenShaderStage::Hull:    return SLANG_STAGE_HULL;
-            case SenShaderStage::Domain:  return SLANG_STAGE_DOMAIN;
-            case SenShaderStage::Pixel:   return SLANG_STAGE_PIXEL;
-            case SenShaderStage::Compute: return SLANG_STAGE_COMPUTE;
+            case BeShaderStage::Vertex:  return SLANG_STAGE_VERTEX;
+            case BeShaderStage::Hull:    return SLANG_STAGE_HULL;
+            case BeShaderStage::Domain:  return SLANG_STAGE_DOMAIN;
+            case BeShaderStage::Pixel:   return SLANG_STAGE_PIXEL;
+            case BeShaderStage::Compute: return SLANG_STAGE_COMPUTE;
         }
         be_assert(false, "BeShaderCompiler: unsupported shader stage");
         return SLANG_STAGE_NONE;
@@ -37,7 +37,7 @@ auto BeShaderCompiler::Launch() -> void {
 auto BeShaderCompiler::Compile(
     const std::filesystem::path& filePath,
     const std::string& entryPoint,
-    SenShaderStage stage
+    BeShaderStage stage
 ) -> std::expected<CompileResult, std::string> {
 
     be_assert(globalSession, "BeShaderCompiler was never initialized. Make sure to call Launch.");

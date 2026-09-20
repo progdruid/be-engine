@@ -51,20 +51,10 @@ struct SenVulkanSamplerEntry {
     uint32_t HeapIndex = UINT32_MAX;
 };
 
-struct SenVulkanShaderEntry {
-    VkShaderModule Module = VK_NULL_HANDLE;
-    SenShaderStage Stage;
-    std::filesystem::path SourcePath;
-    std::string FunctionName;
-    std::vector<std::filesystem::path> Includes;
-};
-
-
 struct SenVulkanPipelineEntry {
     VkPipeline Pipeline = VK_NULL_HANDLE;
     VkPipelineLayout Layout = VK_NULL_HANDLE;
     VkPipelineBindPoint BindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    SenPipelineDesc Desc;
 };
 
 struct SenVulkanRetirementNote {
@@ -119,7 +109,6 @@ class SenVulkanBackend {
     static std::unordered_map<uint32_t, SenVulkanTextureEntry> _textures;       static uint32_t _nextTextureId;
     static std::unordered_map<uint32_t, SenVulkanBufferEntry> _buffers;         static uint32_t _nextBufferId;
     static std::unordered_map<uint32_t, SenVulkanSamplerEntry> _samplers;       static uint32_t _nextSamplerId;
-    static std::unordered_map<uint32_t, SenVulkanShaderEntry> _shaders;         static uint32_t _nextShaderId;
     static std::unordered_map<uint32_t, SenVulkanPipelineEntry> _pipelines;     static uint32_t _nextPipelineId;
     static std::vector<SenVulkanRetirementNote> _retirements;
 
@@ -203,18 +192,8 @@ class SenVulkanBackend {
     hide // retirement
     static auto FlushRetirements(uint64_t completedValue) -> void;
 
-    expose // shaders
-    static auto CreateShader (const SenShaderSourceDesc& sourceDesc) -> SenShader;
-    static auto DestroyShader (SenShader handle) -> void;
-    static auto LookupShader  (SenShader handle) -> SenVulkanShaderEntry&;
-    static auto ReloadSources (std::span<const std::filesystem::path> paths) -> void;
-    static auto GetShaderSourcePaths () -> std::vector<std::filesystem::path>;
-    hide static auto ReloadShader(SenShader handle) -> bool;
-
     expose // pipelines
     static auto CreatePipeline  (const SenPipelineDesc& desc) -> SenPipeline;
     static auto RetirePipeline (SenPipeline handle) -> void;
     static auto LookupPipeline  (SenPipeline handle) -> SenVulkanPipelineEntry&;
-    hide static auto MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulkanPipelineEntry;
-    hide static auto ReloadPipeline(SenPipeline handle) -> void;
 };

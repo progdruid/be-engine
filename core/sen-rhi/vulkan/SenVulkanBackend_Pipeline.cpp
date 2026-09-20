@@ -5,13 +5,19 @@
 
 auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
     const SenPipeline handle { _nextPipelineId++ };
-    _pipelines[handle.ID] = MakePipelineEntry(desc);
-    return handle;
-}
+    auto& entry = _pipelines[handle.ID];
 
-auto SenVulkanBackend::MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulkanPipelineEntry {
-    SenVulkanPipelineEntry entry {};
-    entry.Desc = desc;
+    auto createModule = [&](const SenShaderCode& code) -> VkShaderModule {
+        VkShaderModuleCreateInfo moduleInfo {
+            .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = code.Count * sizeof(uint32_t),
+            .pCode    = code.Code,
+        };
+        VkShaderModule module = VK_NULL_HANDLE;
+        VkResult moduleResult = vkCreateShaderModule(_device, &moduleInfo, nullptr, &module);
+        be_assert(moduleResult == VK_SUCCESS, "Failed to create shader module!");
+        return module;
+    };
 
     // ── pipeline layout ───────────────────────────────────────────────────────
     // Set 0 is the persistent heap, all per-draw data arrives as root push constants.
@@ -34,10 +40,11 @@ auto SenVulkanBackend::MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulk
     if (desc.ComputeShader.IsValid()) {
         be_assert(!desc.VertexShader.IsValid(), "CreatePipeline: ComputeShader and VertexShader are mutually exclusive");
 
+        const VkShaderModule computeModule = createModule(desc.ComputeShader);
         VkPipelineShaderStageCreateInfo computeStage {
             .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage  = VK_SHADER_STAGE_COMPUTE_BIT,
-            .module = LookupShader(desc.ComputeShader).Module,
+            .module = computeModule,
             .pName  = "main",
         };
         VkComputePipelineCreateInfo computeInfo {
@@ -47,20 +54,23 @@ auto SenVulkanBackend::MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulk
         };
         result = vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computeInfo, nullptr, &entry.Pipeline);
         be_assert(result == VK_SUCCESS, "Failed to create compute pipeline!");
+        vkDestroyShaderModule(_device, computeModule, nullptr);
 
         entry.BindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-        return entry;
+        return handle;
     }
 
     // ── shader stages ──────────────────────────────────────────────────────────
     std::vector<VkPipelineShaderStageCreateInfo> stages;
+    std::vector<VkShaderModule> modules;
 
-    auto addStage = [&](SenShader shader, VkShaderStageFlagBits stageBit) {
-        if (!shader.IsValid()) { return; }
+    auto addStage = [&](const SenShaderCode& code, VkShaderStageFlagBits stageBit) {
+        if (!code.IsValid()) { return; }
+        modules.push_back(createModule(code));
         stages.push_back(VkPipelineShaderStageCreateInfo {
             .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage  = stageBit,
-            .module = LookupShader(shader).Module,
+            .module = modules.back(),
             .pName  = "main",
         });
     };
@@ -210,16 +220,11 @@ auto SenVulkanBackend::MakePipelineEntry(const SenPipelineDesc& desc) -> SenVulk
     result = vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &entry.Pipeline);
     be_assert(result == VK_SUCCESS, "Failed to create graphics pipeline!");
 
-    return entry;
-}
+    for (const auto module : modules) {
+        vkDestroyShaderModule(_device, module, nullptr);
+    }
 
-auto SenVulkanBackend::ReloadPipeline(SenPipeline handle) -> void {
-    auto& entry = _pipelines.at(handle.ID);
-    auto reloaded = MakePipelineEntry(entry.Desc);
-
-    vkDestroyPipeline(_device, entry.Pipeline, nullptr);
-    vkDestroyPipelineLayout(_device, entry.Layout, nullptr);
-    entry = std::move(reloaded);
+    return handle;
 }
 
 auto SenVulkanBackend::RetirePipeline(SenPipeline handle) -> void {

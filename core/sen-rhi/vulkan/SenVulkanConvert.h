@@ -165,16 +165,6 @@ namespace Sen::Vulkan {
         return VK_POLYGON_MODE_FILL;
     }
 
-    inline auto ToShaderStageFlags(SenShaderStageFlags stages) -> VkShaderStageFlags {
-        VkShaderStageFlags flags = 0;
-        if (HasAny(stages, SenShaderStageFlags::Vertex))  flags |= VK_SHADER_STAGE_VERTEX_BIT;
-        if (HasAny(stages, SenShaderStageFlags::Pixel))   flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
-        if (HasAny(stages, SenShaderStageFlags::Hull))    flags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-        if (HasAny(stages, SenShaderStageFlags::Domain))  flags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-        if (HasAny(stages, SenShaderStageFlags::Compute)) flags |= VK_SHADER_STAGE_COMPUTE_BIT;
-        return flags;
-    }
-
     inline auto ToHeapDescriptorType(SenHeapBinding binding) -> VkDescriptorType {
         switch (binding) {
             case SenHeapBinding::StorageTexture2D: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;

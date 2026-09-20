@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -18,6 +19,14 @@ enum class BeShaderType : uint8_t {
 };
 ENABLE_BITMASK(BeShaderType);
 
+struct BeShaderStageCode {
+    std::string FunctionName;
+    std::vector<uint32_t> Bytecode;
+
+    auto IsValid() const -> bool { return !Bytecode.empty(); }
+    auto GetCode() const -> SenShaderCode { return { Bytecode.data(), uint32_t(Bytecode.size()) }; }
+};
+
 struct BeShader {
     struct MaterialSchemeEntry {
         std::string Link;
@@ -36,11 +45,14 @@ struct BeShader {
     std::vector<SenVertexLayoutElement> VertexLayout;
     uint32_t VertexStride = 0;
 
-    SenShader ShaderVertex;
-    SenShader ShaderHull;
-    SenShader ShaderDomain;
-    SenShader ShaderPixel;
-    SenShader ShaderCompute;
+    std::filesystem::path SourcePath;
+    std::vector<std::filesystem::path> Includes;
+
+    BeShaderStageCode StageVertex;
+    BeShaderStageCode StageHull;
+    BeShaderStageCode StageDomain;
+    BeShaderStageCode StagePixel;
+    BeShaderStageCode StageCompute;
 
     std::unordered_map<std::string, uint32_t> PixelTargets;
     std::unordered_map<uint32_t, std::string> PixelTargetsInverse;

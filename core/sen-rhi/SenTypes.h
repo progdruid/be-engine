@@ -144,19 +144,6 @@ struct SenSamplerDesc {
 };
 
 
-// ─── bind group layout ───────────────────────────────────────────
-enum class SenShaderStageFlags : uint8_t {
-    None = 0,
-    Vertex = 1 << 0,
-    Pixel  = 1 << 1,
-    Hull = 1 << 2,
-    Domain = 1 << 3,
-    Compute = 1 << 4,
-    AllGraphics = Vertex | Pixel | Hull | Domain,
-};
-ENABLE_BITMASK(SenShaderStageFlags);
-
-
 // ─── blend state ───────────────────────────────────────────────
 enum class SenBlendFactor : uint8_t {
     Zero,
@@ -243,23 +230,10 @@ enum class SenTopology : uint8_t {
 
 
 // ─── shader ─────────────────────────────────────────────────────
-enum class SenShaderStage : uint8_t {
-    Vertex,
-    Hull,
-    Domain,
-    Pixel,
-    Compute,
-};
-
-struct SenShader {
-    uint32_t ID = 0;
-    auto IsValid() const -> bool { return ID != 0; }
-};
-
-struct SenShaderSourceDesc {
-    std::filesystem::path SourcePath;
-    std::string FunctionName;
-    SenShaderStage Stage;
+struct SenShaderCode {
+    const uint32_t* Code = nullptr;
+    uint32_t Count = 0;
+    auto IsValid() const -> bool { return Code != nullptr; }
 };
 
 // ─── vertex layout ─────────────────────────────────────────────
@@ -285,11 +259,11 @@ inline constexpr uint32_t SenMaxRootConstantSize = 128;
 
 struct SenPipelineDesc {
     // Shader stages
-    SenShader VertexShader;
-    SenShader HullShader;
-    SenShader DomainShader;
-    SenShader PixelShader;
-    SenShader ComputeShader;
+    SenShaderCode VertexShader;
+    SenShaderCode HullShader;
+    SenShaderCode DomainShader;
+    SenShaderCode PixelShader;
+    SenShaderCode ComputeShader;
 
     // Vertex input
     std::vector<SenVertexLayoutElement> VertexLayout;

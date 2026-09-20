@@ -23,7 +23,6 @@ VmaAllocator SenVulkanBackend::_allocator;
 std::unordered_map<uint32_t, SenVulkanTextureEntry> SenVulkanBackend::_textures;     uint32_t SenVulkanBackend::_nextTextureId = 1;
 std::unordered_map<uint32_t, SenVulkanBufferEntry> SenVulkanBackend::_buffers;       uint32_t SenVulkanBackend::_nextBufferId = 1;
 std::unordered_map<uint32_t, SenVulkanSamplerEntry> SenVulkanBackend::_samplers;     uint32_t SenVulkanBackend::_nextSamplerId = 1;
-std::unordered_map<uint32_t, SenVulkanShaderEntry> SenVulkanBackend::_shaders;       uint32_t SenVulkanBackend::_nextShaderId = 1;
 std::unordered_map<uint32_t, SenVulkanPipelineEntry> SenVulkanBackend::_pipelines;   uint32_t SenVulkanBackend::_nextPipelineId = 1;
 std::unordered_map<uint32_t, SenVulkanSwapchainEntry> SenVulkanBackend::_swapchains; uint32_t SenVulkanBackend::_nextSwapchainId = 1;
 std::vector<SenVulkanRetirementNote> SenVulkanBackend::_retirements;
@@ -236,11 +235,6 @@ auto SenVulkanBackend::Shutdown() -> void {
     auto pipelines = _pipelines;
     for (const auto& id : pipelines | std::views::keys) {
         RetirePipeline(SenPipeline { id });
-    }
-
-    auto shaders = _shaders;
-    for (const auto& id : shaders | std::views::keys) {
-        DestroyShader(SenShader { id });
     }
 
     auto samplers = _samplers;

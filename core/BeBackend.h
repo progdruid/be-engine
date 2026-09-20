@@ -60,6 +60,8 @@ class BeBackend {
     expose static auto GetStaticKey(uint32_t staticKeyId) -> const StaticKey&;
     expose static auto AcquireFormatSetId(const FormatSet& formatSet) -> uint32_t;
     expose static auto GetPipeline(const BeShader& shader, uint32_t staticKeyId, uint32_t formatSetId) -> SenPipeline;
+    expose static auto RebuildPipelines(const BeShader& shader) -> uint32_t;
+    hide static auto MakePipeline(const BeShader& shader, uint32_t staticKeyId, uint32_t formatSetId) -> SenPipeline;
     
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

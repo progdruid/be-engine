@@ -44,6 +44,9 @@ class BeShaderLibrary {
 
     hide
     static auto CreateShader(const BeShaderTools::ParsedShader& meta) -> std::unique_ptr<BeShader>;
+    static auto GetSourcePaths() -> std::vector<std::filesystem::path>;
+    static auto ReloadSources(std::span<const std::filesystem::path> changed) -> void;
+    static auto RecompileShader(BeShader& shader) -> bool;
 
     expose // default textures + samplers
     static auto RegisterBuiltinDefaultTextures() -> void;
