@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstring>
+#include <memory>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -10,6 +11,7 @@
 #include "sen-rhi/SenTypes.h"
 
 struct BeShader;
+class BeTexture;
 
 class BeBackend {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +72,7 @@ class BeBackend {
 
     expose static auto WriteBuffer(const void* data, uint32_t size, SenBuffer dst, uint32_t dstOffset) -> void;
     expose static auto WriteTexture(const void* data, uint32_t size, SenTexture dst) -> void;
+    expose static auto GenerateMips(const std::shared_ptr<BeTexture>& texture) -> void;
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

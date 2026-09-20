@@ -21,7 +21,11 @@ auto BeTexture::Builder::SetUsage(SenTextureUsage usage) -> Builder&& { _descrip
 auto BeTexture::Builder::SetFormat(SenFormat format)     -> Builder&& { _descriptor.Format = format;                    return std::move(*this); }
 auto BeTexture::Builder::SetMips(uint32_t mips)          -> Builder&& { _descriptor.Mips = mips; _autoMips = false;     return std::move(*this); }
 auto BeTexture::Builder::SetMipsAuto()                   -> Builder&& { _autoMips = true;                               return std::move(*this); }
-auto BeTexture::Builder::GenerateMips()                  -> Builder&& { _descriptor.GenerateMips = true;                return std::move(*this); }
+auto BeTexture::Builder::GenerateMips() -> Builder&& { 
+    _descriptor.GenerateMips = true; 
+    _descriptor.Usage = _descriptor.Usage | SenTextureUsage::RenderTarget; 
+    return std::move(*this); 
+}
 auto BeTexture::Builder::SetSize(uint32_t w, uint32_t h) -> Builder&& { _descriptor.Width = w; _descriptor.Height = h;  return std::move(*this); }
 auto BeTexture::Builder::SetCubemap(bool cubemap)        -> Builder&& { _descriptor.IsCubemap = cubemap;                return std::move(*this); }
 auto BeTexture::Builder::SetArrayLength(uint32_t length) -> Builder&& { _descriptor.ArrayLength = length;               return std::move(*this); }
@@ -112,6 +116,9 @@ auto BeTexture::Builder::Build() -> std::shared_ptr<BeTexture> {
         _descriptor.Mips = std::bit_width(std::max(_descriptor.Width, _descriptor.Height));
     }
     std::shared_ptr<BeTexture> resource(new BeTexture(_descriptor));
+    if (_descriptor.GenerateMips && resource->Mips > 1) {
+        BeBackend::GenerateMips(resource);
+    }
     if (_registry) {
         _registry->AddTexture(_descriptor.Name, resource);
     }
@@ -124,6 +131,9 @@ auto BeTexture::Builder::BuildNoReturn() -> void {
         _descriptor.Mips = std::bit_width(std::max(_descriptor.Width, _descriptor.Height));
     }
     const std::shared_ptr<BeTexture> resource(new BeTexture(_descriptor));
+    if (_descriptor.GenerateMips && resource->Mips > 1) {
+        BeBackend::GenerateMips(resource);
+    }
     if (_registry) {
         _registry->AddTexture(_descriptor.Name, resource);
     }
@@ -165,10 +175,6 @@ BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
             }
             BeBackend::WriteTexture(expanded.data(), faceSize * layerCount, Handle);
         }
-    }
-
-    if (descriptor.GenerateMips && Mips > 1) {
-        SenBackend::GenerateMips(Handle);
     }
 
     CreateMipViewports();

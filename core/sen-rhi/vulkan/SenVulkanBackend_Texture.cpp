@@ -22,9 +22,6 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     entry.LayerCount = layerCount;
     entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_UNDEFINED);
 
-    // Mip generation blits each level into the next, so every level is both a transfer source and destination.
-    const VkImageUsageFlags mipUsage = desc.Mips > 1 ? (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT) : 0;
-
     VkImageCreateInfo imageInfo {
         .sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .flags         = desc.Cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : VkImageCreateFlags(0),
@@ -35,7 +32,7 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
         .arrayLayers   = layerCount,
         .samples       = VK_SAMPLE_COUNT_1_BIT,
         .tiling        = VK_IMAGE_TILING_OPTIMAL,
-        .usage         = usage | mipUsage,
+        .usage         = usage,
         .sharingMode   = VK_SHARING_MODE_EXCLUSIVE,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
@@ -110,96 +107,6 @@ auto SenVulkanBackend::DestroyTexture(SenTexture handle) -> void {
 
 auto SenVulkanBackend:: LookupTexture(SenTexture handle) -> SenVulkanTextureEntry& {
     return _textures.Get(handle);
-}
-
-auto SenVulkanBackend::GenerateMips(SenTexture handle) -> void {
-    auto& entry = _textures.Get(handle);
-    be_assert(entry.MipLevels > 1, "GenerateMips: texture has only one mip level");
-
-    // vkCmdBlitImage downsamples with a linear filter — the format must advertise linear-filter support.
-    VkFormatProperties formatProps;
-    vkGetPhysicalDeviceFormatProperties(_physicalDevice, entry.Format, &formatProps);
-    be_assert(formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT,
-              "GenerateMips: texture format does not support linear blit filtering");
-
-    const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-    const uint32_t           layers = entry.LayerCount;
-
-    VkCommandBufferAllocateInfo cmdAlloc {
-        .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool        = _commandPool,
-        .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1,
-    };
-    VkCommandBuffer cmd;
-    vkAllocateCommandBuffers(_device, &cmdAlloc, &cmd);
-
-    VkCommandBufferBeginInfo beginInfo {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    };
-    vkBeginCommandBuffer(cmd, &beginInfo);
-
-    auto barrier = [&](uint32_t baseMip, uint32_t levelCount, VkImageLayout oldLayout, VkImageLayout newLayout,
-                       VkPipelineStageFlags2 srcStage, VkAccessFlags2 srcAccess,
-                       VkPipelineStageFlags2 dstStage, VkAccessFlags2 dstAccess) -> void {
-        const VkImageSubresourceRange range { aspect, baseMip, levelCount, 0, layers };
-        RecordImageBarrier(cmd, MakeImageBarrier(
-            entry.Image, range, oldLayout, newLayout, srcStage, srcAccess, dstStage, dstAccess));
-    };
-
-    // Bring every level into TRANSFER_DST. Mip 0 already holds the uploaded image; the rest are scratch.
-    // GenerateMips runs right after upload, so all mips share one layout — read level 0 as the source layout.
-    barrier(0, entry.MipLevels, entry.MipLayouts[0], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
-            VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT);
-
-    int32_t mipWidth  = static_cast<int32_t>(entry.Width);
-    int32_t mipHeight = static_cast<int32_t>(entry.Height);
-    for (uint32_t mip = 1; mip < entry.MipLevels; ++mip) {
-        // Flip the source level (mip-1) to TRANSFER_SRC and wait for its prior write to complete.
-        barrier(mip - 1, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_READ_BIT);
-
-        const int32_t nextWidth  = mipWidth  > 1 ? mipWidth  / 2 : 1;
-        const int32_t nextHeight = mipHeight > 1 ? mipHeight / 2 : 1;
-
-        VkImageBlit blit {
-            .srcSubresource = { aspect, mip - 1, 0, layers },
-            .srcOffsets     = { { 0, 0, 0 }, { mipWidth, mipHeight, 1 } },
-            .dstSubresource = { aspect, mip, 0, layers },
-            .dstOffsets     = { { 0, 0, 0 }, { nextWidth, nextHeight, 1 } },
-        };
-        vkCmdBlitImage(cmd, entry.Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                            entry.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                            1, &blit, VK_FILTER_LINEAR);
-
-        mipWidth  = nextWidth;
-        mipHeight = nextHeight;
-    }
-
-    // Levels [0, last) ended as TRANSFER_SRC; the last level is still TRANSFER_DST. Move all to shader-read.
-    barrier(0, entry.MipLevels - 1, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_READ_BIT,
-            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
-    barrier(entry.MipLevels - 1, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT,
-            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
-
-    entry.MipLayouts.assign(entry.MipLevels, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-    vkEndCommandBuffer(cmd);
-
-    VkFenceCreateInfo fenceInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    VkFence fence;
-    vkCreateFence(_device, &fenceInfo, nullptr, &fence);
-    VkSubmitInfo submitInfo { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .commandBufferCount = 1, .pCommandBuffers = &cmd };
-    vkQueueSubmit(_queue, 1, &submitInfo, fence);
-    vkWaitForFences(_device, 1, &fence, VK_TRUE, UINT64_MAX);
-
-    vkDestroyFence(_device, fence, nullptr);
-    vkFreeCommandBuffers(_device, _commandPool, 1, &cmd);
 }
 
 auto SenVulkanBackend::MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout,

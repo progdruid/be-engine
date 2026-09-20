@@ -149,7 +149,6 @@ class SenVulkanBackend {
     static auto CreateTexture  (const SenTextureDesc& desc) -> SenTexture;
     static auto DestroyTexture (SenTexture handle) -> void;
     static auto LookupTexture  (SenTexture handle) -> SenVulkanTextureEntry&;
-    static auto GenerateMips   (SenTexture handle) -> void;   // blit-chain downsample of mip 0 into the rest
     hide static auto CreateImageView      (VkImage image, VkFormat format, VkImageViewType viewType, VkImageAspectFlags aspect, uint32_t baseMip, uint32_t mipLevels, uint32_t baseLayer, uint32_t layerCount) -> VkImageView;
     expose static auto MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout, VkPipelineStageFlags2 srcStage, VkAccessFlags2 srcAccess, VkPipelineStageFlags2 dstStage, VkAccessFlags2 dstAccess) -> VkImageMemoryBarrier2;
     expose static auto MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout) -> VkImageMemoryBarrier2;

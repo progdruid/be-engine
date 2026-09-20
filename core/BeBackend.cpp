@@ -4,9 +4,16 @@
 #include <ranges>
 #include <string_view>
 
+#include "BeDrawState.h"
+#include "BeMaterial.h"
+#include "BePass.h"
+#include "BeRoot.h"
 #include "BeShader.h"
+#include "BeShaderLibrary.h"
+#include "BeTexture.h"
 #include "sen-rhi/SenBackend.h"
 #include <umbrellas/include-libassert.h>
+
 
 std::vector<BeBackend::StaticKey> BeBackend::_staticKeys;
 std::unordered_map<BeBackend::StaticKey, uint32_t, BeBackend::BytesHash> BeBackend::_staticKeyLookup;
@@ -18,48 +25,9 @@ BeBackend::RetirementBucket BeBackend::_pending;
 std::vector<BeBackend::RetirementBucket> BeBackend::_retired;
 std::array<BeBackend::MaterialArenaChain, BeRenderer::FramesInFlight> BeBackend::_arenaChains;
 
+
 auto BeBackend::Init() -> void {
     _uploadCmd = SenBackend::AllocateCommandBuffer();
-}
-
-auto BeBackend::WriteBuffer(const void* data, uint32_t size, SenBuffer dst, uint32_t dstOffset) -> void {
-    if (SenBackend::GetBufferMemory(dst) == SenMemory::Upload) {
-        auto* pointer = static_cast<uint8_t*>(SenBackend::GetBufferPointer(dst)) + dstOffset;
-        std::memcpy(pointer, data, size);
-        return;
-    }
-
-    const SenBuffer staging = SenBackend::CreateBuffer({
-        .Memory = SenMemory::Upload,
-        .Size = size,
-    });
-    std::memcpy(SenBackend::GetBufferPointer(staging), data, size);
-
-    _uploadCmd.Begin();
-    _uploadCmd.CopyBuffer(staging, 0, size, dst, dstOffset);
-    _uploadCmd.End();
-
-    const SenSubmission submission = SenBackend::SubmitImmediate(_uploadCmd);
-    Retire(staging);
-    StampRetirements(submission);
-}
-
-auto BeBackend::WriteTexture(const void* data, uint32_t size, SenTexture dst) -> void {
-    const SenBuffer staging = SenBackend::CreateBuffer({
-        .Memory = SenMemory::Upload,
-        .Size = size,
-    });
-    std::memcpy(SenBackend::GetBufferPointer(staging), data, size);
-
-    _uploadCmd.Begin();
-    _uploadCmd.TransitionTextures({ { dst, SenResourceState::TransferDst } });
-    _uploadCmd.CopyBufferToTexture(staging, 0, dst, 0);
-    _uploadCmd.TransitionTextures({ { dst, SenResourceState::ShaderRead } });
-    _uploadCmd.End();
-
-    const SenSubmission submission = SenBackend::SubmitImmediate(_uploadCmd);
-    Retire(staging);
-    StampRetirements(submission);
 }
 
 auto BeBackend::Shutdown() -> void {
@@ -93,48 +61,6 @@ auto BeBackend::Shutdown() -> void {
 
 
 
-
-auto BeBackend::Retire(SenTexture handle) -> void {
-    _pending.Textures.push_back(handle);
-}
-
-auto BeBackend::Retire(SenBuffer handle) -> void {
-    _pending.Buffers.push_back(handle);
-}
-
-auto BeBackend::Retire(SenSampler handle) -> void {
-    _pending.Samplers.push_back(handle);
-}
-
-auto BeBackend::Retire(SenPipeline handle) -> void {
-    _pending.Pipelines.push_back(handle);
-}
-
-auto BeBackend::StampRetirements(SenSubmission submission) -> void {
-    _pending.Submission = submission;
-    _retired.push_back(std::move(_pending));
-    _pending = {};
-}
-
-auto BeBackend::FlushRetirements() -> void {
-    size_t flushed = 0;
-    while (flushed < _retired.size() && SenBackend::IsSubmissionComplete(_retired[flushed].Submission)) {
-        DestroyBucket(_retired[flushed]);
-        ++flushed;
-    }
-    _retired.erase(_retired.begin(), _retired.begin() + flushed);
-}
-
-auto BeBackend::DestroyBucket(const RetirementBucket& bucket) -> void {
-    for (const auto handle : bucket.Textures)   SenBackend::DestroyTexture(handle);
-    for (const auto handle : bucket.Buffers)    SenBackend::DestroyBuffer(handle);
-    for (const auto handle : bucket.Samplers)   SenBackend::DestroySampler(handle);
-    for (const auto handle : bucket.Pipelines)  SenBackend::DestroyPipeline(handle);
-}
-
-
-
-
 auto BeBackend::AcquireStaticKeyId(const StaticKey& key) -> uint32_t {
     const auto it = _staticKeyLookup.find(key);
     if (it != _staticKeyLookup.end()) {
@@ -146,7 +72,6 @@ auto BeBackend::AcquireStaticKeyId(const StaticKey& key) -> uint32_t {
     _pipelines.emplace_back();
     return id;
 }
-
 auto BeBackend::GetStaticKey(uint32_t staticKeyId) -> const StaticKey& {
     return _staticKeys.at(staticKeyId);
 }
@@ -228,6 +153,122 @@ auto BeBackend::MakePipeline(const BeShader& shader, uint32_t staticKeyId, uint3
     }
 
     return SenBackend::CreatePipeline(desc);
+}
+
+
+
+
+auto BeBackend::WriteBuffer(const void* data, uint32_t size, SenBuffer dst, uint32_t dstOffset) -> void {
+    if (SenBackend::GetBufferMemory(dst) == SenMemory::Upload) {
+        auto* pointer = static_cast<uint8_t*>(SenBackend::GetBufferPointer(dst)) + dstOffset;
+        std::memcpy(pointer, data, size);
+        return;
+    }
+
+    const SenBuffer staging = SenBackend::CreateBuffer({
+        .Memory = SenMemory::Upload,
+        .Size = size,
+    });
+    std::memcpy(SenBackend::GetBufferPointer(staging), data, size);
+
+    _uploadCmd.Begin();
+    _uploadCmd.CopyBuffer(staging, 0, size, dst, dstOffset);
+    _uploadCmd.End();
+
+    const SenSubmission submission = SenBackend::SubmitImmediate(_uploadCmd);
+    Retire(staging);
+    StampRetirements(submission);
+}
+
+auto BeBackend::WriteTexture(const void* data, uint32_t size, SenTexture dst) -> void {
+    const SenBuffer staging = SenBackend::CreateBuffer({
+        .Memory = SenMemory::Upload,
+        .Size = size,
+    });
+    std::memcpy(SenBackend::GetBufferPointer(staging), data, size);
+
+    _uploadCmd.Begin();
+    _uploadCmd.TransitionTextures({ { dst, SenResourceState::TransferDst } });
+    _uploadCmd.CopyBufferToTexture(staging, 0, dst, 0);
+    _uploadCmd.TransitionTextures({ { dst, SenResourceState::ShaderRead } });
+    _uploadCmd.End();
+
+    const SenSubmission submission = SenBackend::SubmitImmediate(_uploadCmd);
+    Retire(staging);
+    StampRetirements(submission);
+}
+
+auto BeBackend::GenerateMips(const std::shared_ptr<BeTexture>& texture) -> void {
+    be_assert(texture->Mips > 1, "BeBackend::GenerateMips: texture has only one mip level");
+
+    const auto shader = BeShaderLibrary::GetShader("mip-downsample");
+    const auto state = BeDrawState::Create(*shader).Build();
+    const auto& scheme = BeShaderLibrary::GetShaderScheme(*shader, "main");
+
+    _uploadCmd.Begin();
+
+    for (uint32_t mip = 1; mip < texture->Mips; ++mip) {
+        const auto& source = texture->GetMipViewport(mip - 1);
+        const auto material = BeMaterial::Create(scheme);
+        material->SetFloat2("TexelSize", glm::vec2(1.f / source.Width, 1.f / source.Height));
+        material->SetTexture("SourceMip", texture, mip - 1);
+
+        BePass pass(_uploadCmd);
+        pass.UseTextureMip(texture, mip - 1);
+        pass.AddColorTarget(texture, SenLoadOp::DontCare, {}, mip);
+        pass.SetViewport(texture->GetMipViewport(mip));
+        pass.Begin();
+        pass.SetState(state);
+        pass.Push(BeRoot(*shader).Use("main", *material));
+        _uploadCmd.Draw(4, 0);
+        pass.End();
+    }
+
+    _uploadCmd.TransitionTextures({ { texture->Handle, SenResourceState::ShaderRead } });
+    _uploadCmd.End();
+
+    const SenSubmission submission = SenBackend::SubmitImmediate(_uploadCmd);
+    StampRetirements(submission);
+}
+
+
+
+auto BeBackend::Retire(SenTexture handle) -> void {
+    _pending.Textures.push_back(handle);
+}
+
+auto BeBackend::Retire(SenBuffer handle) -> void {
+    _pending.Buffers.push_back(handle);
+}
+
+auto BeBackend::Retire(SenSampler handle) -> void {
+    _pending.Samplers.push_back(handle);
+}
+
+auto BeBackend::Retire(SenPipeline handle) -> void {
+    _pending.Pipelines.push_back(handle);
+}
+
+auto BeBackend::StampRetirements(SenSubmission submission) -> void {
+    _pending.Submission = submission;
+    _retired.push_back(std::move(_pending));
+    _pending = {};
+}
+
+auto BeBackend::FlushRetirements() -> void {
+    size_t flushed = 0;
+    while (flushed < _retired.size() && SenBackend::IsSubmissionComplete(_retired[flushed].Submission)) {
+        DestroyBucket(_retired[flushed]);
+        ++flushed;
+    }
+    _retired.erase(_retired.begin(), _retired.begin() + flushed);
+}
+
+auto BeBackend::DestroyBucket(const RetirementBucket& bucket) -> void {
+    for (const auto handle : bucket.Textures)   SenBackend::DestroyTexture(handle);
+    for (const auto handle : bucket.Buffers)    SenBackend::DestroyBuffer(handle);
+    for (const auto handle : bucket.Samplers)   SenBackend::DestroySampler(handle);
+    for (const auto handle : bucket.Pipelines)  SenBackend::DestroyPipeline(handle);
 }
 
 
