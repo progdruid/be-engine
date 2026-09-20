@@ -102,17 +102,9 @@ struct SenTextureDesc {
 
 
 // ─── buffer ─────────────────────────────────────────────────────
-enum class SenBufferUsage : uint8_t {
-    Vertex,
-    Index,
-    Constant,
-    Storage,
-};
-
-enum class SenBufferAccess : uint8_t {
-    Immutable, // set at creation, never written again - Vulkan: device-local via staging, assert write - DX11: USAGE_IMMUTABLE
-    Static,    // rarely updated (not per-frame)       - Vulkan: device-local via staging               - DX11: UpdateSubresource
-    Dynamic,   // written every frame                  - Vulkan: host-visible persistent map            - DX11: Map/Unmap DISCARD
+enum class SenMemory : uint8_t {
+    Device,  // device-local, written through a copy
+    Upload,  // host-visible, persistently mapped
 };
 
 using SenBuffer = SenHandle<SenHandleKind::Buffer>;
@@ -124,10 +116,8 @@ struct SenBufferGpuAddress {
 };
 
 struct SenBufferDesc {
-    SenBufferUsage  Usage  = SenBufferUsage::Constant;
-    SenBufferAccess Access = SenBufferAccess::Dynamic;
-    uint32_t        Size   = 0;       // in bytes
-    const void*     Data   = nullptr; // optional initial data, not owned
+    SenMemory Memory = SenMemory::Device;
+    uint32_t  Size   = 0;       // in bytes
 };
 
 

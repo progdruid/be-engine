@@ -4,6 +4,7 @@
 #include <sen-rhi/SenBackend.h>
 
 #include "BeAssetRegistry.h"
+#include "BeBackend.h"
 #include "BeShaderLibrary.h"
 #include "BeRenderer.h"
 #include "BeShader.h"
@@ -496,18 +497,18 @@ auto BeStandardRenderMachine::BakeMeshes() -> void {
         }
     }
 
+    const auto vertexSize = static_cast<uint32_t>(vertices.size() * sizeof(BeFullVertex));
     _sharedVertexBuffer = SenBackend::CreateBuffer({
-        .Usage  = SenBufferUsage::Vertex,
-        .Access = SenBufferAccess::Immutable,
-        .Size   = static_cast<uint32_t>(vertices.size() * sizeof(BeFullVertex)),
-        .Data   = vertices.data(),
+        .Memory = SenMemory::Device,
+        .Size   = vertexSize,
     });
+    BeBackend::WriteBuffer(vertices.data(), vertexSize, _sharedVertexBuffer, 0);
 
+    const auto indexSize = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
     _sharedIndexBuffer = SenBackend::CreateBuffer({
-        .Usage  = SenBufferUsage::Index,
-        .Access = SenBufferAccess::Immutable,
-        .Size   = static_cast<uint32_t>(indices.size() * sizeof(uint32_t)),
-        .Data   = indices.data(),
+        .Memory = SenMemory::Device,
+        .Size   = indexSize,
     });
+    BeBackend::WriteBuffer(indices.data(), indexSize, _sharedIndexBuffer, 0);
 }
 

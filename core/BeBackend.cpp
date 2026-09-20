@@ -13,11 +13,36 @@ std::unordered_map<BeBackend::StaticKey, uint32_t, BeBackend::BytesHash> BeBacke
 std::vector<BeBackend::FormatSet> BeBackend::_formatSets;
 std::unordered_map<BeBackend::FormatSet, uint32_t, BeBackend::BytesHash> BeBackend::_formatSetLookup;
 std::vector<std::vector<SenPipeline>> BeBackend::_pipelines;
+SenCommandBuffer BeBackend::_uploadCmd;
 BeBackend::RetirementBucket BeBackend::_pending;
 std::vector<BeBackend::RetirementBucket> BeBackend::_retired;
 std::array<BeBackend::MaterialArenaChain, BeRenderer::FramesInFlight> BeBackend::_arenaChains;
 
-auto BeBackend::Init() -> void {}
+auto BeBackend::Init() -> void {
+    _uploadCmd = SenBackend::AllocateCommandBuffer();
+}
+
+auto BeBackend::WriteBuffer(const void* data, uint32_t size, SenBuffer dst, uint32_t dstOffset) -> void {
+    if (SenBackend::GetBufferMemory(dst) == SenMemory::Upload) {
+        auto* pointer = static_cast<uint8_t*>(SenBackend::GetBufferPointer(dst)) + dstOffset;
+        std::memcpy(pointer, data, size);
+        return;
+    }
+
+    const SenBuffer staging = SenBackend::CreateBuffer({
+        .Memory = SenMemory::Upload,
+        .Size = size,
+    });
+    std::memcpy(SenBackend::GetBufferPointer(staging), data, size);
+
+    _uploadCmd.Begin();
+    _uploadCmd.CopyBuffer(staging, 0, size, dst, dstOffset);
+    _uploadCmd.End();
+
+    const SenSubmission submission = SenBackend::SubmitImmediate(_uploadCmd);
+    Retire(staging);
+    StampRetirements(submission);
+}
 
 auto BeBackend::Shutdown() -> void {
     SenBackend::WaitIdle();
@@ -202,8 +227,7 @@ auto BeBackend::AllocateMaterialArenaChunk(uint64_t frame, uint32_t size) -> Mat
     if (chain.CurrentBlock == chain.Blocks.size()) {
         const uint32_t blockSize = std::max(ArenaBlockSize, alignedSize);
         const SenBuffer buffer = SenBackend::CreateBuffer({
-            .Usage = SenBufferUsage::Constant,
-            .Access = SenBufferAccess::Dynamic,
+            .Memory = SenMemory::Upload,
             .Size = blockSize,
         });
         chain.Blocks.push_back({ buffer, blockSize });

@@ -39,12 +39,12 @@ struct SenVulkanTextureEntry {
 };
 
 struct SenVulkanBufferEntry {
-    VkBuffer        Buffer     = VK_NULL_HANDLE;
-    VmaAllocation   Allocation = VK_NULL_HANDLE;
-    SenBufferAccess Access     = SenBufferAccess::Dynamic;
-    uint32_t        Size       = 0;
-    void*           MappedPtr  = nullptr;  // non-null for Dynamic buffers (persistently mapped)
-    uint64_t        GpuAddress = 0;        // cached device address
+    VkBuffer      Buffer     = VK_NULL_HANDLE;
+    VmaAllocation Allocation = VK_NULL_HANDLE;
+    SenMemory     Memory     = SenMemory::Device;
+    uint32_t      Size       = 0;
+    void*         MappedPtr  = nullptr;  // non-null for Upload buffers (persistently mapped)
+    uint64_t      GpuAddress = 0;        // cached device address
 };
 
 struct SenVulkanSamplerEntry {
@@ -161,8 +161,8 @@ class SenVulkanBackend {
     static auto DestroyBuffer (SenBuffer handle) -> void;
     static auto LookupBuffer  (SenBuffer handle) -> SenVulkanBufferEntry&;
     static auto GetBufferGpuAddress(SenBuffer handle) -> SenBufferGpuAddress;
-    static auto WriteBuffer   (SenBuffer handle, const void* data, uint32_t size, uint32_t dstOffset = 0) -> void;
-    hide static auto UploadToDeviceBuffer(VkBuffer dst, const void* data, uint32_t size, uint32_t dstOffset) -> void;
+    static auto GetBufferMemory(SenBuffer handle) -> SenMemory;
+    static auto GetBufferPointer(SenBuffer handle) -> void*;
 
     expose // samplers
     static auto CreateSampler  (const SenSamplerDesc& desc) -> SenSampler;

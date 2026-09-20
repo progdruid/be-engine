@@ -39,6 +39,9 @@ class SenVulkanCommandBuffer {
     auto EndPass   () -> void;
 
     expose
+    auto CopyBuffer (SenBuffer src, uint32_t srcOffset, uint32_t size, SenBuffer dst, uint32_t dstOffset) -> void;
+
+    expose
     auto SetPipeline     (SenPipeline pipeline) -> void;
     auto PushRoot        (const void* data, uint32_t size) -> void;
     auto SetVertexBuffer (SenBuffer buffer) -> void;

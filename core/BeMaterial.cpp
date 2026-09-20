@@ -78,10 +78,10 @@ auto BeMaterial::CommitChunk() -> void {
     }
 
     _chunk = BeBackend::AllocateMaterialArenaChunk(frame, _scheme.CbufferSize);
-    SenBackend::WriteBuffer(
-        _chunk.Buffer,
+    BeBackend::WriteBuffer(
         _bufferData.data(),
         uint32_t(_bufferData.size() * sizeof(float)),
+        _chunk.Buffer,
         _chunk.Offset
     );
     _cbufferDirty = false;

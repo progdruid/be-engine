@@ -118,6 +118,15 @@ auto SenVulkanCommandBuffer::EndPass() -> void {
     vkCmdEndRendering(_cmd);
 }
 
+auto SenVulkanCommandBuffer::CopyBuffer(SenBuffer src, uint32_t srcOffset, uint32_t size, SenBuffer dst, uint32_t dstOffset) -> void {
+    const VkBufferCopy region {
+        .srcOffset = srcOffset,
+        .dstOffset = dstOffset,
+        .size      = size,
+    };
+    vkCmdCopyBuffer(_cmd, SenVulkanBackend::LookupBuffer(src).Buffer, SenVulkanBackend::LookupBuffer(dst).Buffer, 1, &region);
+}
+
 auto SenVulkanCommandBuffer::TransitionTextures(const std::vector<TextureTransition>& transitions) -> void {
     std::vector<VkImageMemoryBarrier2> barriers;
     barriers.reserve(transitions.size());
