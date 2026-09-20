@@ -4,8 +4,7 @@
 #include <umbrellas/include-libassert.h>
 
 auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
-    const SenTexture handle { _nextTextureId++ };
-    auto& entry = _textures[handle.ID];
+    auto entry = SenVulkanTextureEntry();
 
     const VkFormat           format  = Sen::Vulkan::ToFormat(desc.Format);
     const VkImageUsageFlags  usage   = Sen::Vulkan::ToImageUsageFlags(desc.Usage, desc.Data != nullptr);
@@ -99,16 +98,15 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
         }
     }
 
-    return handle;
+    return _textures.Create(std::move(entry));
 }
 
 auto SenVulkanBackend::DestroyTexture(SenTexture handle) -> void {
-    const auto it = _textures.find(handle.ID);
-    if (it == _textures.end()) {
+    if (!_textures.Contains(handle)) {
         return;
     }
 
-    auto& entry = it->second;
+    auto& entry = _textures.Get(handle);
     HeapReleaseTexture(entry);
 
     auto destroy = [&](VkImageView view) -> void { if (view) { vkDestroyImageView(_device, view, nullptr); } };
@@ -120,15 +118,15 @@ auto SenVulkanBackend::DestroyTexture(SenTexture handle) -> void {
     for (auto& mips : entry.LayerMipRTVs) { for (auto view : mips) { destroy(view); } }
 
     vmaDestroyImage(_allocator, entry.Image, entry.Allocation);
-    _textures.erase(it);
+    _textures.Destroy(handle);
 }
 
 auto SenVulkanBackend:: LookupTexture(SenTexture handle) -> SenVulkanTextureEntry& {
-    return _textures.at(handle.ID);
+    return _textures.Get(handle);
 }
 
 auto SenVulkanBackend::GenerateMips(SenTexture handle) -> void {
-    auto& entry = _textures.at(handle.ID);
+    auto& entry = _textures.Get(handle);
     be_assert(entry.MipLevels > 1, "GenerateMips: texture has only one mip level");
 
     // vkCmdBlitImage downsamples with a linear filter — the format must advertise linear-filter support.

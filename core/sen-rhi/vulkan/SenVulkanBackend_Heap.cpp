@@ -171,7 +171,7 @@ auto SenVulkanBackend::HeapReleaseSampler(SenVulkanSamplerEntry& entry) -> void 
 }
 
 auto SenVulkanBackend::GetTextureHeapIndex(SenTexture handle, uint32_t mip) -> uint32_t {
-    auto& entry = _textures.at(handle.ID);
+    auto& entry = _textures.Get(handle);
     if (mip != SEN_FULL_MIPS && mip < entry.MipHeapIndices.size()) {
         be_assert(entry.MipHeapIndices[mip] != UINT32_MAX, "GetTextureHeapIndex: texture mip has no heap slot");
         return entry.MipHeapIndices[mip];
@@ -181,7 +181,7 @@ auto SenVulkanBackend::GetTextureHeapIndex(SenTexture handle, uint32_t mip) -> u
 }
 
 auto SenVulkanBackend::GetSamplerHeapIndex(SenSampler handle) -> uint32_t {
-    auto& entry = _samplers.at(handle.ID);
+    auto& entry = _samplers.Get(handle);
     be_assert(entry.HeapIndex != UINT32_MAX, "GetSamplerHeapIndex: sampler has no heap slot");
     return entry.HeapIndex;
 }

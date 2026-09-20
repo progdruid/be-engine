@@ -196,7 +196,7 @@ auto BePass::Push(const BeRoot& root) -> void {
             _staticKeyId = BeBackend::AcquireStaticKeyId(_overrideKey);
         }
         const auto pipeline = BeBackend::GetPipeline(_state->GetShader(), _staticKeyId, _formatSetId);
-        if (pipeline.ID != _boundPipeline.ID) {
+        if (pipeline != _boundPipeline) {
             _cmd.SetPipeline(pipeline);
             _boundPipeline = pipeline;
         }

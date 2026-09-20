@@ -161,9 +161,7 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
         texEntry.MipRTVs.push_back(entry.ImageViews[i]);
         texEntry.MipLayouts.assign(1, VK_IMAGE_LAYOUT_UNDEFINED);
 
-        const SenTexture texHandle { _nextTextureId++ };
-        _textures[texHandle.ID] = texEntry;
-        entry.Textures[i] = texHandle;
+        entry.Textures[i] = _textures.Create(std::move(texEntry));
     }
 
     // 7. Create sync objects
@@ -184,35 +182,29 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     }
     entry.ImageTimelineValues.assign(imageCount, 0);
 
-    const SenSwapchain handle { _nextSwapchainId++ };
-    _swapchains[handle.ID] = std::move(entry);
-    return handle;
+    return _swapchains.Create(std::move(entry));
 }
 
 auto SenVulkanBackend::DestroySwapchain(SenSwapchain handle) -> void {
-    auto it = _swapchains.find(handle.ID);
-    if (it != _swapchains.end()) {
-        auto& entry = it->second;
-
-        // Remove swapchain texture entries (image views are owned by swapchain, not VMA)
-        for (const auto& tex : entry.Textures) {
-            _textures.erase(tex.ID);
-        }
-
-        for (auto semaphore : entry.ImageAvailableSemaphores) { vkDestroySemaphore(_device, semaphore, nullptr); }
-        for (auto semaphore : entry.RenderFinishedSemaphores) { vkDestroySemaphore(_device, semaphore, nullptr); }
-        for (auto imageView : entry.ImageViews) {
-            vkDestroyImageView(_device, imageView, nullptr);
-        }
-        if (entry.Swapchain) { vkDestroySwapchainKHR(_device, entry.Swapchain, nullptr); }
-        if (entry.Surface)   { vkDestroySurfaceKHR(_instance, entry.Surface, nullptr); }
-
-        _swapchains.erase(it);
+    if (!_swapchains.Contains(handle)) {
+        return;
     }
+
+    auto& entry = _swapchains.Get(handle);
+
+    // Remove swapchain texture entries (image views are owned by swapchain, not VMA)
+    for (const auto& tex : entry.Textures)                { _textures.Destroy(tex); }
+    for (auto semaphore : entry.ImageAvailableSemaphores) { vkDestroySemaphore(_device, semaphore, nullptr); }
+    for (auto semaphore : entry.RenderFinishedSemaphores) { vkDestroySemaphore(_device, semaphore, nullptr); }
+    for (auto imageView : entry.ImageViews)               { vkDestroyImageView(_device, imageView, nullptr); }
+    if (entry.Swapchain) { vkDestroySwapchainKHR(_device, entry.Swapchain, nullptr); }
+    if (entry.Surface)   { vkDestroySurfaceKHR(_instance, entry.Surface, nullptr); }
+
+    _swapchains.Destroy(handle);
 }
 
 auto SenVulkanBackend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uint32_t height) -> void {
-    const auto& entry = _swapchains.at(handle.ID);
+    const auto& entry = _swapchains.Get(handle);
     const SenSwapchainDesc desc {
         .NativeWindowHandle = entry.NativeWindowHandle,
         .Width = width,
@@ -228,19 +220,19 @@ auto SenVulkanBackend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uin
 }
 
 auto SenVulkanBackend::GetSwapchainFormat(SenSwapchain handle) -> SenFormat {
-    return _swapchains.at(handle.ID).Format;
+    return _swapchains.Get(handle).Format;
 }
 
 auto SenVulkanBackend::GetSwapchainWidth(SenSwapchain handle) -> uint32_t {
-    return _swapchains.at(handle.ID).Width;
+    return _swapchains.Get(handle).Width;
 }
 
 auto SenVulkanBackend::GetSwapchainHeight(SenSwapchain handle) -> uint32_t {
-    return _swapchains.at(handle.ID).Height;
+    return _swapchains.Get(handle).Height;
 }
 
 auto SenVulkanBackend::GetSurfaceExtent(SenSwapchain handle, uint32_t& outWidth, uint32_t& outHeight) -> void {
-    const auto& entry = _swapchains.at(handle.ID);
+    const auto& entry = _swapchains.Get(handle);
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, entry.Surface, &capabilities);
     outWidth  = capabilities.currentExtent.width;
@@ -248,7 +240,7 @@ auto SenVulkanBackend::GetSurfaceExtent(SenSwapchain handle, uint32_t& outWidth,
 }
 
 auto SenVulkanBackend::BeginFrame(SenSwapchain handle, uint32_t frameSlot) -> SenTexture {
-    auto& entry = _swapchains.at(handle.ID);
+    auto& entry = _swapchains.Get(handle);
     be_assert(frameSlot < entry.FramesInFlight, "BeginFrame: frame slot out of range");
 
     const uint64_t slotValue = entry.SlotTimelineValues[frameSlot];
@@ -282,7 +274,7 @@ auto SenVulkanBackend::BeginFrame(SenSwapchain handle, uint32_t frameSlot) -> Se
 }
 
 auto SenVulkanBackend::EndFrame(SenSwapchain handle, SenVulkanCommandBuffer& cmd, uint32_t frameSlot) -> SenSubmission {
-    auto& entry = _swapchains.at(handle.ID);
+    auto& entry = _swapchains.Get(handle);
     be_assert(frameSlot < entry.FramesInFlight, "EndFrame: frame slot out of range");
 
     const VkCommandBufferSubmitInfo cmdInfo {

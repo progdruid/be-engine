@@ -10,6 +10,24 @@
 
 
 
+// ─── handles ──────────────────────────────────────────────────────
+enum class SenHandleKind : uint8_t {
+    Texture,
+    Buffer,
+    Sampler,
+    Pipeline,
+    Swapchain,
+};
+
+template <SenHandleKind Kind>
+struct SenHandle {
+    uint32_t Index = 0;
+    uint32_t Generation = 0;
+    auto IsValid() const -> bool { return Generation != 0; }
+    auto operator==(const SenHandle& other) const -> bool = default;
+};
+
+
 // ─── platform ─────────────────────────────────────────────────────
 enum class SenPlatform { Windows, Linux, Unknown };
 
@@ -68,10 +86,7 @@ enum class SenResourceState : uint8_t {
 
 constexpr uint32_t SEN_FULL_MIPS = UINT32_MAX;
 
-struct SenTexture {
-    uint32_t ID = 0;
-    auto IsValid() const -> bool { return ID != 0; }
-};
+using SenTexture = SenHandle<SenHandleKind::Texture>;
 
 struct SenTextureDesc {
     SenFormat       Format      = SenFormat::Unknown;
@@ -100,10 +115,7 @@ enum class SenBufferAccess : uint8_t {
     Dynamic,   // written every frame                  - Vulkan: host-visible persistent map            - DX11: Map/Unmap DISCARD
 };
 
-struct SenBuffer {
-    uint32_t ID = 0;
-    auto IsValid() const -> bool { return ID != 0; }
-};
+using SenBuffer = SenHandle<SenHandleKind::Buffer>;
 
 struct SenBufferGpuAddress {
     uint64_t Value = 0;
@@ -132,10 +144,7 @@ enum class SenAddressMode : uint8_t {
     Mirror,
 };
 
-struct SenSampler {
-    uint32_t ID = 0;
-    auto IsValid() const -> bool { return ID != 0; }
-};
+using SenSampler = SenHandle<SenHandleKind::Sampler>;
 
 struct SenSamplerDesc {
     SenFilter      Filter     = SenFilter::Linear;
@@ -257,10 +266,7 @@ struct SenVertexLayoutDesc {
 
 
 // ─── pipeline ──────────────────────────────────────────────────
-struct SenPipeline {
-    uint32_t ID = 0;
-    auto IsValid() const -> bool { return ID != 0; }
-};
+using SenPipeline = SenHandle<SenHandleKind::Pipeline>;
 
 inline constexpr uint32_t SenMaxRootConstantSize = 128;
 
@@ -343,10 +349,7 @@ enum class SenPresentMode : uint8_t {
     Mailbox,    // triple-buf — Vulkan: MAILBOX_KHR, DX11: falls back to VSync
 };
 
-struct SenSwapchain {
-    uint32_t ID = 0;
-    auto IsValid() const -> bool { return ID != 0; }
-};
+using SenSwapchain = SenHandle<SenHandleKind::Swapchain>;
 
 struct SenSwapchainDesc {
     void*          NativeWindowHandle = nullptr;  // GLFWwindow* (TODO: see SenVulkanBackend.cpp)

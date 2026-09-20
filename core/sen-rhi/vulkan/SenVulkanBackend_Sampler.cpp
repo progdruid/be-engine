@@ -4,8 +4,7 @@
 #include <umbrellas/include-libassert.h>
 
 auto SenVulkanBackend::CreateSampler(const SenSamplerDesc& desc) -> SenSampler {
-    const SenSampler handle { _nextSamplerId++ };
-    auto& entry = _samplers[handle.ID];
+    auto entry = SenVulkanSamplerEntry();
 
     VkSamplerCreateInfo samplerInfo {
         .sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -28,20 +27,20 @@ auto SenVulkanBackend::CreateSampler(const SenSamplerDesc& desc) -> SenSampler {
 
     HeapRegisterSampler(entry);
 
-    return handle;
+    return _samplers.Create(std::move(entry));
 }
 
 auto SenVulkanBackend::DestroySampler(SenSampler handle) -> void {
-    const auto it = _samplers.find(handle.ID);
-    if (it == _samplers.end()) {
+    if (!_samplers.Contains(handle)) {
         return;
     }
 
-    HeapReleaseSampler(it->second);
-    vkDestroySampler(_device, it->second.Sampler, nullptr);
-    _samplers.erase(it);
+    auto& entry = _samplers.Get(handle);
+    HeapReleaseSampler(entry);
+    vkDestroySampler(_device, entry.Sampler, nullptr);
+    _samplers.Destroy(handle);
 }
 
 auto SenVulkanBackend::LookupSampler(SenSampler handle) -> SenVulkanSamplerEntry& {
-    return _samplers.at(handle.ID);
+    return _samplers.Get(handle);
 }

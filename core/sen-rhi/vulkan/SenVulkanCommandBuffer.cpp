@@ -178,7 +178,7 @@ auto SenVulkanCommandBuffer::ResetPerFrameState() -> void {
 // ─── pipeline + resources ─────────────────────────────────────────────────────
 
 auto SenVulkanCommandBuffer::SetPipeline(SenPipeline pipeline) -> void {
-    if (pipeline.ID == _boundPipeline.ID) {
+    if (pipeline == _boundPipeline) {
         return;
     }
 

@@ -3,8 +3,7 @@
 #include <umbrellas/include-libassert.h>
 
 auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
-    const SenBuffer handle { _nextBufferId++ };
-    auto& entry = _buffers[handle.ID];
+    auto entry = SenVulkanBufferEntry();
     entry.Access = desc.Access;
     entry.Size   = desc.Size;
 
@@ -62,29 +61,29 @@ auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
     };
     entry.GpuAddress = vkGetBufferDeviceAddress(_device, &addressInfo);
 
-    return handle;
+    return _buffers.Create(std::move(entry));
 }
 
 auto SenVulkanBackend::DestroyBuffer(SenBuffer handle) -> void {
-    const auto it = _buffers.find(handle.ID);
-    if (it == _buffers.end()) {
+    if (!_buffers.Contains(handle)) {
         return;
     }
 
-    vmaDestroyBuffer(_allocator, it->second.Buffer, it->second.Allocation);
-    _buffers.erase(it);
+    auto& entry = _buffers.Get(handle);
+    vmaDestroyBuffer(_allocator, entry.Buffer, entry.Allocation);
+    _buffers.Destroy(handle);
 }
 
 auto SenVulkanBackend::LookupBuffer(SenBuffer handle) -> SenVulkanBufferEntry& {
-    return _buffers.at(handle.ID);
+    return _buffers.Get(handle);
 }
 
 auto SenVulkanBackend::GetBufferGpuAddress(SenBuffer handle) -> SenBufferGpuAddress {
-    return { _buffers.at(handle.ID).GpuAddress };
+    return { _buffers.Get(handle).GpuAddress };
 }
 
 auto SenVulkanBackend::WriteBuffer(SenBuffer handle, const void* data, uint32_t size, uint32_t dstOffset) -> void {
-    auto& entry = _buffers.at(handle.ID);
+    auto& entry = _buffers.Get(handle);
     be_assert(entry.Access != SenBufferAccess::Immutable, "Cannot write to an Immutable buffer");
     be_assert(dstOffset + size <= entry.Size, "WriteBuffer: write runs past the end of the buffer");
 

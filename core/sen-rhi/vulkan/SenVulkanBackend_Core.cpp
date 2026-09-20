@@ -20,11 +20,11 @@ uint64_t SenVulkanBackend::_timelineValue = 0;
 VkCommandPool SenVulkanBackend::_commandPool;
 VmaAllocator SenVulkanBackend::_allocator;
 
-std::unordered_map<uint32_t, SenVulkanTextureEntry> SenVulkanBackend::_textures;     uint32_t SenVulkanBackend::_nextTextureId = 1;
-std::unordered_map<uint32_t, SenVulkanBufferEntry> SenVulkanBackend::_buffers;       uint32_t SenVulkanBackend::_nextBufferId = 1;
-std::unordered_map<uint32_t, SenVulkanSamplerEntry> SenVulkanBackend::_samplers;     uint32_t SenVulkanBackend::_nextSamplerId = 1;
-std::unordered_map<uint32_t, SenVulkanPipelineEntry> SenVulkanBackend::_pipelines;   uint32_t SenVulkanBackend::_nextPipelineId = 1;
-std::unordered_map<uint32_t, SenVulkanSwapchainEntry> SenVulkanBackend::_swapchains; uint32_t SenVulkanBackend::_nextSwapchainId = 1;
+SenSlotMap<SenVulkanTextureEntry, SenTexture> SenVulkanBackend::_textures;
+SenSlotMap<SenVulkanBufferEntry, SenBuffer> SenVulkanBackend::_buffers;
+SenSlotMap<SenVulkanSamplerEntry, SenSampler> SenVulkanBackend::_samplers;
+SenSlotMap<SenVulkanPipelineEntry, SenPipeline> SenVulkanBackend::_pipelines;
+SenSlotMap<SenVulkanSwapchainEntry, SenSwapchain> SenVulkanBackend::_swapchains;
 
 VkDescriptorSetLayout SenVulkanBackend::_bindlessLayout = VK_NULL_HANDLE;
 VkDescriptorPool      SenVulkanBackend::_bindlessPool   = VK_NULL_HANDLE;
@@ -216,30 +216,11 @@ auto SenVulkanBackend::Shutdown() -> void {
     WaitIdle();
 
     // Destroy all swapchains first (they depend on device)
-    auto swapchains = _swapchains;
-    for (const auto id : swapchains | std::views::keys) {
-        DestroySwapchain(SenSwapchain { id });
-    }
-
-    auto textures = _textures;
-    for (const auto& id : textures | std::views::keys) {
-        DestroyTexture(SenTexture { id });
-    }
-
-    auto buffers = _buffers;
-    for (const auto& id : buffers | std::views::keys) {
-        DestroyBuffer(SenBuffer { id });
-    }
-
-    auto pipelines = _pipelines;
-    for (const auto& id : pipelines | std::views::keys) {
-        DestroyPipeline(SenPipeline { id });
-    }
-
-    auto samplers = _samplers;
-    for (const auto& id : samplers | std::views::keys) {
-        DestroySampler(SenSampler { id });
-    }
+    for (const auto handle : _swapchains.GetLiveHandles()) { DestroySwapchain(handle); }
+    for (const auto handle : _textures.GetLiveHandles())   { DestroyTexture(handle); }
+    for (const auto handle : _buffers.GetLiveHandles())    { DestroyBuffer(handle); }
+    for (const auto handle : _pipelines.GetLiveHandles())  { DestroyPipeline(handle); }
+    for (const auto handle : _samplers.GetLiveHandles())   { DestroySampler(handle); }
 
     ShutdownBindlessHeap();
     if (_timeline)         { vkDestroySemaphore(_device, _timeline, nullptr); _timeline = VK_NULL_HANDLE; }

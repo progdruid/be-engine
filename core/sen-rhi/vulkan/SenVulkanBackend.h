@@ -8,6 +8,7 @@
 #include <vma/vk_mem_alloc.h>
 
 #include "sen-rhi/SenCommandBuffer.h"
+#include "sen-rhi/SenSlotMap.h"
 #include "sen-rhi/SenTypes.h"
 #include <umbrellas/common.hpp>
 
@@ -98,11 +99,11 @@ class SenVulkanBackend {
     static VmaAllocator _allocator;
 
     hide
-    static std::unordered_map<uint32_t, SenVulkanSwapchainEntry> _swapchains;   static uint32_t _nextSwapchainId;
-    static std::unordered_map<uint32_t, SenVulkanTextureEntry> _textures;       static uint32_t _nextTextureId;
-    static std::unordered_map<uint32_t, SenVulkanBufferEntry> _buffers;         static uint32_t _nextBufferId;
-    static std::unordered_map<uint32_t, SenVulkanSamplerEntry> _samplers;       static uint32_t _nextSamplerId;
-    static std::unordered_map<uint32_t, SenVulkanPipelineEntry> _pipelines;     static uint32_t _nextPipelineId;
+    static SenSlotMap<SenVulkanSwapchainEntry, SenSwapchain> _swapchains;
+    static SenSlotMap<SenVulkanTextureEntry, SenTexture> _textures;
+    static SenSlotMap<SenVulkanBufferEntry, SenBuffer> _buffers;
+    static SenSlotMap<SenVulkanSamplerEntry, SenSampler> _samplers;
+    static SenSlotMap<SenVulkanPipelineEntry, SenPipeline> _pipelines;
 
     hide
     static VkDescriptorSetLayout _bindlessLayout;

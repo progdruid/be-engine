@@ -4,8 +4,7 @@
 #include <umbrellas/include-libassert.h>
 
 auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
-    const SenPipeline handle { _nextPipelineId++ };
-    auto& entry = _pipelines[handle.ID];
+    auto entry = SenVulkanPipelineEntry();
 
     auto createModule = [&](const SenShaderCode& code) -> VkShaderModule {
         VkShaderModuleCreateInfo moduleInfo {
@@ -57,7 +56,7 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
         vkDestroyShaderModule(_device, computeModule, nullptr);
 
         entry.BindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-        return handle;
+        return _pipelines.Create(std::move(entry));
     }
 
     // ── shader stages ──────────────────────────────────────────────────────────
@@ -224,20 +223,20 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
         vkDestroyShaderModule(_device, module, nullptr);
     }
 
-    return handle;
+    return _pipelines.Create(std::move(entry));
 }
 
 auto SenVulkanBackend::DestroyPipeline(SenPipeline handle) -> void {
-    const auto it = _pipelines.find(handle.ID);
-    if (it == _pipelines.end()) {
+    if (!_pipelines.Contains(handle)) {
         return;
     }
 
-    vkDestroyPipeline(_device, it->second.Pipeline, nullptr);
-    vkDestroyPipelineLayout(_device, it->second.Layout, nullptr);
-    _pipelines.erase(it);
+    auto& entry = _pipelines.Get(handle);
+    vkDestroyPipeline(_device, entry.Pipeline, nullptr);
+    vkDestroyPipelineLayout(_device, entry.Layout, nullptr);
+    _pipelines.Destroy(handle);
 }
 
 auto SenVulkanBackend::LookupPipeline(SenPipeline handle) -> SenVulkanPipelineEntry& {
-    return _pipelines.at(handle.ID);
+    return _pipelines.Get(handle);
 }
