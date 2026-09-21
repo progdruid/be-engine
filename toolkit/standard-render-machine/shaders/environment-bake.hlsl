@@ -25,7 +25,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 
 struct environment_bake_material {
     float FaceIndex;
@@ -39,8 +39,8 @@ struct DrawRoot {
 [[vk::push_constant]] DrawRoot Root;
 
 property environment_bake_material* _Main { get { return Root.Main; } }
-property Texture2D Equirect { get { return Tex2DHeap[Root.Equirect]; } }
-property SamplerState EquirectSampler { get { return SamplerHeap[Root.EquirectSampler]; } }
+property Texture2D Equirect { get { return Tex2DTable[Root.Equirect]; } }
+property SamplerState EquirectSampler { get { return SamplerTable[Root.EquirectSampler]; } }
 
 struct PixelOutput {
     float4 EnvFace : SV_Target0;

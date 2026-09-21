@@ -4,6 +4,7 @@
 #include <sen-rhi/vulkan/SenVulkanValidation.h>
 
 #define VMA_IMPLEMENTATION
+#include <cstdio>
 #include <ranges>
 #include <vma/vk_mem_alloc.h>
 
@@ -30,9 +31,6 @@ SenSlotMap<SenVulkanSwapchainEntry, SenSwapchain> SenVulkanBackend::_swapchains;
 VkDescriptorSetLayout SenVulkanBackend::_bindlessLayout = VK_NULL_HANDLE;
 VkDescriptorPool      SenVulkanBackend::_bindlessPool   = VK_NULL_HANDLE;
 VkDescriptorSet       SenVulkanBackend::_bindlessSet    = VK_NULL_HANDLE;
-std::array<uint32_t, size_t(SenHeapBinding::Count)>              SenVulkanBackend::_heapNext {};
-std::array<std::vector<uint32_t>, size_t(SenHeapBinding::Count)> SenVulkanBackend::_heapFree {};
-std::array<uint32_t, size_t(SenHeapBinding::Count)>              SenVulkanBackend::_heapCapacity {};
 
 // ─── device lifecycle ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
@@ -210,7 +208,7 @@ auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
     result = vmaCreateAllocator(&allocatorInfo, &_allocator);
     be_assert(result == VK_SUCCESS, "Failed to create VMA allocator!");
 
-    InitBindlessHeap();
+    InitBindless();
 }
 
 auto SenVulkanBackend::Shutdown() -> void {
@@ -224,7 +222,7 @@ auto SenVulkanBackend::Shutdown() -> void {
     for (const auto handle : _pipelines.GetLiveHandles())  { DestroyPipeline(handle); }
     for (const auto handle : _samplers.GetLiveHandles())   { DestroySampler(handle); }
 
-    ShutdownBindlessHeap();
+    ShutdownBindless();
     if (_timeline)         { vkDestroySemaphore(_device, _timeline, nullptr); _timeline = VK_NULL_HANDLE; }
     if (_commandPool)      { vkDestroyCommandPool(_device, _commandPool, nullptr); _commandPool = VK_NULL_HANDLE; }
     if (_allocator)        { vmaDestroyAllocator(_allocator); _allocator = VK_NULL_HANDLE; }
@@ -235,6 +233,19 @@ auto SenVulkanBackend::Shutdown() -> void {
 
 auto SenVulkanBackend::WaitIdle() -> void {
     vkDeviceWaitIdle(_device);
+}
+
+auto SenVulkanBackend::GetCaps() -> SenCaps {
+    VkPhysicalDeviceProperties props {};
+    vkGetPhysicalDeviceProperties(_physicalDevice, &props);
+
+    SenCaps caps {
+        .TextureSlots = BindlessTextureSlots,
+        .StorageSlots = BindlessStorageSlots,
+        .SamplerSlots = BindlessSamplerSlots,
+    };
+    std::snprintf(caps.DeviceName, sizeof(caps.DeviceName), "%s", props.deviceName);
+    return caps;
 }
 
 auto SenVulkanBackend::IsSubmissionComplete(SenSubmission submission) -> bool {

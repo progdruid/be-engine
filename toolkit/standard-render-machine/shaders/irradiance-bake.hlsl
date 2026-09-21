@@ -25,7 +25,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 
 struct irradiance_bake_material {
     float FaceIndex;
@@ -40,8 +40,8 @@ struct DrawRoot {
 [[vk::push_constant]] DrawRoot Root;
 
 property irradiance_bake_material* _Main { get { return Root.Main; } }
-property TextureCube EnvCubemap { get { return TexCubeHeap[Root.EnvCubemap]; } }
-property SamplerState EnvSampler { get { return SamplerHeap[Root.EnvSampler]; } }
+property TextureCube EnvCubemap { get { return TexCubeTable[Root.EnvCubemap]; } }
+property SamplerState EnvSampler { get { return SamplerTable[Root.EnvSampler]; } }
 
 struct PixelOutput {
     float4 IrradianceFace : SV_Target0;

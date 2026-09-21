@@ -21,6 +21,11 @@ std::vector<BeBackend::FormatSet> BeBackend::_formatSets;
 std::unordered_map<BeBackend::FormatSet, uint32_t, BeBackend::BytesHash> BeBackend::_formatSetLookup;
 std::vector<std::vector<SenPipeline>> BeBackend::_pipelines;
 SenCommandBuffer BeBackend::_uploadCmd;
+std::array<uint32_t, static_cast<size_t>(BeBackend::BindlessKind::Count)> BeBackend::_bindlessNext {};
+std::array<std::vector<uint32_t>, static_cast<size_t>(BeBackend::BindlessKind::Count)> BeBackend::_bindlessFree {};
+std::array<uint32_t, static_cast<size_t>(BeBackend::BindlessKind::Count)> BeBackend::_bindlessCapacity {};
+std::vector<uint32_t> BeBackend::_textureSlots;
+std::vector<uint32_t> BeBackend::_samplerSlots;
 BeBackend::RetirementBucket BeBackend::_pending;
 std::vector<BeBackend::RetirementBucket> BeBackend::_retired;
 std::array<BeBackend::MaterialArenaChain, BeRenderer::FramesInFlight> BeBackend::_arenaChains;
@@ -28,6 +33,10 @@ std::array<BeBackend::MaterialArenaChain, BeRenderer::FramesInFlight> BeBackend:
 
 auto BeBackend::Init() -> void {
     _uploadCmd = SenBackend::AllocateCommandBuffer();
+
+    const SenCaps caps = SenBackend::GetCaps();
+    _bindlessCapacity[static_cast<size_t>(BindlessKind::Texture)] = caps.TextureSlots;
+    _bindlessCapacity[static_cast<size_t>(BindlessKind::Sampler)] = caps.SamplerSlots;
 }
 
 auto BeBackend::Shutdown() -> void {
@@ -57,6 +66,13 @@ auto BeBackend::Shutdown() -> void {
         }
         chain = {};
     }
+
+    _bindlessNext = {};
+    for (auto& free : _bindlessFree) {
+        free.clear();
+    }
+    _textureSlots.clear();
+    _samplerSlots.clear();
 }
 
 
@@ -233,25 +249,90 @@ auto BeBackend::GenerateMips(const std::shared_ptr<BeTexture>& texture) -> void 
 
 
 
-auto BeBackend::Retire(SenTexture handle) -> void {
-    _pending.Textures.push_back(handle);
+auto BeBackend::RegisterTexture(SenView view) -> void {
+    be_assert(view.IsValid(), "BeBackend::RegisterTexture: invalid view");
+
+    if (view.Index >= _textureSlots.size()) {
+        _textureSlots.resize(view.Index + 1, InvalidSlot);
+    }
+    be_assert(_textureSlots[view.Index] == InvalidSlot, "BeBackend::RegisterTexture: view already registered", view.Index);
+
+    const uint32_t slot = AllocSlot(BindlessKind::Texture);
+    _textureSlots[view.Index] = slot;
+    SenBackend::PublishTextureBindless(slot, view);
 }
 
-auto BeBackend::Retire(SenView handle) -> void {
-    _pending.Views.push_back(handle);
+auto BeBackend::RegisterSampler(SenSampler sampler) -> void {
+    be_assert(sampler.IsValid(), "BeBackend::RegisterSampler: invalid sampler");
+
+    if (sampler.Index >= _samplerSlots.size()) {
+        _samplerSlots.resize(sampler.Index + 1, InvalidSlot);
+    }
+    be_assert(_samplerSlots[sampler.Index] == InvalidSlot, "BeBackend::RegisterSampler: sampler already registered", sampler.Index);
+
+    const uint32_t slot = AllocSlot(BindlessKind::Sampler);
+    _samplerSlots[sampler.Index] = slot;
+    SenBackend::PublishSamplerBindless(slot, sampler);
 }
 
-auto BeBackend::Retire(SenBuffer handle) -> void {
-    _pending.Buffers.push_back(handle);
+auto BeBackend::GetTextureSlot(SenView view) -> uint32_t {
+    be_assert(view.Index < _textureSlots.size(), "BeBackend::GetTextureSlot: view not registered", view.Index);
+    const uint32_t slot = _textureSlots[view.Index];
+    be_assert(slot != InvalidSlot, "BeBackend::GetTextureSlot: view not registered", view.Index);
+    return slot;
 }
 
-auto BeBackend::Retire(SenSampler handle) -> void {
-    _pending.Samplers.push_back(handle);
+auto BeBackend::GetSamplerSlot(SenSampler sampler) -> uint32_t {
+    be_assert(sampler.Index < _samplerSlots.size(), "BeBackend::GetSamplerSlot: sampler not registered", sampler.Index);
+    const uint32_t slot = _samplerSlots[sampler.Index];
+    be_assert(slot != InvalidSlot, "BeBackend::GetSamplerSlot: sampler not registered", sampler.Index);
+    return slot;
 }
 
-auto BeBackend::Retire(SenPipeline handle) -> void {
-    _pending.Pipelines.push_back(handle);
+auto BeBackend::UnregisterTexture(SenView view) -> void {
+    if (view.Index >= _textureSlots.size() || _textureSlots[view.Index] == InvalidSlot) {
+        return;
+    }
+    ReleaseSlot(BindlessKind::Texture, _textureSlots[view.Index]);
+    _textureSlots[view.Index] = InvalidSlot;
 }
+
+auto BeBackend::UnregisterSampler(SenSampler sampler) -> void {
+    if (sampler.Index >= _samplerSlots.size() || _samplerSlots[sampler.Index] == InvalidSlot) {
+        return;
+    }
+    ReleaseSlot(BindlessKind::Sampler, _samplerSlots[sampler.Index]);
+    _samplerSlots[sampler.Index] = InvalidSlot;
+}
+
+auto BeBackend::AllocSlot(BindlessKind kind) -> uint32_t {
+    auto& free = _bindlessFree[static_cast<size_t>(kind)];
+    if (!free.empty()) {
+        const uint32_t recycled = free.back();
+        free.pop_back();
+        return recycled;
+    }
+
+    const uint32_t slot = _bindlessNext[static_cast<size_t>(kind)]++;
+    be_assert(
+        slot < _bindlessCapacity[static_cast<size_t>(kind)],
+        "BeBackend: out of bindless slots",
+        static_cast<size_t>(kind)
+    );
+    return slot;
+}
+
+auto BeBackend::ReleaseSlot(BindlessKind kind, uint32_t slot) -> void {
+    _bindlessFree[static_cast<size_t>(kind)].push_back(slot);
+}
+
+
+
+auto BeBackend::Retire(SenTexture handle)  -> void { _pending.Textures.push_back(handle); }
+auto BeBackend::Retire(SenView handle)     -> void { _pending.Views.push_back(handle); }
+auto BeBackend::Retire(SenBuffer handle)   -> void { _pending.Buffers.push_back(handle); }
+auto BeBackend::Retire(SenSampler handle)  -> void { _pending.Samplers.push_back(handle); }
+auto BeBackend::Retire(SenPipeline handle) -> void { _pending.Pipelines.push_back(handle); }
 
 auto BeBackend::StampRetirements(SenSubmission submission) -> void {
     _pending.Submission = submission;
@@ -269,11 +350,11 @@ auto BeBackend::FlushRetirements() -> void {
 }
 
 auto BeBackend::DestroyBucket(const RetirementBucket& bucket) -> void {
-    for (const auto handle : bucket.Views)      SenBackend::DestroyView(handle);
-    for (const auto handle : bucket.Textures)   SenBackend::DestroyTexture(handle);
-    for (const auto handle : bucket.Buffers)    SenBackend::DestroyBuffer(handle);
-    for (const auto handle : bucket.Samplers)   SenBackend::DestroySampler(handle);
-    for (const auto handle : bucket.Pipelines)  SenBackend::DestroyPipeline(handle);
+    for (const auto handle : bucket.Views)     { UnregisterTexture(handle); SenBackend::DestroyView(handle); }
+    for (const auto handle : bucket.Textures)  {                            SenBackend::DestroyTexture(handle); }
+    for (const auto handle : bucket.Buffers)   {                            SenBackend::DestroyBuffer(handle); }
+    for (const auto handle : bucket.Samplers)  { UnregisterSampler(handle); SenBackend::DestroySampler(handle); }
+    for (const auto handle : bucket.Pipelines) {                            SenBackend::DestroyPipeline(handle); }
 }
 
 

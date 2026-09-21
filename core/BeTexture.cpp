@@ -221,9 +221,11 @@ auto BeTexture::CreateViews() -> void {
     const uint32_t layerCount = (IsCubemap ? 6 : 1) * std::max(1u, ArrayLength);
 
     if (HasAny(Usage, SenTextureUsage::ShaderResource)) {
-        const SenViewType sampledType =
-            IsCubemap ? (ArrayLength > 1 ? SenViewType::SampledCubeArray : SenViewType::SampledCube)
-                      : (layerCount > 1  ? SenViewType::Sampled2DArray   : SenViewType::Sampled2D);
+        const SenViewType sampledType = 
+            IsCubemap 
+            ? (ArrayLength > 1 ? SenViewType::TextureCubeArray : SenViewType::TextureCube)
+            : (layerCount > 1  ? SenViewType::Texture2DArray   : SenViewType::Texture2D)
+        ;
 
         _sampledView = SenBackend::CreateView({
             .Texture = Handle,
@@ -231,6 +233,7 @@ auto BeTexture::CreateViews() -> void {
             .MipCount = Mips,
             .LayerCount = layerCount,
         });
+        BeBackend::RegisterTexture(_sampledView);
 
         _sampledMipViews.resize(Mips);
         for (uint32_t mip = 0; mip < Mips; ++mip) {
@@ -240,6 +243,7 @@ auto BeTexture::CreateViews() -> void {
                 .BaseMip = mip,
                 .LayerCount = layerCount,
             });
+            BeBackend::RegisterTexture(_sampledMipViews[mip]);
         }
     }
 
@@ -248,7 +252,7 @@ auto BeTexture::CreateViews() -> void {
         for (uint32_t layer = 0; layer < layerCount; ++layer) {
             _depthTargetViews[layer] = SenBackend::CreateView({
                 .Texture = Handle,
-                .Type = SenViewType::Attachment2D,
+                .Type = SenViewType::Texture2D,
                 .BaseLayer = layer,
             });
         }
@@ -261,7 +265,7 @@ auto BeTexture::CreateViews() -> void {
             for (uint32_t mip = 0; mip < Mips; ++mip) {
                 _colorTargetViews[layer][mip] = SenBackend::CreateView({
                     .Texture = Handle,
-                    .Type = SenViewType::Attachment2D,
+                    .Type = SenViewType::Texture2D,
                     .BaseMip = mip,
                     .BaseLayer = layer,
                 });

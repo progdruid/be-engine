@@ -107,7 +107,7 @@ static auto GenerateRoot(const BeShaderTools::ParsedShader& shader) -> std::opti
         } else {
             structBody += "    uint " + field.FieldName + ";\n";
             accessors  += "property " + field.TypeName + " " + field.AliasName
-                       +  " { get { return " + field.HeapArray + "[Root." + field.FieldName + "]; } }\n";
+                       +  " { get { return " + field.TableArray + "[Root." + field.FieldName + "]; } }\n";
         }
     }
 
@@ -147,7 +147,7 @@ static auto GenerateBoilerplate(const std::string& collection, const std::filesy
 
     auto includes = GenerateIncludes(collection, path, binds);
     if (!binds.empty()) {
-        includes.insert(includes.begin(), "#include \"core/be-heap.hlsl\"");
+        includes.insert(includes.begin(), "#include \"core/be-bindless-tables.hlsl\"");
     }
     if (!includes.empty()) {
         parts.push_back(JoinLines(includes));

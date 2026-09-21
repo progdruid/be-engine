@@ -80,16 +80,6 @@ enum class SenTextureUsage : uint32_t {
 };
 ENABLE_BITMASK(SenTextureUsage);
 
-enum class SenHeapBinding : uint32_t {
-    Texture2D        = 0,
-    Texture2DArray   = 1,
-    TextureCube      = 2,
-    TextureCubeArray = 3,
-    StorageTexture2D = 4,
-    Sampler          = 5,
-    Count            = 6,
-};
-
 enum class SenResourceState : uint8_t {
     Undefined,
     ShaderRead,
@@ -106,17 +96,15 @@ using SenTexture = SenHandle<SenHandleKind::Texture>;
 using SenView = SenHandle<SenHandleKind::View>;
 
 enum class SenViewType : uint8_t {
-    Sampled2D,
-    Sampled2DArray,
-    SampledCube,
-    SampledCubeArray,
-    Storage2D,
-    Attachment2D,
+    Texture2D,
+    Texture2DArray,
+    TextureCube,
+    TextureCubeArray,
 };
 
 struct SenViewDesc {
     SenTexture  Texture;
-    SenViewType Type       = SenViewType::Sampled2D;
+    SenViewType Type       = SenViewType::Texture2D;
     uint32_t    BaseMip    = 0;
     uint32_t    MipCount   = 1;
     uint32_t    BaseLayer  = 0;
@@ -359,6 +347,13 @@ struct SenPassDesc {
 
 struct SenDeviceDesc {
     bool DebugLayer = false;
+};
+
+struct SenCaps {
+    char     DeviceName[256] = {};
+    uint32_t TextureSlots    = 0;
+    uint32_t StorageSlots    = 0;
+    uint32_t SamplerSlots    = 0;
 };
 
 

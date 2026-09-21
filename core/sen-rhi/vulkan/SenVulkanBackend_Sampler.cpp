@@ -25,8 +25,6 @@ auto SenVulkanBackend::CreateSampler(const SenSamplerDesc& desc) -> SenSampler {
     VkResult result = vkCreateSampler(_device, &samplerInfo, nullptr, &entry.Sampler);
     be_assert(result == VK_SUCCESS, "Failed to create sampler!");
 
-    HeapRegisterSampler(entry);
-
     return _samplers.Create(std::move(entry));
 }
 
@@ -36,7 +34,6 @@ auto SenVulkanBackend::DestroySampler(SenSampler handle) -> void {
     }
 
     auto& entry = _samplers.Get(handle);
-    HeapReleaseSampler(entry);
     vkDestroySampler(_device, entry.Sampler, nullptr);
     _samplers.Destroy(handle);
 }

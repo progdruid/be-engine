@@ -27,7 +27,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct backbuffer_material {
@@ -45,9 +45,9 @@ struct DrawRoot {
 
 property uniform_material* _Frame { get { return Root.Frame; } }
 property backbuffer_material* _Main { get { return Root.Main; } }
-property Texture2D InputTexture { get { return Tex2DHeap[Root.InputTexture]; } }
-property Texture2D DepthTexture { get { return Tex2DHeap[Root.DepthTexture]; } }
-property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
+property Texture2D InputTexture { get { return Tex2DTable[Root.InputTexture]; } }
+property Texture2D DepthTexture { get { return Tex2DTable[Root.DepthTexture]; } }
+property SamplerState InputSampler { get { return SamplerTable[Root.InputSampler]; } }
 
 struct PixelOutput {
     float4 BackbufferColor : SV_Target0;

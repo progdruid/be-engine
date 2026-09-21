@@ -54,19 +54,19 @@ auto BeMaterial::GetCbufferAddress() -> SenBufferGpuAddress {
     return SenBackend::GetBufferGpuAddress(_chunk.Buffer) + _chunk.Offset;
 }
 
-auto BeMaterial::GetTextureHeapIndex(const std::string& propertyName) const -> uint32_t {
+auto BeMaterial::GetTextureSlot(const std::string& propertyName) const -> uint32_t {
     const auto it = _textures.find(propertyName);
-    be_assert(it != _textures.end(), "GetTextureHeapIndex: no texture property", propertyName);
+    be_assert(it != _textures.end(), "GetTextureSlot: no texture property", propertyName);
     const auto& binding = it->second;
-    be_assert(binding.Texture && binding.Texture->Handle.IsValid(), "GetTextureHeapIndex: texture unset", propertyName);
-    return SenBackend::GetViewHeapIndex(binding.Texture->GetSampledView(binding.Mip));
+    be_assert(binding.Texture && binding.Texture->Handle.IsValid(), "GetTextureSlot: texture unset", propertyName);
+    return BeBackend::GetTextureSlot(binding.Texture->GetSampledView(binding.Mip));
 }
 
-auto BeMaterial::GetSamplerHeapIndex(const std::string& propertyName) const -> uint32_t {
+auto BeMaterial::GetSamplerSlot(const std::string& propertyName) const -> uint32_t {
     const auto it = _samplers.find(propertyName);
-    be_assert(it != _samplers.end(), "GetSamplerHeapIndex: no sampler property", propertyName);
-    be_assert(it->second.IsValid(), "GetSamplerHeapIndex: sampler unset", propertyName);
-    return SenBackend::GetSamplerHeapIndex(it->second);
+    be_assert(it != _samplers.end(), "GetSamplerSlot: no sampler property", propertyName);
+    be_assert(it->second.IsValid(), "GetSamplerSlot: sampler unset", propertyName);
+    return BeBackend::GetSamplerSlot(it->second);
 }
 
 auto BeMaterial::CommitChunk() -> void {

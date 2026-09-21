@@ -61,7 +61,7 @@ class BeShaderTools {
         std::string   FieldName;
         std::string   AliasName;
         std::string   TypeName;
-        std::string   HeapArray;
+        std::string   TableArray;
         std::string   PropertyName;
         uint32_t      Offset = 0;
     };

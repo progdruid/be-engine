@@ -29,7 +29,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct dof_material {
@@ -50,10 +50,10 @@ struct DrawRoot {
 
 property uniform_material* _Frame { get { return Root.Frame; } }
 property dof_material* _Main { get { return Root.Main; } }
-property Texture2D ColorInput { get { return Tex2DHeap[Root.ColorInput]; } }
-property Texture2D DepthInput { get { return Tex2DHeap[Root.DepthInput]; } }
-property SamplerState LinearSampler { get { return SamplerHeap[Root.LinearSampler]; } }
-property SamplerState PointSampler { get { return SamplerHeap[Root.PointSampler]; } }
+property Texture2D ColorInput { get { return Tex2DTable[Root.ColorInput]; } }
+property Texture2D DepthInput { get { return Tex2DTable[Root.DepthInput]; } }
+property SamplerState LinearSampler { get { return SamplerTable[Root.LinearSampler]; } }
+property SamplerState PointSampler { get { return SamplerTable[Root.PointSampler]; } }
 
 struct PixelOutput {
     float3 DofOutput : SV_Target0;

@@ -518,6 +518,7 @@ auto BeShaderLibrary::GetSampler(std::string_view samplerDescString) -> SenSampl
         .Address    = address,
         .Comparison = hasComparison,
     });
+    BeBackend::RegisterSampler(sampler);
 
     _samplers[key] = sampler;
     return sampler;

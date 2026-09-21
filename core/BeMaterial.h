@@ -54,8 +54,8 @@ class BeMaterial {
     auto GetUniqueID () const -> uint32_t { return _uniqueID; }
 
     auto GetCbufferAddress () -> SenBufferGpuAddress;
-    auto GetTextureHeapIndex (const std::string& propertyName) const -> uint32_t;
-    auto GetSamplerHeapIndex (const std::string& propertyName) const -> uint32_t;
+    auto GetTextureSlot (const std::string& propertyName) const -> uint32_t;
+    auto GetSamplerSlot (const std::string& propertyName) const -> uint32_t;
 
     auto Print() const -> std::string;
     

@@ -21,7 +21,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 
 struct PixelOutput {
     float2 BrdfLut : SV_Target0;

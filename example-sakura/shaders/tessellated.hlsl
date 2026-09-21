@@ -33,7 +33,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 #include "core/uniform-material.hlsl"
 #include "core/objectMaterial.hlsl"
 
@@ -59,8 +59,8 @@ struct DrawRoot {
 property uniform_material* _Frame { get { return Root.Frame; } }
 property object_material_for_geometry_pass* _Object { get { return Root.GeometryObject; } }
 property tesselated_main_material_for_geometry_pass* _Tesselated { get { return Root.GeometryMain; } }
-property Texture2D DiffuseTexture { get { return Tex2DHeap[Root.DiffuseTexture]; } }
-property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
+property Texture2D DiffuseTexture { get { return Tex2DTable[Root.DiffuseTexture]; } }
+property SamplerState InputSampler { get { return SamplerTable[Root.InputSampler]; } }
 
 struct VertexInput {
     float3 Position : POSITION;

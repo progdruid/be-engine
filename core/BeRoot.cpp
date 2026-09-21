@@ -29,12 +29,12 @@ auto BeRoot::Use(const std::string& link, BeMaterial& material) -> BeRoot& {
                 break;
             }
             case BeShaderTools::RootFieldKind::TextureIndex: {
-                const uint32_t index = material.GetTextureHeapIndex(field.PropertyName);
+                const uint32_t index = material.GetTextureSlot(field.PropertyName);
                 std::memcpy(_data.data() + field.Offset, &index, sizeof(index));
                 break;
             }
             case BeShaderTools::RootFieldKind::SamplerIndex: {
-                const uint32_t index = material.GetSamplerHeapIndex(field.PropertyName);
+                const uint32_t index = material.GetSamplerSlot(field.PropertyName);
                 std::memcpy(_data.data() + field.Offset, &index, sizeof(index));
                 break;
             }

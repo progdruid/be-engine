@@ -37,7 +37,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 #include "core/uniform-material.hlsl"
 #include "core/objectMaterial.hlsl"
 
@@ -63,11 +63,11 @@ struct DrawRoot {
 property uniform_material* _Frame { get { return Root.Frame; } }
 property object_material_for_geometry_pass* _GeometryObject { get { return Root.GeometryObject; } }
 property standard_phong_material* _GeometryMain { get { return Root.GeometryMain; } }
-property Texture2D DiffuseTexture { get { return Tex2DHeap[Root.DiffuseTexture]; } }
-property Texture2D SpecularTexture { get { return Tex2DHeap[Root.SpecularTexture]; } }
-property Texture2D EmissiveTexture { get { return Tex2DHeap[Root.EmissiveTexture]; } }
-property Texture2D NormalMap { get { return Tex2DHeap[Root.NormalMap]; } }
-property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
+property Texture2D DiffuseTexture { get { return Tex2DTable[Root.DiffuseTexture]; } }
+property Texture2D SpecularTexture { get { return Tex2DTable[Root.SpecularTexture]; } }
+property Texture2D EmissiveTexture { get { return Tex2DTable[Root.EmissiveTexture]; } }
+property Texture2D NormalMap { get { return Tex2DTable[Root.NormalMap]; } }
+property SamplerState InputSampler { get { return SamplerTable[Root.InputSampler]; } }
 
 struct VertexInput {
     float3 Position : POSITION;

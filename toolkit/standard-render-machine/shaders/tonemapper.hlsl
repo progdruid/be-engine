@@ -25,7 +25,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct tonemapper_material {
@@ -43,8 +43,8 @@ struct DrawRoot {
 
 property uniform_material* _Frame { get { return Root.Frame; } }
 property tonemapper_material* _Main { get { return Root.Main; } }
-property Texture2D HDRInput { get { return Tex2DHeap[Root.HDRInput]; } }
-property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
+property Texture2D HDRInput { get { return Tex2DTable[Root.HDRInput]; } }
+property SamplerState InputSampler { get { return SamplerTable[Root.InputSampler]; } }
 
 struct PixelOutput {
     float3 HDRTarget : SV_Target0;

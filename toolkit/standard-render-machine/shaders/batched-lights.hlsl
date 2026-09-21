@@ -30,7 +30,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct batched_lights_material {
@@ -52,11 +52,11 @@ struct DrawRoot {
 
 property uniform_material* _Frame { get { return Root.Frame; } }
 property batched_lights_material* _Main { get { return Root.Main; } }
-property Texture2D Depth { get { return Tex2DHeap[Root.Depth]; } }
-property Texture2D Albedo_RGB { get { return Tex2DHeap[Root.Albedo_RGB]; } }
-property Texture2D WorldNormal_XYZ { get { return Tex2DHeap[Root.WorldNormal_XYZ]; } }
-property Texture2D ORM_RGB { get { return Tex2DHeap[Root.ORM_RGB]; } }
-property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
+property Texture2D Depth { get { return Tex2DTable[Root.Depth]; } }
+property Texture2D Albedo_RGB { get { return Tex2DTable[Root.Albedo_RGB]; } }
+property Texture2D WorldNormal_XYZ { get { return Tex2DTable[Root.WorldNormal_XYZ]; } }
+property Texture2D ORM_RGB { get { return Tex2DTable[Root.ORM_RGB]; } }
+property SamplerState InputSampler { get { return SamplerTable[Root.InputSampler]; } }
 
 struct PixelOutput {
     float3 LightHDR : SV_Target0;

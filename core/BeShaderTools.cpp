@@ -44,12 +44,12 @@ namespace {
         return "Texture2D";
     }
 
-    auto TextureHeapArray(const std::string& type) -> std::string {
-        if (type == "storage texture2d") return "RWTex2DHeap";
-        if (type == "textureCube")       return "TexCubeHeap";
-        if (type == "texture2d[]")       return "Tex2DArrayHeap";
-        if (type == "textureCube[]")     return "TexCubeArrayHeap";
-        return "Tex2DHeap";
+    auto TextureTableArray(const std::string& type) -> std::string {
+        if (type == "storage texture2d") return "RWTex2DTable";
+        if (type == "textureCube")       return "TexCubeTable";
+        if (type == "texture2d[]")       return "Tex2DArrayTable";
+        if (type == "textureCube[]")     return "TexCubeArrayTable";
+        return "Tex2DTable";
     }
 }
 
@@ -311,7 +311,7 @@ auto BeShaderTools::BuildRootLayout(const ParsedShader& shader, const std::vecto
                 .FieldName    = property.Name,
                 .AliasName    = property.Name,
                 .TypeName     = TextureSlangType(property.Type),
-                .HeapArray    = TextureHeapArray(property.Type),
+                .TableArray   = TextureTableArray(property.Type),
                 .PropertyName = property.Name,
                 .Offset       = offset,
             });
@@ -330,7 +330,7 @@ auto BeShaderTools::BuildRootLayout(const ParsedShader& shader, const std::vecto
                 .FieldName    = property.Name,
                 .AliasName    = property.Name,
                 .TypeName     = property.Type == "comparison sampler" ? "SamplerComparisonState" : "SamplerState",
-                .HeapArray    = "SamplerHeap",
+                .TableArray   = "SamplerTable",
                 .PropertyName = property.Name,
                 .Offset       = offset,
             });

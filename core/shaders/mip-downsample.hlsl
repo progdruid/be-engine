@@ -24,7 +24,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 
 struct mip_downsample_material {
     float2 TexelSize;
@@ -38,8 +38,8 @@ struct DrawRoot {
 [[vk::push_constant]] DrawRoot Root;
 
 property mip_downsample_material* _Main { get { return Root.Main; } }
-property Texture2D SourceMip { get { return Tex2DHeap[Root.SourceMip]; } }
-property SamplerState SourceSampler { get { return SamplerHeap[Root.SourceSampler]; } }
+property Texture2D SourceMip { get { return Tex2DTable[Root.SourceMip]; } }
+property SamplerState SourceSampler { get { return SamplerTable[Root.SourceSampler]; } }
 
 struct PixelOutput {
     float4 MipOutput : SV_Target0;

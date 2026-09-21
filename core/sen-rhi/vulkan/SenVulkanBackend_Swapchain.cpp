@@ -139,7 +139,7 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
         entry.Textures[i] = _textures.Create(std::move(texEntry));
         entry.Views[i] = CreateView({
             .Texture = entry.Textures[i],
-            .Type = SenViewType::Attachment2D,
+            .Type = SenViewType::Texture2D,
         });
     }
 

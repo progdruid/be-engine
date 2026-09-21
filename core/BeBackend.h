@@ -76,6 +76,33 @@ class BeBackend {
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // bindless table //////////////////////////////////////////////////////////////////////////////////////////////////
+    hide static constexpr uint32_t InvalidSlot = UINT32_MAX;
+
+    hide enum class BindlessKind : uint8_t {
+        Texture,
+        Sampler,
+        Count,
+    };
+
+    hide static std::array<uint32_t,              static_cast<size_t>(BindlessKind::Count)> _bindlessNext;
+    hide static std::array<std::vector<uint32_t>, static_cast<size_t>(BindlessKind::Count)> _bindlessFree;
+    hide static std::array<uint32_t,              static_cast<size_t>(BindlessKind::Count)> _bindlessCapacity;
+    hide static std::vector<uint32_t> _textureSlots;     // by SenView::Index
+    hide static std::vector<uint32_t> _samplerSlots;     // by SenSampler::Index
+
+    expose static auto RegisterTexture (SenView view) -> void;
+    expose static auto RegisterSampler (SenSampler sampler) -> void;
+    expose static auto GetTextureSlot  (SenView view) -> uint32_t;
+    expose static auto GetSamplerSlot  (SenSampler sampler) -> uint32_t;
+
+    hide static auto UnregisterTexture (SenView view) -> void;
+    hide static auto UnregisterSampler (SenSampler sampler) -> void;
+    hide static auto AllocSlot   (BindlessKind kind) -> uint32_t;
+    hide static auto ReleaseSlot (BindlessKind kind, uint32_t slot) -> void;
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // retirement //////////////////////////////////////////////////////////////////////////////////////////////////////
     hide struct RetirementBucket {
         SenSubmission Submission;

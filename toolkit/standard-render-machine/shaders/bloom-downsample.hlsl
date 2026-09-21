@@ -26,7 +26,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct bloom_downsample_material {
@@ -44,8 +44,8 @@ struct DrawRoot {
 
 property uniform_material* _Frame { get { return Root.Frame; } }
 property bloom_downsample_material* _Main { get { return Root.Main; } }
-property Texture2D BloomMipInput { get { return Tex2DHeap[Root.BloomMipInput]; } }
-property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
+property Texture2D BloomMipInput { get { return Tex2DTable[Root.BloomMipInput]; } }
+property SamplerState InputSampler { get { return SamplerTable[Root.InputSampler]; } }
 
 struct PixelOutput {
     float3 BloomMipOutput : SV_Target0;

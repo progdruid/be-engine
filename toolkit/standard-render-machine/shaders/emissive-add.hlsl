@@ -23,7 +23,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct DrawRoot {
@@ -34,8 +34,8 @@ struct DrawRoot {
 [[vk::push_constant]] DrawRoot Root;
 
 property uniform_material* _Frame { get { return Root.Frame; } }
-property Texture2D InputEmissive { get { return Tex2DHeap[Root.InputEmissive]; } }
-property SamplerState InputSampler { get { return SamplerHeap[Root.InputSampler]; } }
+property Texture2D InputEmissive { get { return Tex2DTable[Root.InputEmissive]; } }
+property SamplerState InputSampler { get { return SamplerTable[Root.InputSampler]; } }
 
 struct PixelOutput {
     float3 HDROutput : SV_Target0;

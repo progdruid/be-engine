@@ -32,8 +32,6 @@ struct SenVulkanTextureEntry {
 struct SenVulkanViewEntry {
     VkImageView View = VK_NULL_HANDLE;
     SenViewDesc Desc;
-    uint32_t    HeapBinding = UINT32_MAX;
-    uint32_t    HeapIndex   = UINT32_MAX;
 };
 
 struct SenVulkanBufferEntry {
@@ -47,7 +45,6 @@ struct SenVulkanBufferEntry {
 
 struct SenVulkanSamplerEntry {
     VkSampler Sampler = VK_NULL_HANDLE;
-    uint32_t HeapIndex = UINT32_MAX;
 };
 
 struct SenVulkanPipelineEntry {
@@ -105,17 +102,19 @@ class SenVulkanBackend {
     static SenSlotMap<SenVulkanPipelineEntry, SenPipeline> _pipelines;
 
     hide
+    static constexpr uint32_t BindlessTextureSlots = 4096;
+    static constexpr uint32_t BindlessStorageSlots = 256;
+    static constexpr uint32_t BindlessSamplerSlots = 256;
+
     static VkDescriptorSetLayout _bindlessLayout;
     static VkDescriptorPool      _bindlessPool;
     static VkDescriptorSet       _bindlessSet;
-    static std::array<uint32_t,              static_cast<size_t>(SenHeapBinding::Count)> _heapNext;
-    static std::array<std::vector<uint32_t>, static_cast<size_t>(SenHeapBinding::Count)> _heapFree;
-    static std::array<uint32_t,              static_cast<size_t>(SenHeapBinding::Count)> _heapCapacity;
 
     expose
     static auto Init      (const SenDeviceDesc& desc) -> void;
     static auto Shutdown  () -> void;
     static auto WaitIdle  () -> void;
+    static auto GetCaps   () -> SenCaps;
     static auto IsSubmissionComplete(SenSubmission submission) -> bool;
     
     expose // swapchain lifecycle
@@ -160,7 +159,6 @@ class SenVulkanBackend {
     static auto LookupView  (SenView handle) -> SenVulkanViewEntry&;
     static auto GetViewDesc (SenView handle) -> const SenViewDesc&;
     static auto GetViewFormat (SenView handle) -> SenFormat;
-    static auto GetViewHeapIndex (SenView handle) -> uint32_t;
 
     expose // buffers
     static auto CreateBuffer  (const SenBufferDesc& desc) -> SenBuffer;
@@ -175,16 +173,14 @@ class SenVulkanBackend {
     static auto DestroySampler (SenSampler handle) -> void;
     static auto LookupSampler  (SenSampler handle) -> SenVulkanSamplerEntry&;
 
-    expose // bindless heap
-    static auto GetSamplerHeapIndex (SenSampler handle) -> uint32_t;
+    expose // bindless
+    static auto PublishTextureBindless (uint32_t slot, SenView view) -> void;
+    static auto PublishStorageBindless (uint32_t slot, SenView view) -> void;
+    static auto PublishSamplerBindless (uint32_t slot, SenSampler sampler) -> void;
     static auto GetBindlessSet      () -> VkDescriptorSet { return _bindlessSet; }
     static auto GetBindlessLayout   () -> VkDescriptorSetLayout { return _bindlessLayout; }
-    hide static auto InitBindlessHeap     () -> void;
-    hide static auto ShutdownBindlessHeap () -> void;
-    hide static auto HeapRegisterView     (SenHeapBinding binding, VkImageView view) -> uint32_t;
-    hide static auto HeapRegisterSampler  (SenVulkanSamplerEntry& entry) -> void;
-    hide static auto HeapReleaseSampler   (SenVulkanSamplerEntry& entry) -> void;
-    hide static auto HeapAllocSlot        (SenHeapBinding binding) -> uint32_t;
+    hide static auto InitBindless     () -> void;
+    hide static auto ShutdownBindless () -> void;
 
     expose // pipelines
     static auto CreatePipeline  (const SenPipelineDesc& desc) -> SenPipeline;

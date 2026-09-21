@@ -29,7 +29,7 @@
 
 /*========================================================*/
 // region @be-auto-boilerplate
-#include "core/be-heap.hlsl"
+#include "core/be-bindless-tables.hlsl"
 #include "core/uniform-material.hlsl"
 
 struct pixelation_material {
@@ -50,9 +50,9 @@ struct DrawRoot {
 
 property uniform_material* _Frame { get { return Root.Frame; } }
 property pixelation_material* _Main { get { return Root.Main; } }
-property Texture2D ColorTexture { get { return Tex2DHeap[Root.ColorTexture]; } }
-property Texture2D DepthTexture { get { return Tex2DHeap[Root.DepthTexture]; } }
-property SamplerState PointSampler { get { return SamplerHeap[Root.PointSampler]; } }
+property Texture2D ColorTexture { get { return Tex2DTable[Root.ColorTexture]; } }
+property Texture2D DepthTexture { get { return Tex2DTable[Root.DepthTexture]; } }
+property SamplerState PointSampler { get { return SamplerTable[Root.PointSampler]; } }
 
 struct PixelOutput {
     float3 PixelOutput : SV_Target0;
