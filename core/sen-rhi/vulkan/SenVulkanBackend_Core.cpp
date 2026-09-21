@@ -248,6 +248,16 @@ auto SenVulkanBackend::GetCaps() -> SenCaps {
     return caps;
 }
 
+auto SenVulkanBackend::WaitForSubmission(SenSubmission submission) -> void {
+    const VkSemaphoreWaitInfo waitInfo {
+        .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+        .semaphoreCount = 1,
+        .pSemaphores    = &_timeline,
+        .pValues        = &submission.Value,
+    };
+    vkWaitSemaphores(_device, &waitInfo, UINT64_MAX);
+}
+
 auto SenVulkanBackend::IsSubmissionComplete(SenSubmission submission) -> bool {
     uint64_t completedValue = 0;
     vkGetSemaphoreCounterValue(_device, _timeline, &completedValue);
@@ -268,60 +278,89 @@ auto SenVulkanBackend::AllocateCommandBuffer() -> SenVulkanCommandBuffer {
     return SenVulkanCommandBuffer(cmd);
 }
 
-auto SenVulkanBackend::SubmitImmediate(SenVulkanCommandBuffer& cmd) -> SenSubmission {
-    const VkCommandBufferSubmitInfo cmdInfo {
-        .sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-        .commandBuffer = cmd.GetNativeHandle(),
-    };
-    
+auto SenVulkanBackend::Submit(const SenSubmitDesc& desc) -> SenSubmission {
+    be_assert(desc.ListCount <= MaxSubmitLists, "Submit: too many command lists", desc.ListCount);
+    be_assert(desc.PresentCount <= MaxSubmitPresents, "Submit: too many presents", desc.PresentCount);
+
+    std::array<VkCommandBufferSubmitInfo, MaxSubmitLists> cmdInfos {};
+    for (uint32_t i = 0; i < desc.ListCount; ++i) {
+        cmdInfos[i] = {
+            .sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+            .commandBuffer = desc.Lists[i]->GetNativeHandle(),
+        };
+    }
+
+    std::array<VkSemaphoreSubmitInfo, MaxSubmitPresents> waitInfos {};
+    std::array<VkSemaphoreSubmitInfo, MaxSubmitPresents + 1> signalInfos {};
+    for (uint32_t i = 0; i < desc.PresentCount; ++i) {
+        const auto& entry = _swapchains.Get(desc.Presents[i]);
+        waitInfos[i] = {
+            .sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = entry.AcquireSemaphores[entry.PendingAcquireIndex],
+            .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        };
+        signalInfos[i] = {
+            .sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = entry.RenderFinishedSemaphores[entry.CurrentImageIndex],
+            .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        };
+    }
+
     const uint64_t signalValue = ++_timelineValue;
-    const VkSemaphoreSubmitInfo signalInfo {
+    signalInfos[desc.PresentCount] = {
         .sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
         .semaphore = _timeline,
         .value     = signalValue,
         .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
     };
-    
+
     const VkSubmitInfo2 submitInfo {
         .sType                    = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-        .commandBufferInfoCount   = 1,
-        .pCommandBufferInfos      = &cmdInfo,
-        .signalSemaphoreInfoCount = 1,
-        .pSignalSemaphoreInfos    = &signalInfo,
+        .waitSemaphoreInfoCount   = desc.PresentCount,
+        .pWaitSemaphoreInfos      = waitInfos.data(),
+        .commandBufferInfoCount   = desc.ListCount,
+        .pCommandBufferInfos      = cmdInfos.data(),
+        .signalSemaphoreInfoCount = desc.PresentCount + 1,
+        .pSignalSemaphoreInfos    = signalInfos.data(),
     };
     vkQueueSubmit2(_queue, 1, &submitInfo, VK_NULL_HANDLE);
-    
-    const VkSemaphoreWaitInfo waitInfo {
-        .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
-        .semaphoreCount = 1,
-        .pSemaphores    = &_timeline,
-        .pValues        = &signalValue,
+
+    if (desc.PresentCount == 0) {
+        return SenSubmission { signalValue };
+    }
+
+    std::array<VkSemaphore, MaxSubmitPresents> presentWaits {};
+    std::array<VkSwapchainKHR, MaxSubmitPresents> swapchains {};
+    std::array<uint32_t, MaxSubmitPresents> imageIndices {};
+    for (uint32_t i = 0; i < desc.PresentCount; ++i) {
+        auto& entry = _swapchains.Get(desc.Presents[i]);
+        entry.AcquireTimelineValues[entry.PendingAcquireIndex] = signalValue;
+        entry.ImageTimelineValues[entry.CurrentImageIndex] = signalValue;
+
+        presentWaits[i] = entry.RenderFinishedSemaphores[entry.CurrentImageIndex];
+        swapchains[i]   = entry.Swapchain;
+        imageIndices[i] = entry.CurrentImageIndex;
+    }
+
+    const VkPresentInfoKHR presentInfo {
+        .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = desc.PresentCount,
+        .pWaitSemaphores    = presentWaits.data(),
+        .swapchainCount     = desc.PresentCount,
+        .pSwapchains        = swapchains.data(),
+        .pImageIndices      = imageIndices.data(),
     };
-    vkWaitSemaphores(_device, &waitInfo, UINT64_MAX);
+    vkQueuePresentKHR(_queue, &presentInfo);
 
     return SenSubmission { signalValue };
 }
 
 // ─── native escape hatches ────────────────────────────────────────────────────────────────
-auto SenVulkanBackend::GetNativeDevice() -> void* {
-    return _device;
-}
-
-auto SenVulkanBackend::GetNativeInstance() -> void* {
-    return _instance;
-}
-
-auto SenVulkanBackend::GetNativePhysicalDevice() -> void* {
-    return _physicalDevice;
-}
-
-auto SenVulkanBackend::GetNativeQueue() -> void* {
-    return _queue;
-}
-
-auto SenVulkanBackend::GetNativeQueueFamilyIndex() -> uint32_t {
-    return _queueFamilyIndex;
-}
+auto SenVulkanBackend::GetNativeDevice() -> void* { return _device; }
+auto SenVulkanBackend::GetNativeInstance() -> void* { return _instance; }
+auto SenVulkanBackend::GetNativePhysicalDevice() -> void* { return _physicalDevice; }
+auto SenVulkanBackend::GetNativeQueue() -> void* { return _queue; }
+auto SenVulkanBackend::GetNativeQueueFamilyIndex() -> uint32_t { return _queueFamilyIndex; }
 
 // ─── debug ────────────────────────────────────────────────────────────────
 auto SenVulkanBackend::BeginDebugEvent(const std::string& label) -> void {

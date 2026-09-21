@@ -30,8 +30,9 @@ class BeRenderer {
     raw_ptr<void> _nativeWindow;
     SenSwapchain _swapchain;
 
-    SenTexture _backbufferTexture;
+    SenView _backbufferView;
     std::array<SenCommandBuffer, FramesInFlight> _frameCmds;
+    std::array<SenSubmission, FramesInFlight> _frameSubmissions;
     SenCommandBuffer _immediateCmd;
 
     raw_ptr<BePassSequence> _sequence = nullptr;
@@ -55,8 +56,7 @@ class BeRenderer {
     auto Render() -> void;
     auto RenderOnce(const std::vector<BeRenderPass*>& passes) -> void;
 
-    [[nodiscard]] auto GetBackbufferTexture() const -> SenTexture { return _backbufferTexture; }
-    [[nodiscard]] auto GetBackbufferView() const -> SenView;
+    [[nodiscard]] auto GetBackbufferView() const -> SenView { return _backbufferView; }
 
     [[nodiscard]] auto GetSwapchainPixelWidth () const -> uint32_t;
     [[nodiscard]] auto GetSwapchainPixelHeight () const -> uint32_t;

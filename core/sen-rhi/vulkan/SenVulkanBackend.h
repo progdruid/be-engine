@@ -60,9 +60,11 @@ struct SenVulkanSwapchainEntry {
     std::vector<SenTexture> Textures;   // SenTexture handle per swapchain image
     std::vector<SenView>    Views;      // attachment view per swapchain image
 
-    // per frame slot
-    std::vector<VkSemaphore> ImageAvailableSemaphores;
-    std::vector<uint64_t>    SlotTimelineValues;
+    // acquire ring
+    std::vector<VkSemaphore> AcquireSemaphores;
+    std::vector<uint64_t>    AcquireTimelineValues;
+    uint32_t AcquireIndex = 0;
+    uint32_t PendingAcquireIndex = 0;
 
     // per swapchain image
     std::vector<VkSemaphore> RenderFinishedSemaphores;
@@ -74,7 +76,6 @@ struct SenVulkanSwapchainEntry {
     uint32_t Width = 0;
     uint32_t Height = 0;
     uint32_t BufferCount;
-    uint32_t FramesInFlight = 2;
     SenFormat Format;
     SenPresentMode PresentMode;
 };
@@ -116,22 +117,24 @@ class SenVulkanBackend {
     static auto WaitIdle  () -> void;
     static auto GetCaps   () -> SenCaps;
     static auto IsSubmissionComplete(SenSubmission submission) -> bool;
+    static auto WaitForSubmission(SenSubmission submission) -> void;
     
     expose // swapchain lifecycle
     static auto CreateSwapchain       (const SenSwapchainDesc& desc) -> SenSwapchain;
     static auto DestroySwapchain      (SenSwapchain handle) -> void;
     static auto ResizeSwapchain       (SenSwapchain& handle, uint32_t width, uint32_t height) -> void;
-    static auto BeginFrame            (SenSwapchain handle, uint32_t frameSlot) -> SenTexture;
-    static auto EndFrame              (SenSwapchain handle, SenVulkanCommandBuffer& cmd, uint32_t frameSlot) -> SenSubmission;
+    static auto AcquireSwapchainView  (SenSwapchain handle) -> SenView;
     static auto GetSwapchainFormat    (SenSwapchain handle) -> SenFormat;
-    static auto GetSwapchainImageView (SenSwapchain handle) -> SenView;
     static auto GetSwapchainWidth     (SenSwapchain handle) -> uint32_t;
     static auto GetSwapchainHeight    (SenSwapchain handle) -> uint32_t;
     static auto GetSurfaceExtent      (SenSwapchain handle, uint32_t& outWidth, uint32_t& outHeight) -> void;
 
     expose // command buffer factory
+    static constexpr uint32_t MaxSubmitLists = 8;
+    static constexpr uint32_t MaxSubmitPresents = 4;
+
     static auto AllocateCommandBuffer () -> SenVulkanCommandBuffer;
-    static auto SubmitImmediate       (SenVulkanCommandBuffer& cmd) -> SenSubmission;  // submit + fence-wait, no swapchain sync
+    static auto Submit (const SenSubmitDesc& desc) -> SenSubmission;
 
     expose // native API escape hatches (for ImGui, etc.)
     static auto GetNativeDevice          () -> void*;  // VkDevice

@@ -191,7 +191,9 @@ auto BeBackend::WriteBuffer(const void* data, uint32_t size, SenBuffer dst, uint
     _uploadCmd.CopyBuffer(staging, 0, size, dst, dstOffset);
     _uploadCmd.End();
 
-    const SenSubmission submission = SenBackend::SubmitImmediate(_uploadCmd);
+    SenCommandBuffer* lists[] = { &_uploadCmd };
+    const SenSubmission submission = SenBackend::Submit({ .Lists = lists, .ListCount = 1 });
+    SenBackend::WaitForSubmission(submission);
     Retire(staging);
     StampRetirements(submission);
 }
@@ -209,7 +211,9 @@ auto BeBackend::WriteTexture(const void* data, uint32_t size, SenTexture dst) ->
     _uploadCmd.TransitionTextures({ { dst, SenResourceState::ShaderRead } });
     _uploadCmd.End();
 
-    const SenSubmission submission = SenBackend::SubmitImmediate(_uploadCmd);
+    SenCommandBuffer* lists[] = { &_uploadCmd };
+    const SenSubmission submission = SenBackend::Submit({ .Lists = lists, .ListCount = 1 });
+    SenBackend::WaitForSubmission(submission);
     Retire(staging);
     StampRetirements(submission);
 }
@@ -243,7 +247,9 @@ auto BeBackend::GenerateMips(const std::shared_ptr<BeTexture>& texture) -> void 
     _uploadCmd.TransitionTextures({ { texture->Handle, SenResourceState::ShaderRead } });
     _uploadCmd.End();
 
-    const SenSubmission submission = SenBackend::SubmitImmediate(_uploadCmd);
+    SenCommandBuffer* lists[] = { &_uploadCmd };
+    const SenSubmission submission = SenBackend::Submit({ .Lists = lists, .ListCount = 1 });
+    SenBackend::WaitForSubmission(submission);
     StampRetirements(submission);
 }
 

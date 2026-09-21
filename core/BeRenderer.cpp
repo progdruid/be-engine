@@ -38,7 +38,6 @@ auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
         .NativeWindowHandle = _nativeWindow,
         .Width = _desiredWidth,
         .Height = _desiredHeight,
-        .FramesInFlight = FramesInFlight,
         .PresentMode = presentMode,
     });
 
@@ -49,10 +48,6 @@ auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
 
     BeShaderLibrary::RegisterBuiltinDefaultTextures();
     BeShaderLibrary::LoadShaders();
-}
-
-auto BeRenderer::GetBackbufferView() const -> SenView {
-    return SenBackend::GetSwapchainImageView(_swapchain);
 }
 
 auto BeRenderer::GetSwapchainFormat() const -> SenFormat {
@@ -102,19 +97,23 @@ auto BeRenderer::Render() -> void {
     SenBackend::BeginDebugEvent("Frame");
 
     const uint32_t slot = _currentFrame % FramesInFlight;
-    _backbufferTexture = SenBackend::BeginFrame(_swapchain, slot);
-    if (!_backbufferTexture.IsValid() && PollResize()) {
-        _backbufferTexture = SenBackend::BeginFrame(_swapchain, slot);
+    if (_frameSubmissions[slot].IsValid()) {
+        SenBackend::WaitForSubmission(_frameSubmissions[slot]);
     }
-    if (!_backbufferTexture.IsValid()) {
+
+    // safe here, not earlier: the GPU is done with both the command buffer and the arena chunks
+    // about to be reused.
+    BeBackend::ResetMaterialArena(_currentFrame);
+    BeBackend::FlushRetirements();
+
+    _backbufferView = SenBackend::AcquireSwapchainView(_swapchain);
+    if (!_backbufferView.IsValid() && PollResize()) {
+        _backbufferView = SenBackend::AcquireSwapchainView(_swapchain);
+    }
+    if (!_backbufferView.IsValid()) {
         SenBackend::EndDebugEvent();
         return;
     }
-
-    // safe here, not earlier: BeginFrame waits on this slot's fence, so the GPU is done with
-    // both the command buffer and the arena chunks about to be reused.
-    BeBackend::ResetMaterialArena(_currentFrame);
-    BeBackend::FlushRetirements();
 
     auto& cmd = _frameCmds[slot];
     cmd.Begin();
@@ -125,10 +124,17 @@ auto BeRenderer::Render() -> void {
         SenBackend::EndDebugEvent();
     }
 
-    cmd.TransitionTextures({ { _backbufferTexture, SenResourceState::Present } });
+    cmd.TransitionTextures({ { SenBackend::GetViewDesc(_backbufferView).Texture, SenResourceState::Present } });
     cmd.End();
 
-    const SenSubmission submission = SenBackend::EndFrame(_swapchain, cmd, slot);
+    SenCommandBuffer* lists[] = { &cmd };
+    const SenSubmission submission = SenBackend::Submit({
+        .Lists = lists,
+        .ListCount = 1,
+        .Presents = &_swapchain,
+        .PresentCount = 1,
+    });
+    _frameSubmissions[slot] = submission;
     BeBackend::StampRetirements(submission);
     SenBackend::EndDebugEvent();
 
@@ -148,7 +154,9 @@ auto BeRenderer::RenderOnce(const std::vector<BeRenderPass*>& passes) -> void {
 
     _immediateCmd.End();
 
-    const SenSubmission submission = SenBackend::SubmitImmediate(_immediateCmd);
+    SenCommandBuffer* lists[] = { &_immediateCmd };
+    const SenSubmission submission = SenBackend::Submit({ .Lists = lists, .ListCount = 1 });
+    SenBackend::WaitForSubmission(submission);
     BeBackend::StampRetirements(submission);
     SenBackend::EndDebugEvent();
 }

@@ -372,7 +372,6 @@ struct SenSwapchainDesc {
     uint32_t       Width          = 0;
     uint32_t       Height         = 0;
     uint32_t       BufferCount    = 2;
-    uint32_t       FramesInFlight = 2;
     SenFormat      Format         = SenFormat::RGBA8_Unorm;
     SenPresentMode PresentMode    = SenPresentMode::VSync;
 };
