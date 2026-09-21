@@ -5,7 +5,6 @@
 #include "BePass.h"
 #include "BeMaterial.h"
 #include "BeRenderer.h"
-#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
@@ -36,12 +35,10 @@ auto BeStandardFullscreenEffectPass::Render(BeRenderer& renderer, SenCommandList
     pass.Begin();
     pass.SetState(_state);
 
-    BeRoot root(*_shader);
-    root.Use("frame", *_srm->UniformMaterial);
+    pass.Bind("frame", *_srm->UniformMaterial);
     if (_material) {
-        root.Use("main", *_material);
+        pass.Bind("main", *_material);
     }
-    pass.Push(root);
 
     pass.Draw(4);
 

@@ -7,7 +7,6 @@
 #include "BeDrawState.h"
 #include "BeMaterial.h"
 #include "BePass.h"
-#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeShaderLibrary.h"
 #include "BeTexture.h"
@@ -237,7 +236,7 @@ auto BeBackend::GenerateMips(const std::shared_ptr<BeTexture>& texture) -> void 
         pass.SetViewport(texture->GetMipViewport(mip));
         pass.Begin();
         pass.SetState(state);
-        pass.Push(BeRoot(*shader).Use("main", *material));
+        pass.Bind("main", *material);
         pass.Draw(4);
         pass.End();
     }

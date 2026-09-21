@@ -1,10 +1,10 @@
 #include "BePass.h"
 
+#include <cstring>
 #include <utility>
 
 #include "BeDrawState.h"
 #include "BeMaterial.h"
-#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include <sen-rhi/SenBackend.h>
@@ -167,6 +167,15 @@ auto BePass::SetState(const BeDrawState& state) -> BePass& {
     _staticKeyId = state.GetStaticKeyId();
     _hasOverrides = false;
     _isStateDirty = true;
+
+    _rootLayout = &state.GetShader().RootLayout;
+    be_assert(
+        _rootLayout->Size <= SenMaxRootConstantSize,
+        "BePass::SetState: root exceeds push-constant capacity",
+        _rootLayout->Size
+    );
+    be_assert(_rootLayout->Fields.size() <= 32, "BePass::SetState: too many root fields to track");
+    _rootWritten = 0;
     return *this;
 }
 
@@ -200,10 +209,40 @@ auto BePass::OverrideDepthStencil(const SenDepthStencilState& depthStencil) -> B
     return *this;
 }
 
-auto BePass::Push(const BeRoot& root) -> void {
-    be_assert(_formatSetId != UINT32_MAX, "BePass::Push: pass has not begun");
-    be_assert(_state != nullptr, "BePass::Push: no state set");
-    be_assert(root._layout == &_state->GetShader().RootLayout, "BePass::Push: root was built for another shader");
+auto BePass::Bind(const std::string& link, BeMaterial& material) -> BePass& {
+    be_assert(_rootLayout != nullptr, "BePass::Bind: no state set");
+
+    for (size_t i = 0; i < _rootLayout->Fields.size(); ++i) {
+        const auto& field = _rootLayout->Fields[i];
+        if (field.Link != link) {
+            continue;
+        }
+
+        switch (field.Kind) {
+            case BeShaderTools::RootFieldKind::Pointer: {
+                const uint64_t address = material.GetCbufferAddress().Value;
+                std::memcpy(_rootData.data() + field.Offset, &address, sizeof(address));
+                break;
+            }
+            case BeShaderTools::RootFieldKind::TextureIndex: {
+                const uint32_t index = material.GetTextureSlot(field.PropertyName);
+                std::memcpy(_rootData.data() + field.Offset, &index, sizeof(index));
+                break;
+            }
+            case BeShaderTools::RootFieldKind::SamplerIndex: {
+                const uint32_t index = material.GetSamplerSlot(field.PropertyName);
+                std::memcpy(_rootData.data() + field.Offset, &index, sizeof(index));
+                break;
+            }
+        }
+        _rootWritten |= (static_cast<uint32_t>(1) << i);
+    }
+    return *this;
+}
+
+auto BePass::Commit() -> void {
+    be_assert(_isBegun, "BePass: draw before Begin");
+    be_assert(_state != nullptr, "BePass: draw without a state");
 
     if (_isStateDirty) {
         if (_hasOverrides) {
@@ -216,21 +255,33 @@ auto BePass::Push(const BeRoot& root) -> void {
         }
         _isStateDirty = false;
     }
-    root.Push(_list);
+
+    if (_rootLayout->Size == 0) {
+        return;
+    }
+    for (size_t i = 0; i < _rootLayout->Fields.size(); ++i) {
+        be_assert(
+            _rootWritten & (static_cast<uint32_t>(1) << i),
+            "BePass: root field not bound before draw",
+            _rootLayout->Fields[i].FieldName
+        );
+    }
+    SenCmd::PushRoot(_list, _rootData.data(), _rootLayout->Size);
+    _rootWritten = 0;
 }
 
 auto BePass::Draw(uint32_t vertexCount, uint32_t firstVertex) -> void {
-    be_assert(_isBegun, "BePass::Draw: pass has not begun");
+    Commit();
     SenCmd::Draw(_list, vertexCount, firstVertex);
 }
 
 auto BePass::DrawIndexed(uint32_t indexCount, uint32_t firstIndex, int32_t baseVertex) -> void {
-    be_assert(_isBegun, "BePass::DrawIndexed: pass has not begun");
+    Commit();
     SenCmd::DrawIndexed(_list, indexCount, firstIndex, baseVertex);
 }
 
 auto BePass::Dispatch(uint32_t x, uint32_t y, uint32_t z) -> void {
-    be_assert(_isBegun, "BePass::Dispatch: pass has not begun");
     be_assert(_isCompute, "BePass::Dispatch: pass is not a compute pass");
+    Commit();
     SenCmd::Dispatch(_list, x, y, z);
 }

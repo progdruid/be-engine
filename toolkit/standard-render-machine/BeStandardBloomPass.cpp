@@ -8,7 +8,6 @@
 #include "BePass.h"
 #include "BeMaterial.h"
 #include "BeRenderer.h"
-#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
@@ -101,10 +100,8 @@ auto BeStandardBloomPass::RenderBrightPass(SenCommandList cmd) const -> void {
     pass.SetViewport(_bloomTexture->GetViewport());
     pass.Begin();
     pass.SetState(_brightState);
-    pass.Push(BeRoot(*_brightShader)
-        .Use("frame", *_srm->UniformMaterial)
-        .Use("main", *_brightMaterial)
-    );
+    pass.Bind("frame", *_srm->UniformMaterial);
+    pass.Bind("main", *_brightMaterial);
     pass.Draw(4);
     pass.End();
 }
@@ -117,10 +114,8 @@ auto BeStandardBloomPass::RenderDownsamplePasses(SenCommandList cmd) const -> vo
         pass.SetViewport(_bloomTexture->GetMipViewport(mipTarget));
         pass.Begin();
         pass.SetState(_downsampleState);
-        pass.Push(BeRoot(*_downsampleShader)
-            .Use("frame", *_srm->UniformMaterial)
-            .Use("main", *_downsampleMaterials[mipTarget])
-        );
+        pass.Bind("frame", *_srm->UniformMaterial);
+        pass.Bind("main", *_downsampleMaterials[mipTarget]);
         pass.Draw(4);
         pass.End();
     }
@@ -134,10 +129,8 @@ auto BeStandardBloomPass::RenderUpsamplePasses(SenCommandList cmd) const -> void
         pass.SetViewport(_bloomTexture->GetMipViewport(mipTarget));
         pass.Begin();
         pass.SetState(_upsampleState);
-        pass.Push(BeRoot(*_upsampleShader)
-            .Use("frame", *_srm->UniformMaterial)
-            .Use("main", *_upsampleMaterials[mipTarget])
-        );
+        pass.Bind("frame", *_srm->UniformMaterial);
+        pass.Bind("main", *_upsampleMaterials[mipTarget]);
         pass.Draw(4);
         pass.End();
     }
@@ -150,10 +143,8 @@ auto BeStandardBloomPass::RenderAddPass(BeRenderer& renderer, SenCommandList cmd
     pass.SetViewport(_output->GetViewport());
     pass.Begin();
     pass.SetState(_addState);
-    pass.Push(BeRoot(*_addShader)
-        .Use("frame", *_srm->UniformMaterial)
-        .Use("main", *_addMaterial)
-    );
+    pass.Bind("frame", *_srm->UniformMaterial);
+    pass.Bind("main", *_addMaterial);
     pass.Draw(4);
     pass.End();
 }

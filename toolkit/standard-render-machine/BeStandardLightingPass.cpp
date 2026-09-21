@@ -9,7 +9,6 @@
 #include "BePass.h"
 #include "BeMaterial.h"
 #include "BeRenderer.h"
-#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
@@ -160,10 +159,8 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandList cmd) ->
         _batchedMaterial->SetFloat4Array("LightColorPower", std::span(unshadowedColorPower).subspan(first, chunkSize));
         _batchedMaterial->SetFloat1("LightCount", static_cast<float>(chunkSize));
         pass.SetState(_batchedState);
-        pass.Push(BeRoot(*_batchedShader)
-            .Use("frame", *srm.UniformMaterial)
-            .Use("main", *_batchedMaterial)
-        );
+        pass.Bind("frame", *srm.UniformMaterial);
+        pass.Bind("main", *_batchedMaterial);
         pass.Draw(4);
     }
 
@@ -197,10 +194,8 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandList cmd) ->
                 _dirShadowBatchMaterial->SetMatrixArray("LightProjectionView", std::span(projectionViews).subspan(first, chunkSize));
                 _dirShadowBatchMaterial->SetFloat1("LightCount", static_cast<float>(chunkSize));
                 pass.SetState(_dirShadowBatchState);
-                pass.Push(BeRoot(*_dirShadowBatchShader)
-                    .Use("frame", *srm.UniformMaterial)
-                    .Use("main", *_dirShadowBatchMaterial)
-                );
+                pass.Bind("frame", *srm.UniformMaterial);
+                pass.Bind("main", *_dirShadowBatchMaterial);
                 pass.Draw(4);
             }
         }
@@ -234,10 +229,8 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandList cmd) ->
                 _pointShadowBatchMaterial->SetFloat4Array("LightShadowParams", std::span(shadowParams).subspan(first, chunkSize));
                 _pointShadowBatchMaterial->SetFloat1("LightCount", static_cast<float>(chunkSize));
                 pass.SetState(_pointShadowBatchState);
-                pass.Push(BeRoot(*_pointShadowBatchShader)
-                    .Use("frame", *srm.UniformMaterial)
-                    .Use("main", *_pointShadowBatchMaterial)
-                );
+                pass.Bind("frame", *srm.UniformMaterial);
+                pass.Bind("main", *_pointShadowBatchMaterial);
                 pass.Draw(4);
             }
         }
@@ -245,18 +238,14 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandList cmd) ->
 
     // Emissive
     pass.SetState(_emissiveState);
-    pass.Push(BeRoot(*_emissiveShader)
-        .Use("frame", *srm.UniformMaterial)
-        .Use("main", *_emissiveMaterial)
-    );
+    pass.Bind("frame", *srm.UniformMaterial);
+    pass.Bind("main", *_emissiveMaterial);
     pass.Draw(4);
 
     if (_ambientMaterial) {
         pass.SetState(_ambientState);
-        pass.Push(BeRoot(*_ambientShader)
-            .Use("frame", *srm.UniformMaterial)
-            .Use("main", *_ambientMaterial)
-        );
+        pass.Bind("frame", *srm.UniformMaterial);
+        pass.Bind("main", *_ambientMaterial);
         pass.Draw(4);
     }
 

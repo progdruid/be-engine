@@ -8,7 +8,6 @@
 #include "BePass.h"
 #include "BeMaterial.h"
 #include "BeRenderer.h"
-#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
@@ -86,7 +85,7 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandList 
         pass.SetViewport(_envCubemap->GetViewport());
         pass.Begin();
         pass.SetState(_envState);
-        pass.Push(BeRoot(*_envShader).Use("main", *_envFaceMaterials[face]));
+        pass.Bind("main", *_envFaceMaterials[face]);
         pass.Draw(4);
         pass.End();
     }
@@ -98,7 +97,7 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandList 
         pass.SetViewport(_irradianceCubemap->GetViewport());
         pass.Begin();
         pass.SetState(_irradianceState);
-        pass.Push(BeRoot(*_irradianceShader).Use("main", *_irradianceFaceMaterials[face]));
+        pass.Bind("main", *_irradianceFaceMaterials[face]);
         pass.Draw(4);
         pass.End();
     }
@@ -112,7 +111,7 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandList 
             pass.SetViewport(_prefilteredCubemap->GetMipViewport(mip));
             pass.Begin();
             pass.SetState(_prefilterState);
-            pass.Push(BeRoot(*_prefilterShader).Use("main", *_prefilterFaceMaterials[mip][face]));
+            pass.Bind("main", *_prefilterFaceMaterials[mip][face]);
             pass.Draw(4);
             pass.End();
         }
@@ -124,7 +123,7 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandList 
         pass.SetViewport(_brdfLutTexture->GetViewport());
         pass.Begin();
         pass.SetState(_brdfLutState);
-        pass.Push(BeRoot(*_brdfLutShader).Use("main", *_brdfLutMaterial));
+        pass.Bind("main", *_brdfLutMaterial);
         pass.Draw(4);
         pass.End();
     }

@@ -1,6 +1,9 @@
 #pragma once
+#include <array>
+#include <cstddef>
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
@@ -8,11 +11,11 @@
 #include <sen-rhi/SenCmd.h>
 
 #include "BeBackend.h"
+#include "BeShaderTools.h"
 
 class BeTexture;
 class BeMaterial;
 class BeDrawState;
-class BeRoot;
 
 class BePass {
     hide
@@ -42,7 +45,9 @@ class BePass {
     bool _isStateDirty = false;
     SenPipeline _boundPipeline;
 
-    auto AcquireOverrideKey() -> BeBackend::StaticKey&;
+    const BeShaderTools::RootLayout* _rootLayout = nullptr;
+    std::array<std::byte, SenMaxRootConstantSize> _rootData {};
+    uint32_t _rootWritten = 0;
 
     expose
     explicit BePass (SenCommandList list);
@@ -87,7 +92,7 @@ class BePass {
         uint8_t clearStencil = 0
     ) -> BePass&;
 
-    auto SetViewport    (SenViewport viewport) -> BePass&;
+    auto SetViewport (SenViewport viewport) -> BePass&;
 
     auto SetVertexBuffer (SenBuffer buffer) -> BePass&;
     auto SetIndexBuffer  (SenBuffer buffer) -> BePass&;
@@ -100,9 +105,14 @@ class BePass {
     auto OverrideFill (SenFillMode mode) -> BePass&;
     auto OverrideBlend (const SenBlendState& blend) -> BePass&;
     auto OverrideDepthStencil (const SenDepthStencilState& depthStencil) -> BePass&;
-    auto Push (const BeRoot& root) -> void;
+
+    auto Bind (const std::string& link, BeMaterial& material) -> BePass&;
 
     auto Draw        (uint32_t vertexCount, uint32_t firstVertex = 0) -> void;
     auto DrawIndexed (uint32_t indexCount, uint32_t firstIndex, int32_t baseVertex) -> void;
     auto Dispatch    (uint32_t x, uint32_t y, uint32_t z) -> void;
+    
+    hide
+    auto AcquireOverrideKey() -> BeBackend::StaticKey&;
+    auto Commit() -> void;
 };

@@ -5,7 +5,6 @@
 #include "BePass.h"
 #include "BeMaterial.h"
 #include "BeRenderer.h"
-#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeShaderLibrary.h"
 #include "BeTexture.h"
@@ -50,11 +49,9 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandList cmd) ->
 
             pass.SetState(entry.Prop->State);
             pass.OverrideCull(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back);
-            pass.Push(BeRoot(entry.Prop->State.GetShader())
-                .Use("frame", *uniformMat)
-                .Use("geometry-object", *_objectMaterial)
-                .Use("geometry-main", *propSlice.Material)
-            );
+            pass.Bind("frame", *uniformMat);
+            pass.Bind("geometry-object", *_objectMaterial);
+            pass.Bind("geometry-main", *propSlice.Material);
 
             pass.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }

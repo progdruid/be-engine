@@ -6,7 +6,6 @@
 #include "BeShaderLibrary.h"
 #include "BePass.h"
 #include "BeMaterial.h"
-#include "BeRoot.h"
 #include "BeShader.h"
 #include "BeTexture.h"
 #include "standard-render-machine/BeStandardRenderMachine.h"
@@ -42,10 +41,8 @@ auto BeStandardSkyboxPass::Render(BeRenderer& renderer, SenCommandList cmd) -> v
     pass.SetViewport(_output->GetViewport());
     pass.Begin();
     pass.SetState(_state);
-    pass.Push(BeRoot(*_shader)
-        .Use("frame", *_srm->UniformMaterial)
-        .Use("main", *_material)
-    );
+    pass.Bind("frame", *_srm->UniformMaterial);
+    pass.Bind("main", *_material);
 
     pass.Draw(4);
     pass.End();
