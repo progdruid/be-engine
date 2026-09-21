@@ -7,7 +7,7 @@
 #include "BeMaterial.h"
 #include "BeShader.h"
 #include "BeTexture.h"
-#include <sen-rhi/SenBackend.h>
+#include <sen-rhi/Sen.h>
 #include <umbrellas/include-libassert.h>
 
 BePass::BePass(SenCommandList list)
@@ -57,7 +57,7 @@ auto BePass::UseMaterial(const BeMaterial& material) -> BePass& {
 auto BePass::AddColorTarget(SenView view, SenLoadOp loadOp, glm::vec4 clearColor) -> BePass& {
     be_assert(view.IsValid(), "BePass::AddColorTarget: invalid view handle");
     be_assert(_colorTargets.size() < _formatSet.ColorFormats.size(), "BePass::AddColorTarget: too many color targets");
-    _formatSet.ColorFormats[_colorTargets.size()] = SenBackend::GetViewFormat(view);
+    _formatSet.ColorFormats[_colorTargets.size()] = Sen::GetViewFormat(view);
     _colorTargets.push_back(SenColorAttachment{
         .View       = view,
         .LoadOp     = loadOp,
@@ -80,7 +80,7 @@ auto BePass::AddColorTargets(const std::vector<std::shared_ptr<BeTexture>>& text
 
 auto BePass::SetDepthTarget(SenView view, SenLoadOp loadOp, float clearDepth, uint8_t clearStencil) -> BePass& {
     be_assert(view.IsValid(), "BePass::SetDepthTarget: invalid view handle");
-    _formatSet.DepthFormat = SenBackend::GetViewFormat(view);
+    _formatSet.DepthFormat = Sen::GetViewFormat(view);
     _depthTarget = SenDepthAttachment{
         .View         = view,
         .LoadOp       = loadOp,
@@ -124,18 +124,18 @@ auto BePass::Begin() -> void {
     std::vector<SenTextureTransition> transitions;
     transitions.reserve(_reads.size() + _storageTextures.size() + _colorTargets.size() + 1);
     for (const auto& read : _reads) {
-        transitions.push_back({ read.Texture, SenResourceState::ShaderRead, read.BaseMip, read.MipCount });
+        transitions.push_back({ read.Texture, SenLayout::ShaderRead, read.BaseMip, read.MipCount });
     }
     for (const auto texture : _storageTextures) {
-        transitions.push_back({ texture, SenResourceState::UnorderedAccess });
+        transitions.push_back({ texture, SenLayout::Storage });
     }
     for (const auto& target : _colorTargets) {
-        const auto& view = SenBackend::GetViewDesc(target.View);
-        transitions.push_back({ view.Texture, SenResourceState::ColorAttachment, view.BaseMip, view.MipCount });
+        const auto& view = Sen::GetViewDesc(target.View);
+        transitions.push_back({ view.Texture, SenLayout::ColorTarget, view.BaseMip, view.MipCount });
     }
     if (_depthTarget) {
-        const auto& view = SenBackend::GetViewDesc(_depthTarget->View);
-        transitions.push_back({ view.Texture, SenResourceState::DepthAttachment, view.BaseMip, view.MipCount });
+        const auto& view = Sen::GetViewDesc(_depthTarget->View);
+        transitions.push_back({ view.Texture, SenLayout::DepthTarget, view.BaseMip, view.MipCount });
     }
     SenCmd::TransitionTextures(_list, transitions);
     _formatSetId = BeBackend::AcquireFormatSetId(_formatSet);
@@ -167,10 +167,11 @@ auto BePass::SetState(const BeDrawState& state) -> BePass& {
     _staticKeyId = state.GetStaticKeyId();
     _hasOverrides = false;
     _isStateDirty = true;
+    _dynamic = state.GetDynamic();
 
     _rootLayout = &state.GetShader().RootLayout;
     be_assert(
-        _rootLayout->Size <= SenMaxRootConstantSize,
+        _rootLayout->Size <= SenMaxRootSize,
         "BePass::SetState: root exceeds push-constant capacity",
         _rootLayout->Size
     );
@@ -189,13 +190,24 @@ auto BePass::AcquireOverrideKey() -> BeBackend::StaticKey& {
     return _overrideKey;
 }
 
-auto BePass::OverrideCull(SenCullMode mode) -> BePass& {
-    AcquireOverrideKey().RasterizerState.CullMode = mode;
+auto BePass::OverrideCull(SenCull mode) -> BePass& {
+    _dynamic.Cull = mode;
     return *this;
 }
 
-auto BePass::OverrideFill(SenFillMode mode) -> BePass& {
-    AcquireOverrideKey().RasterizerState.FillMode = mode;
+auto BePass::OverrideFrontFace(SenFrontFace frontFace) -> BePass& {
+    _dynamic.FrontFace = frontFace;
+    return *this;
+}
+
+auto BePass::OverrideDepthBias(float constant, float slopeScaled) -> BePass& {
+    _dynamic.DepthBias = constant;
+    _dynamic.SlopeScaledDepthBias = slopeScaled;
+    return *this;
+}
+
+auto BePass::OverrideFill(SenFill mode) -> BePass& {
+    AcquireOverrideKey().Fill = mode;
     return *this;
 }
 
@@ -204,8 +216,8 @@ auto BePass::OverrideBlend(const SenBlendState& blend) -> BePass& {
     return *this;
 }
 
-auto BePass::OverrideDepthStencil(const SenDepthStencilState& depthStencil) -> BePass& {
-    AcquireOverrideKey().DepthStencilState = depthStencil;
+auto BePass::OverrideDepth(const SenDepthState& depthStencil) -> BePass& {
+    _dynamic.Depth = depthStencil;
     return *this;
 }
 
@@ -256,6 +268,11 @@ auto BePass::Commit() -> void {
         _isStateDirty = false;
     }
 
+    SenCmd::SetCull(_list, _dynamic.Cull);
+    SenCmd::SetFrontFace(_list, _dynamic.FrontFace);
+    SenCmd::SetDepth(_list, _dynamic.Depth);
+    SenCmd::SetDepthBias(_list, _dynamic.DepthBias, _dynamic.SlopeScaledDepthBias);
+
     if (_rootLayout->Size == 0) {
         return;
     }
@@ -266,7 +283,7 @@ auto BePass::Commit() -> void {
             _rootLayout->Fields[i].FieldName
         );
     }
-    SenCmd::PushRoot(_list, _rootData.data(), _rootLayout->Size);
+    SenCmd::SetRoot(_list, _rootData.data(), _rootLayout->Size);
     _rootWritten = 0;
 }
 

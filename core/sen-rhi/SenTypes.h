@@ -9,8 +9,10 @@
 #include <umbrellas/include-glm.h>
 
 
+inline constexpr uint32_t SenMaxRootSize = 128;
+inline constexpr uint32_t SenAllMips = UINT32_MAX;
 
-// ─── handles ──────────────────────────────────────────────────────
+
 enum class SenHandleKind : uint8_t {
     Texture,
     View,
@@ -29,19 +31,142 @@ struct SenHandle {
     auto operator==(const SenHandle& other) const -> bool = default;
 };
 
+using SenTexture = SenHandle<SenHandleKind::Texture>;
+using SenView = SenHandle<SenHandleKind::View>;
+using SenBuffer = SenHandle<SenHandleKind::Buffer>;
+using SenSampler = SenHandle<SenHandleKind::Sampler>;
+using SenPipeline = SenHandle<SenHandleKind::Pipeline>;
+using SenSwapchain = SenHandle<SenHandleKind::Swapchain>;
+using SenCommandList = SenHandle<SenHandleKind::CommandList>;
 
-// ─── platform ─────────────────────────────────────────────────────
+struct SenGpuAddress {
+    uint64_t Value = 0;
+    auto IsValid() const -> bool { return Value != 0; }
+    auto operator+(uint64_t offset) const -> SenGpuAddress { return { Value + offset }; }
+};
+
+
 enum class SenPlatform { Windows, Linux, Unknown };
-
 constexpr SenPlatform SenCurrentPlatform =
-#if defined(_WIN32) // 
+#if defined(_WIN32) //
     SenPlatform::Windows;
-#elif defined(__linux__) //  
+#elif defined(__linux__) //
     SenPlatform::Linux;
 #else //
     SenPlatform::Unknown;
 #endif //
 
+
+enum class SenMemory : uint8_t {
+    Device,  // device-local, written through a copy
+    Upload,  // host-visible, persistently mapped
+};
+
+enum class SenTextureUsage : uint32_t {
+    None = 0,
+    Sampled = 1 << 0,
+    Storage = 1 << 1,
+    ColorTarget = 1 << 2,
+    DepthTarget = 1 << 3,
+}; ENABLE_BITMASK(SenTextureUsage);
+
+enum class SenViewType : uint8_t {
+    Texture2D,
+    Texture2DArray,
+    TextureCube,
+    TextureCubeArray,
+};
+
+enum class SenLayout : uint8_t {
+    Undefined,
+    TransferDst,
+    ShaderRead,
+    Storage,
+    ColorTarget,
+    DepthTarget,
+    Present,
+};
+
+enum class SenFilter : uint8_t {
+    Point,
+    Linear,
+    Anisotropic,
+};
+
+enum class SenAddressMode : uint8_t {
+    Wrap,
+    Clamp,
+    Mirror,
+};
+
+enum class SenCompare : uint8_t {
+    Never,
+    Less,
+    Equal,
+    LessEqual,
+    Greater,
+    NotEqual,
+    GreaterEqual,
+    Always,
+};
+
+enum class SenTopology : uint8_t {
+    Undefined,
+    TriangleList,
+    TriangleStrip,
+    LineList,
+    PointList,
+    PatchList3,
+};
+
+enum class SenBlendFactor : uint8_t {
+    Zero,
+    One,
+    SrcColor,
+    InvSrcColor,
+    SrcAlpha,
+    InvSrcAlpha,
+    DstColor,
+    InvDstColor,
+    DstAlpha,
+    InvDstAlpha,
+};
+
+enum class SenBlendOp : uint8_t {
+    Add,
+    Subtract,
+    ReverseSubtract,
+    Min,
+    Max,
+};
+
+enum class SenCull : uint8_t {
+    None,
+    Front,
+    Back,
+};
+
+enum class SenFill : uint8_t {
+    Solid,
+    Wireframe,
+};
+
+enum class SenFrontFace : uint8_t {
+    Clockwise,
+    CounterClockwise,
+};
+
+enum class SenLoadOp : uint8_t {
+    Load,     // load existing contents of attachment
+    Clear,    // clear attachment to clear value
+    DontCare, // contents undefined, no load/clear needed (optimisation)
+};
+
+enum class SenPresentMode : uint8_t {
+    Immediate,  // no vsync
+    VSync,      // vsync
+    Mailbox,    // triple-buf
+};
 
 enum class SenFormat : uint8_t {
     Unknown,
@@ -71,332 +196,152 @@ inline auto SenGetFormatBytes(SenFormat format) -> uint32_t {
     }
 }
 
-// ─── texture ─────────────────────────────────────────────────────
-enum class SenTextureUsage : uint32_t {
-    None           = 0,
-    ShaderResource = 1 << 0,
-    RenderTarget   = 1 << 1,
-    DepthStencil   = 1 << 2,
-    Storage        = 1 << 3,
-};
-ENABLE_BITMASK(SenTextureUsage);
 
-enum class SenResourceState : uint8_t {
-    Undefined,
-    ShaderRead,
-    ColorAttachment,
-    DepthAttachment,
-    TransferDst,
-    Present,
-    UnorderedAccess,
+struct SenInitDesc {
+    bool DebugLayer = false;
 };
 
-constexpr uint32_t SEN_FULL_MIPS = UINT32_MAX;
-
-using SenTexture = SenHandle<SenHandleKind::Texture>;
-using SenView = SenHandle<SenHandleKind::View>;
-
-enum class SenViewType : uint8_t {
-    Texture2D,
-    Texture2DArray,
-    TextureCube,
-    TextureCubeArray,
-};
-
-struct SenViewDesc {
-    SenTexture  Texture;
-    SenViewType Type       = SenViewType::Texture2D;
-    uint32_t    BaseMip    = 0;
-    uint32_t    MipCount   = 1;
-    uint32_t    BaseLayer  = 0;
-    uint32_t    LayerCount = 1;
-};
-
-struct SenTextureDesc {
-    SenFormat       Format      = SenFormat::Unknown;
-    uint32_t        Width       = 0;
-    uint32_t        Height      = 0;
-    SenTextureUsage Usage       = SenTextureUsage::None;
-    uint32_t        Mips        = 1;
-    bool            Cubemap     = false;
-    uint32_t        ArrayLength = 1;
-};
-
-
-
-// ─── buffer ─────────────────────────────────────────────────────
-enum class SenMemory : uint8_t {
-    Device,  // device-local, written through a copy
-    Upload,  // host-visible, persistently mapped
-};
-
-using SenBuffer = SenHandle<SenHandleKind::Buffer>;
-
-struct SenBufferGpuAddress {
-    uint64_t Value = 0;
-    auto IsValid() const -> bool { return Value != 0; }
-    auto operator+(uint64_t offset) const -> SenBufferGpuAddress { return { Value + offset }; }
+struct SenCaps {
+    char DeviceName[256] = {};
+    uint32_t TextureSlots = 0;
+    uint32_t StorageSlots = 0;
+    uint32_t SamplerSlots = 0;
 };
 
 struct SenBufferDesc {
     SenMemory Memory = SenMemory::Device;
-    uint32_t  Size   = 0;       // in bytes
+    uint32_t Size = 0;  // in bytes
 };
 
-
-// ─── sampler ─────────────────────────────────────────────────────
-enum class SenFilter : uint8_t {
-    Point,
-    Linear,
-    Anisotropic,
+struct SenTextureDesc {
+    SenFormat Format = SenFormat::Unknown;
+    uint32_t Width = 0;
+    uint32_t Height = 0;
+    SenTextureUsage Usage = SenTextureUsage::None;
+    uint32_t Mips = 1;
+    bool Cubemap = false;
+    uint32_t ArrayLength = 1;
 };
 
-enum class SenAddressMode : uint8_t {
-    Wrap,
-    Clamp,
-    Mirror,
+struct SenViewDesc {
+    SenTexture Texture;
+    SenViewType Type = SenViewType::Texture2D;
+    uint32_t BaseMip = 0;
+    uint32_t MipCount = 1;
+    uint32_t BaseLayer = 0;
+    uint32_t LayerCount = 1;
 };
-
-using SenSampler = SenHandle<SenHandleKind::Sampler>;
 
 struct SenSamplerDesc {
-    SenFilter      Filter     = SenFilter::Linear;
-    SenAddressMode Address    = SenAddressMode::Clamp; // applied to U, V, and W
-    bool           Comparison = false;                 // enables less-than comparison (shadow maps)
+    SenFilter Filter = SenFilter::Linear;
+    SenAddressMode Address = SenAddressMode::Clamp;  // applied to U, V, and W
+    bool Comparison = false;                         // enables less-than comparison (shadow maps)
 };
 
-
-// ─── blend state ───────────────────────────────────────────────
-enum class SenBlendFactor : uint8_t {
-    Zero,
-    One,
-    SrcColor,
-    InvSrcColor,
-    SrcAlpha,
-    InvSrcAlpha,
-    DstColor,
-    InvDstColor,
-    DstAlpha,
-    InvDstAlpha,
-};
-
-enum class SenBlendOp : uint8_t {
-    Add,
-    Subtract,
-    ReverseSubtract,
-    Min,
-    Max,
-};
-
-struct SenBlendState {
-    bool              Enable           = false;
-    SenBlendFactor    SrcBlend         = SenBlendFactor::One;
-    SenBlendFactor    DstBlend         = SenBlendFactor::Zero;
-    SenBlendOp        BlendOp          = SenBlendOp::Add;
-    SenBlendFactor    SrcBlendAlpha    = SenBlendFactor::One;
-    SenBlendFactor    DstBlendAlpha    = SenBlendFactor::Zero;
-    SenBlendOp        BlendOpAlpha     = SenBlendOp::Add;
-};
-
-
-// ─── rasterizer state ──────────────────────────────────────────
-enum class SenCullMode : uint8_t {
-    None,
-    Front,
-    Back,
-};
-
-enum class SenFillMode : uint8_t {
-    Solid,
-    Wireframe,
-};
-
-struct SenRasterizerState {
-    SenCullMode CullMode              = SenCullMode::Back;
-    SenFillMode FillMode              = SenFillMode::Solid;
-    float       DepthBias             = 0.f;
-    float       SlopeScaledDepthBias  = 0.f;
-    bool        DepthClipEnable       = true;
-    bool        ScissorEnable         = false;
-};
-
-
-// ─── depth-stencil state ───────────────────────────────────────
-enum class SenComparisonFunc : uint8_t {
-    Never,
-    Less,
-    Equal,
-    LessEqual,
-    Greater,
-    NotEqual,
-    GreaterEqual,
-    Always,
-};
-
-struct SenDepthStencilState {
-    bool              DepthEnable      = true;
-    bool              DepthWriteEnable = true;
-    SenComparisonFunc DepthFunc        = SenComparisonFunc::Less;
-};
-
-
-// ─── topology ───────────────────────────────────────────────────
-enum class SenTopology : uint8_t {
-    Undefined,
-    TriangleList,
-    TriangleStrip,
-    LineList,
-    PointList,
-    PatchList3,
-};
-
-
-// ─── command list ───────────────────────────────────────────────
-using SenCommandList = SenHandle<SenHandleKind::CommandList>;
-
-constexpr uint32_t SenAllMips = UINT32_MAX;
-
-struct SenTextureTransition {
-    SenTexture Texture;
-    SenResourceState State;
-    uint32_t BaseMip = 0;
-    uint32_t MipCount = SenAllMips;
-};
-
-
-// ─── submission ─────────────────────────────────────────────────
-struct SenSubmission {
-    uint64_t Value = 0;
-    auto IsValid() const -> bool { return Value != 0; }
-};
-
-
-
-// ─── shader ─────────────────────────────────────────────────────
 struct SenShaderCode {
     const uint32_t* Code = nullptr;
     uint32_t Count = 0;
     auto IsValid() const -> bool { return Code != nullptr; }
 };
 
-// ─── vertex layout ─────────────────────────────────────────────
 struct SenVertexLayoutElement {
     std::string Semantic;  // HLSL semantic name, used by DX11
-    uint32_t    Location;  // SPIR-V location, used by Vulkan
-    SenFormat   Format;
-    uint32_t    Offset;
+    uint32_t Location;     // SPIR-V location, used by Vulkan
+    SenFormat Format;
+    uint32_t Offset;
 };
 
 struct SenVertexLayoutDesc {
     std::vector<SenVertexLayoutElement> Elements;
 };
 
+struct SenBlendState {
+    bool Enable = false;
+    SenBlendFactor SrcBlend = SenBlendFactor::One;
+    SenBlendFactor DstBlend = SenBlendFactor::Zero;
+    SenBlendOp BlendOp = SenBlendOp::Add;
+    SenBlendFactor SrcBlendAlpha = SenBlendFactor::One;
+    SenBlendFactor DstBlendAlpha = SenBlendFactor::Zero;
+    SenBlendOp BlendOpAlpha = SenBlendOp::Add;
+};
 
-// ─── pipeline ──────────────────────────────────────────────────
-using SenPipeline = SenHandle<SenHandleKind::Pipeline>;
-
-inline constexpr uint32_t SenMaxRootConstantSize = 128;
+struct SenDepthState {
+    bool Test = true;
+    bool Write = true;
+    SenCompare Compare = SenCompare::Less;
+};
 
 struct SenPipelineDesc {
-    // Shader stages
     SenShaderCode VertexShader;
     SenShaderCode HullShader;
     SenShaderCode DomainShader;
     SenShaderCode PixelShader;
     SenShaderCode ComputeShader;
 
-    // Vertex input
     std::vector<SenVertexLayoutElement> VertexLayout;
-    uint32_t    VertexStride = 0;  // full stride of the vertex buffer (0 = no vertex input)
+    uint32_t VertexStride = 0;  // full stride of the vertex buffer (0 = no vertex input)
     SenTopology Topology = SenTopology::TriangleList;
 
-    // Render state
-    SenRasterizerState    RasterizerState;
-    SenBlendState         BlendState;
-    SenDepthStencilState  DepthStencilState;
+    SenFill Fill = SenFill::Solid;
+    bool DepthClipEnable = true;
+    SenBlendState BlendState;
 
     std::vector<SenFormat> RenderTargetFormats;
-    SenFormat DepthStencilFormat;
+    SenFormat DepthFormat;
 };
 
-
-// ─── viewport ───────────────────────────────────────────────────
 struct SenViewport {
-    float X        = 0.f;
-    float Y        = 0.f;
-    float Width    = 0.f;
-    float Height   = 0.f;
+    float X = 0.f;
+    float Y = 0.f;
+    float Width = 0.f;
+    float Height = 0.f;
     float MinDepth = 0.f;
     float MaxDepth = 1.f;
 };
 
-
-// ─── render pass ───────────────────────────────────────────────
-enum class SenLoadOp : uint8_t {
-    Load,     // load existing contents of attachment
-    Clear,    // clear attachment to clear value
-    DontCare, // contents undefined, no load/clear needed (optimization)
-};
-
 struct SenColorAttachment {
-    SenView   View;
-    SenLoadOp LoadOp     = SenLoadOp::Clear;
+    SenView View;
+    SenLoadOp LoadOp = SenLoadOp::Clear;
     glm::vec4 ClearColor = {0, 0, 0, 0};
 };
 
 struct SenDepthAttachment {
-    SenView   View;
-    SenLoadOp LoadOp       = SenLoadOp::Clear;
-    float     ClearDepth   = 1.0f;
-    uint8_t   ClearStencil = 0;
+    SenView View;
+    SenLoadOp LoadOp = SenLoadOp::Clear;
+    float ClearDepth = 1.0f;
+    uint8_t ClearStencil = 0;
 };
 
-struct SenPassDesc {
-    std::vector<SenColorAttachment>   ColorAttachments;
+struct SenRenderPassDesc {
+    std::vector<SenColorAttachment> ColorAttachments;
     std::optional<SenDepthAttachment> DepthAttachment;
-    SenViewport                       Viewport;
+    SenViewport Viewport;
 };
 
-
-// ─── device ─────────────────────────────────────────────────────
-
-struct SenDeviceDesc {
-    bool DebugLayer = false;
+struct SenTextureTransition {
+    SenTexture Texture;
+    SenLayout State;
+    uint32_t BaseMip = 0;
+    uint32_t MipCount = SenAllMips;
 };
-
-struct SenCaps {
-    char     DeviceName[256] = {};
-    uint32_t TextureSlots    = 0;
-    uint32_t StorageSlots    = 0;
-    uint32_t SamplerSlots    = 0;
-};
-
-
-// ─── swapchain ──────────────────────────────────────────────────
-
-enum class SenPresentMode : uint8_t {
-    Immediate,  // no vsync  — DX11: Present(0), Vulkan: IMMEDIATE_KHR
-    VSync,      // vsync     — DX11: Present(1), Vulkan: FIFO_KHR
-    Mailbox,    // triple-buf — Vulkan: MAILBOX_KHR, DX11: falls back to VSync
-};
-
-using SenSwapchain = SenHandle<SenHandleKind::Swapchain>;
 
 struct SenSwapchainDesc {
-    void*          NativeWindowHandle = nullptr;  // GLFWwindow* (TODO: see SenVulkanBackend.cpp)
-    uint32_t       Width          = 0;
-    uint32_t       Height         = 0;
-    uint32_t       BufferCount    = 2;
-    SenFormat      Format         = SenFormat::RGBA8_Unorm;
-    SenPresentMode PresentMode    = SenPresentMode::VSync;
+    void* NativeWindowHandle = nullptr;  // GLFWwindow* (TODO: see SenVulkanBackend.cpp)
+    uint32_t Width = 0;
+    uint32_t Height = 0;
+    uint32_t BufferCount = 2;
+    SenFormat Format = SenFormat::RGBA8_Unorm;
+    SenPresentMode PresentMode = SenPresentMode::VSync;
 };
 
+struct SenSubmission {
+    uint64_t Value = 0;
+    auto IsValid() const -> bool { return Value != 0; }
+};
 
-// ─── submit ─────────────────────────────────────────────────────
 struct SenSubmitDesc {
     const SenCommandList* Lists = nullptr;
     uint32_t ListCount = 0;
     const SenSwapchain* Presents = nullptr;
     uint32_t PresentCount = 0;
 };
-

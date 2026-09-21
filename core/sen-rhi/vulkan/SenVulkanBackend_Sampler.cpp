@@ -8,12 +8,12 @@ auto SenVulkanBackend::CreateSampler(const SenSamplerDesc& desc) -> SenSampler {
 
     VkSamplerCreateInfo samplerInfo {
         .sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter        = Sen::Vulkan::ToFilter(desc.Filter),
-        .minFilter        = Sen::Vulkan::ToFilter(desc.Filter),
-        .mipmapMode       = Sen::Vulkan::ToMipmapMode(desc.Filter),
-        .addressModeU     = Sen::Vulkan::ToAddressMode(desc.Address),
-        .addressModeV     = Sen::Vulkan::ToAddressMode(desc.Address),
-        .addressModeW     = Sen::Vulkan::ToAddressMode(desc.Address),
+        .magFilter        = SenVk::ToFilter(desc.Filter),
+        .minFilter        = SenVk::ToFilter(desc.Filter),
+        .mipmapMode       = SenVk::ToMipmapMode(desc.Filter),
+        .addressModeU     = SenVk::ToAddressMode(desc.Address),
+        .addressModeV     = SenVk::ToAddressMode(desc.Address),
+        .addressModeW     = SenVk::ToAddressMode(desc.Address),
         .anisotropyEnable = (desc.Filter == SenFilter::Anisotropic) ? VK_TRUE : VK_FALSE,
         .maxAnisotropy    = (desc.Filter == SenFilter::Anisotropic) ? 16.f : 1.f,
         .compareEnable    = desc.Comparison ? VK_TRUE : VK_FALSE,

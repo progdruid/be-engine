@@ -4,7 +4,7 @@
 #include <bit>
 #include <umbrellas/include-glm.h>
 #include <stb_image/stb_image.h>
-#include "sen-rhi/SenBackend.h"
+#include "sen-rhi/Sen.h"
 #include "BeAssetRegistry.h"
 #include "BeBackend.h"
 
@@ -23,7 +23,7 @@ auto BeTexture::Builder::SetMips(uint32_t mips)          -> Builder&& { _descrip
 auto BeTexture::Builder::SetMipsAuto()                   -> Builder&& { _autoMips = true;                               return std::move(*this); }
 auto BeTexture::Builder::GenerateMips() -> Builder&& { 
     _descriptor.GenerateMips = true; 
-    _descriptor.Usage = _descriptor.Usage | SenTextureUsage::RenderTarget; 
+    _descriptor.Usage = _descriptor.Usage | SenTextureUsage::ColorTarget; 
     return std::move(*this); 
 }
 auto BeTexture::Builder::SetSize(uint32_t w, uint32_t h) -> Builder&& { _descriptor.Width = w; _descriptor.Height = h;  return std::move(*this); }
@@ -159,7 +159,7 @@ BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
     senDesc.Cubemap = descriptor.IsCubemap;
     senDesc.ArrayLength = descriptor.ArrayLength;
 
-    Handle = SenBackend::CreateTexture(senDesc);
+    Handle = Sen::CreateTexture(senDesc);
     CreateViews();
 
     if (descriptor.Data) {
@@ -210,7 +210,7 @@ auto BeTexture::Resize(uint32_t width, uint32_t height) -> void {
     senDesc.Cubemap     = IsCubemap;
     senDesc.ArrayLength = ArrayLength;
 
-    Handle = SenBackend::CreateTexture(senDesc);
+    Handle = Sen::CreateTexture(senDesc);
     CreateViews();
 
     CreateMipViewports();
@@ -220,14 +220,14 @@ auto BeTexture::Resize(uint32_t width, uint32_t height) -> void {
 auto BeTexture::CreateViews() -> void {
     const uint32_t layerCount = (IsCubemap ? 6 : 1) * std::max(1u, ArrayLength);
 
-    if (HasAny(Usage, SenTextureUsage::ShaderResource)) {
+    if (HasAny(Usage, SenTextureUsage::Sampled)) {
         const SenViewType sampledType = 
             IsCubemap 
             ? (ArrayLength > 1 ? SenViewType::TextureCubeArray : SenViewType::TextureCube)
             : (layerCount > 1  ? SenViewType::Texture2DArray   : SenViewType::Texture2D)
         ;
 
-        _sampledView = SenBackend::CreateView({
+        _sampledView = Sen::CreateView({
             .Texture = Handle,
             .Type = sampledType,
             .MipCount = Mips,
@@ -237,7 +237,7 @@ auto BeTexture::CreateViews() -> void {
 
         _sampledMipViews.resize(Mips);
         for (uint32_t mip = 0; mip < Mips; ++mip) {
-            _sampledMipViews[mip] = SenBackend::CreateView({
+            _sampledMipViews[mip] = Sen::CreateView({
                 .Texture = Handle,
                 .Type = sampledType,
                 .BaseMip = mip,
@@ -247,10 +247,10 @@ auto BeTexture::CreateViews() -> void {
         }
     }
 
-    if (HasAny(Usage, SenTextureUsage::DepthStencil)) {
+    if (HasAny(Usage, SenTextureUsage::DepthTarget)) {
         _depthTargetViews.resize(layerCount);
         for (uint32_t layer = 0; layer < layerCount; ++layer) {
-            _depthTargetViews[layer] = SenBackend::CreateView({
+            _depthTargetViews[layer] = Sen::CreateView({
                 .Texture = Handle,
                 .Type = SenViewType::Texture2D,
                 .BaseLayer = layer,
@@ -258,12 +258,12 @@ auto BeTexture::CreateViews() -> void {
         }
     }
 
-    if (HasAny(Usage, SenTextureUsage::RenderTarget)) {
+    if (HasAny(Usage, SenTextureUsage::ColorTarget)) {
         _colorTargetViews.resize(layerCount);
         for (uint32_t layer = 0; layer < layerCount; ++layer) {
             _colorTargetViews[layer].resize(Mips);
             for (uint32_t mip = 0; mip < Mips; ++mip) {
-                _colorTargetViews[layer][mip] = SenBackend::CreateView({
+                _colorTargetViews[layer][mip] = Sen::CreateView({
                     .Texture = Handle,
                     .Type = SenViewType::Texture2D,
                     .BaseMip = mip,
@@ -296,7 +296,7 @@ auto BeTexture::RetireViews() -> void {
 }
 
 auto BeTexture::GetSampledView(uint32_t mip) const -> SenView {
-    if (mip == SEN_FULL_MIPS) {
+    if (mip == SenAllMips) {
         be_assert(_sampledView.IsValid(), "GetSampledView: texture is not a shader resource", Name);
         return _sampledView;
     }

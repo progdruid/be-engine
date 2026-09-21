@@ -122,7 +122,7 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     entry.Width       = imageExtent.width;
     entry.Height      = imageExtent.height;
     entry.BufferCount = desc.BufferCount;
-    entry.Format      = Sen::Vulkan::FromVkFormat(chosenFormat.format);
+    entry.Format      = SenVk::FromVkFormat(chosenFormat.format);
     entry.PresentMode = desc.PresentMode;
 
     // 5. Register each swapchain image as a SenTexture plus its attachment view

@@ -12,37 +12,25 @@
 #include "BeShaderCompiler.h"
 #include "BeShaderTools.h"
 #include "BeTexture.h"
-#include "sen-rhi/SenBackend.h"
+#include "sen-rhi/Sen.h"
 
 namespace {
-    auto ParseCullMode(const std::string& str) -> SenCullMode {
-        if (str == "none") return SenCullMode::None;
-        if (str == "front") return SenCullMode::Front;
-        if (str == "back") return SenCullMode::Back;
+    auto ParseCull(const std::string& str) -> SenCull {
+        if (str == "none") return SenCull::None;
+        if (str == "front") return SenCull::Front;
+        if (str == "back") return SenCull::Back;
         be_assert(false, "Unknown cull mode: " + str);
-        return SenCullMode::Back;
+        return SenCull::Back;
     }
 
-    auto ParseFillMode(const std::string& str) -> SenFillMode {
-        if (str == "solid") return SenFillMode::Solid;
-        if (str == "wireframe") return SenFillMode::Wireframe;
+    auto ParseFill(const std::string& str) -> SenFill {
+        if (str == "solid") return SenFill::Solid;
+        if (str == "wireframe") return SenFill::Wireframe;
         be_assert(false, "Unknown fill mode: " + str);
-        return SenFillMode::Solid;
+        return SenFill::Solid;
     }
 
-    auto ParseRasterizerString(const std::string& str) -> SenRasterizerState {
-        auto state = SenRasterizerState();
-        const auto parts = BeShaderTools::Split(str, "-");
-        be_assert(!parts.empty(), "Invalid rasterizer state format: " + str);
-
-        state.CullMode = ParseCullMode(std::string(parts[0]));
-        if (parts.size() > 1) {
-            state.FillMode = ParseFillMode(std::string(parts[1]));
-        }
-        return state;
-    }
-
-    auto ParseBlendString(const std::string& str) -> SenBlendState {
+    auto ParseBlend(const std::string& str) -> SenBlendState {
         auto state = SenBlendState();
         if (str == "disable") {
             state.Enable = false;
@@ -73,27 +61,27 @@ namespace {
         return state;
     }
 
-    auto ParseComparisonFunc(const std::string& str) -> SenComparisonFunc {
-        if (str == "never") return SenComparisonFunc::Never;
-        if (str == "less") return SenComparisonFunc::Less;
-        if (str == "equal") return SenComparisonFunc::Equal;
-        if (str == "less-equal") return SenComparisonFunc::LessEqual;
-        if (str == "greater") return SenComparisonFunc::Greater;
-        if (str == "not-equal") return SenComparisonFunc::NotEqual;
-        if (str == "greater-equal") return SenComparisonFunc::GreaterEqual;
-        if (str == "always") return SenComparisonFunc::Always;
+    auto ParseCompare(const std::string& str) -> SenCompare {
+        if (str == "never") return SenCompare::Never;
+        if (str == "less") return SenCompare::Less;
+        if (str == "equal") return SenCompare::Equal;
+        if (str == "less-equal") return SenCompare::LessEqual;
+        if (str == "greater") return SenCompare::Greater;
+        if (str == "not-equal") return SenCompare::NotEqual;
+        if (str == "greater-equal") return SenCompare::GreaterEqual;
+        if (str == "always") return SenCompare::Always;
         be_assert(false, "Unknown comparison func: " + str);
-        return SenComparisonFunc::Less;
+        return SenCompare::Less;
     }
 
-    auto ParseDepthStencilString(const std::string& str) -> SenDepthStencilState {
-        auto state = SenDepthStencilState();
+    auto ParseDepth(const std::string& str) -> SenDepthState {
+        auto state = SenDepthState();
         if (str == "disable") {
-            state.DepthEnable = false;
+            state.Test = false;
             return state;
         }
-        state.DepthEnable = true;
-        state.DepthFunc = ParseComparisonFunc(str);
+        state.Test = true;
+        state.Compare = ParseCompare(str);
         return state;
     }
 }
@@ -153,7 +141,7 @@ auto BeShaderLibrary::ReloadSources(std::span<const std::filesystem::path> chang
         return;
     }
 
-    SenBackend::WaitIdle();
+    Sen::WaitIdle();
 
     auto pipelineCount = uint32_t(0);
     for (const auto shader : reloaded) {
@@ -363,13 +351,19 @@ auto BeShaderLibrary::CreateShader(const BeShaderTools::ParsedShader& meta) -> s
     }
 
     if (!meta.Rasterizer.empty()) {
-        shader->RasterizerState = ParseRasterizerString(meta.Rasterizer);
+        const auto parts = BeShaderTools::Split(meta.Rasterizer, "-");
+        be_assert(!parts.empty(), "Invalid rasterizer state format: " + meta.Rasterizer);
+
+        shader->Cull = ParseCull(std::string(parts[0]));
+        if (parts.size() > 1) {
+            shader->Fill = ParseFill(std::string(parts[1]));
+        }
     }
     if (!meta.Blend.empty()) {
-        shader->BlendState = ParseBlendString(meta.Blend);
+        shader->BlendState = ParseBlend(meta.Blend);
     }
     if (!meta.Depth.empty()) {
-        shader->DepthStencilState = ParseDepthStencilString(meta.Depth);
+        shader->DepthState = ParseDepth(meta.Depth);
     }
 
     if (!meta.VertexFn.empty()) {
@@ -436,7 +430,7 @@ auto BeShaderLibrary::RegisterBuiltinDefaultTextures() -> void {
     struct BuiltinDefaultTexture {
         std::string_view Name;
         glm::vec4 Color;
-        SenTextureUsage Usage = SenTextureUsage::ShaderResource;
+        SenTextureUsage Usage = SenTextureUsage::Sampled;
         bool Cubemap = false;
         uint32_t ArrayLength = 1;
     };
@@ -444,10 +438,10 @@ auto BeShaderLibrary::RegisterBuiltinDefaultTextures() -> void {
     const BuiltinDefaultTexture builtins[] = {
         { "white", glm::vec4(1.f) },
         { "black", glm::vec4(0.f, 0.f, 0.f, 1.f) },
-        { "storage-black", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::ShaderResource | SenTextureUsage::Storage },
-        { "black-cube", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::ShaderResource, true },
-        { "black-array", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::ShaderResource, false, 2 },
-        { "black-cube-array", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::ShaderResource, true, 2 },
+        { "storage-black", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::Sampled | SenTextureUsage::Storage },
+        { "black-cube", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::Sampled, true },
+        { "black-array", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::Sampled, false, 2 },
+        { "black-cube-array", glm::vec4(0.f, 0.f, 0.f, 1.f), SenTextureUsage::Sampled, true, 2 },
         { "default-orm", glm::vec4(0.f, 1.f, 1.f, 1.f) },
         { "flat-normal", glm::vec4(0.5f, 0.5f, 1.f, 1.f) },
     };
@@ -513,7 +507,7 @@ auto BeShaderLibrary::GetSampler(std::string_view samplerDescString) -> SenSampl
         be_assert(false, "Unknown address token", addressToken);
     }
 
-    auto sampler = SenBackend::CreateSampler({
+    auto sampler = Sen::CreateSampler({
         .Filter     = filter,
         .Address    = address,
         .Comparison = hasComparison,

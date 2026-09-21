@@ -1,4 +1,5 @@
 #include "BeStandardLightingPass.h"
+#include <sen-rhi/Sen.h>
 
 #include <algorithm>
 #include <span>

@@ -8,7 +8,7 @@
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 #include <sen-rhi/SenTypes.h>
-#include <sen-rhi/SenCmd.h>
+#include <sen-rhi/Sen.h>
 
 #include "BeBackend.h"
 #include "BeShaderTools.h"
@@ -45,8 +45,10 @@ class BePass {
     bool _isStateDirty = false;
     SenPipeline _boundPipeline;
 
+    BeBackend::DynamicState _dynamic;
+
     const BeShaderTools::RootLayout* _rootLayout = nullptr;
-    std::array<std::byte, SenMaxRootConstantSize> _rootData {};
+    std::array<std::byte, SenMaxRootSize> _rootData {};
     uint32_t _rootWritten = 0;
 
     expose
@@ -101,10 +103,12 @@ class BePass {
     auto End   () -> void;
 
     auto SetState (const BeDrawState& state) -> BePass&;
-    auto OverrideCull (SenCullMode mode) -> BePass&;
-    auto OverrideFill (SenFillMode mode) -> BePass&;
+    auto OverrideCull (SenCull mode) -> BePass&;
+    auto OverrideFrontFace (SenFrontFace frontFace) -> BePass&;
+    auto OverrideDepth (const SenDepthState& depthStencil) -> BePass&;
+    auto OverrideDepthBias (float constant, float slopeScaled) -> BePass&;
+    auto OverrideFill (SenFill mode) -> BePass&;
     auto OverrideBlend (const SenBlendState& blend) -> BePass&;
-    auto OverrideDepthStencil (const SenDepthStencilState& depthStencil) -> BePass&;
 
     auto Bind (const std::string& link, BeMaterial& material) -> BePass&;
 

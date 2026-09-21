@@ -5,7 +5,7 @@
 #include "BeRenderPass.h"
 #include "BeShader.h"
 #include "BeShaderLibrary.h"
-#include <sen-rhi/SenBackend.h>
+#include <sen-rhi/Sen.h>
 
 uint64_t BeRenderer::_currentFrame = 0;
 
@@ -22,11 +22,11 @@ BeRenderer::BeRenderer(
 BeRenderer::~BeRenderer() {
     BeShaderLibrary::Shutdown();
     BeBackend::Shutdown();
-    SenBackend::Shutdown();
+    Sen::Shutdown();
 }
 
 auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
-    SenBackend::Init({
+    Sen::Init({
         #if defined(_DEBUG)
         .DebugLayer = true,
         #endif
@@ -34,7 +34,7 @@ auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
     BeBackend::Init();
     BeShaderLibrary::Init();
 
-    _swapchain = SenBackend::CreateSwapchain({
+    _swapchain = Sen::CreateSwapchain({
         .NativeWindowHandle = _nativeWindow,
         .Width = _desiredWidth,
         .Height = _desiredHeight,
@@ -42,24 +42,24 @@ auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
     });
 
     for (auto& cmd : _frameCmds) {
-        cmd = SenBackend::CreateCommandList();
+        cmd = Sen::CreateCommandList();
     }
-    _immediateCmd = SenBackend::CreateCommandList();
+    _immediateCmd = Sen::CreateCommandList();
 
     BeShaderLibrary::RegisterBuiltinDefaultTextures();
     BeShaderLibrary::LoadShaders();
 }
 
 auto BeRenderer::GetSwapchainFormat() const -> SenFormat {
-    return SenBackend::GetSwapchainFormat(_swapchain);
+    return Sen::GetSwapchainFormat(_swapchain);
 }
 
 auto BeRenderer::GetSwapchainPixelWidth() const -> uint32_t {
-    return SenBackend::GetSwapchainWidth(_swapchain);
+    return Sen::GetSwapchainWidth(_swapchain);
 }
 
 auto BeRenderer::GetSwapchainPixelHeight() const -> uint32_t {
-    return SenBackend::GetSwapchainHeight(_swapchain);
+    return Sen::GetSwapchainHeight(_swapchain);
 }
 
 auto BeRenderer::GetViewport() const -> SenViewport {
@@ -71,20 +71,20 @@ auto BeRenderer::SetSequence(BePassSequence* sequence) -> void {
 }
 
 auto BeRenderer::WaitIdle() -> void {
-    SenBackend::WaitIdle();
+    Sen::WaitIdle();
 }
 
 auto BeRenderer::PollResize() -> bool {
     uint32_t width = 0;
     uint32_t height = 0;
-    SenBackend::GetSurfaceExtent(_swapchain, width, height);
+    Sen::GetSurfaceExtent(_swapchain, width, height);
 
     if (width == 0 || height == 0) { return false; }
     if (width == UINT32_MAX) { return true; }
 
     if (width != GetSwapchainPixelWidth() || height != GetSwapchainPixelHeight()) {
-        SenBackend::WaitIdle();
-        SenBackend::ResizeSwapchain(_swapchain, width, height);
+        Sen::WaitIdle();
+        Sen::ResizeSwapchain(_swapchain, width, height);
         _desiredWidth = width;
         _desiredHeight = height;
     }
@@ -94,11 +94,9 @@ auto BeRenderer::PollResize() -> bool {
 auto BeRenderer::Render() -> void {
     be_assert(_sequence != nullptr, "BeRenderer::Render(): sequence is null");
     
-    SenBackend::BeginDebugEvent("Frame");
-
     const uint32_t slot = _currentFrame % FramesInFlight;
     if (_frameSubmissions[slot].IsValid()) {
-        SenBackend::WaitForSubmission(_frameSubmissions[slot]);
+        Sen::WaitForSubmission(_frameSubmissions[slot]);
     }
 
     // safe here, not earlier: the GPU is done with both the command buffer and the arena chunks
@@ -106,28 +104,29 @@ auto BeRenderer::Render() -> void {
     BeBackend::ResetMaterialArena(_currentFrame);
     BeBackend::FlushRetirements();
 
-    _backbufferView = SenBackend::AcquireSwapchainView(_swapchain);
+    _backbufferView = Sen::AcquireSwapchainView(_swapchain);
     if (!_backbufferView.IsValid() && PollResize()) {
-        _backbufferView = SenBackend::AcquireSwapchainView(_swapchain);
+        _backbufferView = Sen::AcquireSwapchainView(_swapchain);
     }
     if (!_backbufferView.IsValid()) {
-        SenBackend::EndDebugEvent();
         return;
     }
 
     const SenCommandList cmd = _frameCmds[slot];
     SenCmd::Begin(cmd);
+    SenCmd::PushMarker(cmd, "Frame");
 
     for (const auto& pass : _sequence->Passes) {
-        SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
+        SenCmd::PushMarker(cmd, pass->GetPassName().c_str());
         pass->Render(*this, cmd);
-        SenBackend::EndDebugEvent();
+        SenCmd::PopMarker(cmd);
     }
 
-    SenCmd::TransitionTextures(cmd, { { SenBackend::GetViewDesc(_backbufferView).Texture, SenResourceState::Present } });
+    SenCmd::TransitionTextures(cmd, { { Sen::GetViewDesc(_backbufferView).Texture, SenLayout::Present } });
+    SenCmd::PopMarker(cmd);
     SenCmd::End(cmd);
 
-    const SenSubmission submission = SenBackend::Submit({
+    const SenSubmission submission = Sen::Submit({
         .Lists = &cmd,
         .ListCount = 1,
         .Presents = &_swapchain,
@@ -135,26 +134,24 @@ auto BeRenderer::Render() -> void {
     });
     _frameSubmissions[slot] = submission;
     BeBackend::StampRetirements(submission);
-    SenBackend::EndDebugEvent();
 
     ++_currentFrame;
 }
 
 auto BeRenderer::RenderOnce(const std::vector<BeRenderPass*>& passes) -> void {
-    SenBackend::BeginDebugEvent("RenderOnce");
-
     SenCmd::Begin(_immediateCmd);
+    SenCmd::PushMarker(_immediateCmd, "RenderOnce");
 
     for (const auto& pass : passes) {
-        SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
+        SenCmd::PushMarker(_immediateCmd, pass->GetPassName().c_str());
         pass->Render(*this, _immediateCmd);
-        SenBackend::EndDebugEvent();
+        SenCmd::PopMarker(_immediateCmd);
     }
 
+    SenCmd::PopMarker(_immediateCmd);
     SenCmd::End(_immediateCmd);
 
-    const SenSubmission submission = SenBackend::Submit({ .Lists = &_immediateCmd, .ListCount = 1 });
-    SenBackend::WaitForSubmission(submission);
+    const SenSubmission submission = Sen::Submit({ .Lists = &_immediateCmd, .ListCount = 1 });
+    Sen::WaitForSubmission(submission);
     BeBackend::StampRetirements(submission);
-    SenBackend::EndDebugEvent();
 }

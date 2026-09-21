@@ -26,7 +26,7 @@ class BeMaterial {
     struct TextureBinding {
         std::shared_ptr<BeTexture> Texture;
         bool IsStorage;
-        uint32_t Mip = SEN_FULL_MIPS; // SEN_FULL_MIPS = full-mip SRV
+        uint32_t Mip = SenAllMips; // SenAllMips = full-mip SRV
     };
     std::unordered_map<std::string, TextureBinding> _textures;
     std::unordered_map<std::string, SenSampler> _samplers;
@@ -53,7 +53,7 @@ class BeMaterial {
     auto GetScheme () const -> const BeMaterialScheme& { return _scheme; }
     auto GetUniqueID () const -> uint32_t { return _uniqueID; }
 
-    auto GetCbufferAddress () -> SenBufferGpuAddress;
+    auto GetCbufferAddress () -> SenGpuAddress;
     auto GetTextureSlot (const std::string& propertyName) const -> uint32_t;
     auto GetSamplerSlot (const std::string& propertyName) const -> uint32_t;
 
@@ -92,7 +92,7 @@ class BeMaterial {
     auto GetFloat3Array (const std::string& propertyName) const -> std::vector<glm::vec3>;
     auto GetFloat4Array (const std::string& propertyName) const -> std::vector<glm::vec4>;
     
-    auto SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture, uint32_t mip = SEN_FULL_MIPS) -> void;
+    auto SetTexture(const std::string& propertyName, const std::shared_ptr<BeTexture>& texture, uint32_t mip = SenAllMips) -> void;
     auto GetTexture(const std::string& propertyName) const -> std::shared_ptr<BeTexture>;
     auto GetTextures() const { return _textures | std::views::values; }
 

@@ -4,13 +4,13 @@
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-libassert.h>
 
-namespace Sen::Vulkan {
+namespace SenVk {
 
     inline auto ToImageUsageFlags(SenTextureUsage usage) -> VkImageUsageFlags {
         VkImageUsageFlags flags = 0;
-        if (HasAny(usage, SenTextureUsage::ShaderResource)) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
-        if (HasAny(usage, SenTextureUsage::RenderTarget))   flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        if (HasAny(usage, SenTextureUsage::DepthStencil))   flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        if (HasAny(usage, SenTextureUsage::Sampled)) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+        if (HasAny(usage, SenTextureUsage::ColorTarget))   flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        if (HasAny(usage, SenTextureUsage::DepthTarget))   flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         if (HasAny(usage, SenTextureUsage::Storage))        flags |= VK_IMAGE_USAGE_STORAGE_BIT;
         flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         return flags;
@@ -46,18 +46,18 @@ namespace Sen::Vulkan {
         return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     }
 
-    inline auto ToCompareOp(SenComparisonFunc func) -> VkCompareOp {
+    inline auto ToCompareOp(SenCompare func) -> VkCompareOp {
         switch (func) {
-            case SenComparisonFunc::Never:        return VK_COMPARE_OP_NEVER;
-            case SenComparisonFunc::Less:         return VK_COMPARE_OP_LESS;
-            case SenComparisonFunc::Equal:        return VK_COMPARE_OP_EQUAL;
-            case SenComparisonFunc::LessEqual:    return VK_COMPARE_OP_LESS_OR_EQUAL;
-            case SenComparisonFunc::Greater:      return VK_COMPARE_OP_GREATER;
-            case SenComparisonFunc::NotEqual:     return VK_COMPARE_OP_NOT_EQUAL;
-            case SenComparisonFunc::GreaterEqual: return VK_COMPARE_OP_GREATER_OR_EQUAL;
-            case SenComparisonFunc::Always:       return VK_COMPARE_OP_ALWAYS;
+            case SenCompare::Never:        return VK_COMPARE_OP_NEVER;
+            case SenCompare::Less:         return VK_COMPARE_OP_LESS;
+            case SenCompare::Equal:        return VK_COMPARE_OP_EQUAL;
+            case SenCompare::LessEqual:    return VK_COMPARE_OP_LESS_OR_EQUAL;
+            case SenCompare::Greater:      return VK_COMPARE_OP_GREATER;
+            case SenCompare::NotEqual:     return VK_COMPARE_OP_NOT_EQUAL;
+            case SenCompare::GreaterEqual: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+            case SenCompare::Always:       return VK_COMPARE_OP_ALWAYS;
         }
-        be_assert(false, "Unknown SenComparisonFunc");
+        be_assert(false, "Unknown SenCompare");
         return VK_COMPARE_OP_LESS;
     }
 
@@ -131,36 +131,45 @@ namespace Sen::Vulkan {
         return VK_BLEND_OP_ADD;
     }
 
-    inline auto ToCullMode(SenCullMode mode) -> VkCullModeFlags {
+    inline auto ToCull(SenCull mode) -> VkCullModeFlags {
         switch (mode) {
-            case SenCullMode::None:  return VK_CULL_MODE_NONE;
-            case SenCullMode::Front: return VK_CULL_MODE_FRONT_BIT;
-            case SenCullMode::Back:  return VK_CULL_MODE_BACK_BIT;
+            case SenCull::None:  return VK_CULL_MODE_NONE;
+            case SenCull::Front: return VK_CULL_MODE_FRONT_BIT;
+            case SenCull::Back:  return VK_CULL_MODE_BACK_BIT;
         }
-        be_assert(false, "Unknown SenCullMode");
+        be_assert(false, "Unknown SenCull");
         return VK_CULL_MODE_BACK_BIT;
     }
 
-    inline auto ToFillMode(SenFillMode mode) -> VkPolygonMode {
-        switch (mode) {
-            case SenFillMode::Solid:      return VK_POLYGON_MODE_FILL;
-            case SenFillMode::Wireframe:  return VK_POLYGON_MODE_LINE;
+    inline auto ToFrontFace(SenFrontFace frontFace) -> VkFrontFace {
+        switch (frontFace) {
+            case SenFrontFace::Clockwise:        return VK_FRONT_FACE_CLOCKWISE;
+            case SenFrontFace::CounterClockwise: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
         }
-        be_assert(false, "Unknown SenFillMode");
+        be_assert(false, "Unknown SenFrontFace");
+        return VK_FRONT_FACE_CLOCKWISE;
+    }
+
+    inline auto ToFill(SenFill mode) -> VkPolygonMode {
+        switch (mode) {
+            case SenFill::Solid:      return VK_POLYGON_MODE_FILL;
+            case SenFill::Wireframe:  return VK_POLYGON_MODE_LINE;
+        }
+        be_assert(false, "Unknown SenFill");
         return VK_POLYGON_MODE_FILL;
     }
 
-    inline auto ToImageLayout(SenResourceState state) -> VkImageLayout {
+    inline auto ToImageLayout(SenLayout state) -> VkImageLayout {
         switch (state) {
-            case SenResourceState::Undefined:        return VK_IMAGE_LAYOUT_UNDEFINED;
-            case SenResourceState::ShaderRead:       return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            case SenResourceState::ColorAttachment:  return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            case SenResourceState::DepthAttachment:  return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            case SenResourceState::TransferDst:      return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            case SenResourceState::Present:          return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            case SenResourceState::UnorderedAccess:  return VK_IMAGE_LAYOUT_GENERAL;
+            case SenLayout::Undefined:   return VK_IMAGE_LAYOUT_UNDEFINED;
+            case SenLayout::TransferDst: return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            case SenLayout::ShaderRead:  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            case SenLayout::Storage:     return VK_IMAGE_LAYOUT_GENERAL;
+            case SenLayout::ColorTarget: return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            case SenLayout::DepthTarget: return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            case SenLayout::Present:     return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         }
-        be_assert(false, "Unknown SenResourceState");
+        be_assert(false, "Unknown SenLayout");
         return VK_IMAGE_LAYOUT_UNDEFINED;
     }
 
@@ -203,4 +212,4 @@ namespace Sen::Vulkan {
         }
     }
 
-} // namespace Sen::Vulkan
+} // namespace SenVk

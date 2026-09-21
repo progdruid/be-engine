@@ -1,7 +1,7 @@
 #include "BeStandardRenderMachine.h"
 
 #include <umbrellas/include-libassert.h>
-#include <sen-rhi/SenBackend.h>
+#include <sen-rhi/Sen.h>
 
 #include "BeAssetRegistry.h"
 #include "BeBackend.h"
@@ -69,7 +69,7 @@ auto BeStandardRenderMachine::DeclareGBufferTarget(const std::string& name, SenF
 
 auto BeStandardRenderMachine::DeclareDepthTarget(const std::string& name, SenFormat format) -> std::shared_ptr<BeTexture> {
     auto texture = BeTexture::Create(name)
-        .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+        .SetUsage(SenTextureUsage::DepthTarget | SenTextureUsage::Sampled)
         .SetFormat(format)
         .SetSize(_width, _height)
         .Build();
@@ -80,7 +80,7 @@ auto BeStandardRenderMachine::DeclareDepthTarget(const std::string& name, SenFor
 }
 
 auto BeStandardRenderMachine::DeclareTextureTarget(const std::string& name, SenFormat format, bool storage, uint32_t mips) -> std::shared_ptr<BeTexture> {
-    auto usage = SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource;
+    auto usage = SenTextureUsage::ColorTarget | SenTextureUsage::Sampled;
     if (storage) {
         usage = usage | SenTextureUsage::Storage;
     }
@@ -212,14 +212,14 @@ auto BeStandardRenderMachine::AddPass(std::unique_ptr<BeRenderPass> pass) -> voi
 
 auto BeStandardRenderMachine::AddEnvironmentBakePass(std::shared_ptr<BeTexture> equirect, uint32_t cubemapSize) -> void {
     _envCubemap = BeTexture::Create("__standard_env_cubemap")
-        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+        .SetUsage(SenTextureUsage::ColorTarget | SenTextureUsage::Sampled)
         .SetFormat(SenFormat::RGBA16_Float)
         .SetCubemap(true)
         .SetSize(cubemapSize, cubemapSize)
         .Build();
 
     _irradianceCubemap = BeTexture::Create("__standard_irradiance_cubemap")
-        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+        .SetUsage(SenTextureUsage::ColorTarget | SenTextureUsage::Sampled)
         .SetFormat(SenFormat::RGBA16_Float)
         .SetCubemap(true)
         .SetSize(32, 32)
@@ -233,7 +233,7 @@ auto BeStandardRenderMachine::AddEnvironmentBakePass(std::shared_ptr<BeTexture> 
         s /= 2;
     }
     _prefilteredCubemap = BeTexture::Create("__standard_prefiltered_cubemap")
-        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+        .SetUsage(SenTextureUsage::ColorTarget | SenTextureUsage::Sampled)
         .SetFormat(SenFormat::RGBA16_Float)
         .SetCubemap(true)
         .SetSize(prefilteredSize, prefilteredSize)
@@ -241,7 +241,7 @@ auto BeStandardRenderMachine::AddEnvironmentBakePass(std::shared_ptr<BeTexture> 
         .Build();
 
     _brdfLutTexture = BeTexture::Create("__standard_brdf_lut")
-        .SetUsage(SenTextureUsage::RenderTarget | SenTextureUsage::ShaderResource)
+        .SetUsage(SenTextureUsage::ColorTarget | SenTextureUsage::Sampled)
         .SetFormat(SenFormat::RG32_Float)
         .SetSize(512, 512)
         .Build();
@@ -350,7 +350,7 @@ auto BeStandardRenderMachine::EnsureShadowArrays() -> void {
     if (dirCount > 0
         && (!_directionalShadowArray || _directionalShadowArray->Width != dirRes || _directionalShadowArray->ArrayLength != dirCount)) {
         _directionalShadowArray = BeTexture::Create("__srm_directional_shadow_array")
-            .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+            .SetUsage(SenTextureUsage::DepthTarget | SenTextureUsage::Sampled)
             .SetFormat(SenFormat::Depth32)
             .SetSize(dirRes, dirRes)
             .SetArrayLength(dirCount)
@@ -362,7 +362,7 @@ auto BeStandardRenderMachine::EnsureShadowArrays() -> void {
     if (pointCount > 0
         && (!_pointShadowArray || _pointShadowArray->Width != pointRes || _pointShadowArray->ArrayLength != pointCount)) {
         _pointShadowArray = BeTexture::Create("__srm_point_shadow_array")
-            .SetUsage(SenTextureUsage::DepthStencil | SenTextureUsage::ShaderResource)
+            .SetUsage(SenTextureUsage::DepthTarget | SenTextureUsage::Sampled)
             .SetFormat(SenFormat::Depth32)
             .SetCubemap(true)
             .SetSize(pointRes, pointRes)
@@ -498,14 +498,14 @@ auto BeStandardRenderMachine::BakeMeshes() -> void {
     }
 
     const auto vertexSize = static_cast<uint32_t>(vertices.size() * sizeof(BeFullVertex));
-    _sharedVertexBuffer = SenBackend::CreateBuffer({
+    _sharedVertexBuffer = Sen::CreateBuffer({
         .Memory = SenMemory::Device,
         .Size   = vertexSize,
     });
     BeBackend::WriteBuffer(vertices.data(), vertexSize, _sharedVertexBuffer, 0);
 
     const auto indexSize = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
-    _sharedIndexBuffer = SenBackend::CreateBuffer({
+    _sharedIndexBuffer = Sen::CreateBuffer({
         .Memory = SenMemory::Device,
         .Size   = indexSize,
     });

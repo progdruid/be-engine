@@ -52,5 +52,5 @@ auto SenVulkanBackend::GetViewDesc(SenView handle) -> const SenViewDesc& {
 
 auto SenVulkanBackend::GetViewFormat(SenView handle) -> SenFormat {
     const auto& desc = _views.Get(handle).Desc;
-    return Sen::Vulkan::FromVkFormat(_textures.Get(desc.Texture).Format);
+    return SenVk::FromVkFormat(_textures.Get(desc.Texture).Format);
 }

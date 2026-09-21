@@ -39,9 +39,14 @@ struct BeShader {
     BeShaderType ShaderType = BeShaderType::None;
 
     SenTopology Topology = SenTopology::Undefined;
-    SenRasterizerState RasterizerState;
+    SenFill Fill = SenFill::Solid;
+    bool DepthClipEnable = true;
     SenBlendState BlendState;
-    SenDepthStencilState DepthStencilState;
+
+    // command state, not baked into the pipeline
+    SenCull Cull = SenCull::Back;
+    SenFrontFace FrontFace = SenFrontFace::Clockwise;
+    SenDepthState DepthState;
     std::vector<SenVertexLayoutElement> VertexLayout;
     uint32_t VertexStride = 0;
 

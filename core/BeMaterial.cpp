@@ -5,7 +5,7 @@
 #include "BeAssetRegistry.h"
 #include "BeShaderLibrary.h"
 #include "BeTexture.h"
-#include "sen-rhi/SenBackend.h"
+#include "sen-rhi/Sen.h"
 
 // std140 array stride is 16 bytes / 4 floats (float->float4); 
 // matrix os 64 bytes / 16 floats.
@@ -46,12 +46,12 @@ auto BeMaterial::InitialiseSlotMaps() -> void {
     }
 }
 
-auto BeMaterial::GetCbufferAddress() -> SenBufferGpuAddress {
+auto BeMaterial::GetCbufferAddress() -> SenGpuAddress {
     if (_scheme.CbufferSize == 0) {
         return {};
     }
     CommitChunk();
-    return SenBackend::GetBufferGpuAddress(_chunk.Buffer) + _chunk.Offset;
+    return Sen::GetBufferAddress(_chunk.Buffer) + _chunk.Offset;
 }
 
 auto BeMaterial::GetTextureSlot(const std::string& propertyName) const -> uint32_t {

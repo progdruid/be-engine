@@ -12,6 +12,7 @@
 #include "BePassSequence.h"
 #include "BeProp.h"
 #include <sen-rhi/SenTypes.h>
+#include <sen-rhi/Sen.h>
 
 class BeTexture;
 class BeRenderer;

@@ -2,7 +2,7 @@
 #include <string>
 
 #include <umbrellas/common.hpp>
-#include <sen-rhi/SenCmd.h>
+#include <sen-rhi/SenTypes.h>
 
 class BeRenderer;
 

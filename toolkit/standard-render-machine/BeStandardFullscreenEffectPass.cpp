@@ -1,4 +1,5 @@
 #include "BeStandardFullscreenEffectPass.h"
+#include <sen-rhi/Sen.h>
 
 #include <umbrellas/include-libassert.h>
 

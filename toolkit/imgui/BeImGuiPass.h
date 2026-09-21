@@ -1,4 +1,5 @@
 #pragma once
+#include <sen-rhi/Sen.h>
 
 #include <functional>
 #include <memory>

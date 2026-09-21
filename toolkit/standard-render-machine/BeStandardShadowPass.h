@@ -4,6 +4,7 @@
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 #include <sen-rhi/SenTypes.h>
+#include <sen-rhi/Sen.h>
 
 #include "BeRenderPass.h"
 

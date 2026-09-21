@@ -23,7 +23,7 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     const VkPushConstantRange rootRange {
         .stageFlags = VK_SHADER_STAGE_ALL,
         .offset     = 0,
-        .size       = SenMaxRootConstantSize,
+        .size       = SenMaxRootSize,
     };
     VkPipelineLayoutCreateInfo layoutInfo {
         .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -85,7 +85,7 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
         attributes.push_back(VkVertexInputAttributeDescription {
             .location = elem.Location,
             .binding  = 0,
-            .format   = Sen::Vulkan::ToFormat(elem.Format),
+            .format   = SenVk::ToFormat(elem.Format),
             .offset   = elem.Offset,
         });
     }
@@ -109,7 +109,7 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     // ── input assembly ─────────────────────────────────────────────────────────
     VkPipelineInputAssemblyStateCreateInfo inputAssembly {
         .sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology               = Sen::Vulkan::ToTopology(desc.Topology),
+        .topology               = SenVk::ToTopology(desc.Topology),
         .primitiveRestartEnable = VK_FALSE,
     };
 
@@ -127,16 +127,12 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     };
 
     // ── rasterizer ─────────────────────────────────────────────────────────────
+    // cullMode, frontFace and the depthBias fields are dynamic; the values here are ignored.
     VkPipelineRasterizationStateCreateInfo rasterizer {
         .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-        .depthClampEnable        = !desc.RasterizerState.DepthClipEnable,
+        .depthClampEnable        = !desc.DepthClipEnable,
         .rasterizerDiscardEnable = VK_FALSE,
-        .polygonMode             = Sen::Vulkan::ToFillMode(desc.RasterizerState.FillMode),
-        .cullMode                = Sen::Vulkan::ToCullMode(desc.RasterizerState.CullMode),
-        .frontFace               = VK_FRONT_FACE_CLOCKWISE,
-        .depthBiasEnable         = desc.RasterizerState.DepthBias != 0.f || desc.RasterizerState.SlopeScaledDepthBias != 0.f,
-        .depthBiasConstantFactor = desc.RasterizerState.DepthBias,
-        .depthBiasSlopeFactor    = desc.RasterizerState.SlopeScaledDepthBias,
+        .polygonMode             = SenVk::ToFill(desc.Fill),
         .lineWidth               = 1.f,
     };
 
@@ -147,23 +143,21 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     };
 
     // ── depth stencil ──────────────────────────────────────────────────────────
+    // Fully dynamic; the struct must still be present when there is a depth attachment.
     VkPipelineDepthStencilStateCreateInfo depthStencil {
-        .sType            = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable  = desc.DepthStencilState.DepthEnable,
-        .depthWriteEnable = desc.DepthStencilState.DepthWriteEnable,
-        .depthCompareOp   = Sen::Vulkan::ToCompareOp(desc.DepthStencilState.DepthFunc),
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
     };
 
     // ── blend ──────────────────────────────────────────────────────────────────
     uint32_t rtCount = uint32_t(desc.RenderTargetFormats.size());
     VkPipelineColorBlendAttachmentState blendAttachment {
         .blendEnable         = desc.BlendState.Enable,
-        .srcColorBlendFactor = Sen::Vulkan::ToBlendFactor(desc.BlendState.SrcBlend),
-        .dstColorBlendFactor = Sen::Vulkan::ToBlendFactor(desc.BlendState.DstBlend),
-        .colorBlendOp        = Sen::Vulkan::ToBlendOp(desc.BlendState.BlendOp),
-        .srcAlphaBlendFactor = Sen::Vulkan::ToBlendFactor(desc.BlendState.SrcBlendAlpha),
-        .dstAlphaBlendFactor = Sen::Vulkan::ToBlendFactor(desc.BlendState.DstBlendAlpha),
-        .alphaBlendOp        = Sen::Vulkan::ToBlendOp(desc.BlendState.BlendOpAlpha),
+        .srcColorBlendFactor = SenVk::ToBlendFactor(desc.BlendState.SrcBlend),
+        .dstColorBlendFactor = SenVk::ToBlendFactor(desc.BlendState.DstBlend),
+        .colorBlendOp        = SenVk::ToBlendOp(desc.BlendState.BlendOp),
+        .srcAlphaBlendFactor = SenVk::ToBlendFactor(desc.BlendState.SrcBlendAlpha),
+        .dstAlphaBlendFactor = SenVk::ToBlendFactor(desc.BlendState.DstBlendAlpha),
+        .alphaBlendOp        = SenVk::ToBlendOp(desc.BlendState.BlendOpAlpha),
         .colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                                VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
     };
@@ -176,7 +170,17 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     };
 
     // ── dynamic state ──────────────────────────────────────────────────────────
-    std::array<VkDynamicState, 2> dynamicStates { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    std::array<VkDynamicState, 9> dynamicStates {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR,
+        VK_DYNAMIC_STATE_CULL_MODE,
+        VK_DYNAMIC_STATE_FRONT_FACE,
+        VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE,
+        VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE,
+        VK_DYNAMIC_STATE_DEPTH_COMPARE_OP,
+        VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE,
+        VK_DYNAMIC_STATE_DEPTH_BIAS,
+    };
     VkPipelineDynamicStateCreateInfo dynamicState {
         .sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
         .dynamicStateCount = uint32_t(dynamicStates.size()),
@@ -187,9 +191,9 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     std::vector<VkFormat> colorFormats;
     colorFormats.reserve(desc.RenderTargetFormats.size());
     for (const auto& fmt : desc.RenderTargetFormats) {
-        colorFormats.push_back(Sen::Vulkan::ToFormat(fmt));
+        colorFormats.push_back(SenVk::ToFormat(fmt));
     }
-    VkFormat depthFormat = Sen::Vulkan::ToFormat(desc.DepthStencilFormat);
+    VkFormat depthFormat = SenVk::ToFormat(desc.DepthFormat);
 
     VkPipelineRenderingCreateInfoKHR renderingInfo {
         .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,

@@ -9,7 +9,7 @@
 
 // ─── render pass ──────────────────────────────────────────────────────────────
 
-auto SenVulkanCmd::BeginPass(SenCommandList list, const SenPassDesc& desc) -> void {
+auto SenVulkanCmd::BeginPass(SenCommandList list, const SenRenderPassDesc& desc) -> void {
     // Attachments are expected to already be in the correct layout — callers transition
     // them (e.g. via BePass / TransitionTextures). BeginPass only opens the render pass.
     const VkCommandBuffer cmd = SenVulkanBackend::LookupCommandList(list).Cmd;
@@ -120,7 +120,7 @@ auto SenVulkanCmd::CopyBufferToTexture(SenCommandList list, SenBuffer src, uint3
 
     const uint32_t mipWidth  = std::max(1u, entry.Width >> mip);
     const uint32_t mipHeight = std::max(1u, entry.Height >> mip);
-    const uint32_t faceSize  = mipWidth * mipHeight * SenGetFormatBytes(Sen::Vulkan::FromVkFormat(entry.Format));
+    const uint32_t faceSize  = mipWidth * mipHeight * SenGetFormatBytes(SenVk::FromVkFormat(entry.Format));
 
     // Source is tightly packed, layers consecutive.
     std::vector<VkBufferImageCopy> regions(entry.LayerCount);
@@ -148,7 +148,7 @@ auto SenVulkanCmd::TransitionTextures(SenCommandList list, const std::vector<Sen
 
     for (const auto& transition : transitions) {
         auto& entry = SenVulkanBackend::LookupTexture(transition.Texture);
-        const VkImageLayout newLayout = Sen::Vulkan::ToImageLayout(transition.State);
+        const VkImageLayout newLayout = SenVk::ToImageLayout(transition.State);
 
         const VkImageAspectFlags aspect = (entry.Format == VK_FORMAT_D32_SFLOAT)
             ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
@@ -185,6 +185,11 @@ auto SenVulkanCmd::Begin(SenCommandList list) -> void {
     entry.BoundPipeline       = {};
     entry.PipelineDirty       = false;
 
+    entry.CullDirty = true;
+    entry.FrontFaceDirty = true;
+    entry.DepthDirty = true;
+    entry.DepthBiasDirty = true;
+
     vkResetCommandBuffer(entry.Cmd, 0);
     const VkCommandBufferBeginInfo beginInfo {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -195,6 +200,12 @@ auto SenVulkanCmd::Begin(SenCommandList list) -> void {
 
 auto SenVulkanCmd::End(SenCommandList list) -> void {
     vkEndCommandBuffer(SenVulkanBackend::LookupCommandList(list).Cmd);
+}
+
+auto SenVulkanCmd::PushMarker(SenCommandList list, const char* label) -> void {
+}
+
+auto SenVulkanCmd::PopMarker(SenCommandList list) -> void {
 }
 
 
@@ -212,14 +223,42 @@ auto SenVulkanCmd::SetPipeline(SenCommandList list, SenPipeline pipeline) -> voi
     entry.PipelineDirty = true;
 }
 
-auto SenVulkanCmd::PushRoot(SenCommandList list, const void* data, uint32_t size) -> void {
+auto SenVulkanCmd::SetCull(SenCommandList list, SenCull mode) -> void {
     auto& entry = SenVulkanBackend::LookupCommandList(list);
-    be_assert(entry.BoundPipelineLayout != VK_NULL_HANDLE, "PushRoot: no pipeline bound");
-    be_assert(size <= SenMaxRootConstantSize, "PushRoot: root struct exceeds {} bytes", SenMaxRootConstantSize);
+    entry.CullDirty |= (mode != entry.Cull);
+    entry.Cull = mode;
+}
+
+auto SenVulkanCmd::SetFrontFace(SenCommandList list, SenFrontFace frontFace) -> void {
+    auto& entry = SenVulkanBackend::LookupCommandList(list);
+    entry.FrontFaceDirty |= (frontFace != entry.FrontFace);
+    entry.FrontFace = frontFace;
+}
+
+auto SenVulkanCmd::SetDepth(SenCommandList list, const SenDepthState& depth) -> void {
+    auto& entry = SenVulkanBackend::LookupCommandList(list);
+    entry.DepthDirty |=
+        depth.Test != entry.Depth.Test ||
+        depth.Write != entry.Depth.Write ||
+        depth.Compare != entry.Depth.Compare;
+    entry.Depth = depth;
+}
+
+auto SenVulkanCmd::SetDepthBias(SenCommandList list, float constant, float slopeScaled) -> void {
+    auto& entry = SenVulkanBackend::LookupCommandList(list);
+    entry.DepthBiasDirty |= (constant != entry.DepthBiasConstant || slopeScaled != entry.DepthBiasSlope);
+    entry.DepthBiasConstant = constant;
+    entry.DepthBiasSlope = slopeScaled;
+}
+
+auto SenVulkanCmd::SetRoot(SenCommandList list, const void* data, uint32_t size) -> void {
+    auto& entry = SenVulkanBackend::LookupCommandList(list);
+    be_assert(entry.BoundPipelineLayout != VK_NULL_HANDLE, "SetRoot: no pipeline bound");
+    be_assert(size <= SenMaxRootSize, "SetRoot: root struct exceeds {} bytes", SenMaxRootSize);
     vkCmdPushConstants(entry.Cmd, entry.BoundPipelineLayout, VK_SHADER_STAGE_ALL, 0, size, data);
 }
 
-auto SenVulkanCmd::FlushState(SenVulkanCommandListEntry& entry) -> void {
+auto SenVulkanCmd::FlushPipeline(SenVulkanCommandListEntry& entry) -> void {
     if (!entry.PipelineDirty) {
         return;
     }
@@ -228,6 +267,32 @@ auto SenVulkanCmd::FlushState(SenVulkanCommandListEntry& entry) -> void {
     VkDescriptorSet heap = SenVulkanBackend::GetBindlessSet();
     vkCmdBindDescriptorSets(entry.Cmd, pipelineEntry.BindPoint, pipelineEntry.Layout, 0, 1, &heap, 0, nullptr);
     entry.PipelineDirty = false;
+}
+
+auto SenVulkanCmd::FlushDrawState(SenVulkanCommandListEntry& entry) -> void {
+    if (entry.CullDirty) {
+        vkCmdSetCullMode(entry.Cmd, SenVk::ToCull(entry.Cull));
+        entry.CullDirty = false;
+    }
+
+    if (entry.FrontFaceDirty) {
+        vkCmdSetFrontFace(entry.Cmd, SenVk::ToFrontFace(entry.FrontFace));
+        entry.FrontFaceDirty = false;
+    }
+
+    if (entry.DepthDirty) {
+        vkCmdSetDepthTestEnable(entry.Cmd, entry.Depth.Test);
+        vkCmdSetDepthWriteEnable(entry.Cmd, entry.Depth.Write);
+        vkCmdSetDepthCompareOp(entry.Cmd, SenVk::ToCompareOp(entry.Depth.Compare));
+        entry.DepthDirty = false;
+    }
+
+    if (entry.DepthBiasDirty) {
+        const bool enable = entry.DepthBiasConstant != 0.f || entry.DepthBiasSlope != 0.f;
+        vkCmdSetDepthBiasEnable(entry.Cmd, enable);
+        vkCmdSetDepthBias(entry.Cmd, entry.DepthBiasConstant, 0.f, entry.DepthBiasSlope);
+        entry.DepthBiasDirty = false;
+    }
 }
 
 auto SenVulkanCmd::SetVertexBuffer(SenCommandList list, SenBuffer buffer) -> void {
@@ -250,18 +315,20 @@ auto SenVulkanCmd::GetNativeHandle(SenCommandList list) -> VkCommandBuffer {
 
 auto SenVulkanCmd::Draw(SenCommandList list, uint32_t vertexCount, uint32_t firstVertex) -> void {
     auto& entry = SenVulkanBackend::LookupCommandList(list);
-    FlushState(entry);
+    FlushPipeline(entry);
+    FlushDrawState(entry);
     vkCmdDraw(entry.Cmd, vertexCount, 1, firstVertex, 0);
 }
 
 auto SenVulkanCmd::DrawIndexed(SenCommandList list, uint32_t indexCount, uint32_t firstIndex, int32_t baseVertex) -> void {
     auto& entry = SenVulkanBackend::LookupCommandList(list);
-    FlushState(entry);
+    FlushPipeline(entry);
+    FlushDrawState(entry);
     vkCmdDrawIndexed(entry.Cmd, indexCount, 1, firstIndex, baseVertex, 0);
 }
 
 auto SenVulkanCmd::Dispatch(SenCommandList list, uint32_t x, uint32_t y, uint32_t z) -> void {
     auto& entry = SenVulkanBackend::LookupCommandList(list);
-    FlushState(entry);
+    FlushPipeline(entry);
     vkCmdDispatch(entry.Cmd, x, y, z);
 }

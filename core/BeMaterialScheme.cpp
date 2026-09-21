@@ -2,7 +2,7 @@
 
 #include <ranges>
 
-#include "sen-rhi/SenBackend.h"
+#include "sen-rhi/Sen.h"
 #include "umbrellas/include-libassert.h"
 
 // Scalar (natural) layout, matching Slang's layout for BDA pointer-backed cbuffers.

@@ -6,8 +6,8 @@
 auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     auto entry = SenVulkanTextureEntry();
 
-    const VkFormat format = Sen::Vulkan::ToFormat(desc.Format);
-    const VkImageUsageFlags usage = Sen::Vulkan::ToImageUsageFlags(desc.Usage);
+    const VkFormat format = SenVk::ToFormat(desc.Format);
+    const VkImageUsageFlags usage = SenVk::ToImageUsageFlags(desc.Usage);
 
     const uint32_t cubeFactor = desc.Cubemap ? 6 : 1;
     const uint32_t layerCount = cubeFactor * (desc.ArrayLength > 0 ? desc.ArrayLength : 1);
@@ -75,8 +75,8 @@ auto SenVulkanBackend::MakeImageBarrier(VkImage image, VkImageSubresourceRange r
 auto SenVulkanBackend::MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout) -> VkImageMemoryBarrier2 {
     VkPipelineStageFlags2 srcStage, dstStage;
     VkAccessFlags2        srcAccess, dstAccess;
-    Sen::Vulkan::ScopeForLayout(oldLayout, srcStage, srcAccess);
-    Sen::Vulkan::ScopeForLayout(newLayout, dstStage, dstAccess);
+    SenVk::ScopeForLayout(oldLayout, srcStage, srcAccess);
+    SenVk::ScopeForLayout(newLayout, dstStage, dstAccess);
     return MakeImageBarrier(image, range, oldLayout, newLayout, srcStage, srcAccess, dstStage, dstAccess);
 }
 

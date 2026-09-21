@@ -9,6 +9,7 @@
 
 #include "BeRenderer.h"
 #include "sen-rhi/SenTypes.h"
+#include <sen-rhi/Sen.h>
 
 struct BeShader;
 class BeTexture;
@@ -25,14 +26,22 @@ class BeBackend {
     expose struct StaticKey {
         uint32_t ShaderID;
         SenTopology Topology;
-        SenRasterizerState RasterizerState;
+        SenFill Fill;
+        bool DepthClipEnable;
         SenBlendState BlendState;
-        SenDepthStencilState DepthStencilState;
 
         StaticKey() { std::memset(this, 0, sizeof(StaticKey)); }
         auto operator==(const StaticKey& other) const -> bool {
             return std::memcmp(this, &other, sizeof(StaticKey)) == 0;
         }
+    };
+
+    expose struct DynamicState {
+        SenCull Cull = SenCull::Back;
+        SenFrontFace FrontFace = SenFrontFace::Clockwise;
+        SenDepthState Depth;
+        float DepthBias = 0.f;
+        float SlopeScaledDepthBias = 0.f;
     };
 
     expose struct FormatSet {

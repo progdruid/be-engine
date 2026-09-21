@@ -18,7 +18,7 @@ class BeTexture {
         bool IsCubemap = false;
         uint32_t ArrayLength = 1;
         SenFormat Format = SenFormat::RGBA8_Unorm;
-        SenTextureUsage Usage = SenTextureUsage::ShaderResource;
+        SenTextureUsage Usage = SenTextureUsage::Sampled;
         uint32_t Mips = 1;
         uint32_t Width = 1;
         uint32_t Height = 1;
@@ -92,7 +92,7 @@ class BeTexture {
     expose auto GetViewport () const -> const SenViewport& { return GetMipViewport(0); }
     expose auto Resize (uint32_t width, uint32_t height) -> void;
 
-    expose auto GetSampledView (uint32_t mip = SEN_FULL_MIPS) const -> SenView;
+    expose auto GetSampledView (uint32_t mip = SenAllMips) const -> SenView;
     expose auto GetColorTargetView (uint32_t mip, int16_t layer) const -> SenView;
     expose auto GetDepthTargetView (int16_t layer) const -> SenView;
 

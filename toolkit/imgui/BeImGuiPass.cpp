@@ -6,7 +6,7 @@
 #include <imgui/backends/imgui_impl_vulkan.h>
 
 #include <vulkan/vulkan_core.h>
-#include <sen-rhi/SenBackend.h>
+#include <sen-rhi/Sen.h>
 #include <sen-rhi/vulkan/SenVulkanConvert.h>
 
 #include "BePass.h"
@@ -24,7 +24,7 @@ BeImGuiPass::~BeImGuiPass() {
     _holdsBackendRef = false;
     if (--s_backendRefCount > 0) return;
 
-    SenBackend::WaitIdle();
+    Sen::WaitIdle();
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -40,15 +40,15 @@ auto BeImGuiPass::Initialise(BeRenderer& renderer) -> void {
 
     ImGui_ImplGlfw_InitForVulkan(_window->GetGlfwWindow(), true);
 
-    VkFormat colorFormat = Sen::Vulkan::ToFormat(renderer.GetSwapchainFormat());
+    VkFormat colorFormat = SenVk::ToFormat(renderer.GetSwapchainFormat());
 
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.ApiVersion      = VK_API_VERSION_1_3;
-    init_info.Instance        = static_cast<VkInstance>(SenBackend::GetNativeInstance());
-    init_info.PhysicalDevice  = static_cast<VkPhysicalDevice>(SenBackend::GetNativePhysicalDevice());
-    init_info.Device          = static_cast<VkDevice>(SenBackend::GetNativeDevice());
-    init_info.QueueFamily     = SenBackend::GetNativeQueueFamilyIndex();
-    init_info.Queue           = static_cast<VkQueue>(SenBackend::GetNativeQueue());
+    init_info.Instance        = static_cast<VkInstance>(Sen::GetNativeInstance());
+    init_info.PhysicalDevice  = static_cast<VkPhysicalDevice>(Sen::GetNativePhysicalDevice());
+    init_info.Device          = static_cast<VkDevice>(Sen::GetNativeDevice());
+    init_info.QueueFamily     = Sen::GetNativeQueueFamilyIndex();
+    init_info.Queue           = static_cast<VkQueue>(Sen::GetNativeQueue());
     init_info.DescriptorPoolSize = 16;
     init_info.MinAllocationSize = 1024 * 1024;
     init_info.CheckVkResultFn = [](VkResult err) {

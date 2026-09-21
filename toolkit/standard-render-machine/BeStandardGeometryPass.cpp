@@ -1,6 +1,6 @@
 #include "BeStandardGeometryPass.h"
 
-#include <sen-rhi/SenBackend.h>
+#include <sen-rhi/Sen.h>
 
 #include "BePass.h"
 #include "BeMaterial.h"
@@ -48,7 +48,7 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandList cmd) ->
             const auto& propSlice = entry.Prop->Slices[j];
 
             pass.SetState(entry.Prop->State);
-            pass.OverrideCull(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back);
+            pass.OverrideCull(propSlice.TwoSided ? SenCull::None : SenCull::Back);
             pass.Bind("frame", *uniformMat);
             pass.Bind("geometry-object", *_objectMaterial);
             pass.Bind("geometry-main", *propSlice.Material);

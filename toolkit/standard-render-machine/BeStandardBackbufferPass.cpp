@@ -1,4 +1,5 @@
 #include "BeStandardBackbufferPass.h"
+#include <sen-rhi/Sen.h>
 
 #include "BeAssetRegistry.h"
 #include "BeShaderLibrary.h"

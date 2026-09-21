@@ -1,7 +1,7 @@
 #include "BeStandardShadowPass.h"
 
 #include <umbrellas/include-glm.h>
-#include <sen-rhi/SenBackend.h>
+#include <sen-rhi/Sen.h>
 
 #include "BeAssetRegistry.h"
 #include "BePass.h"
@@ -73,7 +73,7 @@ auto BeStandardShadowPass::RenderDirectionalShadows(
             const auto& propSlice = entry.Prop->Slices[j];
 
             pass.SetState(entry.Prop->State);
-            pass.OverrideCull(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back);
+            pass.OverrideCull(propSlice.TwoSided ? SenCull::None : SenCull::Back);
             pass.Bind("frame", *uniformMat);
             pass.Bind("geometry-object", *_objectMaterial);
             pass.Bind("geometry-main", *propSlice.Material);
@@ -119,7 +119,7 @@ auto BeStandardShadowPass::RenderPointLightShadows(
                 const auto& meshSlice = meshSlices[j];
                 const auto& propSlice = entry.Prop->Slices[j];
                 pass.SetState(entry.Prop->State);
-                pass.OverrideCull(propSlice.TwoSided ? SenCullMode::None : SenCullMode::Back);
+                pass.OverrideCull(propSlice.TwoSided ? SenCull::None : SenCull::Back);
                 pass.Bind("frame", *uniformMat);
                 pass.Bind("geometry-object", *_objectMaterial);
                 pass.Bind("geometry-main", *propSlice.Material);

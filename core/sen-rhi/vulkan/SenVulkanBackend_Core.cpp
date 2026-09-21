@@ -34,7 +34,7 @@ VkDescriptorPool      SenVulkanBackend::_bindlessPool   = VK_NULL_HANDLE;
 VkDescriptorSet       SenVulkanBackend::_bindlessSet    = VK_NULL_HANDLE;
 
 // ─── device lifecycle ────────────────────────────────────────────────────────────────
-auto SenVulkanBackend::Init(const SenDeviceDesc& desc) -> void {
+auto SenVulkanBackend::Init(const SenInitDesc& desc) -> void {
     // instance
     VkApplicationInfo appInfo {
         .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -379,9 +379,3 @@ auto SenVulkanBackend::GetNativePhysicalDevice() -> void* { return _physicalDevi
 auto SenVulkanBackend::GetNativeQueue() -> void* { return _queue; }
 auto SenVulkanBackend::GetNativeQueueFamilyIndex() -> uint32_t { return _queueFamilyIndex; }
 
-// ─── debug ────────────────────────────────────────────────────────────────
-auto SenVulkanBackend::BeginDebugEvent(const std::string& label) -> void {
-}
-
-auto SenVulkanBackend::EndDebugEvent() -> void {
-}

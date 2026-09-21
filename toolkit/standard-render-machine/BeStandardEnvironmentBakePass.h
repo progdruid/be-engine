@@ -5,6 +5,7 @@
 #include <vector>
 #include <umbrellas/common.hpp>
 #include <sen-rhi/SenTypes.h>
+#include <sen-rhi/Sen.h>
 
 #include "BeDrawState.h"
 #include "BeRenderPass.h"

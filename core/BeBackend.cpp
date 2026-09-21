@@ -10,7 +10,7 @@
 #include "BeShader.h"
 #include "BeShaderLibrary.h"
 #include "BeTexture.h"
-#include "sen-rhi/SenBackend.h"
+#include "sen-rhi/Sen.h"
 #include <umbrellas/include-libassert.h>
 
 
@@ -31,15 +31,15 @@ std::array<BeBackend::MaterialArenaChain, BeRenderer::FramesInFlight> BeBackend:
 
 
 auto BeBackend::Init() -> void {
-    _uploadCmd = SenBackend::CreateCommandList();
+    _uploadCmd = Sen::CreateCommandList();
 
-    const SenCaps caps = SenBackend::GetCaps();
+    const SenCaps caps = Sen::GetCaps();
     _bindlessCapacity[static_cast<size_t>(BindlessKind::Texture)] = caps.TextureSlots;
     _bindlessCapacity[static_cast<size_t>(BindlessKind::Sampler)] = caps.SamplerSlots;
 }
 
 auto BeBackend::Shutdown() -> void {
-    SenBackend::WaitIdle();
+    Sen::WaitIdle();
 
     for (const auto& bucket : _retired) {
         DestroyBucket(bucket);
@@ -50,7 +50,7 @@ auto BeBackend::Shutdown() -> void {
 
     for (const auto pipeline : _pipelines | std::views::join) {
         if (pipeline.IsValid()) {
-            SenBackend::DestroyPipeline(pipeline);
+            Sen::DestroyPipeline(pipeline);
         }
     }
     _pipelines.clear();
@@ -61,7 +61,7 @@ auto BeBackend::Shutdown() -> void {
 
     for (auto& chain : _arenaChains) {
         for (const auto& block : chain.Blocks) {
-            SenBackend::DestroyBuffer(block.Buffer);
+            Sen::DestroyBuffer(block.Buffer);
         }
         chain = {};
     }
@@ -155,62 +155,62 @@ auto BeBackend::MakePipeline(const BeShader& shader, uint32_t staticKeyId, uint3
         desc.VertexLayout = shader.VertexLayout;
         desc.VertexStride = shader.VertexStride;
         desc.Topology = key.Topology;
-        desc.RasterizerState = key.RasterizerState;
+        desc.Fill = key.Fill;
+        desc.DepthClipEnable = key.DepthClipEnable;
         desc.BlendState = key.BlendState;
-        desc.DepthStencilState = key.DepthStencilState;
         for (const auto format : formatSet.ColorFormats) {
             if (format == SenFormat::Unknown) {
                 break;
             }
             desc.RenderTargetFormats.push_back(format);
         }
-        desc.DepthStencilFormat = formatSet.DepthFormat;
+        desc.DepthFormat = formatSet.DepthFormat;
     }
 
-    return SenBackend::CreatePipeline(desc);
+    return Sen::CreatePipeline(desc);
 }
 
 
 
 
 auto BeBackend::WriteBuffer(const void* data, uint32_t size, SenBuffer dst, uint32_t dstOffset) -> void {
-    if (SenBackend::GetBufferMemory(dst) == SenMemory::Upload) {
-        auto* pointer = static_cast<uint8_t*>(SenBackend::GetBufferPointer(dst)) + dstOffset;
+    if (Sen::GetBufferMemory(dst) == SenMemory::Upload) {
+        auto* pointer = static_cast<uint8_t*>(Sen::GetBufferPointer(dst)) + dstOffset;
         std::memcpy(pointer, data, size);
         return;
     }
 
-    const SenBuffer staging = SenBackend::CreateBuffer({
+    const SenBuffer staging = Sen::CreateBuffer({
         .Memory = SenMemory::Upload,
         .Size = size,
     });
-    std::memcpy(SenBackend::GetBufferPointer(staging), data, size);
+    std::memcpy(Sen::GetBufferPointer(staging), data, size);
 
     SenCmd::Begin(_uploadCmd);
     SenCmd::CopyBuffer(_uploadCmd, staging, 0, size, dst, dstOffset);
     SenCmd::End(_uploadCmd);
 
-    const SenSubmission submission = SenBackend::Submit({ .Lists = &_uploadCmd, .ListCount = 1 });
-    SenBackend::WaitForSubmission(submission);
+    const SenSubmission submission = Sen::Submit({ .Lists = &_uploadCmd, .ListCount = 1 });
+    Sen::WaitForSubmission(submission);
     Retire(staging);
     StampRetirements(submission);
 }
 
 auto BeBackend::WriteTexture(const void* data, uint32_t size, SenTexture dst) -> void {
-    const SenBuffer staging = SenBackend::CreateBuffer({
+    const SenBuffer staging = Sen::CreateBuffer({
         .Memory = SenMemory::Upload,
         .Size = size,
     });
-    std::memcpy(SenBackend::GetBufferPointer(staging), data, size);
+    std::memcpy(Sen::GetBufferPointer(staging), data, size);
 
     SenCmd::Begin(_uploadCmd);
-    SenCmd::TransitionTextures(_uploadCmd, { { dst, SenResourceState::TransferDst } });
+    SenCmd::TransitionTextures(_uploadCmd, { { dst, SenLayout::TransferDst } });
     SenCmd::CopyBufferToTexture(_uploadCmd, staging, 0, dst, 0);
-    SenCmd::TransitionTextures(_uploadCmd, { { dst, SenResourceState::ShaderRead } });
+    SenCmd::TransitionTextures(_uploadCmd, { { dst, SenLayout::ShaderRead } });
     SenCmd::End(_uploadCmd);
 
-    const SenSubmission submission = SenBackend::Submit({ .Lists = &_uploadCmd, .ListCount = 1 });
-    SenBackend::WaitForSubmission(submission);
+    const SenSubmission submission = Sen::Submit({ .Lists = &_uploadCmd, .ListCount = 1 });
+    Sen::WaitForSubmission(submission);
     Retire(staging);
     StampRetirements(submission);
 }
@@ -241,11 +241,11 @@ auto BeBackend::GenerateMips(const std::shared_ptr<BeTexture>& texture) -> void 
         pass.End();
     }
 
-    SenCmd::TransitionTextures(_uploadCmd, { { texture->Handle, SenResourceState::ShaderRead } });
+    SenCmd::TransitionTextures(_uploadCmd, { { texture->Handle, SenLayout::ShaderRead } });
     SenCmd::End(_uploadCmd);
 
-    const SenSubmission submission = SenBackend::Submit({ .Lists = &_uploadCmd, .ListCount = 1 });
-    SenBackend::WaitForSubmission(submission);
+    const SenSubmission submission = Sen::Submit({ .Lists = &_uploadCmd, .ListCount = 1 });
+    Sen::WaitForSubmission(submission);
     StampRetirements(submission);
 }
 
@@ -261,7 +261,7 @@ auto BeBackend::RegisterTexture(SenView view) -> void {
 
     const uint32_t slot = AllocSlot(BindlessKind::Texture);
     _textureSlots[view.Index] = slot;
-    SenBackend::PublishTextureBindless(slot, view);
+    Sen::PublishTextureBindless(slot, view);
 }
 
 auto BeBackend::RegisterSampler(SenSampler sampler) -> void {
@@ -274,7 +274,7 @@ auto BeBackend::RegisterSampler(SenSampler sampler) -> void {
 
     const uint32_t slot = AllocSlot(BindlessKind::Sampler);
     _samplerSlots[sampler.Index] = slot;
-    SenBackend::PublishSamplerBindless(slot, sampler);
+    Sen::PublishSamplerBindless(slot, sampler);
 }
 
 auto BeBackend::GetTextureSlot(SenView view) -> uint32_t {
@@ -344,7 +344,7 @@ auto BeBackend::StampRetirements(SenSubmission submission) -> void {
 
 auto BeBackend::FlushRetirements() -> void {
     size_t flushed = 0;
-    while (flushed < _retired.size() && SenBackend::IsSubmissionComplete(_retired[flushed].Submission)) {
+    while (flushed < _retired.size() && Sen::IsSubmissionComplete(_retired[flushed].Submission)) {
         DestroyBucket(_retired[flushed]);
         ++flushed;
     }
@@ -352,11 +352,11 @@ auto BeBackend::FlushRetirements() -> void {
 }
 
 auto BeBackend::DestroyBucket(const RetirementBucket& bucket) -> void {
-    for (const auto handle : bucket.Views)     { UnregisterTexture(handle); SenBackend::DestroyView(handle); }
-    for (const auto handle : bucket.Textures)  {                            SenBackend::DestroyTexture(handle); }
-    for (const auto handle : bucket.Buffers)   {                            SenBackend::DestroyBuffer(handle); }
-    for (const auto handle : bucket.Samplers)  { UnregisterSampler(handle); SenBackend::DestroySampler(handle); }
-    for (const auto handle : bucket.Pipelines) {                            SenBackend::DestroyPipeline(handle); }
+    for (const auto handle : bucket.Views)     { UnregisterTexture(handle); Sen::DestroyView(handle); }
+    for (const auto handle : bucket.Textures)  {                            Sen::DestroyTexture(handle); }
+    for (const auto handle : bucket.Buffers)   {                            Sen::DestroyBuffer(handle); }
+    for (const auto handle : bucket.Samplers)  { UnregisterSampler(handle); Sen::DestroySampler(handle); }
+    for (const auto handle : bucket.Pipelines) {                            Sen::DestroyPipeline(handle); }
 }
 
 
@@ -373,7 +373,7 @@ auto BeBackend::AllocateMaterialArenaChunk(uint64_t frame, uint32_t size) -> Mat
     }
     if (chain.CurrentBlock == chain.Blocks.size()) {
         const uint32_t blockSize = std::max(ArenaBlockSize, alignedSize);
-        const SenBuffer buffer = SenBackend::CreateBuffer({
+        const SenBuffer buffer = Sen::CreateBuffer({
             .Memory = SenMemory::Upload,
             .Size = blockSize,
         });

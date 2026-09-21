@@ -63,7 +63,7 @@ auto SenVulkanBackend::LookupBuffer(SenBuffer handle) -> SenVulkanBufferEntry& {
     return _buffers.Get(handle);
 }
 
-auto SenVulkanBackend::GetBufferGpuAddress(SenBuffer handle) -> SenBufferGpuAddress {
+auto SenVulkanBackend::GetBufferAddress(SenBuffer handle) -> SenGpuAddress {
     return { _buffers.Get(handle).GpuAddress };
 }
 

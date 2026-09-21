@@ -142,7 +142,7 @@ auto BeAssimpImporter::LoadTextureFromAssimpPath(
     tempCount++;
     auto builder =
         BeTexture::Create("TODO" + std::to_string(tempCount))
-        .SetUsage(SenTextureUsage::ShaderResource)
+        .SetUsage(SenTextureUsage::Sampled)
         .SetFormat(SenFormat::RGBA8_Unorm)
         .SetMipsAuto()
         .GenerateMips();

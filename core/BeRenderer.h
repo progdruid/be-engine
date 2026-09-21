@@ -4,8 +4,8 @@
 #include <vector>
 #include <umbrellas/common.hpp>
 
-#include <sen-rhi/SenCmd.h>
 #include <sen-rhi/SenTypes.h>
+#include <sen-rhi/Sen.h>
 
 class BeWindow;
 class BeRenderPass;
