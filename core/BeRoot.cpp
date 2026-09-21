@@ -44,7 +44,7 @@ auto BeRoot::Use(const std::string& link, BeMaterial& material) -> BeRoot& {
     return *this;
 }
 
-auto BeRoot::Push(SenCommandBuffer& cmd) const -> void {
+auto BeRoot::Push(SenCommandList cmd) const -> void {
     if (_layout->Size == 0) {
         return;
     }
@@ -55,5 +55,5 @@ auto BeRoot::Push(SenCommandBuffer& cmd) const -> void {
             _layout->Fields[i].FieldName
         );
     }
-    cmd.PushRoot(_data.data(), _layout->Size);
+    SenCmd::PushRoot(cmd, _data.data(), _layout->Size);
 }

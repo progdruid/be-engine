@@ -29,7 +29,7 @@ auto BeStandardBackbufferPass::Initialise(BeRenderer& renderer) -> void {
     _state = BeDrawState::Create(*_shader).Build();
 }
 
-auto BeStandardBackbufferPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
+auto BeStandardBackbufferPass::Render(BeRenderer& renderer, SenCommandList cmd) -> void {
     _material->SetFloat1("DiscardFar", _srm->Settings.Backbuffer.DiscardFar ? 1.0f : 0.0f);
 
     BePass pass(cmd);
@@ -43,6 +43,6 @@ auto BeStandardBackbufferPass::Render(BeRenderer& renderer, SenCommandBuffer& cm
         .Use("main", *_material)
     );
 
-    cmd.Draw(4, 0);
+    pass.Draw(4);
     pass.End();
 }

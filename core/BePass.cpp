@@ -10,8 +10,8 @@
 #include <sen-rhi/SenBackend.h>
 #include <umbrellas/include-libassert.h>
 
-BePass::BePass(SenCommandBuffer& cmd)
-    : _cmd(cmd)
+BePass::BePass(SenCommandList list)
+    : _list(list)
 {}
 
 auto BePass::SetCompute(bool isCompute) -> BePass& {
@@ -24,7 +24,7 @@ auto BePass::UseTexture(SenTexture texture, bool useAsStorage) -> BePass& {
     if (useAsStorage) {
         _storageTextures.push_back(texture);
     } else {
-        _reads.push_back({ texture, 0, SenCommandBuffer::TextureTransition::AllMips });
+        _reads.push_back({ texture, 0, SenAllMips });
     }
     return *this;
 }
@@ -100,6 +100,16 @@ auto BePass::SetViewport(SenViewport viewport) -> BePass& {
     return *this;
 }
 
+auto BePass::SetVertexBuffer(SenBuffer buffer) -> BePass& {
+    _vertexBuffer = buffer;
+    return *this;
+}
+
+auto BePass::SetIndexBuffer(SenBuffer buffer) -> BePass& {
+    _indexBuffer = buffer;
+    return *this;
+}
+
 auto BePass::Begin() -> void {
     const bool hasTargets = !_colorTargets.empty() || _depthTarget.has_value();
     be_assert(
@@ -111,8 +121,7 @@ auto BePass::Begin() -> void {
         "BePass::Begin: compute pass cannot have render targets"
     );
 
-    using Transition = SenCommandBuffer::TextureTransition;
-    std::vector<Transition> transitions;
+    std::vector<SenTextureTransition> transitions;
     transitions.reserve(_reads.size() + _storageTextures.size() + _colorTargets.size() + 1);
     for (const auto& read : _reads) {
         transitions.push_back({ read.Texture, SenResourceState::ShaderRead, read.BaseMip, read.MipCount });
@@ -128,22 +137,28 @@ auto BePass::Begin() -> void {
         const auto& view = SenBackend::GetViewDesc(_depthTarget->View);
         transitions.push_back({ view.Texture, SenResourceState::DepthAttachment, view.BaseMip, view.MipCount });
     }
-    _cmd.TransitionTextures(transitions);
+    SenCmd::TransitionTextures(_list, transitions);
     _formatSetId = BeBackend::AcquireFormatSetId(_formatSet);
 
     if (!_isCompute) {
-        _cmd.BeginPass({
+        SenCmd::BeginPass(_list, {
             .ColorAttachments = _colorTargets,
             .DepthAttachment  = _depthTarget,
             .Viewport         = _viewport,
         });
     }
+
+    if (_vertexBuffer.IsValid()) { SenCmd::SetVertexBuffer(_list, _vertexBuffer); }
+    if (_indexBuffer.IsValid())  { SenCmd::SetIndexBuffer(_list, _indexBuffer); }
+
+    _isBegun = true;
 }
 
 auto BePass::End() -> void {
     if (!_isCompute) {
-        _cmd.EndPass();
+        SenCmd::EndPass(_list);
     }
+    _isBegun = false;
 }
 
 auto BePass::SetState(const BeDrawState& state) -> BePass& {
@@ -196,10 +211,26 @@ auto BePass::Push(const BeRoot& root) -> void {
         }
         const auto pipeline = BeBackend::GetPipeline(_state->GetShader(), _staticKeyId, _formatSetId);
         if (pipeline != _boundPipeline) {
-            _cmd.SetPipeline(pipeline);
+            SenCmd::SetPipeline(_list, pipeline);
             _boundPipeline = pipeline;
         }
         _isStateDirty = false;
     }
-    root.Push(_cmd);
+    root.Push(_list);
+}
+
+auto BePass::Draw(uint32_t vertexCount, uint32_t firstVertex) -> void {
+    be_assert(_isBegun, "BePass::Draw: pass has not begun");
+    SenCmd::Draw(_list, vertexCount, firstVertex);
+}
+
+auto BePass::DrawIndexed(uint32_t indexCount, uint32_t firstIndex, int32_t baseVertex) -> void {
+    be_assert(_isBegun, "BePass::DrawIndexed: pass has not begun");
+    SenCmd::DrawIndexed(_list, indexCount, firstIndex, baseVertex);
+}
+
+auto BePass::Dispatch(uint32_t x, uint32_t y, uint32_t z) -> void {
+    be_assert(_isBegun, "BePass::Dispatch: pass has not begun");
+    be_assert(_isCompute, "BePass::Dispatch: pass is not a compute pass");
+    SenCmd::Dispatch(_list, x, y, z);
 }

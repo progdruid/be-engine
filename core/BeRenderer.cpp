@@ -42,9 +42,9 @@ auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
     });
 
     for (auto& cmd : _frameCmds) {
-        cmd = SenBackend::AllocateCommandBuffer();
+        cmd = SenBackend::CreateCommandList();
     }
-    _immediateCmd = SenBackend::AllocateCommandBuffer();
+    _immediateCmd = SenBackend::CreateCommandList();
 
     BeShaderLibrary::RegisterBuiltinDefaultTextures();
     BeShaderLibrary::LoadShaders();
@@ -115,8 +115,8 @@ auto BeRenderer::Render() -> void {
         return;
     }
 
-    auto& cmd = _frameCmds[slot];
-    cmd.Begin();
+    const SenCommandList cmd = _frameCmds[slot];
+    SenCmd::Begin(cmd);
 
     for (const auto& pass : _sequence->Passes) {
         SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
@@ -124,12 +124,11 @@ auto BeRenderer::Render() -> void {
         SenBackend::EndDebugEvent();
     }
 
-    cmd.TransitionTextures({ { SenBackend::GetViewDesc(_backbufferView).Texture, SenResourceState::Present } });
-    cmd.End();
+    SenCmd::TransitionTextures(cmd, { { SenBackend::GetViewDesc(_backbufferView).Texture, SenResourceState::Present } });
+    SenCmd::End(cmd);
 
-    SenCommandBuffer* lists[] = { &cmd };
     const SenSubmission submission = SenBackend::Submit({
-        .Lists = lists,
+        .Lists = &cmd,
         .ListCount = 1,
         .Presents = &_swapchain,
         .PresentCount = 1,
@@ -144,7 +143,7 @@ auto BeRenderer::Render() -> void {
 auto BeRenderer::RenderOnce(const std::vector<BeRenderPass*>& passes) -> void {
     SenBackend::BeginDebugEvent("RenderOnce");
 
-    _immediateCmd.Begin();
+    SenCmd::Begin(_immediateCmd);
 
     for (const auto& pass : passes) {
         SenBackend::BeginDebugEvent(std::string(pass->GetPassName()));
@@ -152,10 +151,9 @@ auto BeRenderer::RenderOnce(const std::vector<BeRenderPass*>& passes) -> void {
         SenBackend::EndDebugEvent();
     }
 
-    _immediateCmd.End();
+    SenCmd::End(_immediateCmd);
 
-    SenCommandBuffer* lists[] = { &_immediateCmd };
-    const SenSubmission submission = SenBackend::Submit({ .Lists = lists, .ListCount = 1 });
+    const SenSubmission submission = SenBackend::Submit({ .Lists = &_immediateCmd, .ListCount = 1 });
     SenBackend::WaitForSubmission(submission);
     BeBackend::StampRetirements(submission);
     SenBackend::EndDebugEvent();

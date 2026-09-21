@@ -68,7 +68,7 @@ auto BeImGuiPass::Initialise(BeRenderer& renderer) -> void {
     ImGui_ImplVulkan_Init(&init_info);
 }
 
-auto BeImGuiPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
+auto BeImGuiPass::Render(BeRenderer& renderer, SenCommandList cmd) -> void {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -99,7 +99,7 @@ auto BeImGuiPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
 
     ImGui_ImplVulkan_RenderDrawData(
         ImGui::GetDrawData(),
-        cmd.GetNativeHandle()
+        SenCmd::GetNativeHandle(cmd)
     );
 
     pass.End();

@@ -26,18 +26,18 @@ class BeStandardShadowPass final : public BeRenderPass {
 
     expose
     auto Initialise(BeRenderer& renderer) -> void override;
-    auto Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void override;
+    auto Render(BeRenderer& renderer, SenCommandList cmd) -> void override;
     auto GetPassName() const -> const std::string override { return "Standard Shadow Pass"; }
 
     hide
     auto RenderDirectionalShadows(
-        SenCommandBuffer& cmd, 
+        SenCommandList cmd, 
         const BeSRMSunLightEntry& sunLight, 
         const std::shared_ptr<BeTexture>& shadowArray, 
         uint32_t slice
     ) const -> void;
     auto RenderPointLightShadows(
-        SenCommandBuffer& cmd, 
+        SenCommandList cmd, 
         const BeSRMPointLightEntry& pointLight, 
         const std::shared_ptr<BeTexture>& shadowArray, 
         uint32_t slice

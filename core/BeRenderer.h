@@ -4,7 +4,7 @@
 #include <vector>
 #include <umbrellas/common.hpp>
 
-#include <sen-rhi/SenCommandBuffer.h>
+#include <sen-rhi/SenCmd.h>
 #include <sen-rhi/SenTypes.h>
 
 class BeWindow;
@@ -31,9 +31,9 @@ class BeRenderer {
     SenSwapchain _swapchain;
 
     SenView _backbufferView;
-    std::array<SenCommandBuffer, FramesInFlight> _frameCmds;
+    std::array<SenCommandList, FramesInFlight> _frameCmds;
     std::array<SenSubmission, FramesInFlight> _frameSubmissions;
-    SenCommandBuffer _immediateCmd;
+    SenCommandList _immediateCmd;
 
     raw_ptr<BePassSequence> _sequence = nullptr;
 

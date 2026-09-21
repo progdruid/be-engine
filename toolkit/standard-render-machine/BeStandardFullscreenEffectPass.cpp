@@ -26,7 +26,7 @@ auto BeStandardFullscreenEffectPass::Initialise(BeRenderer& renderer) -> void {
     _state = BeDrawState::Create(*_shader).Build();
 }
 
-auto BeStandardFullscreenEffectPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
+auto BeStandardFullscreenEffectPass::Render(BeRenderer& renderer, SenCommandList cmd) -> void {
     BePass pass(cmd);
     if (_material) {
         pass.UseMaterial(*_material);
@@ -43,7 +43,7 @@ auto BeStandardFullscreenEffectPass::Render(BeRenderer& renderer, SenCommandBuff
     }
     pass.Push(root);
 
-    cmd.Draw(4, 0);
+    pass.Draw(4);
 
     pass.End();
 }

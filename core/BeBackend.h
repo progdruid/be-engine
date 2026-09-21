@@ -68,7 +68,7 @@ class BeBackend {
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // uploads /////////////////////////////////////////////////////////////////////////////////////////////////////////
-    hide static SenCommandBuffer _uploadCmd;
+    hide static SenCommandList _uploadCmd;
 
     expose static auto WriteBuffer(const void* data, uint32_t size, SenBuffer dst, uint32_t dstOffset) -> void;
     expose static auto WriteTexture(const void* data, uint32_t size, SenTexture dst) -> void;

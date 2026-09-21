@@ -29,6 +29,6 @@ class BeStandardGeometryPass final : public BeRenderPass {
 
     expose
     auto Initialise(BeRenderer& renderer) -> void override;
-    auto Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void override;
+    auto Render(BeRenderer& renderer, SenCommandList cmd) -> void override;
     auto GetPassName() const -> const std::string override { return "Standard Geometry Pass"; }
 };

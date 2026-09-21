@@ -24,7 +24,7 @@ auto BeStandardGeometryPass::Initialise(BeRenderer& renderer) -> void {
     _objectMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("object-material-for-geometry-pass"));
 }
 
-auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
+auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandList cmd) -> void {
     const auto uniformMat = _srm->UniformMaterial;
     const auto& entries = _srm->GetGeometryEntries();
 
@@ -32,10 +32,9 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
     pass.AddColorTargets(_colorTargets);
     pass.SetDepthTarget(_depthTarget);
     pass.SetViewport(_colorTargets[0]->GetViewport());
+    pass.SetVertexBuffer(_srm->GetSharedVertexBuffer());
+    pass.SetIndexBuffer (_srm->GetSharedIndexBuffer());
     pass.Begin();
-
-    cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
-    cmd.SetIndexBuffer (_srm->GetSharedIndexBuffer());
 
     for (const auto& entry : entries) {
         be_assert(entry.Prop->State.IsValid());
@@ -57,7 +56,7 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
                 .Use("geometry-main", *propSlice.Material)
             );
 
-            cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
+            pass.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }
     }
 

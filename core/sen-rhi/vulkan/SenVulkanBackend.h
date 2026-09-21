@@ -7,7 +7,7 @@
 #include <vulkan/vulkan_core.h>
 #include <vma/vk_mem_alloc.h>
 
-#include "sen-rhi/SenCommandBuffer.h"
+#include "sen-rhi/vulkan/SenVulkanCmd.h"
 #include "sen-rhi/SenSlotMap.h"
 #include "sen-rhi/SenTypes.h"
 #include <umbrellas/common.hpp>
@@ -101,6 +101,7 @@ class SenVulkanBackend {
     static SenSlotMap<SenVulkanBufferEntry, SenBuffer> _buffers;
     static SenSlotMap<SenVulkanSamplerEntry, SenSampler> _samplers;
     static SenSlotMap<SenVulkanPipelineEntry, SenPipeline> _pipelines;
+    static SenSlotMap<SenVulkanCommandListEntry, SenCommandList> _commandLists;
 
     hide
     static constexpr uint32_t BindlessTextureSlots = 4096;
@@ -129,11 +130,13 @@ class SenVulkanBackend {
     static auto GetSwapchainHeight    (SenSwapchain handle) -> uint32_t;
     static auto GetSurfaceExtent      (SenSwapchain handle, uint32_t& outWidth, uint32_t& outHeight) -> void;
 
-    expose // command buffer factory
+    expose // command lists
     static constexpr uint32_t MaxSubmitLists = 8;
     static constexpr uint32_t MaxSubmitPresents = 4;
 
-    static auto AllocateCommandBuffer () -> SenVulkanCommandBuffer;
+    static auto CreateCommandList () -> SenCommandList;
+    static auto DestroyCommandList (SenCommandList handle) -> void;
+    static auto LookupCommandList (SenCommandList handle) -> SenVulkanCommandListEntry&;
     static auto Submit (const SenSubmitDesc& desc) -> SenSubmission;
 
     expose // native API escape hatches (for ImGui, etc.)

@@ -77,7 +77,7 @@ auto BeStandardBloomPass::Initialise(BeRenderer& renderer) -> void {
     _addState = BeDrawState::Create(*_addShader).Build();
 }
 
-auto BeStandardBloomPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
+auto BeStandardBloomPass::Render(BeRenderer& renderer, SenCommandList cmd) -> void {
     const auto& settings = _srm->Settings.Bloom;
     _brightMaterial->SetFloat1("Threshold", settings.Threshold);
     _brightMaterial->SetFloat1("Knee", settings.Knee);
@@ -93,7 +93,7 @@ auto BeStandardBloomPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) ->
     RenderAddPass(renderer, cmd);
 }
 
-auto BeStandardBloomPass::RenderBrightPass(SenCommandBuffer& cmd) const -> void {
+auto BeStandardBloomPass::RenderBrightPass(SenCommandList cmd) const -> void {
     BePass pass(cmd);
     pass.UseTexture(_inputHDR);
     pass.UseMaterial(*_brightMaterial);
@@ -105,11 +105,11 @@ auto BeStandardBloomPass::RenderBrightPass(SenCommandBuffer& cmd) const -> void 
         .Use("frame", *_srm->UniformMaterial)
         .Use("main", *_brightMaterial)
     );
-    cmd.Draw(4, 0);
+    pass.Draw(4);
     pass.End();
 }
 
-auto BeStandardBloomPass::RenderDownsamplePasses(SenCommandBuffer& cmd) const -> void {
+auto BeStandardBloomPass::RenderDownsamplePasses(SenCommandList cmd) const -> void {
     for (uint32_t mipTarget = 1; mipTarget < _mipCount; ++mipTarget) {
         BePass pass(cmd);
         pass.UseTextureMip(_bloomTexture, mipTarget - 1);
@@ -121,12 +121,12 @@ auto BeStandardBloomPass::RenderDownsamplePasses(SenCommandBuffer& cmd) const ->
             .Use("frame", *_srm->UniformMaterial)
             .Use("main", *_downsampleMaterials[mipTarget])
         );
-        cmd.Draw(4, 0);
+        pass.Draw(4);
         pass.End();
     }
 }
 
-auto BeStandardBloomPass::RenderUpsamplePasses(SenCommandBuffer& cmd) const -> void {
+auto BeStandardBloomPass::RenderUpsamplePasses(SenCommandList cmd) const -> void {
     for (int32_t mipTarget = _mipCount - 2; mipTarget >= 0; --mipTarget) {
         BePass pass(cmd);
         pass.UseTextureMip(_bloomTexture, mipTarget + 1);
@@ -138,12 +138,12 @@ auto BeStandardBloomPass::RenderUpsamplePasses(SenCommandBuffer& cmd) const -> v
             .Use("frame", *_srm->UniformMaterial)
             .Use("main", *_upsampleMaterials[mipTarget])
         );
-        cmd.Draw(4, 0);
+        pass.Draw(4);
         pass.End();
     }
 }
 
-auto BeStandardBloomPass::RenderAddPass(BeRenderer& renderer, SenCommandBuffer& cmd) const -> void {
+auto BeStandardBloomPass::RenderAddPass(BeRenderer& renderer, SenCommandList cmd) const -> void {
     BePass pass(cmd);
     pass.UseMaterial(*_addMaterial);
     pass.AddColorTarget(_output, SenLoadOp::Load);
@@ -154,6 +154,6 @@ auto BeStandardBloomPass::RenderAddPass(BeRenderer& renderer, SenCommandBuffer& 
         .Use("frame", *_srm->UniformMaterial)
         .Use("main", *_addMaterial)
     );
-    cmd.Draw(4, 0);
+    pass.Draw(4);
     pass.End();
 }

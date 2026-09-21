@@ -113,7 +113,7 @@ auto BeStandardLightingPass::Initialise(BeRenderer& renderer) -> void {
         .Build();
 }
 
-auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
+auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandList cmd) -> void {
     const auto& srm = *_srm;
     const auto& sunLights = srm.GetSunLightEntries();
     const auto& pointLights = srm.GetPointLightEntries();
@@ -164,7 +164,7 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
             .Use("frame", *srm.UniformMaterial)
             .Use("main", *_batchedMaterial)
         );
-        cmd.Draw(4, 0);
+        pass.Draw(4);
     }
 
     // Shadowed directional lights, batched. Slice = shadowed-iteration order (matches the shadow pass).
@@ -201,7 +201,7 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
                     .Use("frame", *srm.UniformMaterial)
                     .Use("main", *_dirShadowBatchMaterial)
                 );
-                cmd.Draw(4, 0);
+                pass.Draw(4);
             }
         }
     }
@@ -238,7 +238,7 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
                     .Use("frame", *srm.UniformMaterial)
                     .Use("main", *_pointShadowBatchMaterial)
                 );
-                cmd.Draw(4, 0);
+                pass.Draw(4);
             }
         }
     }
@@ -249,7 +249,7 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
         .Use("frame", *srm.UniformMaterial)
         .Use("main", *_emissiveMaterial)
     );
-    cmd.Draw(4, 0);
+    pass.Draw(4);
 
     if (_ambientMaterial) {
         pass.SetState(_ambientState);
@@ -257,7 +257,7 @@ auto BeStandardLightingPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd)
             .Use("frame", *srm.UniformMaterial)
             .Use("main", *_ambientMaterial)
         );
-        cmd.Draw(4, 0);
+        pass.Draw(4);
     }
 
     pass.End();

@@ -6,7 +6,7 @@
 #include <umbrellas/common.hpp>
 
 #include "BeShaderTools.h"
-#include "sen-rhi/SenCommandBuffer.h"
+#include "sen-rhi/SenCmd.h"
 #include "sen-rhi/SenTypes.h"
 
 struct BeShader;
@@ -25,7 +25,7 @@ class BeRoot {
     auto Use(const std::string& link, BeMaterial& material) -> BeRoot&;
 
     hide
-    auto Push(SenCommandBuffer& cmd) const -> void;
+    auto Push(SenCommandList cmd) const -> void;
 
     friend class BePass;
 };

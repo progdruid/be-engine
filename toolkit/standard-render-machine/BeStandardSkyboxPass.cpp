@@ -32,7 +32,7 @@ auto BeStandardSkyboxPass::Initialise(BeRenderer& renderer) -> void {
     _state = BeDrawState::Create(*_shader).Build();
 }
 
-auto BeStandardSkyboxPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
+auto BeStandardSkyboxPass::Render(BeRenderer& renderer, SenCommandList cmd) -> void {
     _material->SetFloat1("ClampRadiance", _srm->Settings.Skybox.ClampRadiance);
 
     BePass pass(cmd);
@@ -47,6 +47,6 @@ auto BeStandardSkyboxPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -
         .Use("main", *_material)
     );
 
-    cmd.Draw(4, 0);
+    pass.Draw(4);
     pass.End();
 }

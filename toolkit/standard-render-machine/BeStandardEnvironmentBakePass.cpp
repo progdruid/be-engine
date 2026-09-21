@@ -78,7 +78,7 @@ auto BeStandardEnvironmentBakePass::Initialise(BeRenderer& renderer) -> void {
     _brdfLutState = BeDrawState::Create(*_brdfLutShader).Build();
 }
 
-auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
+auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandList cmd) -> void {
     for (uint32_t face = 0; face < FaceCount; ++face) {
         BePass pass(cmd);
         pass.UseTexture(_equirect);
@@ -87,7 +87,7 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffe
         pass.Begin();
         pass.SetState(_envState);
         pass.Push(BeRoot(*_envShader).Use("main", *_envFaceMaterials[face]));
-        cmd.Draw(4, 0);
+        pass.Draw(4);
         pass.End();
     }
 
@@ -99,7 +99,7 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffe
         pass.Begin();
         pass.SetState(_irradianceState);
         pass.Push(BeRoot(*_irradianceShader).Use("main", *_irradianceFaceMaterials[face]));
-        cmd.Draw(4, 0);
+        pass.Draw(4);
         pass.End();
     }
 
@@ -113,7 +113,7 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffe
             pass.Begin();
             pass.SetState(_prefilterState);
             pass.Push(BeRoot(*_prefilterShader).Use("main", *_prefilterFaceMaterials[mip][face]));
-            cmd.Draw(4, 0);
+            pass.Draw(4);
             pass.End();
         }
     }
@@ -125,7 +125,7 @@ auto BeStandardEnvironmentBakePass::Render(BeRenderer& renderer, SenCommandBuffe
         pass.Begin();
         pass.SetState(_brdfLutState);
         pass.Push(BeRoot(*_brdfLutShader).Use("main", *_brdfLutMaterial));
-        cmd.Draw(4, 0);
+        pass.Draw(4);
         pass.End();
     }
 }

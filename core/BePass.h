@@ -5,7 +5,7 @@
 #include <umbrellas/common.hpp>
 #include <umbrellas/include-glm.h>
 #include <sen-rhi/SenTypes.h>
-#include <sen-rhi/SenCommandBuffer.h>
+#include <sen-rhi/SenCmd.h>
 
 #include "BeBackend.h"
 
@@ -22,13 +22,16 @@ class BePass {
         uint32_t MipCount;
     };
 
-    SenCommandBuffer& _cmd;
+    SenCommandList _list;
     bool _isCompute = false;
+    bool _isBegun = false;
     std::vector<ReadBinding> _reads;
     std::vector<SenTexture> _storageTextures;
     std::vector<SenColorAttachment> _colorTargets;
     std::optional<SenDepthAttachment> _depthTarget;
     SenViewport _viewport {};
+    SenBuffer _vertexBuffer;
+    SenBuffer _indexBuffer;
 
     BeBackend::FormatSet _formatSet;
     uint32_t _formatSetId = UINT32_MAX;
@@ -42,7 +45,7 @@ class BePass {
     auto AcquireOverrideKey() -> BeBackend::StaticKey&;
 
     expose
-    explicit BePass (SenCommandBuffer& cmd);
+    explicit BePass (SenCommandList list);
 
     auto SetCompute (bool isCompute) -> BePass&;
 
@@ -86,6 +89,9 @@ class BePass {
 
     auto SetViewport    (SenViewport viewport) -> BePass&;
 
+    auto SetVertexBuffer (SenBuffer buffer) -> BePass&;
+    auto SetIndexBuffer  (SenBuffer buffer) -> BePass&;
+
     auto Begin () -> void;
     auto End   () -> void;
 
@@ -95,4 +101,8 @@ class BePass {
     auto OverrideBlend (const SenBlendState& blend) -> BePass&;
     auto OverrideDepthStencil (const SenDepthStencilState& depthStencil) -> BePass&;
     auto Push (const BeRoot& root) -> void;
+
+    auto Draw        (uint32_t vertexCount, uint32_t firstVertex = 0) -> void;
+    auto DrawIndexed (uint32_t indexCount, uint32_t firstIndex, int32_t baseVertex) -> void;
+    auto Dispatch    (uint32_t x, uint32_t y, uint32_t z) -> void;
 };

@@ -26,6 +26,7 @@ SenSlotMap<SenVulkanViewEntry, SenView> SenVulkanBackend::_views;
 SenSlotMap<SenVulkanBufferEntry, SenBuffer> SenVulkanBackend::_buffers;
 SenSlotMap<SenVulkanSamplerEntry, SenSampler> SenVulkanBackend::_samplers;
 SenSlotMap<SenVulkanPipelineEntry, SenPipeline> SenVulkanBackend::_pipelines;
+SenSlotMap<SenVulkanCommandListEntry, SenCommandList> SenVulkanBackend::_commandLists;
 SenSlotMap<SenVulkanSwapchainEntry, SenSwapchain> SenVulkanBackend::_swapchains;
 
 VkDescriptorSetLayout SenVulkanBackend::_bindlessLayout = VK_NULL_HANDLE;
@@ -215,6 +216,7 @@ auto SenVulkanBackend::Shutdown() -> void {
     WaitIdle();
 
     // Destroy all swapchains first (they depend on device)
+    for (const auto handle : _commandLists.GetLiveHandles()) { DestroyCommandList(handle); }
     for (const auto handle : _swapchains.GetLiveHandles()) { DestroySwapchain(handle); }
     for (const auto handle : _views.GetLiveHandles())      { DestroyView(handle); }
     for (const auto handle : _textures.GetLiveHandles())   { DestroyTexture(handle); }
@@ -265,7 +267,7 @@ auto SenVulkanBackend::IsSubmissionComplete(SenSubmission submission) -> bool {
 }
 
 // ─── command buffer ────────────────────────────────────────────────────────────────
-auto SenVulkanBackend::AllocateCommandBuffer() -> SenVulkanCommandBuffer {
+auto SenVulkanBackend::CreateCommandList() -> SenCommandList {
     VkCommandBufferAllocateInfo allocInfo {
         .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool        = _commandPool,
@@ -275,7 +277,22 @@ auto SenVulkanBackend::AllocateCommandBuffer() -> SenVulkanCommandBuffer {
     VkCommandBuffer cmd = VK_NULL_HANDLE;
     VkResult result = vkAllocateCommandBuffers(_device, &allocInfo, &cmd);
     be_assert(result == VK_SUCCESS, "Failed to allocate command buffer!");
-    return SenVulkanCommandBuffer(cmd);
+
+    return _commandLists.Create(SenVulkanCommandListEntry { .Cmd = cmd });
+}
+
+auto SenVulkanBackend::DestroyCommandList(SenCommandList handle) -> void {
+    if (!_commandLists.Contains(handle)) {
+        return;
+    }
+
+    VkCommandBuffer cmd = _commandLists.Get(handle).Cmd;
+    vkFreeCommandBuffers(_device, _commandPool, 1, &cmd);
+    _commandLists.Destroy(handle);
+}
+
+auto SenVulkanBackend::LookupCommandList(SenCommandList handle) -> SenVulkanCommandListEntry& {
+    return _commandLists.Get(handle);
 }
 
 auto SenVulkanBackend::Submit(const SenSubmitDesc& desc) -> SenSubmission {
@@ -286,7 +303,7 @@ auto SenVulkanBackend::Submit(const SenSubmitDesc& desc) -> SenSubmission {
     for (uint32_t i = 0; i < desc.ListCount; ++i) {
         cmdInfos[i] = {
             .sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-            .commandBuffer = desc.Lists[i]->GetNativeHandle(),
+            .commandBuffer = LookupCommandList(desc.Lists[i]).Cmd,
         };
     }
 

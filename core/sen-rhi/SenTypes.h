@@ -18,6 +18,7 @@ enum class SenHandleKind : uint8_t {
     Sampler,
     Pipeline,
     Swapchain,
+    CommandList,
 };
 
 template <SenHandleKind Kind>
@@ -250,11 +251,25 @@ enum class SenTopology : uint8_t {
 };
 
 
+// ─── command list ───────────────────────────────────────────────
+using SenCommandList = SenHandle<SenHandleKind::CommandList>;
+
+constexpr uint32_t SenAllMips = UINT32_MAX;
+
+struct SenTextureTransition {
+    SenTexture Texture;
+    SenResourceState State;
+    uint32_t BaseMip = 0;
+    uint32_t MipCount = SenAllMips;
+};
+
+
 // ─── submission ─────────────────────────────────────────────────
 struct SenSubmission {
     uint64_t Value = 0;
     auto IsValid() const -> bool { return Value != 0; }
 };
+
 
 
 // ─── shader ─────────────────────────────────────────────────────
@@ -374,5 +389,14 @@ struct SenSwapchainDesc {
     uint32_t       BufferCount    = 2;
     SenFormat      Format         = SenFormat::RGBA8_Unorm;
     SenPresentMode PresentMode    = SenPresentMode::VSync;
+};
+
+
+// ─── submit ─────────────────────────────────────────────────────
+struct SenSubmitDesc {
+    const SenCommandList* Lists = nullptr;
+    uint32_t ListCount = 0;
+    const SenSwapchain* Presents = nullptr;
+    uint32_t PresentCount = 0;
 };
 

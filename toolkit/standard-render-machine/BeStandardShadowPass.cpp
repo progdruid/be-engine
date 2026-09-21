@@ -19,7 +19,7 @@ auto BeStandardShadowPass::Initialise(BeRenderer& renderer) -> void {
     _objectMaterial = BeMaterial::Create(BeShaderLibrary::GetMaterialScheme("object-material-for-geometry-pass"));
 }
 
-auto BeStandardShadowPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -> void {
+auto BeStandardShadowPass::Render(BeRenderer& renderer, SenCommandList cmd) -> void {
     _srm->EnsureShadowArrays();
 
     const auto directionalArray = _srm->GetDirectionalShadowArray();
@@ -42,7 +42,7 @@ auto BeStandardShadowPass::Render(BeRenderer& renderer, SenCommandBuffer& cmd) -
 }
 
 auto BeStandardShadowPass::RenderDirectionalShadows(
-    SenCommandBuffer& cmd, 
+    SenCommandList cmd,
     const BeSRMSunLightEntry& sunLight, 
     const std::shared_ptr<BeTexture>& shadowArray, 
     uint32_t slice
@@ -52,12 +52,11 @@ auto BeStandardShadowPass::RenderDirectionalShadows(
     const auto& entries = _srm->GetGeometryEntries();
     const float resolution = static_cast<float>(_srm->Settings.Shadow.DirectionalResolution);
 
-    cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
-    cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
-
     BePass pass(cmd);
     pass.SetDepthTarget(shadowArray, SenLoadOp::Clear, 1.0f, static_cast<int16_t>(slice));
     pass.SetViewport({ 0, 0, resolution, resolution, 0, 1 });
+    pass.SetVertexBuffer(_srm->GetSharedVertexBuffer());
+    pass.SetIndexBuffer(_srm->GetSharedIndexBuffer());
     pass.Begin();
 
     for (const auto& entry : entries) {
@@ -81,14 +80,14 @@ auto BeStandardShadowPass::RenderDirectionalShadows(
                 .Use("geometry-object", *_objectMaterial)
                 .Use("geometry-main", *propSlice.Material)
             );
-            cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
+            pass.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }
     }
     pass.End();
 }
 
 auto BeStandardShadowPass::RenderPointLightShadows(
-    SenCommandBuffer& cmd, 
+    SenCommandList cmd,
     const BeSRMPointLightEntry& pointLight, 
     const std::shared_ptr<BeTexture>& shadowArray, 
     uint32_t slice
@@ -98,9 +97,6 @@ auto BeStandardShadowPass::RenderPointLightShadows(
     const auto& entries = _srm->GetGeometryEntries();
     const float resolution = static_cast<float>(_srm->Settings.Shadow.PointResolution);
 
-    cmd.SetVertexBuffer(_srm->GetSharedVertexBuffer());
-    cmd.SetIndexBuffer(_srm->GetSharedIndexBuffer());
-
     for (int face = 0; face < 6; ++face) {
         const glm::mat4 faceViewProj = CalculatePointLightFaceViewProjection(pointLight, face);
         const int16_t layer = static_cast<int16_t>(slice * 6 + face);
@@ -108,6 +104,8 @@ auto BeStandardShadowPass::RenderPointLightShadows(
         BePass pass(cmd);
         pass.SetDepthTarget(shadowArray, SenLoadOp::Clear, 1.0f, layer);
         pass.SetViewport({ 0, 0, resolution, resolution, 0, 1 });
+        pass.SetVertexBuffer(_srm->GetSharedVertexBuffer());
+        pass.SetIndexBuffer(_srm->GetSharedIndexBuffer());
         pass.Begin();
 
         for (const auto& entry : entries) {
@@ -130,7 +128,7 @@ auto BeStandardShadowPass::RenderPointLightShadows(
                     .Use("geometry-object", *_objectMaterial)
                     .Use("geometry-main", *propSlice.Material)
                 );
-                cmd.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
+                pass.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
             }
         }
 

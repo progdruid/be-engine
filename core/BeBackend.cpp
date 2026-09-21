@@ -20,7 +20,7 @@ std::unordered_map<BeBackend::StaticKey, uint32_t, BeBackend::BytesHash> BeBacke
 std::vector<BeBackend::FormatSet> BeBackend::_formatSets;
 std::unordered_map<BeBackend::FormatSet, uint32_t, BeBackend::BytesHash> BeBackend::_formatSetLookup;
 std::vector<std::vector<SenPipeline>> BeBackend::_pipelines;
-SenCommandBuffer BeBackend::_uploadCmd;
+SenCommandList BeBackend::_uploadCmd;
 std::array<uint32_t, static_cast<size_t>(BeBackend::BindlessKind::Count)> BeBackend::_bindlessNext {};
 std::array<std::vector<uint32_t>, static_cast<size_t>(BeBackend::BindlessKind::Count)> BeBackend::_bindlessFree {};
 std::array<uint32_t, static_cast<size_t>(BeBackend::BindlessKind::Count)> BeBackend::_bindlessCapacity {};
@@ -32,7 +32,7 @@ std::array<BeBackend::MaterialArenaChain, BeRenderer::FramesInFlight> BeBackend:
 
 
 auto BeBackend::Init() -> void {
-    _uploadCmd = SenBackend::AllocateCommandBuffer();
+    _uploadCmd = SenBackend::CreateCommandList();
 
     const SenCaps caps = SenBackend::GetCaps();
     _bindlessCapacity[static_cast<size_t>(BindlessKind::Texture)] = caps.TextureSlots;
@@ -187,12 +187,11 @@ auto BeBackend::WriteBuffer(const void* data, uint32_t size, SenBuffer dst, uint
     });
     std::memcpy(SenBackend::GetBufferPointer(staging), data, size);
 
-    _uploadCmd.Begin();
-    _uploadCmd.CopyBuffer(staging, 0, size, dst, dstOffset);
-    _uploadCmd.End();
+    SenCmd::Begin(_uploadCmd);
+    SenCmd::CopyBuffer(_uploadCmd, staging, 0, size, dst, dstOffset);
+    SenCmd::End(_uploadCmd);
 
-    SenCommandBuffer* lists[] = { &_uploadCmd };
-    const SenSubmission submission = SenBackend::Submit({ .Lists = lists, .ListCount = 1 });
+    const SenSubmission submission = SenBackend::Submit({ .Lists = &_uploadCmd, .ListCount = 1 });
     SenBackend::WaitForSubmission(submission);
     Retire(staging);
     StampRetirements(submission);
@@ -205,14 +204,13 @@ auto BeBackend::WriteTexture(const void* data, uint32_t size, SenTexture dst) ->
     });
     std::memcpy(SenBackend::GetBufferPointer(staging), data, size);
 
-    _uploadCmd.Begin();
-    _uploadCmd.TransitionTextures({ { dst, SenResourceState::TransferDst } });
-    _uploadCmd.CopyBufferToTexture(staging, 0, dst, 0);
-    _uploadCmd.TransitionTextures({ { dst, SenResourceState::ShaderRead } });
-    _uploadCmd.End();
+    SenCmd::Begin(_uploadCmd);
+    SenCmd::TransitionTextures(_uploadCmd, { { dst, SenResourceState::TransferDst } });
+    SenCmd::CopyBufferToTexture(_uploadCmd, staging, 0, dst, 0);
+    SenCmd::TransitionTextures(_uploadCmd, { { dst, SenResourceState::ShaderRead } });
+    SenCmd::End(_uploadCmd);
 
-    SenCommandBuffer* lists[] = { &_uploadCmd };
-    const SenSubmission submission = SenBackend::Submit({ .Lists = lists, .ListCount = 1 });
+    const SenSubmission submission = SenBackend::Submit({ .Lists = &_uploadCmd, .ListCount = 1 });
     SenBackend::WaitForSubmission(submission);
     Retire(staging);
     StampRetirements(submission);
@@ -225,7 +223,7 @@ auto BeBackend::GenerateMips(const std::shared_ptr<BeTexture>& texture) -> void 
     const auto state = BeDrawState::Create(*shader).Build();
     const auto& scheme = BeShaderLibrary::GetShaderScheme(*shader, "main");
 
-    _uploadCmd.Begin();
+    SenCmd::Begin(_uploadCmd);
 
     for (uint32_t mip = 1; mip < texture->Mips; ++mip) {
         const auto& source = texture->GetMipViewport(mip - 1);
@@ -240,15 +238,14 @@ auto BeBackend::GenerateMips(const std::shared_ptr<BeTexture>& texture) -> void 
         pass.Begin();
         pass.SetState(state);
         pass.Push(BeRoot(*shader).Use("main", *material));
-        _uploadCmd.Draw(4, 0);
+        pass.Draw(4);
         pass.End();
     }
 
-    _uploadCmd.TransitionTextures({ { texture->Handle, SenResourceState::ShaderRead } });
-    _uploadCmd.End();
+    SenCmd::TransitionTextures(_uploadCmd, { { texture->Handle, SenResourceState::ShaderRead } });
+    SenCmd::End(_uploadCmd);
 
-    SenCommandBuffer* lists[] = { &_uploadCmd };
-    const SenSubmission submission = SenBackend::Submit({ .Lists = lists, .ListCount = 1 });
+    const SenSubmission submission = SenBackend::Submit({ .Lists = &_uploadCmd, .ListCount = 1 });
     SenBackend::WaitForSubmission(submission);
     StampRetirements(submission);
 }
