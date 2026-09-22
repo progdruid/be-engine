@@ -5,8 +5,8 @@
 #include <fstream>
 #include <sstream>
 
-#include "umbrellas/include-glm.h"
-#include "umbrellas/include-libassert.h"
+#include "include-glm.h"
+#include "include-libassert.h"
 
 namespace {
     auto ParseSlot(std::string_view tok) -> uint8_t {

@@ -4,9 +4,9 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <umbrellas/include-glm.h>
-#include <umbrellas/common.hpp>
-#include <sen-rhi/SenTypes.h>
+#include <include-glm.h>
+#include <common.hpp>
+#include <SenTypes.h>
 
 class BeAssetRegistry;
 

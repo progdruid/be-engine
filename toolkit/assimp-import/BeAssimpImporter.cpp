@@ -4,7 +4,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <stb_image/stb_image.h>
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 #include <BeProp.h>
 #include <BeTexture.h>
 

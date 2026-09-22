@@ -1,9 +1,9 @@
 #include "BeStandardLightingPass.h"
-#include <sen-rhi/Sen.h>
+#include <Sen.h>
 
 #include <algorithm>
 #include <span>
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 
 #include "BeAssetRegistry.h"
 #include "BeShaderLibrary.h"

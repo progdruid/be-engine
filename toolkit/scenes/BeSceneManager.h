@@ -5,7 +5,7 @@
 #include <string>
 #include <concepts>
 #include <typeinfo>
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 
 class BeScene;
 

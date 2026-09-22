@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <umbrellas/common.hpp>
+#include <common.hpp>
 
 #include "BeCameraShot.h"
 

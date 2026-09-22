@@ -3,8 +3,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <umbrellas/common.hpp>
-#include <sen-rhi/SenTypes.h>
+#include <common.hpp>
+#include <SenTypes.h>
 
 #include "BeMaterialScheme.h"
 #include "BeShaderTools.h"

@@ -1,8 +1,8 @@
 #pragma once
 #include <cstdint>
 #include <vector>
-#include <umbrellas/common.hpp>
-#include <umbrellas/include-libassert.h>
+#include <common.hpp>
+#include <include-libassert.h>
 
 template <typename Entry, typename Handle>
 class SenSlotMap {

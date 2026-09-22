@@ -67,6 +67,8 @@ endfunction()
 # ── targets ───────────────────────────────────────────────────────────────────
 
 add_subdirectory(vendor)
+add_subdirectory(umbrellas)
+add_subdirectory(sen-rhi)
 add_subdirectory(core)
 add_subdirectory(toolkit)
 add_subdirectory(devtools/bechef)

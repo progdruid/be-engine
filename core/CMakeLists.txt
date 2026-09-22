@@ -10,6 +10,8 @@ target_include_directories(core
 
 target_link_libraries(core
     PUBLIC
+        sen
+        umbrellas
         glfw
         Vulkan::Vulkan
         libassert::assert

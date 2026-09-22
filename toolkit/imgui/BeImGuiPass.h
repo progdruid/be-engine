@@ -1,5 +1,5 @@
 #pragma once
-#include <sen-rhi/Sen.h>
+#include <Sen.h>
 
 #include <functional>
 #include <memory>

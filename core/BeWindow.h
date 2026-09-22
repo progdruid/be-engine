@@ -1,8 +1,8 @@
 #pragma once
 
 #include <string>
-#include <umbrellas/common.hpp>
-#include <sen-rhi/SenTypes.h>
+#include <common.hpp>
+#include <SenTypes.h>
 
 // ReSharper disable once CppInconsistentNaming
 struct GLFWwindow;

@@ -1,7 +1,7 @@
 
 #include "OldScene.h"
 
-#include <umbrellas/include-glfw.h>
+#include <include-glfw.h>
 
 #include "BeAssetRegistry.h"
 #include "BeCamera.h"

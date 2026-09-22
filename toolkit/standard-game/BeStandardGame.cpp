@@ -1,6 +1,6 @@
 #include "BeStandardGame.h"
 
-#include <umbrellas/include-glfw.h>
+#include <include-glfw.h>
 
 #include "BeFileWatcher.h"
 #include "BeInput.h"

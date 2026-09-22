@@ -1,7 +1,7 @@
 #include "RailGizmo.h"
 
 #include <string>
-#include <umbrellas/include-glm.h>
+#include <include-glm.h>
 
 #include "BeRail.h"
 #include "BeProp.h"

@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include <umbrellas/include-glfw.h>
+#include <include-glfw.h>
 
 #include "BeCamera.h"
 #include "BeInput.h"

@@ -4,15 +4,15 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <umbrellas/common.hpp>
-#include <umbrellas/include-glm.h>
+#include <common.hpp>
+#include <include-glm.h>
 
 #include "BeMaterial.h"
 #include "BeMesh.h"
 #include "BePassSequence.h"
 #include "BeProp.h"
-#include <sen-rhi/SenTypes.h>
-#include <sen-rhi/Sen.h>
+#include <SenTypes.h>
+#include <Sen.h>
 
 class BeTexture;
 class BeRenderer;

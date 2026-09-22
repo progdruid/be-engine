@@ -1,6 +1,6 @@
 #include "ShowcaseScene.h"
 
-#include <umbrellas/include-glfw.h>
+#include <include-glfw.h>
 
 #include "BeRenderPass.h"
 #include "OrbitCameraController.h"

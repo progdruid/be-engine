@@ -4,8 +4,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "umbrellas/include-libassert.h"
-#include <umbrellas/common.hpp>
+#include "include-libassert.h"
+#include <common.hpp>
 
 #ifdef GetProp
 #undef GetProp

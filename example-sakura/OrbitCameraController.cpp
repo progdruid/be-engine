@@ -1,6 +1,6 @@
 #include "OrbitCameraController.h"
 
-#include <umbrellas/include-glfw.h>
+#include <include-glfw.h>
 
 #include "BeCamera.h"
 #include "BeInput.h"

@@ -4,9 +4,9 @@
 #include <vulkan/vulkan_core.h>
 #include <vma/vk_mem_alloc.h>
 
-#include "sen-rhi/Sen.h"
-#include "sen-rhi/SenSlotMap.h"
-#include "sen-rhi/SenTypes.h"
+#include "Sen.h"
+#include "SenSlotMap.h"
+#include "SenTypes.h"
 
 
 // ─── resource entries ─────────────────────────────────────────────────────────

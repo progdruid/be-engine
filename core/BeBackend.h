@@ -5,11 +5,11 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
-#include <umbrellas/common.hpp>
+#include <common.hpp>
 
 #include "BeRenderer.h"
-#include "sen-rhi/SenTypes.h"
-#include <sen-rhi/Sen.h>
+#include "SenTypes.h"
+#include <Sen.h>
 
 struct BeShader;
 class BeTexture;

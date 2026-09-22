@@ -2,8 +2,8 @@
 
 #include <vector>
 #include <algorithm>
-#include <umbrellas/include-glm.h>
-#include <umbrellas/common.hpp>
+#include <include-glm.h>
+#include <common.hpp>
 
 enum class BeTrackInterp { Hold, Linear, EaseIn, EaseOut, EaseInOut };
 

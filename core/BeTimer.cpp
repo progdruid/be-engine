@@ -1,7 +1,7 @@
 #include "BeTimer.h"
 
 #include <cstdio>
-#include "umbrellas/include-libassert.h"
+#include "include-libassert.h"
 
 void BeTimer::Start(const char* label) {
     be_assert(!_running, "BeTimer::Start called while already running");

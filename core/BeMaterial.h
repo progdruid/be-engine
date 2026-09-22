@@ -4,12 +4,12 @@
 #include <span>
 #include <string>
 #include <unordered_map>
-#include <umbrellas/common.hpp>
-#include <umbrellas/include-glm.h>
+#include <common.hpp>
+#include <include-glm.h>
 
 #include "BeBackend.h"
 #include "BeMaterialScheme.h"
-#include "sen-rhi/SenTypes.h"
+#include "SenTypes.h"
 
 class BeTexture;
 

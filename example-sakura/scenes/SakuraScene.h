@@ -1,8 +1,8 @@
 #pragma once
 #include <array>
 #include <string>
-#include <umbrellas/common.hpp>
-#include <umbrellas/include-glm.h>
+#include <common.hpp>
+#include <include-glm.h>
 
 #include "standard-game/BeStandardFullScene.h"
 #include "FpsCounter.h"

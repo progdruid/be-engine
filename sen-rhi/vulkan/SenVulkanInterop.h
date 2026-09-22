@@ -1,7 +1,7 @@
 #pragma once
 #include <vulkan/vulkan_core.h>
 
-#include "sen-rhi/SenTypes.h"
+#include "SenTypes.h"
 
 
 namespace SenVulkanInterop {

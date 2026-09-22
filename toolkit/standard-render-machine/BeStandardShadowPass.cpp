@@ -1,7 +1,7 @@
 #include "BeStandardShadowPass.h"
 
-#include <umbrellas/include-glm.h>
-#include <sen-rhi/Sen.h>
+#include <include-glm.h>
+#include <Sen.h>
 
 #include "BeAssetRegistry.h"
 #include "BePass.h"

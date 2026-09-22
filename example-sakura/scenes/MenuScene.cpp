@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <iostream>
-#include <umbrellas/include-glfw.h>
+#include <include-glfw.h>
 #include <scenes/BeSceneManager.h>
 
 #include "BeInput.h"

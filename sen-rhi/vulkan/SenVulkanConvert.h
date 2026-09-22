@@ -1,8 +1,8 @@
 #pragma once
 #include <vulkan/vulkan_core.h>
-#include <sen-rhi/SenTypes.h>
-#include <umbrellas/common.hpp>
-#include <umbrellas/include-libassert.h>
+#include <SenTypes.h>
+#include <common.hpp>
+#include <include-libassert.h>
 
 namespace SenVk {
 

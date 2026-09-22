@@ -1,7 +1,7 @@
 #include "BeStandardSkyboxPass.h"
-#include <sen-rhi/Sen.h>
+#include <Sen.h>
 
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 
 #include "BeAssetRegistry.h"
 #include "BeShaderLibrary.h"

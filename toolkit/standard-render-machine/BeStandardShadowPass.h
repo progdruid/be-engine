@@ -1,10 +1,10 @@
 #pragma once
 #include <memory>
 #include <string>
-#include <umbrellas/common.hpp>
-#include <umbrellas/include-glm.h>
-#include <sen-rhi/SenTypes.h>
-#include <sen-rhi/Sen.h>
+#include <common.hpp>
+#include <include-glm.h>
+#include <SenTypes.h>
+#include <Sen.h>
 
 #include "BeRenderPass.h"
 

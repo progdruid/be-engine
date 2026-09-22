@@ -13,8 +13,8 @@
 #include "lua.hpp"
 #include "LuaBridge/LuaBridge.h"
 
-#include <umbrellas/common.hpp>
-#include <umbrellas/include-glm.h>
+#include <common.hpp>
+#include <include-glm.h>
 
 template <class T>
 struct BeLuaConverter {

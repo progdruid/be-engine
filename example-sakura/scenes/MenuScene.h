@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <umbrellas/common.hpp>
+#include <common.hpp>
 
 #include "standard-game/BeStandardBaseScene.h"
 #include "BePassSequence.h"

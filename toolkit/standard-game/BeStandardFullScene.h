@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-#include <umbrellas/common.hpp>
+#include <common.hpp>
 
 #include "BeStandardBaseScene.h"
 #include "BeAssetRegistry.h"

@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <bit>
-#include <umbrellas/include-glm.h>
+#include <include-glm.h>
 #include <stb_image/stb_image.h>
-#include "sen-rhi/Sen.h"
+#include "Sen.h"
 #include "BeAssetRegistry.h"
 #include "BeBackend.h"
 

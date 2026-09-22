@@ -1,6 +1,6 @@
 #include "BeStandardGeometryPass.h"
 
-#include <sen-rhi/Sen.h>
+#include <Sen.h>
 
 #include "BePass.h"
 #include "BeMaterial.h"

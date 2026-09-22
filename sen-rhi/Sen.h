@@ -1,6 +1,6 @@
 #pragma once
-#include <sen-rhi/SenTypes.h>
-#include <umbrellas/common.hpp>
+#include <SenTypes.h>
+#include <common.hpp>
 
 
 class Sen {

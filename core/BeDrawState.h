@@ -1,9 +1,9 @@
 #pragma once
 #include <cstdint>
-#include <umbrellas/common.hpp>
+#include <common.hpp>
 
 #include "BeBackend.h"
-#include "sen-rhi/SenTypes.h"
+#include "SenTypes.h"
 
 struct BeShader;
 

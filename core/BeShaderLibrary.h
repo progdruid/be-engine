@@ -6,9 +6,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include <umbrellas/common.hpp>
-#include <sen-rhi/SenTypes.h>
-#include "umbrellas/include-libassert.h"
+#include <common.hpp>
+#include <SenTypes.h>
+#include "include-libassert.h"
 #include "BeMaterialScheme.h"
 #include "BeShaderTools.h"
 

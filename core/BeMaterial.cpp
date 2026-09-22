@@ -5,7 +5,7 @@
 #include "BeAssetRegistry.h"
 #include "BeShaderLibrary.h"
 #include "BeTexture.h"
-#include "sen-rhi/Sen.h"
+#include "Sen.h"
 
 // std140 array stride is 16 bytes / 4 floats (float->float4); 
 // matrix os 64 bytes / 16 floats.

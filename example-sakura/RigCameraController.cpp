@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 
 #include "BeCamera.h"
 #include "BeCameraShot.h"

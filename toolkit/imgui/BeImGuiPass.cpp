@@ -6,9 +6,9 @@
 #include <imgui/backends/imgui_impl_vulkan.h>
 
 #include <vulkan/vulkan_core.h>
-#include <sen-rhi/Sen.h>
-#include <sen-rhi/vulkan/SenVulkanConvert.h>
-#include <sen-rhi/vulkan/SenVulkanInterop.h>
+#include <Sen.h>
+#include <vulkan/SenVulkanConvert.h>
+#include <vulkan/SenVulkanInterop.h>
 
 #include "BePass.h"
 #include "BeRenderer.h"

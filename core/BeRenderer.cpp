@@ -5,7 +5,7 @@
 #include "BeRenderPass.h"
 #include "BeShader.h"
 #include "BeShaderLibrary.h"
-#include <sen-rhi/Sen.h>
+#include <Sen.h>
 
 uint64_t BeRenderer::_currentFrame = 0;
 

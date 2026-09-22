@@ -5,7 +5,7 @@
 
 #include <cstring>
 #include <fstream>
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 
 namespace {
     Slang::ComPtr<slang::IGlobalSession> globalSession;

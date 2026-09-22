@@ -2,10 +2,10 @@
 #include <filesystem>
 #include <unordered_map>
 #include <vector>
-#include <umbrellas/common.hpp>
+#include <common.hpp>
 
 #include "BeShaderTools.h"
-#include "sen-rhi/SenTypes.h"
+#include "SenTypes.h"
 
 struct BeMaterialPropertyDescriptor {
     enum class Type : uint8_t {

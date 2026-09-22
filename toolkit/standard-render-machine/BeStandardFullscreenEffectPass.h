@@ -2,9 +2,9 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <umbrellas/common.hpp>
-#include <sen-rhi/SenTypes.h>
-#include <sen-rhi/Sen.h>
+#include <common.hpp>
+#include <SenTypes.h>
+#include <Sen.h>
 
 #include "BeDrawState.h"
 #include "BeRenderPass.h"

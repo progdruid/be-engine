@@ -2,8 +2,8 @@
 
 #include <ranges>
 
-#include "sen-rhi/Sen.h"
-#include "umbrellas/include-libassert.h"
+#include "Sen.h"
+#include "include-libassert.h"
 
 // Scalar (natural) layout, matching Slang's layout for BDA pointer-backed cbuffers.
 // Every member aligns to its scalar component (4 bytes); arrays are tightly packed.

@@ -2,10 +2,10 @@
 
 #include <array>
 #include <vector>
-#include <umbrellas/common.hpp>
+#include <common.hpp>
 
-#include <sen-rhi/SenTypes.h>
-#include <sen-rhi/Sen.h>
+#include <SenTypes.h>
+#include <Sen.h>
 
 class BeWindow;
 class BeRenderPass;

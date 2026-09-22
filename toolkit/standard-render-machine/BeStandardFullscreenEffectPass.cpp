@@ -1,7 +1,7 @@
 #include "BeStandardFullscreenEffectPass.h"
-#include <sen-rhi/Sen.h>
+#include <Sen.h>
 
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 
 #include "BePass.h"
 #include "BeMaterial.h"

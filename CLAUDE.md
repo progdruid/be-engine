@@ -26,10 +26,10 @@ No tests or linting. C++23 (`/Zc:__cplusplus /Zc:preprocessor` on MSVC). Build o
 
 ```
 be-engine/
+├── sen-rhi/            # Static lib `sen` — RHI abstraction (Vulkan-only backend)
+├── umbrellas/          # INTERFACE lib — config headers (glm, libassert, json, common)
 ├── core/               # Static lib — rendering engine core
-│   ├── Be*.h/cpp       # Engine classes
-│   ├── sen-rhi/        # RHI abstraction (Vulkan-only backend)
-│   └── umbrellas/      # Config headers (glm, libassert, json, common)
+│   └── Be*.h/cpp       # Engine classes
 ├── toolkit/            # Static lib — higher-level abstractions; links against core
 │   ├── standard-render-machine/  # Deferred rendering pipeline (SRM)
 │   ├── standard-game/  # BeStandardGame app loop + BeStandardBaseScene/FullScene framework
@@ -48,8 +48,8 @@ be-engine/
 ```
 
 The engine is consumable as a git submodule: the root `CMakeLists.txt` builds the examples
-only when it is the top-level project; a parent project adds `core`, `toolkit`, and `bechef`
-and calls `be_cook_app(<exe>)` on its own app target.
+only when it is the top-level project; a parent project adds `umbrellas`, `sen-rhi`, `core`,
+`toolkit`, and `bechef` and calls `be_cook_app(<exe>)` on its own app target.
 
 ## Architecture Overview
 
@@ -78,11 +78,15 @@ and calls `be_cook_app(<exe>)` on its own app target.
 - **`BeCamera`** — position, yaw/pitch in degrees, FOV, near/far. `Update()` recalculates matrices and direction vectors.
 - **`BeTimer`** — frame timing (delta time, elapsed time).
 
-### RHI Abstraction Layer (`core/sen-rhi/`)
+### RHI Abstraction Layer (`sen-rhi/`)
 
-- **`SenBackend.h`** — selects active backend: `using SenBackend = SenVulkanBackend`.
+Its own target, `sen`. Include root is `sen-rhi/` itself, so headers are `<Sen.h>` and
+`<vulkan/SenVulkanInterop.h>`. It links Vulkan, libassert and `umbrellas` and nothing else:
+no glm, no GLFW, no Be headers.
+
+- **`Sen.h`** — the public API: `Sen` and `SenCmd`, static functions over handles and PODs. No Vulkan.
 - **`SenTypes.h`** — GPU type definitions: formats, usage flags, topology, sampler modes, blend/depth states, buffer access.
-- **`vulkan/`** — Vulkan backend: device, swapchain, textures, buffers, samplers, pipelines, bind groups, descriptor sets. Uses VMA for memory.
+- **`vulkan/`** — Vulkan backend: device, swapchain, textures, buffers, samplers, pipelines, descriptor sets. Uses VMA for memory. `SenVulkanState.h` holds the entries and backend state, `SenVulkanInterop.h` hands native handles to the ImGui backend.
 
 ### Toolkit: Standard Render Machine (`toolkit/standard-render-machine/`)
 
@@ -248,12 +252,15 @@ compiled at runtime by Slang.
 
 ### Access Modifiers Convention
 
-`core/umbrellas/common.hpp` — used as section markers **without** a colon:
+`umbrellas/common.hpp` — used as section markers **without** a colon:
 - `expose` = `public:`
 - `protect` = `protected:`
 - `hide` = `private:`
 
-### Include Umbrellas (`core/umbrellas/`)
+### Include Umbrellas (`umbrellas/`)
+
+Include root is the directory itself: `#include <common.hpp>`, `#include <include-glm.h>`.
+The target carries the include path only, so each consumer links what it uses.
 
 - `include-glm.h` — GLM with `GLM_FORCE_LEFT_HANDED` + `GLM_FORCE_DEPTH_ZERO_TO_ONE`. Defines `_rad` literal (degrees→radians) and `HexColor("#RRGGBB")` → `glm::vec3`.
 - `include-libassert.h` — `be_assert(condition, ...)` wrapping libassert's `DEBUG_ASSERT`.

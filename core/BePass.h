@@ -5,10 +5,10 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include <umbrellas/common.hpp>
-#include <umbrellas/include-glm.h>
-#include <sen-rhi/SenTypes.h>
-#include <sen-rhi/Sen.h>
+#include <common.hpp>
+#include <include-glm.h>
+#include <SenTypes.h>
+#include <Sen.h>
 
 #include "BeBackend.h"
 #include "BeShaderTools.h"

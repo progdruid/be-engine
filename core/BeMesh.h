@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <vector>
-#include <umbrellas/include-glm.h>
+#include <include-glm.h>
 
 struct BeFullVertex {
     glm::vec3 Position;                 // 0

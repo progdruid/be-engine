@@ -4,7 +4,7 @@
 #include <optional>
 #include <algorithm>
 
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 
 static const char* RegionBegin = "// region @be-auto-boilerplate";
 static const char* RegionEnd = "// endregion";

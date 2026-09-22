@@ -1,14 +1,14 @@
 #include "SenVulkanState.h"
 
-#include <sen-rhi/vulkan/SenVulkanSurface.h>
-#include <sen-rhi/vulkan/SenVulkanValidation.h>
+#include <vulkan/SenVulkanSurface.h>
+#include <vulkan/SenVulkanValidation.h>
 
 #define VMA_IMPLEMENTATION
 #include <cstdio>
 #include <ranges>
 #include <vma/vk_mem_alloc.h>
 
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 
 using namespace SenVk;
 

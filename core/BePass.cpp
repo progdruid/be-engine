@@ -7,8 +7,8 @@
 #include "BeMaterial.h"
 #include "BeShader.h"
 #include "BeTexture.h"
-#include <sen-rhi/Sen.h>
-#include <umbrellas/include-libassert.h>
+#include <Sen.h>
+#include <include-libassert.h>
 
 BePass::BePass(SenCommandList list)
     : _list(list)

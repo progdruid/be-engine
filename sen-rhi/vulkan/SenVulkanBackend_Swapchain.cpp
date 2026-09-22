@@ -1,9 +1,9 @@
 #include "SenVulkanState.h"
 
-#include <sen-rhi/vulkan/SenVulkanSurface.h>
-#include <sen-rhi/vulkan/SenVulkanConvert.h>
+#include <vulkan/SenVulkanSurface.h>
+#include <vulkan/SenVulkanConvert.h>
 
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 
 using namespace SenVk;
 

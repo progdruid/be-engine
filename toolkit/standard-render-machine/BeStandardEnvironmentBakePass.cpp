@@ -1,7 +1,7 @@
 #include "BeStandardEnvironmentBakePass.h"
 
-#include <umbrellas/include-libassert.h>
-#include <sen-rhi/Sen.h>
+#include <include-libassert.h>
+#include <Sen.h>
 
 #include "BeAssetRegistry.h"
 #include "BeShaderLibrary.h"

@@ -4,10 +4,10 @@
 #include <memory>
 #include <string>
 
-#include <umbrellas/common.hpp>
+#include <common.hpp>
 
 #include "BeWindow.h"
-#include "sen-rhi/SenTypes.h"
+#include "SenTypes.h"
 
 class BeRenderer;
 class BeInput;

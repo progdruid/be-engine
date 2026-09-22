@@ -1,7 +1,7 @@
 #include "SenVulkanSurface.h"
 
 #include <cstring>
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 
 // mirrored API. no vulkan_xlib.h and friends included, 
 // because they drag in conflicting includes and bloat the translation unit. 

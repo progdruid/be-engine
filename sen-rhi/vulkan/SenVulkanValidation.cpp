@@ -10,7 +10,7 @@
   #include <unistd.h>
 #endif
 
-#include <umbrellas/include-libassert.h>
+#include <include-libassert.h>
 
 VkDebugUtilsMessengerEXT SenVulkanValidation::_messenger = VK_NULL_HANDLE;
 VkDebugUtilsMessengerCreateInfoEXT SenVulkanValidation::_createInfo = {};

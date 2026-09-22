@@ -1,12 +1,12 @@
 #include "BeWindow.h"
 
-#include <umbrellas/include-glfw.h>
+#include <include-glfw.h>
 
 #include <cstdio>
 #include <cassert>
 #include <stdexcept>
 
-#include "umbrellas/include-libassert.h"
+#include "include-libassert.h"
 
 // declared here instead of via glfw3native.h, which drags in conflicting platform headers.
 // guarded: naming a symbol this platform's GLFW lacks is a link error even from a dead branch.

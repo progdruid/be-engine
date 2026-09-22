@@ -1,8 +1,8 @@
 #pragma once
 
 #include <unordered_map>
-#include <umbrellas/include-glm.h>
-#include <umbrellas/common.hpp>
+#include <include-glm.h>
+#include <common.hpp>
 
 
 // ReSharper disable once CppInconsistentNaming

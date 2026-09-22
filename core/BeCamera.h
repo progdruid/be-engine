@@ -1,8 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <umbrellas/include-glm.h>
-#include <umbrellas/common.hpp>
+#include <include-glm.h>
+#include <common.hpp>
 
 class BeWindow;
 class BeRenderer;

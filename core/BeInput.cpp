@@ -1,6 +1,6 @@
 #include "BeInput.h"
 
-#include <umbrellas/include-glfw.h>
+#include <include-glfw.h>
 
 #include "BeWindow.h"
 

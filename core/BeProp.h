@@ -4,7 +4,7 @@
 
 #include "BeDrawState.h"
 #include "BeMesh.h"
-#include <umbrellas/common.hpp>
+#include <common.hpp>
 
 struct BeShader;
 class BeMaterial;

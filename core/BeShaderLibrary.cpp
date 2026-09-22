@@ -12,7 +12,7 @@
 #include "BeShaderCompiler.h"
 #include "BeShaderTools.h"
 #include "BeTexture.h"
-#include "sen-rhi/Sen.h"
+#include "Sen.h"
 
 namespace {
     auto ParseCull(const std::string& str) -> SenCull {

@@ -3,8 +3,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <umbrellas/include-glm.h>
-#include <umbrellas/common.hpp>
+#include <include-glm.h>
+#include <common.hpp>
 
 #include "standard-game/BeStandardFullScene.h"
 #include "standard-game/Components.h"

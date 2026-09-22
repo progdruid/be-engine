@@ -1,6 +1,6 @@
 #pragma once
 
-#include <umbrellas/common.hpp>
+#include <common.hpp>
 #include <scenes/BeScene.h>
 
 class BeStandardGame;

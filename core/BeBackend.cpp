@@ -10,8 +10,8 @@
 #include "BeShader.h"
 #include "BeShaderLibrary.h"
 #include "BeTexture.h"
-#include "sen-rhi/Sen.h"
-#include <umbrellas/include-libassert.h>
+#include "Sen.h"
+#include <include-libassert.h>
 
 
 std::vector<BeBackend::StaticKey> BeBackend::_staticKeys;
