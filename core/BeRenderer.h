@@ -27,7 +27,7 @@ class BeRenderer {
     hide
     uint32_t _desiredWidth;
     uint32_t _desiredHeight;
-    raw_ptr<void> _nativeWindow;
+    SenNativeWindow _nativeWindow;
     SenSwapchain _swapchain;
 
     SenView _backbufferView;
@@ -42,7 +42,7 @@ class BeRenderer {
     explicit BeRenderer(
         uint32_t desiredWidth,
         uint32_t desiredHeight,
-        void* nativeWindow
+        SenNativeWindow nativeWindow
     );
     ~BeRenderer();
 

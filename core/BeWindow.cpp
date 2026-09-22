@@ -8,6 +8,21 @@
 
 #include "umbrellas/include-libassert.h"
 
+// declared here instead of via glfw3native.h, which drags in conflicting platform headers.
+// guarded: naming a symbol this platform's GLFW lacks is a link error even from a dead branch.
+extern "C" {
+#if defined(_WIN32)
+    auto glfwGetWin32Window(GLFWwindow* window) -> void*;        // HWND
+#elif defined(__APPLE__)
+    auto glfwGetCocoaWindow(GLFWwindow* window) -> void*;        // id, an NSWindow*
+#else
+    auto glfwGetX11Display() -> void*;                           // Display*
+    auto glfwGetX11Window(GLFWwindow* window) -> unsigned long;  // Window, an XID
+    auto glfwGetWaylandDisplay() -> void*;                       // struct wl_display*
+    auto glfwGetWaylandWindow(GLFWwindow* window) -> void*;      // struct wl_surface*
+#endif
+}
+
 namespace {
     auto errorCallback(int code, const char* desc) -> void {
         (void)std::fprintf(stderr, "GLFW error %d: %s\n", code, desc);
@@ -106,6 +121,40 @@ auto BeWindow::ShouldClose() const -> bool {
 
 auto BeWindow::GetGlfwWindow() const -> GLFWwindow* {
     return _window;
+}
+
+auto BeWindow::GetNativeWindow() const -> SenNativeWindow {
+#if defined(_WIN32)
+    return {
+        .System = SenWindowSystem::Win32,
+        .Window = glfwGetWin32Window(_window),
+    };
+#elif defined(__APPLE__)
+    // vkCreateMetalSurfaceEXT wants the CAMetalLayer, so sen would still have to walk
+    // NSWindow -> contentView -> layer. untested, there is no mac build yet.
+    return {
+        .System = SenWindowSystem::Metal,
+        .Window = glfwGetCocoaWindow(_window),
+    };
+#else
+    switch (glfwGetPlatform()) {
+        case GLFW_PLATFORM_X11:
+            return {
+                .System = SenWindowSystem::Xlib,
+                .Display = glfwGetX11Display(),
+                .Window = reinterpret_cast<void*>(glfwGetX11Window(_window)),
+            };
+        case GLFW_PLATFORM_WAYLAND:
+            return {
+                .System = SenWindowSystem::Wayland,
+                .Display = glfwGetWaylandDisplay(),
+                .Window = glfwGetWaylandWindow(_window),
+            };
+        default:
+            be_assert(false, "BeWindow::GetNativeWindow: unsupported GLFW platform", glfwGetPlatform());
+            return {};
+    }
+#endif
 }
 
 auto BeWindow::GetReportedLogicalWidth() const -> int {

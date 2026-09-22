@@ -176,6 +176,13 @@ enum class SenPresentMode : uint8_t {
     Mailbox,    // triple-buf
 };
 
+enum class SenWindowSystem : uint8_t {
+    Win32,
+    Xlib,
+    Wayland,
+    Metal,
+};
+
 enum class SenFormat : uint8_t {
     Unknown,
     RGBA8_Unorm,
@@ -342,8 +349,14 @@ struct SenTransition {
     SenLayout To = SenLayout::Undefined;
 };
 
+struct SenNativeWindow {
+    SenWindowSystem System = SenWindowSystem::Xlib;
+    void* Display = nullptr;  // Xlib: Display*, Wayland: wl_display*, Win32/Metal: unused
+    void* Window = nullptr;   // Xlib: Window (XID), Wayland: wl_surface*, Win32: HWND, Metal: CAMetalLayer*
+};
+
 struct SenSwapchainDesc {
-    void* NativeWindowHandle = nullptr;  // GLFWwindow* (TODO: see SenVulkanBackend.cpp)
+    SenNativeWindow Window;
     uint32_t Width = 0;
     uint32_t Height = 0;
     uint32_t BufferCount = 2;

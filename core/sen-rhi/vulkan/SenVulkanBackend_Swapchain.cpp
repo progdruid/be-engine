@@ -1,10 +1,6 @@
 #include "SenVulkanBackend.h"
 
-// TODO: surface creation currently delegates to GLFW, which ties sen-rhi to a windowing library.
-// The correct fix is a small platform-dispatch service inside sen that, given (platform, display server, API choice),
-// returns the appropriate surface + required instance extensions — with no windowing lib
-// knowledge at the sen level. Until that service exists, GLFW is used here as a stopgap.
-#include <umbrellas/include-glfw.h>
+#include <sen-rhi/vulkan/SenVulkanSurface.h>
 #include <sen-rhi/vulkan/SenVulkanConvert.h>
 
 #include <umbrellas/include-libassert.h>
@@ -12,10 +8,9 @@
 auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapchain {
     SenVulkanSwapchainEntry entry {};
 
-    // 1. Create surface — TODO: see above
-    VkResult result = glfwCreateWindowSurface(_instance, static_cast<GLFWwindow*>(desc.NativeWindowHandle), nullptr, &entry.Surface);
-    be_assert(result == VK_SUCCESS, "Failed to create surface!");
-    
+    // 1. Create surface
+    entry.Surface = SenVulkanSurface::Create(_instance, desc.Window);
+
     // 2. Query surface capabilities
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, entry.Surface, &capabilities);
@@ -106,7 +101,7 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
         .clipped          = VK_TRUE,
     };
 
-    result = vkCreateSwapchainKHR(_device, &swapchainInfo, nullptr, &entry.Swapchain);
+    VkResult result = vkCreateSwapchainKHR(_device, &swapchainInfo, nullptr, &entry.Swapchain);
     be_assert(result == VK_SUCCESS, "Failed to create swapchain!");
 
     // 4. Get swapchain images
@@ -118,7 +113,7 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     std::fprintf(stderr, "[vulkan] swapchain images requested=%u actual=%u  extent=%ux%u\n",
         minImageCount, imageCount, imageExtent.width, imageExtent.height);
 
-    entry.NativeWindowHandle = desc.NativeWindowHandle;
+    entry.NativeWindow = desc.Window;
     entry.Width       = imageExtent.width;
     entry.Height      = imageExtent.height;
     entry.BufferCount = desc.BufferCount;
@@ -184,7 +179,7 @@ auto SenVulkanBackend::DestroySwapchain(SenSwapchain handle) -> void {
 auto SenVulkanBackend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uint32_t height) -> void {
     const auto& entry = _swapchains.Get(handle);
     const SenSwapchainDesc desc {
-        .NativeWindowHandle = entry.NativeWindowHandle,
+        .Window = entry.NativeWindow,
         .Width = width,
         .Height = height,
         .BufferCount = entry.BufferCount,

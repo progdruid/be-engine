@@ -12,7 +12,7 @@ uint64_t BeRenderer::_currentFrame = 0;
 BeRenderer::BeRenderer(
     uint32_t desiredWidth,
     uint32_t desiredHeight,
-    void* nativeWindow
+    SenNativeWindow nativeWindow
 )
     : _desiredWidth(desiredWidth)
     , _desiredHeight(desiredHeight)
@@ -35,7 +35,7 @@ auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
     BeShaderLibrary::Init();
 
     _swapchain = Sen::CreateSwapchain({
-        .NativeWindowHandle = _nativeWindow,
+        .Window = _nativeWindow,
         .Width = _desiredWidth,
         .Height = _desiredHeight,
         .PresentMode = presentMode,

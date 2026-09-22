@@ -1,6 +1,6 @@
 #include "SenVulkanBackend.h"
 
-#include <umbrellas/include-glfw.h>  // glfwGetRequiredInstanceExtensions
+#include <sen-rhi/vulkan/SenVulkanSurface.h>
 #include <sen-rhi/vulkan/SenVulkanValidation.h>
 
 #define VMA_IMPLEMENTATION
@@ -42,10 +42,9 @@ auto SenVulkanBackend::Init(const SenInitDesc& desc) -> void {
         .apiVersion         = VK_API_VERSION_1_3,
     };
 
-    uint32_t glfwExtCount = 0;
-    const char** glfwExts = glfwGetRequiredInstanceExtensions(&glfwExtCount); // TODO: see above
-    std::vector<const char*> instanceExtensions(glfwExts, glfwExts + glfwExtCount);
+    std::vector<const char*> instanceExtensions;
     std::vector<const char*> instanceLayers;
+    SenVulkanSurface::ConfigureForInstance(instanceExtensions);
     const void* instancePNext = SenVulkanValidation::ConfigureForInstance(instanceLayers, instanceExtensions);
 
     VkInstanceCreateInfo createInfo {

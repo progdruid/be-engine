@@ -14,7 +14,7 @@ BeStandardGame::BeStandardGame(const BeStandardGameConfig& config) {
     Height = config.Height;
 
     Window = std::make_shared<BeWindow>(Width, Height, config.Title, config.WindowMode);
-    Renderer = std::make_shared<BeRenderer>(Window->GetReportedPixelWidth(), Window->GetReportedPixelHeight(), static_cast<void*>(Window->GetGlfwWindow()));
+    Renderer = std::make_shared<BeRenderer>(Window->GetReportedPixelWidth(), Window->GetReportedPixelHeight(), Window->GetNativeWindow());
     Renderer->LaunchDevice(config.PresentMode);
     Width = Renderer->GetSwapchainPixelWidth();
     Height = Renderer->GetSwapchainPixelHeight();

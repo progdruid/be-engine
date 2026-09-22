@@ -2,6 +2,7 @@
 
 #include <string>
 #include <umbrellas/common.hpp>
+#include <sen-rhi/SenTypes.h>
 
 // ReSharper disable once CppInconsistentNaming
 struct GLFWwindow;
@@ -45,6 +46,7 @@ class BeWindow {
 
     [[nodiscard]] auto ShouldClose() const -> bool;
     [[nodiscard]] auto GetGlfwWindow() const -> GLFWwindow*;
+    [[nodiscard]] auto GetNativeWindow() const -> SenNativeWindow;
     [[nodiscard]] auto GetReportedLogicalWidth() const -> int;
     [[nodiscard]] auto GetReportedLogicalHeight() const -> int;
     [[nodiscard]] auto GetReportedPixelWidth() const -> int;
