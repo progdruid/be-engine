@@ -25,6 +25,8 @@ std::array<std::vector<uint32_t>, static_cast<size_t>(BeBackend::BindlessKind::C
 std::array<uint32_t, static_cast<size_t>(BeBackend::BindlessKind::Count)> BeBackend::_bindlessCapacity {};
 std::vector<uint32_t> BeBackend::_textureSlots;
 std::vector<uint32_t> BeBackend::_samplerSlots;
+std::vector<BeBackend::TrackedLayouts> BeBackend::_textureLayouts;
+std::vector<SenTransition> BeBackend::_queuedTransitions;
 BeBackend::RetirementBucket BeBackend::_pending;
 std::vector<BeBackend::RetirementBucket> BeBackend::_retired;
 std::array<BeBackend::MaterialArenaChain, BeRenderer::FramesInFlight> BeBackend::_arenaChains;
@@ -204,9 +206,11 @@ auto BeBackend::WriteTexture(const void* data, uint32_t size, SenTexture dst) ->
     std::memcpy(Sen::GetBufferPointer(staging), data, size);
 
     SenCmd::Begin(_uploadCmd);
-    SenCmd::TransitionTextures(_uploadCmd, { { dst, SenLayout::TransferDst } });
+    QueueTransition(dst, {}, SenLayout::TransferDst);
+    FlushTransitions(_uploadCmd);
     SenCmd::CopyBufferToTexture(_uploadCmd, staging, 0, dst, 0);
-    SenCmd::TransitionTextures(_uploadCmd, { { dst, SenLayout::ShaderRead } });
+    QueueTransition(dst, {}, SenLayout::ShaderRead);
+    FlushTransitions(_uploadCmd);
     SenCmd::End(_uploadCmd);
 
     const SenSubmission submission = Sen::Submit({ .Lists = &_uploadCmd, .ListCount = 1 });
@@ -241,7 +245,8 @@ auto BeBackend::GenerateMips(const std::shared_ptr<BeTexture>& texture) -> void 
         pass.End();
     }
 
-    SenCmd::TransitionTextures(_uploadCmd, { { texture->Handle, SenLayout::ShaderRead } });
+    QueueTransition(texture->Handle, {}, SenLayout::ShaderRead);
+    FlushTransitions(_uploadCmd);
     SenCmd::End(_uploadCmd);
 
     const SenSubmission submission = Sen::Submit({ .Lists = &_uploadCmd, .ListCount = 1 });
@@ -249,6 +254,68 @@ auto BeBackend::GenerateMips(const std::shared_ptr<BeTexture>& texture) -> void 
     StampRetirements(submission);
 }
 
+
+
+auto BeBackend::ResetTextureLayouts(SenTexture texture, uint32_t mips, uint32_t layers) -> void {
+    be_assert(texture.IsValid(), "BeBackend::ResetTextureLayouts: invalid texture");
+    be_assert(mips > 0 && layers > 0, "BeBackend::ResetTextureLayouts: empty subresource grid", mips, layers);
+
+    if (texture.Index >= _textureLayouts.size()) {
+        _textureLayouts.resize(texture.Index + 1);
+    }
+
+    auto& tracked = _textureLayouts[texture.Index];
+    tracked.Mips = mips;
+    tracked.Layers = layers;
+    tracked.Subresources.assign(size_t(mips) * layers, SenLayout::Undefined);
+}
+
+auto BeBackend::ForgetTextureLayouts(SenTexture texture) -> void {
+    if (texture.Index < _textureLayouts.size()) {
+        _textureLayouts[texture.Index] = {};
+    }
+}
+
+auto BeBackend::QueueTransition(SenTexture texture, SenSubresource subresource, SenLayout to) -> void {
+    be_assert(texture.IsValid(), "BeBackend::QueueTransition: invalid texture");
+    be_assert(
+        texture.Index < _textureLayouts.size() && _textureLayouts[texture.Index].Layers > 0,
+        "BeBackend::QueueTransition: texture layouts are not tracked", texture.Index
+    );
+
+    auto& tracked = _textureLayouts[texture.Index];
+    const uint32_t mipEnd = subresource.MipCount == SenAllMips
+        ? tracked.Mips
+        : subresource.BaseMip + subresource.MipCount;
+    const uint32_t layerEnd = subresource.LayerCount == SenAllLayers
+        ? tracked.Layers
+        : subresource.BaseLayer + subresource.LayerCount;
+
+    be_assert(mipEnd <= tracked.Mips, "BeBackend::QueueTransition: mip range out of bounds", mipEnd, tracked.Mips);
+    be_assert(layerEnd <= tracked.Layers, "BeBackend::QueueTransition: layer range out of bounds", layerEnd, tracked.Layers);
+
+    for (uint32_t mip = subresource.BaseMip; mip < mipEnd; ++mip) {
+        for (uint32_t layer = subresource.BaseLayer; layer < layerEnd; ++layer) {
+            SenLayout& from = tracked.Subresources[mip * tracked.Layers + layer];
+            if (from != to || to == SenLayout::Storage) {
+                _queuedTransitions.push_back({ texture, { mip, 1, layer, 1 }, from, to });
+            }
+            from = to;
+        }
+    }
+}
+
+auto BeBackend::QueueTransition(SenView view, SenLayout to) -> void {
+    be_assert(view.IsValid(), "BeBackend::QueueTransition: invalid view");
+
+    const SenViewDesc& desc = Sen::GetViewDesc(view);
+    QueueTransition(desc.Texture, { desc.BaseMip, desc.MipCount, desc.BaseLayer, desc.LayerCount }, to);
+}
+
+auto BeBackend::FlushTransitions(SenCommandList list) -> void {
+    SenCmd::Transition(list, _queuedTransitions.data(), uint32_t(_queuedTransitions.size()));
+    _queuedTransitions.clear();
+}
 
 
 auto BeBackend::RegisterTexture(SenView view) -> void {

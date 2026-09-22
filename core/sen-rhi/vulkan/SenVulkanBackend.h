@@ -22,7 +22,6 @@ struct SenVulkanTextureEntry {
     VkImage Image = VK_NULL_HANDLE;
     VmaAllocation Allocation = VK_NULL_HANDLE;
     VkFormat Format = VK_FORMAT_UNDEFINED;
-    std::vector<VkImageLayout> MipLayouts;
     uint32_t Width      = 0;                            // mip-0 dimensions
     uint32_t Height     = 0;
     uint32_t MipLevels  = 1;

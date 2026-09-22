@@ -112,6 +112,24 @@ class BeBackend {
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // layout tracking /////////////////////////////////////////////////////////////////////////////////////////////////
+    hide struct TrackedLayouts {
+        uint32_t Mips = 0;
+        uint32_t Layers = 0;
+        std::vector<SenLayout> Subresources;     // [mip * Layers + layer]
+    };
+
+    hide static std::vector<TrackedLayouts> _textureLayouts;     // by SenTexture::Index
+    hide static std::vector<SenTransition> _queuedTransitions;
+
+    expose static auto ResetTextureLayouts (SenTexture texture, uint32_t mips, uint32_t layers) -> void;
+    expose static auto ForgetTextureLayouts (SenTexture texture) -> void;
+    expose static auto QueueTransition (SenTexture texture, SenSubresource subresource, SenLayout to) -> void;
+    expose static auto QueueTransition (SenView view, SenLayout to) -> void;
+    expose static auto FlushTransitions (SenCommandList list) -> void;
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // retirement //////////////////////////////////////////////////////////////////////////////////////////////////////
     hide struct RetirementBucket {
         SenSubmission Submission;

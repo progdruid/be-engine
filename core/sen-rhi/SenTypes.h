@@ -11,6 +11,7 @@
 
 inline constexpr uint32_t SenMaxRootSize = 128;
 inline constexpr uint32_t SenAllMips = UINT32_MAX;
+inline constexpr uint32_t SenAllLayers = UINT32_MAX;
 
 
 enum class SenHandleKind : uint8_t {
@@ -318,11 +319,18 @@ struct SenRenderPassDesc {
     SenViewport Viewport;
 };
 
-struct SenTextureTransition {
-    SenTexture Texture;
-    SenLayout State;
+struct SenSubresource {
     uint32_t BaseMip = 0;
     uint32_t MipCount = SenAllMips;
+    uint32_t BaseLayer = 0;
+    uint32_t LayerCount = SenAllLayers;
+};
+
+struct SenTransition {
+    SenTexture Texture;
+    SenSubresource Subresource;
+    SenLayout From = SenLayout::Undefined;
+    SenLayout To = SenLayout::Undefined;
 };
 
 struct SenSwapchainDesc {

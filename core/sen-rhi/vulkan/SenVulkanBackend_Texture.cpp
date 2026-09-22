@@ -17,7 +17,6 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     entry.Height     = desc.Height;
     entry.MipLevels  = desc.Mips;
     entry.LayerCount = layerCount;
-    entry.MipLayouts.assign(desc.Mips, VK_IMAGE_LAYOUT_UNDEFINED);
 
     VkImageCreateInfo imageInfo {
         .sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,

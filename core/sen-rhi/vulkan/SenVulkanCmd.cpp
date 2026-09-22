@@ -10,8 +10,6 @@
 // ─── render pass ──────────────────────────────────────────────────────────────
 
 auto SenVulkanCmd::BeginPass(SenCommandList list, const SenRenderPassDesc& desc) -> void {
-    // Attachments are expected to already be in the correct layout — callers transition
-    // them (e.g. via BePass / TransitionTextures). BeginPass only opens the render pass.
     const VkCommandBuffer cmd = SenVulkanBackend::LookupCommandList(list).Cmd;
 
     // Color attachments
@@ -142,38 +140,54 @@ auto SenVulkanCmd::CopyBufferToTexture(SenCommandList list, SenBuffer src, uint3
     );
 }
 
-auto SenVulkanCmd::TransitionTextures(SenCommandList list, const std::vector<SenTextureTransition>& transitions) -> void {
+auto SenVulkanCmd::Transition(SenCommandList list, const SenTransition* transitions, uint32_t count) -> void {
+    if (count == 0) { return; }
+
     std::vector<VkImageMemoryBarrier2> barriers;
-    barriers.reserve(transitions.size());
+    barriers.reserve(count);
 
-    for (const auto& transition : transitions) {
-        auto& entry = SenVulkanBackend::LookupTexture(transition.Texture);
-        const VkImageLayout newLayout = SenVk::ToImageLayout(transition.State);
+    for (uint32_t i = 0; i < count; ++i) {
+        const auto& transition = transitions[i];
+        const auto& subresource = transition.Subresource;
+        const auto& entry = SenVulkanBackend::LookupTexture(transition.Texture);
 
-        const VkImageAspectFlags aspect = (entry.Format == VK_FORMAT_D32_SFLOAT)
-            ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        const uint32_t mipCount = subresource.MipCount == SenAllMips
+            ? entry.MipLevels - subresource.BaseMip
+            : subresource.MipCount;
+        const uint32_t layerCount = subresource.LayerCount == SenAllLayers
+            ? entry.LayerCount - subresource.BaseLayer
+            : subresource.LayerCount;
 
-        const uint32_t baseMip  = transition.BaseMip;
-        const uint32_t mipCount = transition.MipCount == SenAllMips ? entry.MipLevels - baseMip : transition.MipCount;
+        be_assert(
+            subresource.BaseMip + mipCount <= entry.MipLevels,
+            "SenCmd::Transition: mip range out of bounds", subresource.BaseMip, mipCount, entry.MipLevels
+        );
+        be_assert(
+            subresource.BaseLayer + layerCount <= entry.LayerCount,
+            "SenCmd::Transition: layer range out of bounds", subresource.BaseLayer, layerCount, entry.LayerCount
+        );
 
-        // One barrier per mip whose layout actually changes — mips may sit in different layouts
-        // (e.g. bloom samples mip i while rendering into mip i+1 of the same image).
-        for (uint32_t mip = baseMip; mip < baseMip + mipCount; ++mip) {
-            const VkImageLayout oldLayout = entry.MipLayouts[mip];
-            if (oldLayout == newLayout) { continue; }
-
-            const VkImageSubresourceRange range { aspect, mip, 1, 0, VK_REMAINING_ARRAY_LAYERS };
-            barriers.push_back(SenVulkanBackend::MakeImageBarrier(entry.Image, range, oldLayout, newLayout));
-            entry.MipLayouts[mip] = newLayout;
-        }
+        const VkImageAspectFlags aspect = 
+            (entry.Format == VK_FORMAT_D32_SFLOAT) 
+            ? VK_IMAGE_ASPECT_DEPTH_BIT 
+            : VK_IMAGE_ASPECT_COLOR_BIT;
+        
+        const VkImageSubresourceRange range {
+            .aspectMask = aspect,
+            .baseMipLevel = subresource.BaseMip,
+            .levelCount = mipCount,
+            .baseArrayLayer = subresource.BaseLayer,
+            .layerCount = layerCount,
+        };
+        barriers.push_back(SenVulkanBackend::MakeImageBarrier(
+            entry.Image, range, SenVk::ToImageLayout(transition.From), SenVk::ToImageLayout(transition.To)
+        ));
     }
 
-    if (barriers.empty()) { return; }
-
     const VkDependencyInfo dependency {
-        .sType                   = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
         .imageMemoryBarrierCount = uint32_t(barriers.size()),
-        .pImageMemoryBarriers    = barriers.data(),
+        .pImageMemoryBarriers = barriers.data(),
     };
     vkCmdPipelineBarrier2(SenVulkanBackend::LookupCommandList(list).Cmd, &dependency);
 }

@@ -22,7 +22,7 @@ auto BePass::SetCompute(bool isCompute) -> BePass& {
 auto BePass::UseTexture(SenTexture texture, bool useAsStorage) -> BePass& {
     be_assert(texture.IsValid(), "BePass::AddReadTexture: invalid texture handle");
     if (useAsStorage) {
-        _storageTextures.push_back(texture);
+        _storage.push_back(texture);
     } else {
         _reads.push_back({ texture, 0, SenAllMips });
     }
@@ -121,23 +121,11 @@ auto BePass::Begin() -> void {
         "BePass::Begin: compute pass cannot have render targets"
     );
 
-    std::vector<SenTextureTransition> transitions;
-    transitions.reserve(_reads.size() + _storageTextures.size() + _colorTargets.size() + 1);
-    for (const auto& read : _reads) {
-        transitions.push_back({ read.Texture, SenLayout::ShaderRead, read.BaseMip, read.MipCount });
-    }
-    for (const auto texture : _storageTextures) {
-        transitions.push_back({ texture, SenLayout::Storage });
-    }
-    for (const auto& target : _colorTargets) {
-        const auto& view = Sen::GetViewDesc(target.View);
-        transitions.push_back({ view.Texture, SenLayout::ColorTarget, view.BaseMip, view.MipCount });
-    }
-    if (_depthTarget) {
-        const auto& view = Sen::GetViewDesc(_depthTarget->View);
-        transitions.push_back({ view.Texture, SenLayout::DepthTarget, view.BaseMip, view.MipCount });
-    }
-    SenCmd::TransitionTextures(_list, transitions);
+    for (const auto& read : _reads)     { BeBackend::QueueTransition(read.Texture, { read.BaseMip, read.MipCount }, SenLayout::ShaderRead); }
+    for (const auto t : _storage)       { BeBackend::QueueTransition(t, {}, SenLayout::Storage); }
+    for (const auto& t : _colorTargets) { BeBackend::QueueTransition(t.View, SenLayout::ColorTarget); }
+    if (_depthTarget)                   { BeBackend::QueueTransition(_depthTarget->View, SenLayout::DepthTarget); }
+    BeBackend::FlushTransitions(_list);
     _formatSetId = BeBackend::AcquireFormatSetId(_formatSet);
 
     if (!_isCompute) {

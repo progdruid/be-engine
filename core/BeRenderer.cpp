@@ -111,6 +111,7 @@ auto BeRenderer::Render() -> void {
     if (!_backbufferView.IsValid()) {
         return;
     }
+    BeBackend::ResetTextureLayouts(Sen::GetViewDesc(_backbufferView).Texture, 1, 1);
 
     const SenCommandList cmd = _frameCmds[slot];
     SenCmd::Begin(cmd);
@@ -122,7 +123,8 @@ auto BeRenderer::Render() -> void {
         SenCmd::PopMarker(cmd);
     }
 
-    SenCmd::TransitionTextures(cmd, { { Sen::GetViewDesc(_backbufferView).Texture, SenLayout::Present } });
+    BeBackend::QueueTransition(_backbufferView, SenLayout::Present);
+    BeBackend::FlushTransitions(cmd);
     SenCmd::PopMarker(cmd);
     SenCmd::End(cmd);
 

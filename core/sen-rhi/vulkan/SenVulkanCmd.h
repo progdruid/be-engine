@@ -46,7 +46,7 @@ struct SenVulkanCmd {
     static auto DrawIndexed(SenCommandList list, uint32_t indexCount, uint32_t firstIndex, int32_t baseVertex) -> void;
     static auto Dispatch(SenCommandList list, uint32_t x, uint32_t y, uint32_t z) -> void;
 
-    static auto TransitionTextures(SenCommandList list, const std::vector<SenTextureTransition>& transitions) -> void;
+    static auto Transition(SenCommandList list, const SenTransition* transitions, uint32_t count) -> void;
     static auto CopyBuffer(SenCommandList list, SenBuffer src, uint32_t srcOffset, uint32_t size, SenBuffer dst, uint32_t dstOffset) -> void;
     static auto CopyBufferToTexture(SenCommandList list, SenBuffer src, uint32_t srcOffset, SenTexture dst, uint32_t mip) -> void;
 

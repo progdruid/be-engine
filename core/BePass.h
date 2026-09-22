@@ -29,7 +29,7 @@ class BePass {
     bool _isCompute = false;
     bool _isBegun = false;
     std::vector<ReadBinding> _reads;
-    std::vector<SenTexture> _storageTextures;
+    std::vector<SenTexture> _storage;
     std::vector<SenColorAttachment> _colorTargets;
     std::optional<SenDepthAttachment> _depthTarget;
     SenViewport _viewport {};

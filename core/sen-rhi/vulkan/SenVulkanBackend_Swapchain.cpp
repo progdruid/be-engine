@@ -134,7 +134,6 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
         texEntry.Format = chosenFormat.format;
         texEntry.Width  = imageExtent.width;
         texEntry.Height = imageExtent.height;
-        texEntry.MipLayouts.assign(1, VK_IMAGE_LAYOUT_UNDEFINED);
 
         entry.Textures[i] = _textures.Create(std::move(texEntry));
         entry.Views[i] = CreateView({

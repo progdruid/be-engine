@@ -160,6 +160,7 @@ BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
     senDesc.ArrayLength = descriptor.ArrayLength;
 
     Handle = Sen::CreateTexture(senDesc);
+    BeBackend::ResetTextureLayouts(Handle, Mips, (IsCubemap ? 6 : 1) * std::max(1u, ArrayLength));
     CreateViews();
 
     if (descriptor.Data) {
@@ -183,6 +184,7 @@ BeTexture::BeTexture(const BeTextureDescriptor& descriptor)
 
 BeTexture::~BeTexture() {
     RetireViews();
+    BeBackend::ForgetTextureLayouts(Handle);
     BeBackend::Retire(Handle);
 }
 
@@ -196,6 +198,7 @@ auto BeTexture::Resize(uint32_t width, uint32_t height) -> void {
     }
 
     RetireViews();
+    BeBackend::ForgetTextureLayouts(Handle);
     BeBackend::Retire(Handle);
 
     Width  = width;
@@ -211,6 +214,7 @@ auto BeTexture::Resize(uint32_t width, uint32_t height) -> void {
     senDesc.ArrayLength = ArrayLength;
 
     Handle = Sen::CreateTexture(senDesc);
+    BeBackend::ResetTextureLayouts(Handle, Mips, (IsCubemap ? 6 : 1) * std::max(1u, ArrayLength));
     CreateViews();
 
     CreateMipViewports();
