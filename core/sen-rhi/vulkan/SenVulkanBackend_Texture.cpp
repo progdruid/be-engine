@@ -1,9 +1,11 @@
-#include "SenVulkanBackend.h"
+#include "SenVulkanState.h"
 
 #include <sen-rhi/vulkan/SenVulkanConvert.h>
 #include <umbrellas/include-libassert.h>
 
-auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
+using namespace SenVk;
+
+auto Sen::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     auto entry = SenVulkanTextureEntry();
 
     const VkFormat format = SenVk::ToFormat(desc.Format);
@@ -39,7 +41,7 @@ auto SenVulkanBackend::CreateTexture(const SenTextureDesc& desc) -> SenTexture {
     return _textures.Create(std::move(entry));
 }
 
-auto SenVulkanBackend::DestroyTexture(SenTexture handle) -> void {
+auto Sen::DestroyTexture(SenTexture handle) -> void {
     if (!_textures.Contains(handle)) {
         return;
     }
@@ -49,11 +51,11 @@ auto SenVulkanBackend::DestroyTexture(SenTexture handle) -> void {
     _textures.Destroy(handle);
 }
 
-auto SenVulkanBackend:: LookupTexture(SenTexture handle) -> SenVulkanTextureEntry& {
+auto SenVk::LookupTexture(SenTexture handle) -> SenVulkanTextureEntry& {
     return _textures.Get(handle);
 }
 
-auto SenVulkanBackend::MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout,
+auto SenVk::MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout,
                                         VkPipelineStageFlags2 srcStage, VkAccessFlags2 srcAccess,
                                         VkPipelineStageFlags2 dstStage, VkAccessFlags2 dstAccess) -> VkImageMemoryBarrier2 {
     return VkImageMemoryBarrier2 {
@@ -71,7 +73,7 @@ auto SenVulkanBackend::MakeImageBarrier(VkImage image, VkImageSubresourceRange r
     };
 }
 
-auto SenVulkanBackend::MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout) -> VkImageMemoryBarrier2 {
+auto SenVk::MakeImageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout, VkImageLayout newLayout) -> VkImageMemoryBarrier2 {
     VkPipelineStageFlags2 srcStage, dstStage;
     VkAccessFlags2        srcAccess, dstAccess;
     SenVk::ScopeForLayout(oldLayout, srcStage, srcAccess);
@@ -79,7 +81,7 @@ auto SenVulkanBackend::MakeImageBarrier(VkImage image, VkImageSubresourceRange r
     return MakeImageBarrier(image, range, oldLayout, newLayout, srcStage, srcAccess, dstStage, dstAccess);
 }
 
-auto SenVulkanBackend::RecordImageBarrier(VkCommandBuffer cmd, const VkImageMemoryBarrier2& barrier) -> void {
+auto SenVk::RecordImageBarrier(VkCommandBuffer cmd, const VkImageMemoryBarrier2& barrier) -> void {
     const VkDependencyInfo dependency {
         .sType                   = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
         .imageMemoryBarrierCount = 1,
@@ -88,7 +90,7 @@ auto SenVulkanBackend::RecordImageBarrier(VkCommandBuffer cmd, const VkImageMemo
     vkCmdPipelineBarrier2(cmd, &dependency);
 }
 
-auto SenVulkanBackend::CreateImageView(VkImage image, VkFormat format, VkImageViewType viewType, VkImageAspectFlags aspect, uint32_t baseMip, uint32_t mipLevels, uint32_t baseLayer, uint32_t layerCount) -> VkImageView {
+auto SenVk::CreateImageView(VkImage image, VkFormat format, VkImageViewType viewType, VkImageAspectFlags aspect, uint32_t baseMip, uint32_t mipLevels, uint32_t baseLayer, uint32_t layerCount) -> VkImageView {
     VkImageViewCreateInfo viewInfo {
         .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image    = image,

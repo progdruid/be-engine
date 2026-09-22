@@ -1,4 +1,4 @@
-#include "SenVulkanBackend.h"
+#include "SenVulkanState.h"
 
 #include <sen-rhi/vulkan/SenVulkanSurface.h>
 #include <sen-rhi/vulkan/SenVulkanValidation.h>
@@ -10,27 +10,10 @@
 
 #include <umbrellas/include-libassert.h>
 
-// ─── static members ────────────────────────────────────────────────────────────────
-VkInstance SenVulkanBackend::_instance;
-VkPhysicalDevice SenVulkanBackend::_physicalDevice;
-VkDevice SenVulkanBackend::_device;
-std::array<SenVulkanBackend::QueueSlot, SenQueueCount> SenVulkanBackend::_queues;
-VmaAllocator SenVulkanBackend::_allocator;
-
-SenSlotMap<SenVulkanTextureEntry, SenTexture> SenVulkanBackend::_textures;
-SenSlotMap<SenVulkanViewEntry, SenView> SenVulkanBackend::_views;
-SenSlotMap<SenVulkanBufferEntry, SenBuffer> SenVulkanBackend::_buffers;
-SenSlotMap<SenVulkanSamplerEntry, SenSampler> SenVulkanBackend::_samplers;
-SenSlotMap<SenVulkanPipelineEntry, SenPipeline> SenVulkanBackend::_pipelines;
-SenSlotMap<SenVulkanCommandListEntry, SenCommandList> SenVulkanBackend::_commandLists;
-SenSlotMap<SenVulkanSwapchainEntry, SenSwapchain> SenVulkanBackend::_swapchains;
-
-VkDescriptorSetLayout SenVulkanBackend::_bindlessLayout = VK_NULL_HANDLE;
-VkDescriptorPool      SenVulkanBackend::_bindlessPool   = VK_NULL_HANDLE;
-VkDescriptorSet       SenVulkanBackend::_bindlessSet    = VK_NULL_HANDLE;
+using namespace SenVk;
 
 // ─── device lifecycle ────────────────────────────────────────────────────────────────
-auto SenVulkanBackend::Init(const SenInitDesc& desc) -> void {
+auto Sen::Init(const SenInitDesc& desc) -> void {
     // instance
     VkApplicationInfo appInfo {
         .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -241,7 +224,7 @@ auto SenVulkanBackend::Init(const SenInitDesc& desc) -> void {
     InitBindless();
 }
 
-auto SenVulkanBackend::Shutdown() -> void {
+auto Sen::Shutdown() -> void {
     WaitIdle();
 
     // Destroy all swapchains first (they depend on device)
@@ -265,11 +248,11 @@ auto SenVulkanBackend::Shutdown() -> void {
     if (_instance)         { vkDestroyInstance(_instance, nullptr); _instance = VK_NULL_HANDLE; }
 }
 
-auto SenVulkanBackend::WaitIdle() -> void {
+auto Sen::WaitIdle() -> void {
     vkDeviceWaitIdle(_device);
 }
 
-auto SenVulkanBackend::GetCaps() -> SenCaps {
+auto Sen::GetCaps() -> SenCaps {
     VkPhysicalDeviceProperties props {};
     vkGetPhysicalDeviceProperties(_physicalDevice, &props);
 
@@ -285,7 +268,7 @@ auto SenVulkanBackend::GetCaps() -> SenCaps {
     return caps;
 }
 
-auto SenVulkanBackend::WaitForSubmission(SenSubmission submission) -> void {
+auto Sen::WaitForSubmission(SenSubmission submission) -> void {
     const VkSemaphoreWaitInfo waitInfo {
         .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
         .semaphoreCount = 1,
@@ -295,14 +278,14 @@ auto SenVulkanBackend::WaitForSubmission(SenSubmission submission) -> void {
     vkWaitSemaphores(_device, &waitInfo, UINT64_MAX);
 }
 
-auto SenVulkanBackend::IsSubmissionComplete(SenSubmission submission) -> bool {
+auto Sen::IsSubmissionComplete(SenSubmission submission) -> bool {
     uint64_t completedValue = 0;
     vkGetSemaphoreCounterValue(_device, _queues[uint32_t(submission.Queue)].Timeline, &completedValue);
     return completedValue >= submission.Id;
 }
 
 // ─── command buffer ────────────────────────────────────────────────────────────────
-auto SenVulkanBackend::CreateCommandList(SenQueue queue) -> SenCommandList {
+auto Sen::CreateCommandList(SenQueue queue) -> SenCommandList {
     VkCommandBufferAllocateInfo allocInfo {
         .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool        = _queues[uint32_t(queue)].Pool,
@@ -316,7 +299,7 @@ auto SenVulkanBackend::CreateCommandList(SenQueue queue) -> SenCommandList {
     return _commandLists.Create(SenVulkanCommandListEntry { .Queue = queue, .Cmd = cmd });
 }
 
-auto SenVulkanBackend::DestroyCommandList(SenCommandList handle) -> void {
+auto Sen::DestroyCommandList(SenCommandList handle) -> void {
     if (!_commandLists.Contains(handle)) {
         return;
     }
@@ -327,11 +310,11 @@ auto SenVulkanBackend::DestroyCommandList(SenCommandList handle) -> void {
     _commandLists.Destroy(handle);
 }
 
-auto SenVulkanBackend::LookupCommandList(SenCommandList handle) -> SenVulkanCommandListEntry& {
+auto SenVk::LookupCommandList(SenCommandList handle) -> SenVulkanCommandListEntry& {
     return _commandLists.Get(handle);
 }
 
-auto SenVulkanBackend::Submit(const SenSubmitDesc& desc) -> SenSubmission {
+auto Sen::Submit(const SenSubmitDesc& desc) -> SenSubmission {
     be_assert(desc.ListCount <= MaxSubmitLists, "Submit: too many command lists", desc.ListCount);
     be_assert(desc.PresentCount <= MaxSubmitPresents, "Submit: too many presents", desc.PresentCount);
     be_assert(desc.WaitCount <= MaxSubmitWaits, "Submit: too many waits", desc.WaitCount);
@@ -425,11 +408,4 @@ auto SenVulkanBackend::Submit(const SenSubmitDesc& desc) -> SenSubmission {
 
     return SenSubmission { desc.Queue, signalValue };
 }
-
-// ─── native escape hatches ────────────────────────────────────────────────────────────────
-auto SenVulkanBackend::GetNativeDevice() -> void* { return _device; }
-auto SenVulkanBackend::GetNativeInstance() -> void* { return _instance; }
-auto SenVulkanBackend::GetNativePhysicalDevice() -> void* { return _physicalDevice; }
-auto SenVulkanBackend::GetNativeQueue() -> void* { return _queues[uint32_t(SenQueue::Graphics)].Queue; }
-auto SenVulkanBackend::GetNativeQueueFamilyIndex() -> uint32_t { return _queues[uint32_t(SenQueue::Graphics)].FamilyIndex; }
 

@@ -8,6 +8,7 @@
 #include <vulkan/vulkan_core.h>
 #include <sen-rhi/Sen.h>
 #include <sen-rhi/vulkan/SenVulkanConvert.h>
+#include <sen-rhi/vulkan/SenVulkanInterop.h>
 
 #include "BePass.h"
 #include "BeRenderer.h"
@@ -44,11 +45,11 @@ auto BeImGuiPass::Initialise(BeRenderer& renderer) -> void {
 
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.ApiVersion      = VK_API_VERSION_1_3;
-    init_info.Instance        = static_cast<VkInstance>(Sen::GetNativeInstance());
-    init_info.PhysicalDevice  = static_cast<VkPhysicalDevice>(Sen::GetNativePhysicalDevice());
-    init_info.Device          = static_cast<VkDevice>(Sen::GetNativeDevice());
-    init_info.QueueFamily     = Sen::GetNativeQueueFamilyIndex();
-    init_info.Queue           = static_cast<VkQueue>(Sen::GetNativeQueue());
+    init_info.Instance        = SenVulkanInterop::GetInstance();
+    init_info.PhysicalDevice  = SenVulkanInterop::GetPhysicalDevice();
+    init_info.Device          = SenVulkanInterop::GetDevice();
+    init_info.QueueFamily     = SenVulkanInterop::GetQueueFamilyIndex();
+    init_info.Queue           = SenVulkanInterop::GetQueue();
     init_info.DescriptorPoolSize = 16;
     init_info.MinAllocationSize = 1024 * 1024;
     init_info.CheckVkResultFn = [](VkResult err) {
@@ -99,7 +100,7 @@ auto BeImGuiPass::Render(BeRenderer& renderer, SenCommandList cmd) -> void {
 
     ImGui_ImplVulkan_RenderDrawData(
         ImGui::GetDrawData(),
-        SenCmd::GetNativeHandle(cmd)
+        SenVulkanInterop::GetCommandBuffer(cmd)
     );
 
     pass.End();

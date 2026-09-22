@@ -1,11 +1,13 @@
-#include "SenVulkanBackend.h"
+#include "SenVulkanState.h"
 
 #include <sen-rhi/vulkan/SenVulkanSurface.h>
 #include <sen-rhi/vulkan/SenVulkanConvert.h>
 
 #include <umbrellas/include-libassert.h>
 
-auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapchain {
+using namespace SenVk;
+
+auto Sen::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapchain {
     SenVulkanSwapchainEntry entry {};
 
     // 1. Create surface
@@ -158,7 +160,7 @@ auto SenVulkanBackend::CreateSwapchain(const SenSwapchainDesc& desc) -> SenSwapc
     return _swapchains.Create(std::move(entry));
 }
 
-auto SenVulkanBackend::DestroySwapchain(SenSwapchain handle) -> void {
+auto Sen::DestroySwapchain(SenSwapchain handle) -> void {
     if (!_swapchains.Contains(handle)) {
         return;
     }
@@ -176,7 +178,7 @@ auto SenVulkanBackend::DestroySwapchain(SenSwapchain handle) -> void {
     _swapchains.Destroy(handle);
 }
 
-auto SenVulkanBackend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uint32_t height) -> void {
+auto Sen::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uint32_t height) -> void {
     const auto& entry = _swapchains.Get(handle);
     const SenSwapchainDesc desc {
         .Window = entry.NativeWindow,
@@ -191,19 +193,19 @@ auto SenVulkanBackend::ResizeSwapchain(SenSwapchain& handle, uint32_t width, uin
     handle = CreateSwapchain(desc);
 }
 
-auto SenVulkanBackend::GetSwapchainFormat(SenSwapchain handle) -> SenFormat {
+auto Sen::GetSwapchainFormat(SenSwapchain handle) -> SenFormat {
     return _swapchains.Get(handle).Format;
 }
 
-auto SenVulkanBackend::GetSwapchainWidth(SenSwapchain handle) -> uint32_t {
+auto Sen::GetSwapchainWidth(SenSwapchain handle) -> uint32_t {
     return _swapchains.Get(handle).Width;
 }
 
-auto SenVulkanBackend::GetSwapchainHeight(SenSwapchain handle) -> uint32_t {
+auto Sen::GetSwapchainHeight(SenSwapchain handle) -> uint32_t {
     return _swapchains.Get(handle).Height;
 }
 
-auto SenVulkanBackend::GetSurfaceExtent(SenSwapchain handle, uint32_t& outWidth, uint32_t& outHeight) -> void {
+auto Sen::GetSurfaceExtent(SenSwapchain handle, uint32_t& outWidth, uint32_t& outHeight) -> void {
     const auto& entry = _swapchains.Get(handle);
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, entry.Surface, &capabilities);
@@ -211,7 +213,7 @@ auto SenVulkanBackend::GetSurfaceExtent(SenSwapchain handle, uint32_t& outWidth,
     outHeight = capabilities.currentExtent.height;
 }
 
-auto SenVulkanBackend::AcquireSwapchainView(SenSwapchain handle) -> SenView {
+auto Sen::AcquireSwapchainView(SenSwapchain handle) -> SenView {
     auto& entry = _swapchains.Get(handle);
 
     // presents are graphics-only, so the recorded values are on the graphics timeline

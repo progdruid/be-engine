@@ -1,8 +1,10 @@
-#include "SenVulkanBackend.h"
+#include "SenVulkanState.h"
 
 #include <umbrellas/include-libassert.h>
 
-auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
+using namespace SenVk;
+
+auto Sen::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
     auto entry = SenVulkanBufferEntry();
     entry.Memory = desc.Memory;
     entry.Size   = desc.Size;
@@ -49,7 +51,7 @@ auto SenVulkanBackend::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
     return _buffers.Create(std::move(entry));
 }
 
-auto SenVulkanBackend::DestroyBuffer(SenBuffer handle) -> void {
+auto Sen::DestroyBuffer(SenBuffer handle) -> void {
     if (!_buffers.Contains(handle)) {
         return;
     }
@@ -59,19 +61,19 @@ auto SenVulkanBackend::DestroyBuffer(SenBuffer handle) -> void {
     _buffers.Destroy(handle);
 }
 
-auto SenVulkanBackend::LookupBuffer(SenBuffer handle) -> SenVulkanBufferEntry& {
+auto SenVk::LookupBuffer(SenBuffer handle) -> SenVulkanBufferEntry& {
     return _buffers.Get(handle);
 }
 
-auto SenVulkanBackend::GetBufferAddress(SenBuffer handle) -> SenGpuAddress {
+auto Sen::GetBufferAddress(SenBuffer handle) -> SenGpuAddress {
     return { _buffers.Get(handle).GpuAddress };
 }
 
-auto SenVulkanBackend::GetBufferMemory(SenBuffer handle) -> SenMemory {
+auto Sen::GetBufferMemory(SenBuffer handle) -> SenMemory {
     return _buffers.Get(handle).Memory;
 }
 
-auto SenVulkanBackend::GetBufferPointer(SenBuffer handle) -> void* {
+auto Sen::GetBufferPointer(SenBuffer handle) -> void* {
     auto& entry = _buffers.Get(handle);
     be_assert(entry.Memory == SenMemory::Upload, "GetBufferPointer: buffer is not Upload memory");
     return entry.MappedPtr;

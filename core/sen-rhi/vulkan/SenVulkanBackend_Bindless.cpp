@@ -1,14 +1,16 @@
-#include "SenVulkanBackend.h"
+#include "SenVulkanState.h"
 
 #include <sen-rhi/vulkan/SenVulkanConvert.h>
 #include <umbrellas/include-libassert.h>
+
+using namespace SenVk;
 
 // must match the bindings be-bindless-tables.hlsl declares its arrays at
 constexpr uint32_t TextureBinding = 0;
 constexpr uint32_t StorageBinding = 1;
 constexpr uint32_t SamplerBinding = 2;
 
-auto SenVulkanBackend::InitBindless() -> void {
+auto SenVk::InitBindless() -> void {
     VkPhysicalDeviceVulkan12Properties props12 {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES,
     };
@@ -88,13 +90,13 @@ auto SenVulkanBackend::InitBindless() -> void {
     be_assert(result == VK_SUCCESS, "Bindless: failed to allocate set");
 }
 
-auto SenVulkanBackend::ShutdownBindless() -> void {
+auto SenVk::ShutdownBindless() -> void {
     if (_bindlessPool)   { vkDestroyDescriptorPool(_device, _bindlessPool, nullptr); _bindlessPool = VK_NULL_HANDLE; }
     if (_bindlessLayout) { vkDestroyDescriptorSetLayout(_device, _bindlessLayout, nullptr); _bindlessLayout = VK_NULL_HANDLE; }
     _bindlessSet = VK_NULL_HANDLE;
 }
 
-auto SenVulkanBackend::PublishTextureBindless(uint32_t slot, SenView view) -> void {
+auto Sen::PublishTextureBindless(uint32_t slot, SenView view) -> void {
     be_assert(slot < BindlessTextureSlots, "PublishTextureBindless: slot out of range", slot);
 
     VkDescriptorImageInfo imageInfo {
@@ -113,7 +115,7 @@ auto SenVulkanBackend::PublishTextureBindless(uint32_t slot, SenView view) -> vo
     vkUpdateDescriptorSets(_device, 1, &write, 0, nullptr);
 }
 
-auto SenVulkanBackend::PublishStorageBindless(uint32_t slot, SenView view) -> void {
+auto Sen::PublishStorageBindless(uint32_t slot, SenView view) -> void {
     be_assert(slot < BindlessStorageSlots, "PublishStorageBindless: slot out of range", slot);
 
     VkDescriptorImageInfo imageInfo {
@@ -132,7 +134,7 @@ auto SenVulkanBackend::PublishStorageBindless(uint32_t slot, SenView view) -> vo
     vkUpdateDescriptorSets(_device, 1, &write, 0, nullptr);
 }
 
-auto SenVulkanBackend::PublishSamplerBindless(uint32_t slot, SenSampler sampler) -> void {
+auto Sen::PublishSamplerBindless(uint32_t slot, SenSampler sampler) -> void {
     be_assert(slot < BindlessSamplerSlots, "PublishSamplerBindless: slot out of range", slot);
 
     VkDescriptorImageInfo imageInfo {

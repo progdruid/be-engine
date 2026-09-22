@@ -1,9 +1,11 @@
-#include "SenVulkanBackend.h"
+#include "SenVulkanState.h"
 
 #include <sen-rhi/vulkan/SenVulkanConvert.h>
 #include <umbrellas/include-libassert.h>
 
-auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
+using namespace SenVk;
+
+auto Sen::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
     auto entry = SenVulkanPipelineEntry();
 
     auto createModule = [&](const SenShaderCode& code) -> VkShaderModule {
@@ -230,7 +232,7 @@ auto SenVulkanBackend::CreatePipeline(const SenPipelineDesc& desc) -> SenPipelin
     return _pipelines.Create(std::move(entry));
 }
 
-auto SenVulkanBackend::DestroyPipeline(SenPipeline handle) -> void {
+auto Sen::DestroyPipeline(SenPipeline handle) -> void {
     if (!_pipelines.Contains(handle)) {
         return;
     }
@@ -241,6 +243,6 @@ auto SenVulkanBackend::DestroyPipeline(SenPipeline handle) -> void {
     _pipelines.Destroy(handle);
 }
 
-auto SenVulkanBackend::LookupPipeline(SenPipeline handle) -> SenVulkanPipelineEntry& {
+auto SenVk::LookupPipeline(SenPipeline handle) -> SenVulkanPipelineEntry& {
     return _pipelines.Get(handle);
 }

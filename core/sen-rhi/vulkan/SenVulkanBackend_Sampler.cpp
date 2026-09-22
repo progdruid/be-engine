@@ -1,9 +1,11 @@
-#include "SenVulkanBackend.h"
+#include "SenVulkanState.h"
 
 #include <sen-rhi/vulkan/SenVulkanConvert.h>
 #include <umbrellas/include-libassert.h>
 
-auto SenVulkanBackend::CreateSampler(const SenSamplerDesc& desc) -> SenSampler {
+using namespace SenVk;
+
+auto Sen::CreateSampler(const SenSamplerDesc& desc) -> SenSampler {
     auto entry = SenVulkanSamplerEntry();
 
     VkSamplerCreateInfo samplerInfo {
@@ -28,7 +30,7 @@ auto SenVulkanBackend::CreateSampler(const SenSamplerDesc& desc) -> SenSampler {
     return _samplers.Create(std::move(entry));
 }
 
-auto SenVulkanBackend::DestroySampler(SenSampler handle) -> void {
+auto Sen::DestroySampler(SenSampler handle) -> void {
     if (!_samplers.Contains(handle)) {
         return;
     }
@@ -38,6 +40,6 @@ auto SenVulkanBackend::DestroySampler(SenSampler handle) -> void {
     _samplers.Destroy(handle);
 }
 
-auto SenVulkanBackend::LookupSampler(SenSampler handle) -> SenVulkanSamplerEntry& {
+auto SenVk::LookupSampler(SenSampler handle) -> SenVulkanSamplerEntry& {
     return _samplers.Get(handle);
 }
