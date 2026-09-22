@@ -1,6 +1,5 @@
 #pragma once
 #include <array>
-#include <filesystem>
 #include <span>
 #include <string>
 #include <unordered_map>
@@ -12,9 +11,6 @@
 #include "sen-rhi/SenTypes.h"
 #include <umbrellas/common.hpp>
 
-
-struct ISlangBlob;
-namespace Slang { template <typename T> class ComPtr; }
 
 // ─── resource entries ─────────────────────────────────────────────────────────
 

@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <umbrellas/include-libassert.h>
-#include <umbrellas/include-glm.h>
 
 
 // ─── render pass ──────────────────────────────────────────────────────────────
@@ -20,7 +19,7 @@ auto SenVulkanCmd::BeginPass(SenCommandList list, const SenRenderPassDesc& desc)
         const VkImageView view = SenVulkanBackend::LookupView(attachment.View).View;
 
         VkClearValue clearValue;
-        clearValue.color = { attachment.ClearColor.r, attachment.ClearColor.g, attachment.ClearColor.b, attachment.ClearColor.a };
+        clearValue.color = { attachment.ClearColor[0], attachment.ClearColor[1], attachment.ClearColor[2], attachment.ClearColor[3] };
 
         colorAttachments.push_back(VkRenderingAttachmentInfoKHR {
             .sType       = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,

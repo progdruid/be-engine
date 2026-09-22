@@ -61,7 +61,7 @@ auto BePass::AddColorTarget(SenView view, SenLoadOp loadOp, glm::vec4 clearColor
     _colorTargets.push_back(SenColorAttachment{
         .View       = view,
         .LoadOp     = loadOp,
-        .ClearColor = clearColor,
+        .ClearColor = {clearColor.r, clearColor.g, clearColor.b, clearColor.a},
     });
     return *this;
 }

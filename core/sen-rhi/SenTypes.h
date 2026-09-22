@@ -1,12 +1,10 @@
 #pragma once
 #include <cstdint>
-#include <filesystem>
 #include <optional>
 #include <span>
 #include <string>
 #include <vector>
 #include <umbrellas/common.hpp>
-#include <umbrellas/include-glm.h>
 
 
 inline constexpr uint32_t SenMaxRootSize = 128;
@@ -319,7 +317,7 @@ struct SenViewport {
 struct SenColorAttachment {
     SenView View;
     SenLoadOp LoadOp = SenLoadOp::Clear;
-    glm::vec4 ClearColor = {0, 0, 0, 0};
+    float ClearColor[4] = {0, 0, 0, 0};
 };
 
 struct SenDepthAttachment {
