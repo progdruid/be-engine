@@ -5,6 +5,7 @@
 #include <sen-rhi/SenTypes.h>
 
 struct SenVulkanCommandListEntry {
+    SenQueue         Queue               = SenQueue::Graphics;
     VkCommandBuffer  Cmd                 = VK_NULL_HANDLE;
     VkPipelineLayout BoundPipelineLayout = VK_NULL_HANDLE;
     SenPipeline      BoundPipeline;

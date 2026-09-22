@@ -42,9 +42,9 @@ auto BeRenderer::LaunchDevice(SenPresentMode presentMode) -> void {
     });
 
     for (auto& cmd : _frameCmds) {
-        cmd = Sen::CreateCommandList();
+        cmd = Sen::CreateCommandList(SenQueue::Graphics);
     }
-    _immediateCmd = Sen::CreateCommandList();
+    _immediateCmd = Sen::CreateCommandList(SenQueue::Graphics);
 
     BeShaderLibrary::RegisterBuiltinDefaultTextures();
     BeShaderLibrary::LoadShaders();

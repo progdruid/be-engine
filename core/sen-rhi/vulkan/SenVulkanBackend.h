@@ -83,15 +83,21 @@ struct SenVulkanSwapchainEntry {
 
 class SenVulkanBackend {
     hide
+    struct QueueSlot {
+        VkQueue Queue = VK_NULL_HANDLE;
+        uint32_t FamilyIndex = 0;
+        VkCommandPool Pool = VK_NULL_HANDLE;
+        VkSemaphore Timeline = VK_NULL_HANDLE;
+        uint64_t Counter = 0;
+        bool OwnsFamily = false;
+    };
+
+    hide
     static VkInstance _instance;
     static VkPhysicalDevice _physicalDevice;
     static VkDevice _device;
-    static VkQueue _queue;
-    static uint32_t _queueFamilyIndex;
-    static VkSemaphore _timeline;
-    static uint64_t _timelineValue;
-    static VkCommandPool _commandPool;
     static VmaAllocator _allocator;
+    static std::array<QueueSlot, SenQueueCount> _queues;
 
     hide
     static SenSlotMap<SenVulkanSwapchainEntry, SenSwapchain> _swapchains;
@@ -114,6 +120,7 @@ class SenVulkanBackend {
     expose
     static constexpr uint32_t MaxSubmitLists = 8;
     static constexpr uint32_t MaxSubmitPresents = 4;
+    static constexpr uint32_t MaxSubmitWaits = 8;
 
     static auto Init(const SenInitDesc& desc) -> void;
     static auto Shutdown() -> void;
@@ -149,7 +156,7 @@ class SenVulkanBackend {
     static auto DestroyPipeline(SenPipeline handle) -> void;
     static auto LookupPipeline(SenPipeline handle) -> SenVulkanPipelineEntry&;
 
-    static auto CreateCommandList() -> SenCommandList;
+    static auto CreateCommandList(SenQueue queue) -> SenCommandList;
     static auto DestroyCommandList(SenCommandList handle) -> void;
     static auto LookupCommandList(SenCommandList handle) -> SenVulkanCommandListEntry&;
 

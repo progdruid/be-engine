@@ -63,6 +63,13 @@ enum class SenMemory : uint8_t {
     Upload,  // host-visible, persistently mapped
 };
 
+enum class SenQueue : uint8_t {
+    Graphics,
+    Compute,   // falls back to the graphics queue when the device has no dedicated family
+    Transfer,  // falls back to the graphics queue when the device has no dedicated family
+};
+inline constexpr uint32_t SenQueueCount = 3;
+
 enum class SenTextureUsage : uint32_t {
     None = 0,
     Sampled = 1 << 0,
@@ -207,6 +214,8 @@ struct SenCaps {
     uint32_t TextureSlots = 0;
     uint32_t StorageSlots = 0;
     uint32_t SamplerSlots = 0;
+    bool DedicatedCompute = false;
+    bool DedicatedTransfer = false;
 };
 
 struct SenBufferDesc {
@@ -343,13 +352,17 @@ struct SenSwapchainDesc {
 };
 
 struct SenSubmission {
-    uint64_t Value = 0;
-    auto IsValid() const -> bool { return Value != 0; }
+    SenQueue Queue = SenQueue::Graphics;
+    uint64_t Id = 0;
+    auto IsValid() const -> bool { return Id != 0; }
 };
 
 struct SenSubmitDesc {
+    SenQueue Queue = SenQueue::Graphics;
     const SenCommandList* Lists = nullptr;
     uint32_t ListCount = 0;
+    const SenSubmission* Waits = nullptr;
+    uint32_t WaitCount = 0;
     const SenSwapchain* Presents = nullptr;
     uint32_t PresentCount = 0;
 };

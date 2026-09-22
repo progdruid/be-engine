@@ -33,7 +33,7 @@ std::array<BeBackend::MaterialArenaChain, BeRenderer::FramesInFlight> BeBackend:
 
 
 auto BeBackend::Init() -> void {
-    _uploadCmd = Sen::CreateCommandList();
+    _uploadCmd = Sen::CreateCommandList(SenQueue::Graphics);
 
     const SenCaps caps = Sen::GetCaps();
     _bindlessCapacity[static_cast<size_t>(BindlessKind::Texture)] = caps.TextureSlots;

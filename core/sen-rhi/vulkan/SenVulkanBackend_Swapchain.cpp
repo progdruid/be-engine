@@ -219,12 +219,15 @@ auto SenVulkanBackend::GetSurfaceExtent(SenSwapchain handle, uint32_t& outWidth,
 auto SenVulkanBackend::AcquireSwapchainView(SenSwapchain handle) -> SenView {
     auto& entry = _swapchains.Get(handle);
 
+    // presents are graphics-only, so the recorded values are on the graphics timeline
+    const VkSemaphore& presentTimeline = _queues[uint32_t(SenQueue::Graphics)].Timeline;
+
     const uint32_t acquireIndex = entry.AcquireIndex;
     const uint64_t acquireValue = entry.AcquireTimelineValues[acquireIndex];
     const VkSemaphoreWaitInfo acquireWait {
         .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
         .semaphoreCount = 1,
-        .pSemaphores    = &_timeline,
+        .pSemaphores    = &presentTimeline,
         .pValues        = &acquireValue,
     };
     vkWaitSemaphores(_device, &acquireWait, UINT64_MAX);
@@ -245,7 +248,7 @@ auto SenVulkanBackend::AcquireSwapchainView(SenSwapchain handle) -> SenView {
     const VkSemaphoreWaitInfo imageWait {
         .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
         .semaphoreCount = 1,
-        .pSemaphores    = &_timeline,
+        .pSemaphores    = &presentTimeline,
         .pValues        = &imageValue,
     };
     vkWaitSemaphores(_device, &imageWait, UINT64_MAX);
