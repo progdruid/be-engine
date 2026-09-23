@@ -7,14 +7,10 @@
 #include "BeTexture.h"
 #include "Sen.h"
 
-// std140 array stride is 16 bytes / 4 floats (float->float4); 
-// matrix os 64 bytes / 16 floats.
-static constexpr uint32_t ArrayStrideFloats = 4;
-static constexpr uint32_t MatrixStrideFloats = 16;
-
-static constexpr auto ArrayStrideFloatsFor(BeMaterialPropertyDescriptor::Type type) -> uint32_t {
-    return type == BeMaterialPropertyDescriptor::Type::Matrix ? MatrixStrideFloats : ArrayStrideFloats;
-}
+// Scalar layout (see BeMaterialScheme): array elements are tightly packed,
+// so the stride in floats equals the element's component count.
+template <typename T>
+static constexpr uint32_t ArrayStrideFloats = sizeof(T) / sizeof(float);
 
 auto BeMaterial::Create(const BeMaterialScheme& scheme) -> std::shared_ptr<BeMaterial> {
     auto material = std::make_shared<BeMaterial>(scheme);
@@ -103,11 +99,7 @@ auto BeMaterial::AssembleData() -> void {
         const auto& defaultValue = property.DefaultValue;
         if (property.ArrayLength > 1) {
             const uint32_t comp = ComponentMap.at(property.PropertyType);
-            const uint32_t stride = ArrayStrideFloatsFor(property.PropertyType);
-            for (uint32_t i = 0; i < property.ArrayLength; ++i) {
-                memcpy(_bufferData.data() + propertyOffset + i * stride,
-                       defaultValue.data() + i * comp, comp * sizeof(float));
-            }
+            memcpy(_bufferData.data() + propertyOffset, defaultValue.data(), property.ArrayLength * comp * sizeof(float));
         } else {
             memcpy(_bufferData.data() + propertyOffset, defaultValue.data(), defaultValue.size() * sizeof(float));
         }
@@ -208,7 +200,7 @@ auto BeMaterial::GetMatrix(const std::string& propertyName) const -> glm::mat4x4
 auto BeMaterial::SetFloat1At(const std::string& propertyName, uint32_t index, float value) -> void {
     be_assert(_scheme.PropertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     be_assert(index < _scheme.PropertyArrayLengths.at(propertyName), "array index out of range: " + propertyName);
-    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats;
+    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats<float>;
     memcpy(_bufferData.data() + offset, &value, sizeof(float));
     _cbufferDirty = true;
 }
@@ -216,7 +208,7 @@ auto BeMaterial::SetFloat1At(const std::string& propertyName, uint32_t index, fl
 auto BeMaterial::SetFloat2At(const std::string& propertyName, uint32_t index, glm::vec2 value) -> void {
     be_assert(_scheme.PropertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     be_assert(index < _scheme.PropertyArrayLengths.at(propertyName), "array index out of range: " + propertyName);
-    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats;
+    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats<glm::vec2>;
     memcpy(_bufferData.data() + offset, &value, sizeof(glm::vec2));
     _cbufferDirty = true;
 }
@@ -224,7 +216,7 @@ auto BeMaterial::SetFloat2At(const std::string& propertyName, uint32_t index, gl
 auto BeMaterial::SetFloat3At(const std::string& propertyName, uint32_t index, glm::vec3 value) -> void {
     be_assert(_scheme.PropertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     be_assert(index < _scheme.PropertyArrayLengths.at(propertyName), "array index out of range: " + propertyName);
-    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats;
+    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats<glm::vec3>;
     memcpy(_bufferData.data() + offset, &value, sizeof(glm::vec3));
     _cbufferDirty = true;
 }
@@ -232,7 +224,7 @@ auto BeMaterial::SetFloat3At(const std::string& propertyName, uint32_t index, gl
 auto BeMaterial::SetFloat4At(const std::string& propertyName, uint32_t index, glm::vec4 value) -> void {
     be_assert(_scheme.PropertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     be_assert(index < _scheme.PropertyArrayLengths.at(propertyName), "array index out of range: " + propertyName);
-    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats;
+    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats<glm::vec4>;
     memcpy(_bufferData.data() + offset, &value, sizeof(glm::vec4));
     _cbufferDirty = true;
 }
@@ -243,7 +235,7 @@ auto BeMaterial::SetFloat1Array(const std::string& propertyName, std::span<const
     be_assert(values.size() <= _scheme.PropertyArrayLengths.at(propertyName), "too many array elements: " + propertyName);
     const uint32_t base = _scheme.PropertyOffsets.at(propertyName);
     for (size_t i = 0; i < values.size(); ++i) {
-        memcpy(_bufferData.data() + base + i * ArrayStrideFloats, &values[i], sizeof(float));
+        memcpy(_bufferData.data() + base + i * ArrayStrideFloats<float>, &values[i], sizeof(float));
     }
     _cbufferDirty = true;
 }
@@ -253,7 +245,7 @@ auto BeMaterial::SetFloat2Array(const std::string& propertyName, std::span<const
     be_assert(values.size() <= _scheme.PropertyArrayLengths.at(propertyName), "too many array elements: " + propertyName);
     const uint32_t base = _scheme.PropertyOffsets.at(propertyName);
     for (size_t i = 0; i < values.size(); ++i) {
-        memcpy(_bufferData.data() + base + i * ArrayStrideFloats, &values[i], sizeof(glm::vec2));
+        memcpy(_bufferData.data() + base + i * ArrayStrideFloats<glm::vec2>, &values[i], sizeof(glm::vec2));
     }
     _cbufferDirty = true;
 }
@@ -263,7 +255,7 @@ auto BeMaterial::SetFloat3Array(const std::string& propertyName, std::span<const
     be_assert(values.size() <= _scheme.PropertyArrayLengths.at(propertyName), "too many array elements: " + propertyName);
     const uint32_t base = _scheme.PropertyOffsets.at(propertyName);
     for (size_t i = 0; i < values.size(); ++i) {
-        memcpy(_bufferData.data() + base + i * ArrayStrideFloats, &values[i], sizeof(glm::vec3));
+        memcpy(_bufferData.data() + base + i * ArrayStrideFloats<glm::vec3>, &values[i], sizeof(glm::vec3));
     }
     _cbufferDirty = true;
 }
@@ -273,7 +265,7 @@ auto BeMaterial::SetFloat4Array(const std::string& propertyName, std::span<const
     be_assert(values.size() <= _scheme.PropertyArrayLengths.at(propertyName), "too many array elements: " + propertyName);
     const uint32_t base = _scheme.PropertyOffsets.at(propertyName);
     for (size_t i = 0; i < values.size(); ++i) {
-        memcpy(_bufferData.data() + base + i * ArrayStrideFloats, &values[i], sizeof(glm::vec4));
+        memcpy(_bufferData.data() + base + i * ArrayStrideFloats<glm::vec4>, &values[i], sizeof(glm::vec4));
     }
     _cbufferDirty = true;
 }
@@ -283,7 +275,7 @@ auto BeMaterial::SetMatrixArray(const std::string& propertyName, std::span<const
     be_assert(values.size() <= _scheme.PropertyArrayLengths.at(propertyName), "too many array elements: " + propertyName);
     const uint32_t base = _scheme.PropertyOffsets.at(propertyName);
     for (size_t i = 0; i < values.size(); ++i) {
-        memcpy(_bufferData.data() + base + i * MatrixStrideFloats, glm::value_ptr(values[i]), sizeof(glm::mat4x4));
+        memcpy(_bufferData.data() + base + i * ArrayStrideFloats<glm::mat4x4>, glm::value_ptr(values[i]), sizeof(glm::mat4x4));
     }
     _cbufferDirty = true;
 }
@@ -292,7 +284,7 @@ auto BeMaterial::SetMatrixArray(const std::string& propertyName, std::span<const
 auto BeMaterial::GetFloat1At(const std::string& propertyName, uint32_t index) const -> float {
     be_assert(_scheme.PropertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     be_assert(index < _scheme.PropertyArrayLengths.at(propertyName), "array index out of range: " + propertyName);
-    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats;
+    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats<float>;
     float value;
     memcpy(&value, _bufferData.data() + offset, sizeof(float));
     return value;
@@ -301,7 +293,7 @@ auto BeMaterial::GetFloat1At(const std::string& propertyName, uint32_t index) co
 auto BeMaterial::GetFloat2At(const std::string& propertyName, uint32_t index) const -> glm::vec2 {
     be_assert(_scheme.PropertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     be_assert(index < _scheme.PropertyArrayLengths.at(propertyName), "array index out of range: " + propertyName);
-    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats;
+    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats<glm::vec2>;
     glm::vec2 value;
     memcpy(&value, _bufferData.data() + offset, sizeof(glm::vec2));
     return value;
@@ -310,7 +302,7 @@ auto BeMaterial::GetFloat2At(const std::string& propertyName, uint32_t index) co
 auto BeMaterial::GetFloat3At(const std::string& propertyName, uint32_t index) const -> glm::vec3 {
     be_assert(_scheme.PropertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     be_assert(index < _scheme.PropertyArrayLengths.at(propertyName), "array index out of range: " + propertyName);
-    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats;
+    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats<glm::vec3>;
     glm::vec3 value;
     memcpy(&value, _bufferData.data() + offset, sizeof(glm::vec3));
     return value;
@@ -319,7 +311,7 @@ auto BeMaterial::GetFloat3At(const std::string& propertyName, uint32_t index) co
 auto BeMaterial::GetFloat4At(const std::string& propertyName, uint32_t index) const -> glm::vec4 {
     be_assert(_scheme.PropertyOffsets.contains(propertyName), "unknown material property: " + propertyName);
     be_assert(index < _scheme.PropertyArrayLengths.at(propertyName), "array index out of range: " + propertyName);
-    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats;
+    const uint32_t offset = _scheme.PropertyOffsets.at(propertyName) + index * ArrayStrideFloats<glm::vec4>;
     glm::vec4 value;
     memcpy(&value, _bufferData.data() + offset, sizeof(glm::vec4));
     return value;
