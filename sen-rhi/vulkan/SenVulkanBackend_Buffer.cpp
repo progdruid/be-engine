@@ -34,7 +34,7 @@ auto Sen::CreateBuffer(const SenBufferDesc& desc) -> SenBuffer {
 
         entry.MappedPtr = allocResult.pMappedData;
     } else {
-        // Device-local VRAM — GPU reads fastest from here, CPU writes arrive through a copy.
+        // Device-local VRAM - GPU reads fastest from here, CPU writes arrive through a copy.
         VmaAllocationCreateInfo allocInfo {
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
         };

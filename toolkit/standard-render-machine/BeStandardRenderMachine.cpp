@@ -51,7 +51,7 @@ BeStandardRenderMachine::~BeStandardRenderMachine() = default;
 
 
 // =====================================================================================================================
-// BeStandardRenderMachine — texture registry
+// BeStandardRenderMachine -texture registry
 // =====================================================================================================================
 
 auto BeStandardRenderMachine::ClearTargets() -> void {
@@ -122,7 +122,7 @@ auto BeStandardRenderMachine::Resize(uint32_t width, uint32_t height) -> void {
 }
 
 // =====================================================================================================================
-// BeStandardRenderMachine — pass builders
+// BeStandardRenderMachine -pass builders
 // =====================================================================================================================
 
 auto BeStandardRenderMachine::AddShadowPass() -> void {
@@ -267,7 +267,7 @@ auto BeStandardRenderMachine::AddSkyboxPass(const std::string& outputName) -> vo
 }
 
 // =====================================================================================================================
-// BeStandardRenderMachine — build
+// BeStandardRenderMachine -build
 // =====================================================================================================================
 
 auto BeStandardRenderMachine::ClearPasses() -> void {
@@ -291,7 +291,7 @@ auto BeStandardRenderMachine::Activate() -> void {
 
 
 // =====================================================================================================================
-// BeStandardRenderMachine — debug
+// BeStandardRenderMachine -debug
 // =====================================================================================================================
 
 
@@ -306,7 +306,7 @@ auto BeStandardRenderMachine::GetDebugChannelTexture() const -> std::shared_ptr<
 }
 
 // =====================================================================================================================
-// BeStandardRenderMachine — frame submission
+// BeStandardRenderMachine -frame submission
 // =====================================================================================================================
 
 auto BeStandardRenderMachine::ClearFrame() -> void {
@@ -372,7 +372,7 @@ auto BeStandardRenderMachine::EnsureShadowArrays() -> void {
 }
 
 // =====================================================================================================================
-// BeStandardRenderMachine — asset loading
+// BeStandardRenderMachine -asset loading
 // =====================================================================================================================
 
 auto BeStandardRenderMachine::LoadProp(
@@ -452,7 +452,7 @@ auto BeStandardRenderMachine::LoadProp(
 
 
 // =====================================================================================================================
-// BeStandardRenderMachine — mesh baking
+// BeStandardRenderMachine -mesh baking
 // =====================================================================================================================
 
 auto BeStandardRenderMachine::ClearMeshes() -> void {

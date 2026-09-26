@@ -188,7 +188,7 @@ class BeStandardRenderMachine {
     auto InitialisePasses() -> void;
     auto Activate() -> void;
 
-    // debug channel (−1 = normal, 0..N = G-buffer targets in declaration order) ---------------------------------------
+    // debug channel (-1 = normal, 0..N = G-buffer targets in declaration order) ---------------------------------------
     expose
     auto SetDebugChannel(int channel) -> void;
     auto GetDebugChannelTexture() const -> std::shared_ptr<BeTexture>;

@@ -7,7 +7,7 @@
 using namespace SenVk;
 
 
-// ─── render pass ──────────────────────────────────────────────────────────────
+// --- render pass --------------------------------------------------------------
 
 auto SenCmd::BeginPass(SenCommandList list, const SenRenderPassDesc& desc) -> void {
     const VkCommandBuffer cmd = SenVk::LookupCommandList(list).Cmd;
@@ -223,7 +223,7 @@ auto SenCmd::PopMarker(SenCommandList list) -> void {
 }
 
 
-// ─── pipeline + resources ─────────────────────────────────────────────────────
+// --- pipeline + resources -----------------------------------------------------
 
 auto SenCmd::SetPipeline(SenCommandList list, SenPipeline pipeline) -> void {
     auto& entry = SenVk::LookupCommandList(list);
@@ -321,7 +321,7 @@ auto SenCmd::SetIndexBuffer(SenCommandList list, SenBuffer buffer) -> void {
 }
 
 
-// ─── draw ─────────────────────────────────────────────────────────────────────
+// --- draw ---------------------------------------------------------------------
 
 auto SenCmd::Draw(SenCommandList list, uint32_t vertexCount, uint32_t firstVertex) -> void {
     auto& entry = SenVk::LookupCommandList(list);

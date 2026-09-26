@@ -12,7 +12,7 @@ float3 ApplyContrast(float3 color, float contrast) {
     return pow(max(color, 0.0) / pivot, contrast) * pivot;
 }
 
-float3 Tonemap_ReinhardWhite(float3 x, float white) { // white ~ 2–4 
+float3 Tonemap_ReinhardWhite(float3 x, float white) { // white ~ 2-4 
     float3 num = x * (1.0 + x / (white * white));
     return num / (1.0 + x);
 }

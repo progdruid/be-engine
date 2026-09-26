@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 
-# ── helpers ───────────────────────────────────────────────────────────────────
+# -- helpers -------------------------------------------------------------------
 
 function(be_apply_defaults target)
     target_compile_options(${target} PRIVATE
@@ -64,7 +64,7 @@ function(be_copy_runtime_deps target)
 endfunction()
 
 
-# ── targets ───────────────────────────────────────────────────────────────────
+# -- targets -------------------------------------------------------------------
 
 add_subdirectory(vendor)
 add_subdirectory(umbrellas)

@@ -12,7 +12,7 @@
 
 using namespace SenVk;
 
-// ─── device lifecycle ────────────────────────────────────────────────────────────────
+// --- device lifecycle ----------------------------------------------------------------
 auto Sen::Init(const SenInitDesc& desc) -> void {
     // instance
     VkApplicationInfo appInfo {
@@ -284,7 +284,7 @@ auto Sen::IsSubmissionComplete(SenSubmission submission) -> bool {
     return completedValue >= submission.Id;
 }
 
-// ─── command buffer ────────────────────────────────────────────────────────────────
+// --- command buffer ----------------------------------------------------------------
 auto Sen::CreateCommandList(SenQueue queue) -> SenCommandList {
     VkCommandBufferAllocateInfo allocInfo {
         .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,

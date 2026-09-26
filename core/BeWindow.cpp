@@ -203,7 +203,7 @@ auto BeWindow::DebugPollMonitors() const -> void {
 
         bool isPrimary = (monitor == primary);
 
-        printf("[%d]%s %s — %dx%d @ %dHz, pos=(%d,%d), scale=(%.1f,%.1f)\n",
+        printf("[%d]%s %s - %dx%d @ %dHz, pos=(%d,%d), scale=(%.1f,%.1f)\n",
             i,
             isPrimary ? " [PRIMARY]" : "",
             name,

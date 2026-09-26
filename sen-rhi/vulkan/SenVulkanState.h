@@ -9,7 +9,7 @@
 #include "SenTypes.h"
 
 
-// ─── resource entries ─────────────────────────────────────────────────────────
+// --- resource entries ---------------------------------------------------------
 
 struct SenVulkanTextureEntry {
     VkImage Image = VK_NULL_HANDLE;
@@ -100,7 +100,7 @@ struct SenVulkanQueueSlot {
     bool OwnsFamily = false;
 };
 
-// ─── backend state ────────────────────────────────────────────────────────────
+// --- backend state ------------------------------------------------------------
 
 namespace SenVk {
 
@@ -126,7 +126,7 @@ inline VkDescriptorSetLayout _bindlessLayout = VK_NULL_HANDLE;
 inline VkDescriptorPool      _bindlessPool   = VK_NULL_HANDLE;
 inline VkDescriptorSet       _bindlessSet    = VK_NULL_HANDLE;
 
-// ─── backend internals ────────────────────────────────────────────────────────
+// --- backend internals --------------------------------------------------------
 
 auto LookupBuffer(SenBuffer handle) -> SenVulkanBufferEntry&;
 auto LookupTexture(SenTexture handle) -> SenVulkanTextureEntry&;

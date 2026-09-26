@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-**Linux (active platform)** — uses CMake with Ninja (requires CMake 3.25+):
+**Linux (active platform)**: uses CMake with Ninja (requires CMake 3.25+):
 ```bash
 # Configure
 cmake --preset linux-debug    # or linux-release, or linux-debug-hotreload (BE_SYMLINK_ASSETS=ON: cook symlinks content)
@@ -17,7 +17,7 @@ cd out/linux-debug/example-sakura && ./example-sakura
 The build runs `shadergen --check` then `cook` for each app, so a stale boilerplate region fails
 the build (fix with `./bechef shadergen`). Debug builds copy the Vulkan validation layer next to the exe.
 
-**Windows** — CMake with Visual Studio 2022:
+**Windows**: CMake with Visual Studio 2022:
 ```bash
 cmake --preset windows
 cmake --build out/windows --config Debug
@@ -31,22 +31,22 @@ No tests or linting. C++23 (`/Zc:__cplusplus /Zc:preprocessor` on MSVC). Build o
 
 ```
 be-engine/
-├── sen-rhi/            # Static lib `sen` — RHI abstraction (Vulkan-only backend)
-├── umbrellas/          # INTERFACE lib — config headers (glm, libassert, json, common)
-├── core/               # Static lib — rendering engine core
+├── sen-rhi/            # Static lib `sen`: RHI abstraction (Vulkan-only backend)
+├── umbrellas/          # INTERFACE lib: config headers (glm, libassert, json, common)
+├── core/               # Static lib: rendering engine core
 │   └── Be*.h/cpp       # Engine classes
-├── toolkit/            # Static lib — higher-level abstractions; links against core
+├── toolkit/            # Static lib: higher-level abstractions; links against core
 │   ├── standard-render-machine/  # Deferred rendering pipeline (SRM)
 │   ├── standard-game/  # BeStandardGame app loop + BeStandardBaseScene/FullScene framework
 │   ├── coroutine/      # Unity-style BeCoroutine + BeCoroutineScheduler
-│   ├── assimp-import/  # BeAssimpImporter — Assimp-based model loading
+│   ├── assimp-import/  # BeAssimpImporter: Assimp-based model loading
 │   ├── scenes/         # BeScene base + BeSceneManager
-│   ├── lua/            # BeLuaState + BeLuaValue — Lua data reading
+│   ├── lua/            # BeLuaState + BeLuaValue: Lua data reading
 │   ├── imgui/          # ImGui source + BeImGuiPass + backends
 │   └── entt/           # ECS header-only library
 ├── example-sakura/     # Advanced showcase (multi-scene, ECS, SRM)
 ├── devtools/
-│   └── bechef/         # CLI — content cook, workspace check, shader boilerplate autogen
+│   └── bechef/         # CLI: content cook, workspace check, shader boilerplate autogen
 ├── bechef              # Built CLI binary, copied to root by CMake (invoke as ./bechef)
 ├── workspace.bechef    # Workspace roots + ignore globs
 └── vendor/             # Third-party libraries
@@ -62,26 +62,26 @@ only when it is the top-level project; a parent project adds `umbrellas`, `sen-r
 
 ### Core Engine (`core/`)
 
-- **`BeRenderer`** — manages Vulkan swapchain/device/queues and an ordered list of `BeRenderPass*`. `Render()` opens a `SenCommandList` and runs each pass wrapped in debug annotations. Binds the `uniform-material` frame scheme (camera matrices, time, ambient) before every pass.
-- **`BeRenderPass`** — abstract base: `Initialise(BeRenderer&)` and `Render(BeRenderer&, SenCommandList)`, plus `GetPassName()`. Passes are held in a `BePassSequence` (`vector<unique_ptr<BeRenderPass>>`).
-- **`BePass`** — fluent per-render command-scope helper built on a `SenCommandList`: `.SetCompute(...)`, `.UseTexture(...)`/`.UseMaterial(...)` (read/storage bindings), `.AddColorTarget(...)`/`.SetDepthTarget(...)`, `.SetViewport(...)`, then `.SetState(state)`, `.Override*(...)`, and `.Bind(link, material)` (writes root fields) per draw, then `Draw`/`DrawIndexed`/`Dispatch`. A pass's `Render()` builds one or more of these to declare its I/O and issue draws/dispatches. This is the recording layer; `BeRenderPass` is the schedulable unit.
+- **`BeRenderer`**: manages Vulkan swapchain/device/queues and an ordered list of `BeRenderPass*`. `Render()` opens a `SenCommandList` and runs each pass wrapped in debug annotations. Binds the `uniform-material` frame scheme (camera matrices, time, ambient) before every pass.
+- **`BeRenderPass`**: abstract base: `Initialise(BeRenderer&)` and `Render(BeRenderer&, SenCommandList)`, plus `GetPassName()`. Passes are held in a `BePassSequence` (`vector<unique_ptr<BeRenderPass>>`).
+- **`BePass`**: fluent per-render command-scope helper built on a `SenCommandList`: `.SetCompute(...)`, `.UseTexture(...)`/`.UseMaterial(...)` (read/storage bindings), `.AddColorTarget(...)`/`.SetDepthTarget(...)`, `.SetViewport(...)`, then `.SetState(state)`, `.Override*(...)`, and `.Bind(link, material)` (writes root fields) per draw, then `Draw`/`DrawIndexed`/`Dispatch`. A pass's `Render()` builds one or more of these to declare its I/O and issue draws/dispatches. This is the recording layer; `BeRenderPass` is the schedulable unit.
 - **`BeDrawState`**: immutable render state built at load, `BeDrawState::Create(shader).SetCull(...).SetBlend(...).Build()`. Target formats come from the `BePass`. State and overrides take effect at the next draw or dispatch, which resolves the pipeline from `BeBackend`'s `[staticKeyId][formatSetId]` table.
 - **`BeShader`**: plain data (per-stage SPIR-V, render state, targets, material schemes, root layout). Created by `BeShaderLibrary` from the parsed `@be-shader` block. Scheme lookup: `BeShaderLibrary::GetShaderScheme(shader, link)`.
-- **`BeShaderLibrary`** — `BeRenderer` loads every cooked shader in the runtime `shaders/` dir at init via `BeShaderLibrary::LoadShaders()`. Apps never load shader dirs themselves. Owns hot reload: on a source or include change it recompiles the shader's stages (all or nothing) and has `BeBackend::RebuildPipelines` recreate that shader's pipelines. Only bytecode reloads, the `@be-shader` and `@be-material` blocks are read once at load.
-- **`BeShaderCompiler`** — Slang-based HLSL→SPIR-V compiler. Pipelines are created from the bytecode; sen knows nothing about shader sources.
-- **`BeShaderTools`** — parses the `@be-material` and `@be-shader` DSL blocks from `.hlsl` comments.
+- **`BeShaderLibrary`**: `BeRenderer` loads every cooked shader in the runtime `shaders/` dir at init via `BeShaderLibrary::LoadShaders()`. Apps never load shader dirs themselves. Owns hot reload: on a source or include change it recompiles the shader's stages (all or nothing) and has `BeBackend::RebuildPipelines` recreate that shader's pipelines. Only bytecode reloads, the `@be-shader` and `@be-material` blocks are read once at load.
+- **`BeShaderCompiler`**: Slang-based HLSL→SPIR-V compiler. Pipelines are created from the bytecode; sen knows nothing about shader sources.
+- **`BeShaderTools`**: parses the `@be-material` and `@be-shader` DSL blocks from `.hlsl` comments.
 - **`BeBackend`**: static owner of Be's GPU-side state: pipeline cache, material arenas, the retirement queue (resources retire into a pending bucket, stamped with the submission at submit time and freed once it completes), uploads (`WriteBuffer`, `WriteTexture`, `GenerateMips`, each staging through Upload memory and submitting immediately), and the bindless table (`RegisterTexture`/`RegisterSampler` allocate a slot and publish it through sen, `GetTextureSlot`/`GetSamplerSlot` answer per draw when `BePass::Bind` fills the root; slots are released when the view or sampler is destroyed). `BeRenderer` drives `Init`/`Shutdown` in order: shader library, backend, sen.
-- **`BeFileWatcher`** — generic hot-reload: register a path-provider + handler `WatchId`, poll each frame. Used by `BeStandardFullScene` for live scene/shader reload.
-- **`BeTexture`** — builder: `BeTexture::Create(name).SetSize(w,h).SetFormat(...).Build()`. Formats: RGBA8, BGRA8, RGBA16_Float, R11G11B10_Float, Depth32, RGB32/RGBA32/RG32/R32_Float.
-- **`BeMaterial` / `BeMaterialScheme`** — typed material properties (float, float2–4, matrix, textures, samplers). `BeMaterial::Create(schemeName)` instantiates from a scheme.
-- **`BeMesh`** — `std::vector<BeFullVertex>` + indices + `std::vector<BeMeshSlice>` (multi-material regions).
-- **`BeMeshPrimitives`** — namespace with `Plane()`, `Cube()`, `Sphere()` returning `shared_ptr<BeMesh>`.
-- **`BeProp`** — renderable object: mesh + shader + per-slice materials + two-sided flags. Use `BeProp::FromMesh(mesh, shader)` for procedural geometry; use `BeAssimpImporter` or `SRM.LoadProp()` for file-loaded models.
-- **`BeAssetRegistry`** — instance-based name→asset store for materials, textures, and props (`Add/Get/Has/Remove`, `Get*` returns `weak_ptr`). Owned per-scene (e.g. `BeStandardFullScene` holds one); not a global. Shaders are managed separately by `BeShaderLibrary`.
-- **`BeWindow`** — GLFW window wrapper. Modes: Windowed, Fullscreen, BorderlessFullscreen.
-- **`BeInput`** — keyboard (`GetKey/Down/Up`), mouse (position, buttons, scroll, capture), gamepad.
-- **`BeCamera`** — position, yaw/pitch in degrees, FOV, near/far. `Update()` recalculates matrices and direction vectors.
-- **`BeTimer`** — frame timing (delta time, elapsed time).
+- **`BeFileWatcher`**: generic hot-reload: register a path-provider + handler `WatchId`, poll each frame. Used by `BeStandardFullScene` for live scene/shader reload.
+- **`BeTexture`**: builder: `BeTexture::Create(name).SetSize(w,h).SetFormat(...).Build()`. Formats: RGBA8, BGRA8, RGBA16_Float, R11G11B10_Float, Depth32, RGB32/RGBA32/RG32/R32_Float.
+- **`BeMaterial` / `BeMaterialScheme`**: typed material properties (float, float2–4, matrix, textures, samplers). `BeMaterial::Create(schemeName)` instantiates from a scheme.
+- **`BeMesh`**: `std::vector<BeFullVertex>` + indices + `std::vector<BeMeshSlice>` (multi-material regions).
+- **`BeMeshPrimitives`**: namespace with `Plane()`, `Cube()`, `Sphere()` returning `shared_ptr<BeMesh>`.
+- **`BeProp`**: renderable object: mesh + shader + per-slice materials + two-sided flags. Use `BeProp::FromMesh(mesh, shader)` for procedural geometry; use `BeAssimpImporter` or `SRM.LoadProp()` for file-loaded models.
+- **`BeAssetRegistry`**: instance-based name→asset store for materials, textures, and props (`Add/Get/Has/Remove`, `Get*` returns `weak_ptr`). Owned per-scene (e.g. `BeStandardFullScene` holds one); not a global. Shaders are managed separately by `BeShaderLibrary`.
+- **`BeWindow`**: GLFW window wrapper. Modes: Windowed, Fullscreen, BorderlessFullscreen.
+- **`BeInput`**: keyboard (`GetKey/Down/Up`), mouse (position, buttons, scroll, capture), gamepad.
+- **`BeCamera`**: position, yaw/pitch in degrees, FOV, near/far. `Update()` recalculates matrices and direction vectors.
+- **`BeTimer`**: frame timing (delta time, elapsed time).
 
 ### RHI Abstraction Layer (`sen-rhi/`)
 
@@ -89,13 +89,13 @@ Its own target, `sen`. Include root is `sen-rhi/` itself, so headers are `<Sen.h
 `<vulkan/SenVulkanInterop.h>`. It links Vulkan, libassert and `umbrellas` and nothing else:
 no glm, no GLFW, no Be headers.
 
-- **`Sen.h`** — the public API: `Sen` and `SenCmd`, static functions over handles and PODs. No Vulkan.
-- **`SenTypes.h`** — GPU type definitions: formats, usage flags, topology, sampler modes, blend/depth states, buffer access.
-- **`vulkan/`** — Vulkan backend: device, swapchain, textures, buffers, samplers, pipelines, descriptor sets. Uses VMA for memory. `SenVulkanState.h` holds the entries and backend state, `SenVulkanInterop.h` hands native handles to the ImGui backend.
+- **`Sen.h`**: the public API: `Sen` and `SenCmd`, static functions over handles and PODs. No Vulkan.
+- **`SenTypes.h`**: GPU type definitions: formats, usage flags, topology, sampler modes, blend/depth states, buffer access.
+- **`vulkan/`**: Vulkan backend: device, swapchain, textures, buffers, samplers, pipelines, descriptor sets. Uses VMA for memory. `SenVulkanState.h` holds the entries and backend state, `SenVulkanInterop.h` hands native handles to the ImGui backend.
 
 ### Toolkit: Standard Render Machine (`toolkit/standard-render-machine/`)
 
-`BeStandardRenderMachine` (SRM) is a fluent builder that owns the texture registry, pass list, and per-frame geometry/light submission buffer. It is the standard deferred pipeline — **an example, not the engine**.
+`BeStandardRenderMachine` (SRM) is a fluent builder that owns the texture registry, pass list, and per-frame geometry/light submission buffer. It is the standard deferred pipeline: **an example, not the engine**.
 
 Typical setup:
 ```cpp
@@ -126,12 +126,12 @@ SRM->AddPointLight({ ... });
 ```
 
 Passes (all in `toolkit/standard-render-machine/`):
-- **`BeStandardShadowPass`** — shadow maps for directional lights (2D) and point lights (cubemap).
-- **`BeStandardGeometryPass`** — populates G-buffer (4 color targets + depth).
-- **`BeStandardLightingPass`** — deferred lighting with shadows and emissive.
-- **`BeStandardBloomPass`** — Kawase bloom (bright extraction → downsample → upsample blend).
-- **`BeStandardFullscreenEffectPass`** — generic fullscreen post-process (FXAA, SMAA, custom).
-- **`BeStandardBackbufferPass`** — final composite + tonemapping to swapchain.
+- **`BeStandardShadowPass`**: shadow maps for directional lights (2D) and point lights (cubemap).
+- **`BeStandardGeometryPass`**: populates G-buffer (4 color targets + depth).
+- **`BeStandardLightingPass`**: deferred lighting with shadows and emissive.
+- **`BeStandardBloomPass`**: Kawase bloom (bright extraction → downsample → upsample blend).
+- **`BeStandardFullscreenEffectPass`**: generic fullscreen post-process (FXAA, SMAA, custom).
+- **`BeStandardBackbufferPass`**: final composite + tonemapping to swapchain.
 
 `BeImGuiPass` lives in `toolkit/imgui/`.
 
@@ -139,9 +139,9 @@ Passes (all in `toolkit/standard-render-machine/`):
 
 The application framework that used to live in `example-sakura`, now reusable.
 
-- **`BeStandardGame`** — owns `BeWindow`, `BeRenderer`, `BeInput`, `BeSceneManager`. Constructed from a `BeStandardGameConfig` (title, window mode, size, present mode). `Run()` drives the main loop (poll input, tick active scene, render). `example-sakura/main.cpp` is the canonical entrypoint: construct the game, register scenes, `Prepare()` each, request the first scene, `return game.Run()`.
-- **`BeStandardBaseScene`** — `BeScene` subclass holding a `BeStandardGame*`; adds virtual `Prepare()`, `Tick(deltaTime)`, `Render()`. Project scenes subclass this.
-- **`BeStandardFullScene`** — batteries-included scene: owns its own `BeAssetRegistry`, `entt::registry`, `BeCamera`, a `BeStandardRenderMachine`, a `BeLuaState`, and a `BeCoroutineScheduler`. Content is Lua-driven through overridable `DefineSettings/DefineAssets/DefineScene/DefinePasses` plus `ApplyLua*` appliers. `SetWatchFile()` + `Reload(ReloadMask)` (a bitmask over Settings/Assets/Scene/Passes) give hot-reload via `BeFileWatcher`.
+- **`BeStandardGame`**: owns `BeWindow`, `BeRenderer`, `BeInput`, `BeSceneManager`. Constructed from a `BeStandardGameConfig` (title, window mode, size, present mode). `Run()` drives the main loop (poll input, tick active scene, render). `example-sakura/main.cpp` is the canonical entrypoint: construct the game, register scenes, `Prepare()` each, request the first scene, `return game.Run()`.
+- **`BeStandardBaseScene`**: `BeScene` subclass holding a `BeStandardGame*`; adds virtual `Prepare()`, `Tick(deltaTime)`, `Render()`. Project scenes subclass this.
+- **`BeStandardFullScene`**: batteries-included scene: owns its own `BeAssetRegistry`, `entt::registry`, `BeCamera`, a `BeStandardRenderMachine`, a `BeLuaState`, and a `BeCoroutineScheduler`. Content is Lua-driven through overridable `DefineSettings/DefineAssets/DefineScene/DefinePasses` plus `ApplyLua*` appliers. `SetWatchFile()` + `Reload(ReloadMask)` (a bitmask over Settings/Assets/Scene/Passes) give hot-reload via `BeFileWatcher`.
 
 ### Toolkit: Coroutines (`toolkit/coroutine/`)
 
@@ -164,10 +164,10 @@ scheduler (e.g. `BeStandardFullScene`) and start coroutines for timed/sequenced 
 A shader's `bind` lines assign a scheme to a register (`s0`, `s1`, ...) with a *frequency*
 that says who fills it and how often:
 
-- `frame` — renderer's `uniform-material` (camera, time, ambient), bound by `BeRenderer` every pass.
-- `geometry-object` — per-object data (model matrix), bound per draw by the geometry pass.
-- `geometry-main` — per-draw surface material in the geometry pass.
-- `main` — this shader's own per-draw material (fullscreen/custom passes).
+- `frame`: renderer's `uniform-material` (camera, time, ambient), bound by `BeRenderer` every pass.
+- `geometry-object`: per-object data (model matrix), bound per draw by the geometry pass.
+- `geometry-main`: per-draw surface material in the geometry pass.
+- `main`: this shader's own per-draw material (fullscreen/custom passes).
 
 Register numbers must be consistent across a shader's binds; the concrete cbuffer/descriptor
 slots are emitted into the auto-boilerplate by `shadergen`.
@@ -180,8 +180,8 @@ slots are emitted into the auto-boilerplate by `shadergen`.
 
 ### Scene System (`toolkit/scenes/`)
 
-- **`BeScene`** — base with `OnLoad()` / `OnUnload()`.
-- **`BeSceneManager`** — named registry. `RequestSceneChange()` / `ApplyPendingSceneChange()` for deferred transitions. Typed accessors: `GetActiveScene<T>()`, `GetScene<T>()`.
+- **`BeScene`**: base with `OnLoad()` / `OnUnload()`.
+- **`BeSceneManager`**: named registry. `RequestSceneChange()` / `ApplyPendingSceneChange()` for deferred transitions. Typed accessors: `GetActiveScene<T>()`, `GetScene<T>()`.
 
 Project scenes subclass `BeStandardBaseScene` (or `BeStandardFullScene`) from `toolkit/standard-game/`, which extend `BeScene` with `Prepare()` / `Tick(float)` / `Render()` and a `BeStandardGame*` handle. See `example-sakura/scenes/`.
 
@@ -232,12 +232,12 @@ compiled at runtime by Slang.
 ```
 
 - **Material property types**: `float`, `float2`, `float3`, `float4`, `matrix`, `texture2d`, `texturecube`, `sampler`. Defaults in parens (values) or a named asset (textures/samplers). Omitting `= ...` leaves it undefaulted.
-- **`bind <slot> <frequency> <scheme> [StructAlias]`** — binds a material scheme at a register. The *frequency* is the update cadence / role, resolved by the render machine: `frame` (renderer's `uniform-material`), `main` (this shader's own per-draw material), and pass-specific roles like `geometry-object` (per-object model matrix) and `geometry-main` (per-draw surface material in the geometry pass). The optional last token names the generated HLSL struct.
-- **`target <slot> <Name> <type>`** — a bound render target output.
+- **`bind <slot> <frequency> <scheme> [StructAlias]`**: binds a material scheme at a register. The *frequency* is the update cadence / role, resolved by the render machine: `frame` (renderer's `uniform-material`), `main` (this shader's own per-draw material), and pass-specific roles like `geometry-object` (per-object model matrix) and `geometry-main` (per-draw surface material in the geometry pass). The optional last token names the generated HLSL struct.
+- **`target <slot> <Name> <type>`**: a bound render target output.
 - **Tessellation**: `topology patch-list-3` plus `hull <Fn>` / `domain <Fn>` lines.
 - **Includes** are emitted as bare filenames (flat `shaders/` namespace).
 
-`@be-auto-boilerplate` / `region ... endregion` blocks (cbuffer structs, samplers, I/O) are **generated by `bechef shadergen`** — never edit them manually.
+`@be-auto-boilerplate` / `region ... endregion` blocks (cbuffer structs, samplers, I/O) are **generated by `bechef shadergen`**: never edit them manually.
 
 #### Presets
 
@@ -257,7 +257,7 @@ compiled at runtime by Slang.
 
 ### Access Modifiers Convention
 
-`umbrellas/common.hpp` — used as section markers **without** a colon:
+`umbrellas/common.hpp`: used as section markers **without** a colon:
 - `expose` = `public:`
 - `protect` = `protected:`
 - `hide` = `private:`
@@ -267,10 +267,10 @@ compiled at runtime by Slang.
 Include root is the directory itself: `#include <common.hpp>`, `#include <include-glm.h>`.
 The target carries the include path only, so each consumer links what it uses.
 
-- `include-glm.h` — GLM with `GLM_FORCE_LEFT_HANDED` + `GLM_FORCE_DEPTH_ZERO_TO_ONE`. Defines `_rad` literal (degrees→radians) and `HexColor("#RRGGBB")` → `glm::vec3`.
-- `include-libassert.h` — `be_assert(condition, ...)` wrapping libassert's `DEBUG_ASSERT`.
-- `json.h` — aliases `nlohmann::json` as `Json`.
-- `common.hpp` — access-modifier markers (`expose`/`protect`/`hide`) plus `ENABLE_BITMASK(EnumType)` for bitwise ops on scoped enums.
+- `include-glm.h`: GLM with `GLM_FORCE_LEFT_HANDED` + `GLM_FORCE_DEPTH_ZERO_TO_ONE`. Defines `_rad` literal (degrees→radians) and `HexColor("#RRGGBB")` → `glm::vec3`.
+- `include-libassert.h`: `be_assert(condition, ...)` wrapping libassert's `DEBUG_ASSERT`.
+- `json.h`: aliases `nlohmann::json` as `Json`.
+- `common.hpp`: access-modifier markers (`expose`/`protect`/`hide`) plus `ENABLE_BITMASK(EnumType)` for bitwise ops on scoped enums.
 
 ### Coordinate System
 
@@ -278,7 +278,7 @@ Left-handed. All geometry (Assimp-loaded and procedural) **negates X** on positi
 
 ### Error Handling
 
-`be_assert(condition, ...)` — debug assertions via libassert (preferred).
+`be_assert(condition, ...)`: debug assertions via libassert (preferred).
 
 ### ECS
 
@@ -300,9 +300,9 @@ flag overrides the workspace root, which defaults to the cwd's nearest `workspac
 
 **Workspace model.** `workspace.bechef` at the root declares `roots <dirs...>` (where projects
 are discovered) and `ignore <globs...>`. Each project dir has a `project.bechef` with:
-- `kind module | app` — libraries are modules; only apps are cookable.
-- `depends <module...>` — the bechef dependency closure (e.g. an app `depends core toolkit`).
-- `shaders <dir>` (repeatable) and `assets <dir>` — content dirs relative to the project.
+- `kind module | app`: libraries are modules; only apps are cookable.
+- `depends <module...>`: the bechef dependency closure (e.g. an app `depends core toolkit`).
+- `shaders <dir>` (repeatable) and `assets <dir>`: content dirs relative to the project.
 
 `shadergen` resolves each shader's material schemes against the project's dependency closure,
 so cross-module `bind`s work; a bind naming a scheme outside the closure is an error. `cook`
@@ -315,7 +315,7 @@ symlinks so edits are live (hot-reload); `copy` is the default. `be_cook_app` ru
 ### Vendor Libraries
 
 All dependencies are committed as source under `vendor/`. **The build never touches the
-network** — no `FetchContent` `URL`/`GIT_REPOSITORY` may be added. Exact upstream refs,
+network**: no `FetchContent` `URL`/`GIT_REPOSITORY` may be added. Exact upstream refs,
 update instructions, and the rules are in **`vendor/VENDOR.md`**; keep it in sync when
 changing a vendored tree.
 

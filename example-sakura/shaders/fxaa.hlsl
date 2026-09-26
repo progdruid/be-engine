@@ -48,7 +48,7 @@ struct PixelOutput {
 #include "core/fullscreen-vertex.hlsl"
 
 // ---------------------------------------------------------------------------
-// FXAA 3.11 — Timothy Lottes (NVIDIA)
+// FXAA 3.11 - Timothy Lottes (NVIDIA)
 // Quality preset: medium-high (12 search steps with variable step sizes)
 // ---------------------------------------------------------------------------
 
@@ -68,7 +68,7 @@ static const float SEARCH_STEPS[12] = {
 // ---------------------------------------------------------------------------
 
 float FxaaLuma(float3 rgb) {
-    // Green-biased luma — fast and sufficient for edge detection
+    // Green-biased luma - fast and sufficient for edge detection
     return rgb.y * (0.587 / 0.299) + rgb.x;
 }
 

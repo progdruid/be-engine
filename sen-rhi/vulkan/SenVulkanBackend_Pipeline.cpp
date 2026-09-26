@@ -20,7 +20,7 @@ auto Sen::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
         return module;
     };
 
-    // ── pipeline layout ───────────────────────────────────────────────────────
+    // -- pipeline layout -------------------------------------------------------
     // Set 0 is the persistent heap, all per-draw data arrives as root push constants.
     const VkPushConstantRange rootRange {
         .stageFlags = VK_SHADER_STAGE_ALL,
@@ -37,7 +37,7 @@ auto Sen::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
     VkResult result = vkCreatePipelineLayout(_device, &layoutInfo, nullptr, &entry.Layout);
     be_assert(result == VK_SUCCESS, "Failed to create pipeline layout!");
 
-    // ── compute pipeline ───────────────────────────────────────────────────────
+    // -- compute pipeline -------------------------------------------------------
     if (desc.ComputeShader.IsValid()) {
         be_assert(!desc.VertexShader.IsValid(), "CreatePipeline: ComputeShader and VertexShader are mutually exclusive");
 
@@ -61,7 +61,7 @@ auto Sen::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
         return _pipelines.Create(std::move(entry));
     }
 
-    // ── shader stages ──────────────────────────────────────────────────────────
+    // -- shader stages ----------------------------------------------------------
     std::vector<VkPipelineShaderStageCreateInfo> stages;
     std::vector<VkShaderModule> modules;
 
@@ -80,7 +80,7 @@ auto Sen::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
     addStage(desc.DomainShader, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
     addStage(desc.PixelShader,  VK_SHADER_STAGE_FRAGMENT_BIT);
 
-    // ── vertex input ───────────────────────────────────────────────────────────
+    // -- vertex input -----------------------------------------------------------
     std::vector<VkVertexInputAttributeDescription> attributes;
     attributes.reserve(desc.VertexLayout.size());
     for (const auto& elem : desc.VertexLayout) {
@@ -108,27 +108,27 @@ auto Sen::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
         .pVertexAttributeDescriptions    = attributes.data(),
     };
 
-    // ── input assembly ─────────────────────────────────────────────────────────
+    // -- input assembly ---------------------------------------------------------
     VkPipelineInputAssemblyStateCreateInfo inputAssembly {
         .sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
         .topology               = SenVk::ToTopology(desc.Topology),
         .primitiveRestartEnable = VK_FALSE,
     };
 
-    // ── tessellation ───────────────────────────────────────────────────────────
+    // -- tessellation -----------------------------------------------------------
     VkPipelineTessellationStateCreateInfo tessellation {
         .sType              = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
         .patchControlPoints = desc.Topology == SenTopology::PatchList3 ? 3u : 1u,
     };
 
-    // ── viewport (dynamic) ─────────────────────────────────────────────────────
+    // -- viewport (dynamic) -----------------------------------------------------
     VkPipelineViewportStateCreateInfo viewportState {
         .sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         .viewportCount = 1,
         .scissorCount  = 1,
     };
 
-    // ── rasterizer ─────────────────────────────────────────────────────────────
+    // -- rasterizer -------------------------------------------------------------
     // cullMode, frontFace and the depthBias fields are dynamic; the values here are ignored.
     VkPipelineRasterizationStateCreateInfo rasterizer {
         .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -138,19 +138,19 @@ auto Sen::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
         .lineWidth               = 1.f,
     };
 
-    // ── multisample ────────────────────────────────────────────────────────────
+    // -- multisample ------------------------------------------------------------
     VkPipelineMultisampleStateCreateInfo multisample {
         .sType                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
     };
 
-    // ── depth stencil ──────────────────────────────────────────────────────────
+    // -- depth stencil ----------------------------------------------------------
     // Fully dynamic; the struct must still be present when there is a depth attachment.
     VkPipelineDepthStencilStateCreateInfo depthStencil {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
     };
 
-    // ── blend ──────────────────────────────────────────────────────────────────
+    // -- blend ------------------------------------------------------------------
     uint32_t rtCount = uint32_t(desc.RenderTargetFormats.size());
     VkPipelineColorBlendAttachmentState blendAttachment {
         .blendEnable         = desc.BlendState.Enable,
@@ -171,7 +171,7 @@ auto Sen::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
         .pAttachments    = blendAttachments.data(),
     };
 
-    // ── dynamic state ──────────────────────────────────────────────────────────
+    // -- dynamic state ----------------------------------------------------------
     std::array<VkDynamicState, 9> dynamicStates {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR,
@@ -189,7 +189,7 @@ auto Sen::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
         .pDynamicStates    = dynamicStates.data(),
     };
 
-    // ── dynamic rendering ──────────────────────────────────────────────────────
+    // -- dynamic rendering ------------------------------------------------------
     std::vector<VkFormat> colorFormats;
     colorFormats.reserve(desc.RenderTargetFormats.size());
     for (const auto& fmt : desc.RenderTargetFormats) {
@@ -204,7 +204,7 @@ auto Sen::CreatePipeline(const SenPipelineDesc& desc) -> SenPipeline {
         .depthAttachmentFormat   = depthFormat,
     };
 
-    // ── create pipeline ────────────────────────────────────────────────────────
+    // -- create pipeline --------------------------------------------------------
     VkGraphicsPipelineCreateInfo pipelineInfo {
         .sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext               = &renderingInfo,
