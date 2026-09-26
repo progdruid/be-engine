@@ -51,8 +51,10 @@ then per frame: `ClearFrame()`, submit geometry + lights, and let the renderer r
 
 ### structure
 
-* `core/`. rendering engine core (static lib): renderer, passes, pipeline builder, shaders, textures, materials, meshes, camera, input, window. `sen-rhi/` lives here.
-* `toolkit/`. higher-level abstractions (static lib, links core): the srm deferred pipeline, scenes, assimp import, imgui, entt.
+* `sen-rhi/`. the rhi (static lib `sen`): vulkan backend, no engine deps.
+* `umbrellas/`. shared config headers (glm, libassert, json, common) as a cmake interface lib.
+* `core/`. rendering engine core (static lib, links sen): renderer, passes, draw states, shaders, textures, materials, meshes, camera, input, window.
+* `toolkit/`. higher-level abstractions (static lib, links core): the srm deferred pipeline, standard game + scene framework, scenes, coroutines, lua, assimp import, imgui, entt.
 * `example-sakura/`. the up-to-date showcase: multi-scene, ecs, full deferred pipeline.
 * `devtools/bechef`. cli that cooks content, checks the workspace, and generates shader boilerplate (`shadergen`, with a `--watch` mode).
 

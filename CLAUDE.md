@@ -7,10 +7,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Linux (active platform)** — uses CMake with Ninja (requires CMake 3.25+):
 ```bash
 # Configure
-cmake --preset linux-debug    # or linux-release, or linux-debug-hotreload
+cmake --preset linux-debug    # or linux-release, or linux-debug-hotreload (BE_SYMLINK_ASSETS=ON: cook symlinks content)
 # Build
 cmake --build out/linux-debug
+# Run (cwd must be the exe dir: shaders/ and assets/ resolve relative to it)
+cd out/linux-debug/example-sakura && ./example-sakura
 ```
+
+The build runs `shadergen --check` then `cook` for each app, so a stale boilerplate region fails
+the build (fix with `./bechef shadergen`). Debug builds copy the Vulkan validation layer next to the exe.
 
 **Windows** — CMake with Visual Studio 2022:
 ```bash
@@ -57,17 +62,17 @@ only when it is the top-level project; a parent project adds `umbrellas`, `sen-r
 
 ### Core Engine (`core/`)
 
-- **`BeRenderer`** — manages Vulkan swapchain/device/queues and an ordered list of `BeRenderPass*`. `Render()` opens a `SenCommandBuffer` and runs each pass wrapped in debug annotations. Binds the `uniform-material` frame scheme (camera matrices, time, ambient) before every pass.
-- **`BeRenderPass`** — abstract base: `Initialise(BeRenderer&)` and `Render(BeRenderer&, SenCommandBuffer&)`, plus `GetPassName()`. Passes are held in a `BePassSequence` (`vector<unique_ptr<BeRenderPass>>`).
-- **`BePass`** — fluent per-render command-scope helper built on a `SenCommandBuffer`: `.SetCompute(...)`, `.UseTexture(...)`/`.UseMaterial(...)` (read/storage bindings), `.AddColorTarget(...)`/`.SetDepthTarget(...)`, `.SetViewport(...)`, then `.SetState(state)`, `.Override*(...)` and `.Push(BeRoot(...))` per draw. A pass's `Render()` builds one or more of these to declare its I/O and issue draws/dispatches. This is the recording layer; `BeRenderPass` is the schedulable unit.
-- **`BeDrawState`**: immutable render state built at load, `BeDrawState::Create(shader).SetCull(...).SetBlend(...).Build()`. Target formats come from the `BePass`. State and overrides take effect at `BePass::Push`, which resolves the pipeline from `BeBackend`'s `[staticKeyId][formatSetId]` table.
+- **`BeRenderer`** — manages Vulkan swapchain/device/queues and an ordered list of `BeRenderPass*`. `Render()` opens a `SenCommandList` and runs each pass wrapped in debug annotations. Binds the `uniform-material` frame scheme (camera matrices, time, ambient) before every pass.
+- **`BeRenderPass`** — abstract base: `Initialise(BeRenderer&)` and `Render(BeRenderer&, SenCommandList)`, plus `GetPassName()`. Passes are held in a `BePassSequence` (`vector<unique_ptr<BeRenderPass>>`).
+- **`BePass`** — fluent per-render command-scope helper built on a `SenCommandList`: `.SetCompute(...)`, `.UseTexture(...)`/`.UseMaterial(...)` (read/storage bindings), `.AddColorTarget(...)`/`.SetDepthTarget(...)`, `.SetViewport(...)`, then `.SetState(state)`, `.Override*(...)`, and `.Bind(link, material)` (writes root fields) per draw, then `Draw`/`DrawIndexed`/`Dispatch`. A pass's `Render()` builds one or more of these to declare its I/O and issue draws/dispatches. This is the recording layer; `BeRenderPass` is the schedulable unit.
+- **`BeDrawState`**: immutable render state built at load, `BeDrawState::Create(shader).SetCull(...).SetBlend(...).Build()`. Target formats come from the `BePass`. State and overrides take effect at the next draw or dispatch, which resolves the pipeline from `BeBackend`'s `[staticKeyId][formatSetId]` table.
 - **`BeShader`**: plain data (per-stage SPIR-V, render state, targets, material schemes, root layout). Created by `BeShaderLibrary` from the parsed `@be-shader` block. Scheme lookup: `BeShaderLibrary::GetShaderScheme(shader, link)`.
 - **`BeShaderLibrary`** — `BeRenderer` loads every cooked shader in the runtime `shaders/` dir at init via `BeShaderLibrary::LoadShaders()`. Apps never load shader dirs themselves. Owns hot reload: on a source or include change it recompiles the shader's stages (all or nothing) and has `BeBackend::RebuildPipelines` recreate that shader's pipelines. Only bytecode reloads, the `@be-shader` and `@be-material` blocks are read once at load.
 - **`BeShaderCompiler`** — Slang-based HLSL→SPIR-V compiler. Pipelines are created from the bytecode; sen knows nothing about shader sources.
 - **`BeShaderTools`** — parses the `@be-material` and `@be-shader` DSL blocks from `.hlsl` comments.
-- **`BeBackend`**: static owner of Be's GPU-side state: pipeline cache, material arenas, the retirement queue (resources retire into a pending bucket, stamped with the submission at submit time and freed once it completes), uploads (`WriteBuffer`, `WriteTexture`, `GenerateMips`, each staging through Upload memory and submitting immediately), and the bindless table (`RegisterTexture`/`RegisterSampler` allocate a slot and publish it through sen, `GetTextureSlot`/`GetSamplerSlot` answer per draw from `BeRoot`; slots are released when the view or sampler is destroyed). `BeRenderer` drives `Init`/`Shutdown` in order: shader library, backend, sen.
+- **`BeBackend`**: static owner of Be's GPU-side state: pipeline cache, material arenas, the retirement queue (resources retire into a pending bucket, stamped with the submission at submit time and freed once it completes), uploads (`WriteBuffer`, `WriteTexture`, `GenerateMips`, each staging through Upload memory and submitting immediately), and the bindless table (`RegisterTexture`/`RegisterSampler` allocate a slot and publish it through sen, `GetTextureSlot`/`GetSamplerSlot` answer per draw when `BePass::Bind` fills the root; slots are released when the view or sampler is destroyed). `BeRenderer` drives `Init`/`Shutdown` in order: shader library, backend, sen.
 - **`BeFileWatcher`** — generic hot-reload: register a path-provider + handler `WatchId`, poll each frame. Used by `BeStandardFullScene` for live scene/shader reload.
-- **`BeTexture`** — builder: `BeTexture::Create(name).SetSize(w,h).SetFormat(...).Build()`. Formats: RGBA8, BGRA8, RGBA16_Float, R11G11B10_Float, Depth32, RGB32/RGBA32/RG32_Float.
+- **`BeTexture`** — builder: `BeTexture::Create(name).SetSize(w,h).SetFormat(...).Build()`. Formats: RGBA8, BGRA8, RGBA16_Float, R11G11B10_Float, Depth32, RGB32/RGBA32/RG32/R32_Float.
 - **`BeMaterial` / `BeMaterialScheme`** — typed material properties (float, float2–4, matrix, textures, samplers). `BeMaterial::Create(schemeName)` instantiates from a scheme.
 - **`BeMesh`** — `std::vector<BeFullVertex>` + indices + `std::vector<BeMeshSlice>` (multi-material regions).
 - **`BeMeshPrimitives`** — namespace with `Plane()`, `Cube()`, `Sphere()` returning `shared_ptr<BeMesh>`.
@@ -148,11 +153,11 @@ scheduler (e.g. `BeStandardFullScene`) and start coroutines for timed/sequenced 
 
 | Target | Format | Contents |
 |--------|--------|----------|
-| 0 | `R11G11B10_FLOAT` | Diffuse RGB |
-| 1 | `R16G16B16A16_FLOAT` | World Normal XYZ |
-| 2 | `R8G8B8A8_UNORM` | Specular RGB + Shininess in A (`value / 2048.0`) |
-| 3 | `R11G11B10_FLOAT` | Emissive RGB |
-| Depth | `R32_TYPELESS` | Depth |
+| 0 | `R11G11B10_Float` | Diffuse / albedo RGB |
+| 1 | `RGBA16_Float` | World Normal XYZ |
+| 2 | `RGBA8_Unorm` | PBR: ORM. Phong: Specular RGB + Shininess in A (`value / 2048.0`) |
+| 3 | `R11G11B10_Float` | Emissive RGB |
+| Depth | `Depth32` | Depth |
 
 ### Binding Frequencies
 
@@ -194,7 +199,7 @@ for (const auto& [name, entityTable] : lua.Call("makeScene").Pairs()) {
 }
 ```
 
-Conversions cover arithmetic types, `bool`, `std::string`, `glm::vec2/3/4` (Lua arrays) and `glm::quat` (euler degrees). `glm::vec3`/`vec4` also accept a hex string, `#` required: `color = "#FFAA33"`. Six digits or eight, where the extra pair is alpha for `vec4` and ignored for `vec3`; a six-digit `vec4` gets alpha 1. Add types by specialising `BeLuaConverter`. Values are views: never outlive the `BeLuaState`. See `SakuraScene::LoadSceneFile()` for scene loading built on it.
+Conversions cover arithmetic types, `bool`, `std::string`, `glm::vec2/3/4` (Lua arrays) and `glm::quat` (euler degrees). `glm::vec3`/`vec4` also accept a hex string, `#` required: `color = "#FFAA33"`. Six digits or eight, where the extra pair is alpha for `vec4` and ignored for `vec3`; a six-digit `vec4` gets alpha 1. Add types by specialising `BeLuaConverter`. Values are views: never outlive the `BeLuaState`. See `BeStandardFullScene` and `SakuraScene.cpp` for scene loading built on it.
 
 ### Shader Format (.hlsl)
 
@@ -248,7 +253,7 @@ compiled at runtime by Slang.
 
 ### Vertex Layout
 
-`BeFullVertex`: Position (vec3), Normal (vec3), Color (vec4, default white), UV0–UV2 (vec2 each). Shader JSON semantic names: `"position"`, `"normal"`, `"color3"`, `"color4"`, `"uv0"`, `"uv1"`, `"uv2"`.
+`BeFullVertex`: Position (vec3), Normal (vec3), Color (vec4, default white), UV0–UV2 (vec2 each). Semantic names for the `vertex` line: `"position"`, `"normal"`, `"color3"`, `"color4"`, `"uv0"`, `"uv1"`, `"uv2"`.
 
 ### Access Modifiers Convention
 
@@ -324,7 +329,7 @@ changing a vendored tree.
 | libassert + cpptrace | Assertions + stack traces |
 | libdwarf + zstd | Symbolization for cpptrace (transitive) |
 | stb_image | Image loading |
-| Lua + LuaBridge3 | Scripting (`example-sakura` scene loading) |
+| Lua + LuaBridge3 | Scripting (`toolkit/lua`, scene/data loading) |
 | entt | ECS (lives in `toolkit/entt/`) |
 | ImGui | Debug/editor UI (lives in `toolkit/imgui/`) |
 | Vulkan SDK | Graphics API |
