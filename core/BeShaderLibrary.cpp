@@ -4,6 +4,7 @@
 #include <sstream>
 #include <fstream>
 #include <ranges>
+#include <filesystem>
 
 #include "BeBackend.h"
 #include "BeFileWatcher.h"

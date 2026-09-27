@@ -1,5 +1,6 @@
 #include "SenVulkanSurface.h"
 
+#include <cstdint>
 #include <cstring>
 #include <include-libassert.h>
 
@@ -97,7 +98,7 @@ auto SenVulkanSurface::Create(VkInstance instance, const SenNativeWindow& window
                 .pNext = nullptr,
                 .flags = 0,
                 .dpy = window.Display,
-                .window = reinterpret_cast<unsigned long>(window.Window),
+                .window = static_cast<unsigned long>(reinterpret_cast<std::uintptr_t>(window.Window)),
             };
             result = create(instance, &info, nullptr, &surface);
             break;
