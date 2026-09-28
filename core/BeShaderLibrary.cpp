@@ -5,6 +5,7 @@
 #include <fstream>
 #include <ranges>
 #include <filesystem>
+#include <string>
 
 #include "BeBackend.h"
 #include "BeFileWatcher.h"
@@ -211,7 +212,7 @@ auto BeShaderLibrary::LoadShaderFiles(const std::vector<std::filesystem::path>& 
         if (_shaderSources.contains(path))
             continue;
 
-        be_assert(std::filesystem::exists(path), path);
+        be_assert(std::filesystem::exists(path), path.string());
 
         auto file = std::ifstream(path);
         auto buffer = std::stringstream();
@@ -257,7 +258,7 @@ auto BeShaderLibrary::LoadShaderFiles(const std::vector<std::filesystem::path>& 
 }
 
 auto BeShaderLibrary::LoadShaderDirectory(const std::filesystem::path& dir) -> void {
-    be_assert(std::filesystem::exists(dir), dir);
+    be_assert(std::filesystem::exists(dir), dir.string());
 
     BeShaderCompiler::AddSearchPath(dir);
 
