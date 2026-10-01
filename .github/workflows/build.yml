@@ -17,16 +17,24 @@ jobs:
       fail-fast: false
       matrix:
         preset: [linux-debug, linux-release]
+        compiler: [gcc, clang]
+        include:
+          - compiler: gcc
+            cc: gcc-14
+            cxx: g++-14
+          - compiler: clang
+            cc: clang-19
+            cxx: clang++-19
     env:
-      CC: gcc-14
-      CXX: g++-14
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build gcc-14 g++-14 \
+          sudo apt-get install -y ninja-build gcc-14 g++-14 clang-19 \
             libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
             libwayland-dev libxkbcommon-dev wayland-protocols
 
@@ -41,12 +49,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        preset: [windows, windows-clang]
         config: [debug, release]
     steps:
       - uses: actions/checkout@v4
 
       - name: Configure
-        run: cmake --preset windows
+        run: cmake --preset ${{ matrix.preset }}
 
       - name: Build
-        run: cmake --build --preset windows-${{ matrix.config }}
+        run: cmake --build --preset ${{ matrix.preset }}-${{ matrix.config }}

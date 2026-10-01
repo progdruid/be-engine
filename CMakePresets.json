@@ -40,6 +40,12 @@
             "generator": "Visual Studio 17 2022",
             "architecture": "x64",
             "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+        },
+        {
+            "name": "windows-clang",
+            "displayName": "Windows (clang-cl)",
+            "inherits": "windows",
+            "toolset": "ClangCL"
         }
     ],
     "buildPresets": [
@@ -47,6 +53,8 @@
         { "name": "linux-debug-hotreload", "displayName": "Linux Debug (Hot Reload)", "configurePreset": "linux-debug-hotreload" },
         { "name": "linux-release",   "displayName": "Linux Release",   "configurePreset": "linux-release" },
         { "name": "windows-debug",   "displayName": "Windows Debug",   "configurePreset": "windows", "configuration": "Debug" },
-        { "name": "windows-release", "displayName": "Windows Release", "configurePreset": "windows", "configuration": "Release" }
+        { "name": "windows-release", "displayName": "Windows Release", "configurePreset": "windows", "configuration": "Release" },
+        { "name": "windows-clang-debug",   "displayName": "Windows Debug (clang-cl)",   "configurePreset": "windows-clang", "configuration": "Debug" },
+        { "name": "windows-clang-release", "displayName": "Windows Release (clang-cl)", "configurePreset": "windows-clang", "configuration": "Release" }
     ]
 }
