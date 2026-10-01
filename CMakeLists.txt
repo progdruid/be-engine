@@ -55,12 +55,12 @@ function(be_copy_runtime_deps target)
     endif()
 
     # Validation layer travels next to the exe (debug only); Init() points VK_ADD_LAYER_PATH here.
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        add_custom_command(TARGET ${target} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${BE_ENGINE_DIR}/vendor/vulkan-sdk/share/vulkan/explicit_layer.d/$<IF:$<PLATFORM_ID:Windows>,windows,linux>"
-                "$<TARGET_FILE_DIR:${target}>/layers")
-    endif()
+    set(layer_src "${BE_ENGINE_DIR}/vendor/vulkan-sdk/share/vulkan/explicit_layer.d/$<IF:$<PLATFORM_ID:Windows>,windows,linux>")
+    set(layer_dst "$<TARGET_FILE_DIR:${target}>/layers")
+    set(layer_copy ${CMAKE_COMMAND} -E copy_directory "${layer_src}" "${layer_dst}")
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND "$<$<CONFIG:Debug>:${layer_copy}>"
+        COMMAND_EXPAND_LISTS)
 endfunction()
 
 

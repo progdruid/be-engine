@@ -35,5 +35,6 @@ out/
 !vendor/**/lib/**
 !vendor/**/*.so
 !vendor/**/*.so.*
+!vendor/vulkan-sdk/**/*.dll
 
 
