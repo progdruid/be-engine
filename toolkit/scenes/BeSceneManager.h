@@ -7,7 +7,7 @@
 #include <typeinfo>
 #include <include-libassert.h>
 
-class BeScene;
+#include "BeScene.h"
 
 class BeSceneManager {
 private:
