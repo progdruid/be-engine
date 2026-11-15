@@ -32,7 +32,7 @@ auto BeAssimpImporter::LoadProp(
     
     auto prop = std::make_shared<BeProp>();
     prop->Mesh = std::make_shared<BeMesh>();
-    prop->State = BeDrawState::Create(*usedShaderForMaterials).Build();
+    prop->DrawState = BeDrawState::Create(*usedShaderForMaterials).Build();
 
     std::unordered_map<uint32_t, std::shared_ptr<BeMaterial>> assimpIndexToMaterial;
     std::unordered_set<uint32_t> assimpIndexToTwoSided;
@@ -75,7 +75,7 @@ auto BeAssimpImporter::LoadProp(
 
     prop->Mesh->Vertices.reserve(numVertices);
     prop->Mesh->Indices.reserve(numIndices);
-    prop->Mesh->Slices.reserve(scene->mNumMeshes);
+    prop->Mesh->LocalSlices.reserve(scene->mNumMeshes);
 
     int32_t vertexOffset = 0;
     uint32_t indexOffset = 0;
@@ -114,7 +114,7 @@ auto BeAssimpImporter::LoadProp(
             prop->Mesh->Indices.push_back(face.mIndices[1]);
         }
 
-        prop->Mesh->Slices.push_back({
+        prop->Mesh->LocalSlices.push_back({
             .IndexCount = mesh->mNumFaces * 3,
             .StartIndexLocation = indexOffset,
             .BaseVertexLocation = vertexOffset,

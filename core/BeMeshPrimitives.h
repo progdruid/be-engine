@@ -47,7 +47,7 @@ namespace BeMeshPrimitives {
             }
         }
 
-        mesh->Slices.push_back({
+        mesh->LocalSlices.push_back({
             .IndexCount = static_cast<uint32_t>(mesh->Indices.size()),
             .StartIndexLocation = 0,
             .BaseVertexLocation = 0,
@@ -113,7 +113,7 @@ namespace BeMeshPrimitives {
             mesh->Indices.push_back(base + 3);
         }
 
-        mesh->Slices.push_back({
+        mesh->LocalSlices.push_back({
             .IndexCount = static_cast<uint32_t>(mesh->Indices.size()),
             .StartIndexLocation = 0,
             .BaseVertexLocation = 0,
@@ -170,7 +170,7 @@ namespace BeMeshPrimitives {
             }
         }
 
-        mesh->Slices.push_back({
+        mesh->LocalSlices.push_back({
             .IndexCount = static_cast<uint32_t>(mesh->Indices.size()),
             .StartIndexLocation = 0,
             .BaseVertexLocation = 0,

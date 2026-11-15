@@ -36,9 +36,10 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandList cmd) ->
     pass.Begin();
 
     for (const auto& entry : entries) {
-        be_assert(entry.Prop->State.IsValid());
+        be_assert(entry.Prop->DrawState.IsValid());
 
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
+        // todo: cmooooon, stuuuupid
         _objectMaterial->SetMatrix("ProjectionView", uniformMat->GetMatrix("CameraProjectionView"));
         _objectMaterial->SetFloat3("ViewerPosition", uniformMat->GetFloat3("CameraPosition"));
 
@@ -47,7 +48,7 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandList cmd) ->
             const auto& meshSlice = meshSlices[j];
             const auto& propSlice = entry.Prop->Slices[j];
 
-            pass.SetState(entry.Prop->State);
+            pass.SetState(entry.Prop->DrawState);
             pass.OverrideCull(propSlice.TwoSided ? SenCull::None : SenCull::Back);
             pass.Bind("frame", *uniformMat);
             pass.Bind("geometry-object", *_objectMaterial);

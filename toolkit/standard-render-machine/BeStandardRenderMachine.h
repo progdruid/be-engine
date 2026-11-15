@@ -137,7 +137,8 @@ class BeStandardRenderMachine {
 
     SenBuffer _sharedVertexBuffer;
     SenBuffer _sharedIndexBuffer;
-    std::unordered_map<BeMesh*, std::vector<BeMeshSlice>> _meshSlices;
+    // todo: raw ptr as a key is not cool, but this will change to a system at some point
+    std::unordered_map<BeMesh*, std::vector<BeMeshSlice>> _sharedMeshSlices;
     std::vector<std::shared_ptr<BeMesh>> _registeredMeshes;
 
     std::shared_ptr<BeMaterial> _tonemapperMaterial;
@@ -224,7 +225,7 @@ class BeStandardRenderMachine {
     auto ClearMeshes() -> void;
     auto RegisterMesh(const std::shared_ptr<BeMesh>& mesh) -> void;
     auto BakeMeshes() -> void;
-    auto GetMeshSlices(BeMesh* mesh) const -> const std::vector<BeMeshSlice>& { return _meshSlices.at(mesh); }
+    auto GetMeshSlices(BeMesh* mesh) const -> const std::vector<BeMeshSlice>& { return _sharedMeshSlices.at(mesh); }
     auto GetSharedVertexBuffer() const -> SenBuffer { return _sharedVertexBuffer; }
     auto GetSharedIndexBuffer() const -> SenBuffer { return _sharedIndexBuffer; }
 };

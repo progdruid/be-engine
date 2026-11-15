@@ -457,7 +457,7 @@ auto BeStandardRenderMachine::LoadProp(
 
 auto BeStandardRenderMachine::ClearMeshes() -> void {
     _registeredMeshes.clear();
-    _meshSlices.clear();
+    _sharedMeshSlices.clear();
 }
 
 auto BeStandardRenderMachine::RegisterMesh(const std::shared_ptr<BeMesh>& mesh) -> void {
@@ -478,7 +478,7 @@ auto BeStandardRenderMachine::BakeMeshes() -> void {
     indices.reserve(totalIndices);
 
     for (const auto& mesh : _registeredMeshes) {
-        if (_meshSlices.contains(mesh.get()))
+        if (_sharedMeshSlices.contains(mesh.get()))
             continue;
 
         const auto vertexBase = static_cast<int32_t>(vertices.size());
@@ -487,8 +487,8 @@ auto BeStandardRenderMachine::BakeMeshes() -> void {
         vertices.insert(vertices.end(), mesh->Vertices.begin(), mesh->Vertices.end());
         indices.insert(indices.end(),   mesh->Indices.begin(),  mesh->Indices.end());
 
-        auto& slices = _meshSlices[mesh.get()];
-        for (const auto& slice : mesh->Slices) {
+        auto& slices = _sharedMeshSlices[mesh.get()];
+        for (const auto& slice : mesh->LocalSlices) {
             slices.push_back({
                 .IndexCount          = slice.IndexCount,
                 .StartIndexLocation  = slice.StartIndexLocation + indexBase,

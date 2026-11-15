@@ -4,7 +4,6 @@
 #include <vector>
 #include <common.hpp>
 #include <SenTypes.h>
-#include <Sen.h>
 
 #include "BeRenderPass.h"
 
@@ -13,7 +12,6 @@ class BeTexture;
 class BeStandardRenderMachine;
 
 class BeStandardGeometryPass final : public BeRenderPass {
-
     hide
     BeStandardRenderMachine* _srm;
     std::vector<std::shared_ptr<BeTexture>> _colorTargets;

@@ -2,6 +2,9 @@
 #include "BeScene.h"
 #include <cassert>
 
+BeSceneManager::BeSceneManager() = default;
+BeSceneManager::~BeSceneManager() = default;
+
 auto BeSceneManager::RegisterScene(const std::string& name, std::unique_ptr<BeScene> scene) -> void {
     _scenes[name] = std::move(scene);
 }

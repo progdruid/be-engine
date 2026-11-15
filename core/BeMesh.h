@@ -20,5 +20,5 @@ struct BeMeshSlice {
 struct BeMesh {
     std::vector<BeFullVertex> Vertices;
     std::vector<uint32_t>     Indices;
-    std::vector<BeMeshSlice>  Slices;
+    std::vector<BeMeshSlice>  LocalSlices;
 };

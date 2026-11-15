@@ -1,22 +1,28 @@
 #pragma once
 
+#include <common.hpp>
 #include <memory>
 #include <unordered_map>
 #include <string>
 #include <concepts>
-#include <typeinfo>
 #include <include-libassert.h>
+#include <ranges>
 
 #include "BeScene.h"
 
 class BeSceneManager {
-private:
+    
+    hide
     std::unordered_map<std::string, std::unique_ptr<BeScene>> _scenes;
     BeScene* _activeScene = nullptr;
     std::string _pendingSceneName;
     bool _hasPendingSceneChange = false;
 
-public:
+    expose
+    explicit BeSceneManager();
+    ~BeSceneManager();
+
+    expose
     auto RegisterScene(const std::string& name, std::unique_ptr<BeScene> scene) -> void;
     auto RequestSceneChange(const std::string& name) -> void;
     auto ApplyPendingSceneChange() -> void;
@@ -47,5 +53,19 @@ public:
             ", got " + typeid(*scene).name()
         );
         return static_cast<T*>(scene);
+    }
+    
+    template<std::derived_from<BeScene> T>
+    auto GetScenes() -> auto  {
+        return 
+            std::views::values(_scenes) |
+            std::views::transform([](const std::unique_ptr<BeScene>& scene) -> T* {
+                be_assert(
+                    dynamic_cast<T*>(scene.get()) != nullptr,
+                    "scene type mismatch: requested " + std::string(libassert::pretty_type_name<T>()) + ", got " + typeid(*scene).name()
+                );
+                return static_cast<T*>(scene.get());
+            } )
+        ;
     }
 };

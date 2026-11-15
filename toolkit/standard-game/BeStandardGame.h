@@ -32,7 +32,6 @@ class BeStandardGame {
     expose explicit BeStandardGame(const BeStandardGameConfig& config);
     expose ~BeStandardGame();
 
-    expose auto Run() -> int;
-
-    hide auto MainLoop() -> void;
+    expose auto Prepare() -> void;
+    expose auto Run() -> void;
 };

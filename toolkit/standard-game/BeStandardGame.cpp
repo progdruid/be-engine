@@ -26,13 +26,13 @@ BeStandardGame::BeStandardGame(const BeStandardGameConfig& config) {
 
 BeStandardGame::~BeStandardGame() = default;
 
-auto BeStandardGame::Run() -> int {
-    MainLoop();
-
-    return 0;
+auto BeStandardGame::Prepare() -> void {
+    for (const auto scene : SceneManager->GetScenes<BeStandardBaseScene>()) {
+        scene->Prepare();
+    }
 }
 
-auto BeStandardGame::MainLoop() -> void {
+auto BeStandardGame::Run() -> void {
     double lastTime = glfwGetTime();
 
     while (!Window->ShouldClose()) {
@@ -59,3 +59,4 @@ auto BeStandardGame::MainLoop() -> void {
         SceneManager->ApplyPendingSceneChange();
     }
 }
+

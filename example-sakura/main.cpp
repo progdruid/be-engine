@@ -24,13 +24,11 @@ int main() {
     scenes.RegisterScene("showcase", std::make_unique<ShowcaseScene>(&game));
     scenes.RegisterScene("old", std::make_unique<OldScene>(&game));
 
-    scenes.GetScene<BeStandardBaseScene>("menu")->Prepare();
-    scenes.GetScene<BeStandardBaseScene>("sakura")->Prepare();
-    scenes.GetScene<BeStandardBaseScene>("showcase")->Prepare();
-    scenes.GetScene<BeStandardBaseScene>("old")->Prepare();
+    game.Prepare();
 
     scenes.RequestSceneChange("menu");
     scenes.ApplyPendingSceneChange();
 
-    return game.Run();
+    game.Run();
+    return 0;
 }

@@ -72,7 +72,7 @@ auto BeStandardShadowPass::RenderDirectionalShadows(
             const auto& meshSlice = meshSlices[j];
             const auto& propSlice = entry.Prop->Slices[j];
 
-            pass.SetState(entry.Prop->State);
+            pass.SetState(entry.Prop->DrawState);
             pass.OverrideCull(propSlice.TwoSided ? SenCull::None : SenCull::Back);
             pass.Bind("frame", *uniformMat);
             pass.Bind("geometry-object", *_objectMaterial);
@@ -118,7 +118,7 @@ auto BeStandardShadowPass::RenderPointLightShadows(
             for (size_t j = 0; j < meshSlices.size(); ++j) {
                 const auto& meshSlice = meshSlices[j];
                 const auto& propSlice = entry.Prop->Slices[j];
-                pass.SetState(entry.Prop->State);
+                pass.SetState(entry.Prop->DrawState);
                 pass.OverrideCull(propSlice.TwoSided ? SenCull::None : SenCull::Back);
                 pass.Bind("frame", *uniformMat);
                 pass.Bind("geometry-object", *_objectMaterial);

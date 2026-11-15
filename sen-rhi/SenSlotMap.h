@@ -1,5 +1,4 @@
 #pragma once
-#include <cstdint>
 #include <vector>
 #include <common.hpp>
 #include <include-libassert.h>
@@ -7,16 +6,20 @@
 template <typename Entry, typename Handle>
 class SenSlotMap {
 
-    hide struct Slot {
+    hide 
+    struct Slot {
         Entry Value;
         uint32_t Generation = 0;
         bool Alive = false;
     };
 
-    hide std::vector<Slot> _slots;
-    hide std::vector<uint32_t> _free;
+    hide
+    std::vector<Slot> _slots;
+    std::vector<uint32_t> _free;
 
-    expose auto Create(Entry value) -> Handle {
+    
+    expose 
+    auto Create(Entry value) -> Handle {
         uint32_t index = 0;
         if (!_free.empty()) {
             index = _free.back();
@@ -38,12 +41,12 @@ class SenSlotMap {
         return Handle { index, slot.Generation };
     }
 
-    expose auto Get(Handle handle) -> Entry& {
+    auto Get(Handle handle) -> Entry& {
         be_assert(Contains(handle), "SenSlotMap: stale handle", handle.Index, handle.Generation);
         return _slots[handle.Index].Value;
     }
 
-    expose auto Contains(Handle handle) const -> bool {
+    auto Contains(Handle handle) const -> bool {
         if (handle.Index >= _slots.size()) {
             return false;
         }
@@ -51,7 +54,7 @@ class SenSlotMap {
         return slot.Alive && slot.Generation == handle.Generation;
     }
 
-    expose auto Destroy(Handle handle) -> void {
+    auto Destroy(Handle handle) -> void {
         be_assert(Contains(handle), "SenSlotMap: stale handle", handle.Index, handle.Generation);
         auto& slot = _slots[handle.Index];
         slot.Value = {};
@@ -59,7 +62,7 @@ class SenSlotMap {
         _free.push_back(handle.Index);
     }
 
-    expose auto GetLiveHandles() const -> std::vector<Handle> {
+    auto GetLiveHandles() const -> std::vector<Handle> {
         auto handles = std::vector<Handle>();
         for (uint32_t index = 0; index < _slots.size(); ++index) {
             if (_slots[index].Alive) {
