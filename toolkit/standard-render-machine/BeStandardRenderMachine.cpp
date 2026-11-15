@@ -381,10 +381,19 @@ auto BeStandardRenderMachine::LoadProp(
     BeSRMLightingModel model
 ) -> std::shared_ptr<BeProp> {
 
-    std::function<std::shared_ptr<BeMaterial>(aiMaterial const*, aiScene const*, const std::filesystem::path&)> materialExtractFunction;
+    BeAssimpImporter::MaterialExtractFunction materialExtractFunction;
+
+    const auto extractDrawState = [this, shader](aiMaterial const* mat, const BePropSurface& surface) -> void {
+        int twoSided = 0;
+        mat->Get(AI_MATKEY_TWOSIDED, twoSided);
+        SenCull cull = twoSided != 0 ? SenCull::None : SenCull::Back;
+        SetDrawState(surface, BeDrawState::Create(*shader).SetCull(cull).Build());
+    };
 
     if (model == BeSRMLightingModel::PBR) {
-        materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
+        materialExtractFunction = [shader, extractDrawState](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath, const BePropSurface& surface) -> std::shared_ptr<BeMaterial> {
+            extractDrawState(mat, surface);
+
             const auto scheme = BeShaderLibrary::GetShaderScheme(*shader, "geometry-main");
             auto material = BeMaterial::Create(scheme);
 
@@ -410,7 +419,9 @@ auto BeStandardRenderMachine::LoadProp(
             return material;
         };
     } else {
-        materialExtractFunction = [shader](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath) -> std::shared_ptr<BeMaterial> {
+        materialExtractFunction = [shader, extractDrawState](aiMaterial const* mat, aiScene const* scene, const std::filesystem::path& parentPath, const BePropSurface& surface) -> std::shared_ptr<BeMaterial> {
+            extractDrawState(mat, surface);
+
             const auto scheme = BeShaderLibrary::GetShaderScheme(*shader, "geometry-main");
             auto material = BeMaterial::Create(scheme);
 
@@ -445,7 +456,28 @@ auto BeStandardRenderMachine::LoadProp(
     }
 
     static BeAssimpImporter importer;
-    auto prop = importer.LoadProp(modelPath, shader, materialExtractFunction);
+    auto prop = importer.LoadProp(modelPath, materialExtractFunction);
+    RegisterMesh(prop->Mesh);
+    return prop;
+}
+
+auto BeStandardRenderMachine::CreateProp(
+    std::shared_ptr<BeMesh> mesh,
+    raw_ptr<BeShader> shader,
+    const std::string& schemeLink
+) -> std::shared_ptr<BeProp> {
+    auto prop = std::make_shared<BeProp>();
+    prop->Mesh = std::move(mesh);
+
+    const auto& scheme = BeShaderLibrary::GetShaderScheme(*shader, schemeLink);
+    const auto state = BeDrawState::Create(*shader).Build();
+    for (size_t i = 0; i < prop->Mesh->LocalSlices.size(); ++i) {
+        auto& surface = prop->Surfaces.emplace_back();
+        surface.MeshSlice = static_cast<uint32_t>(i);
+        surface.Material = BeMaterial::Create(scheme);
+        SetDrawState(surface, state);
+    }
+
     RegisterMesh(prop->Mesh);
     return prop;
 }
@@ -458,10 +490,21 @@ auto BeStandardRenderMachine::LoadProp(
 auto BeStandardRenderMachine::ClearMeshes() -> void {
     _registeredMeshes.clear();
     _sharedMeshSlices.clear();
+    _surfaceDrawStates.clear();
 }
 
 auto BeStandardRenderMachine::RegisterMesh(const std::shared_ptr<BeMesh>& mesh) -> void {
     _registeredMeshes.push_back(mesh);
+}
+
+auto BeStandardRenderMachine::SetDrawState(const BePropSurface& surface, BeDrawState state) -> void {
+    _surfaceDrawStates[surface.Id] = std::move(state);
+}
+
+auto BeStandardRenderMachine::GetDrawState(const BePropSurface& surface) const -> const BeDrawState& {
+    const auto it = _surfaceDrawStates.find(surface.Id);
+    be_assert(it != _surfaceDrawStates.end(), "BeStandardRenderMachine::GetDrawState: surface was never registered", surface.Id);
+    return it->second;
 }
 
 auto BeStandardRenderMachine::BakeMeshes() -> void {

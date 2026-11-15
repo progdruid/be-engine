@@ -48,28 +48,26 @@ auto OldScene::DefineAssets() -> void {
 
     {
         auto planeMesh = BeMeshPrimitives::Plane(63);
-        _plane = BeProp::FromMesh(std::move(planeMesh), terrainShader, "geometry-main");
-        _plane->Slices[0].Material->SetFloat1("TerrainScale", 200.0f);
-        _plane->Slices[0].Material->SetFloat1("HeightScale", 100.0f);
+        _plane = _machine->CreateProp(std::move(planeMesh), terrainShader, "geometry-main");
+        _plane->Surfaces[0].Material->SetFloat1("TerrainScale", 200.0f);
+        _plane->Surfaces[0].Material->SetFloat1("HeightScale", 100.0f);
     }
-    _cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), tessellatedShader, "geometry-main");
-    _cube->Slices[0].Material->SetFloat3("DiffuseColor", glm::vec3(0.28f, 0.39f, 1.0f));
+    _cube = _machine->CreateProp(BeMeshPrimitives::Cube(), tessellatedShader, "geometry-main");
+    _cube->Surfaces[0].Material->SetFloat3("DiffuseColor", glm::vec3(0.28f, 0.39f, 1.0f));
 
     _witchItems = _machine->LoadProp("assets/witch_items.glb",          standardShader, BeSRMLightingModel::Phong);
     _macintosh  = _machine->LoadProp("assets/model.fbx",                standardShader, BeSRMLightingModel::Phong);
     _pagoda     = _machine->LoadProp("assets/pagoda.glb",               standardShader, BeSRMLightingModel::Phong);
     _disks      = _machine->LoadProp("assets/floppy-disks.glb",         standardShader, BeSRMLightingModel::Phong);
     _anvil      = _machine->LoadProp("assets/anvil-lowpoly/anvil.fbx",  standardShader, BeSRMLightingModel::Phong);
-    _anvil->Materials[0]->SetFloat3("SpecularColor", glm::vec3(1.0f));
+    _anvil->Surfaces[0].Material->SetFloat3("SpecularColor", glm::vec3(1.0f));
 
     for (const auto& prop : { _anvil, _pagoda, _witchItems }) {
-        for (const auto& material : prop->Materials) {
-            material->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
+        for (const auto& surface : prop->Surfaces) {
+            surface.Material->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
         }
     }
 
-    _machine->RegisterMesh(_plane->Mesh);
-    _machine->RegisterMesh(_cube->Mesh);
     _machine->BakeMeshes();
 
     _machine->DeclareGBufferTarget("Old_BaseColor",         SenFormat::R11G11B10_Float);

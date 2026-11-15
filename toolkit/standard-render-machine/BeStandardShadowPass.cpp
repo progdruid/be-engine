@@ -68,15 +68,13 @@ auto BeStandardShadowPass::RenderDirectionalShadows(
         _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
 
         const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
-        for (size_t j = 0; j < meshSlices.size(); ++j) {
-            const auto& meshSlice = meshSlices[j];
-            const auto& propSlice = entry.Prop->Slices[j];
+        for (const auto& surface : entry.Prop->Surfaces) {
+            const auto& meshSlice = meshSlices[surface.MeshSlice];
 
-            pass.SetState(entry.Prop->DrawState);
-            pass.OverrideCull(propSlice.TwoSided ? SenCull::None : SenCull::Back);
+            pass.SetState(_srm->GetDrawState(surface));
             pass.Bind("frame", *uniformMat);
             pass.Bind("geometry-object", *_objectMaterial);
-            pass.Bind("geometry-main", *propSlice.Material);
+            pass.Bind("geometry-main", *surface.Material);
             pass.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }
     }
@@ -115,14 +113,12 @@ auto BeStandardShadowPass::RenderPointLightShadows(
             _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
 
             const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
-            for (size_t j = 0; j < meshSlices.size(); ++j) {
-                const auto& meshSlice = meshSlices[j];
-                const auto& propSlice = entry.Prop->Slices[j];
-                pass.SetState(entry.Prop->DrawState);
-                pass.OverrideCull(propSlice.TwoSided ? SenCull::None : SenCull::Back);
+            for (const auto& surface : entry.Prop->Surfaces) {
+                const auto& meshSlice = meshSlices[surface.MeshSlice];
+                pass.SetState(_srm->GetDrawState(surface));
                 pass.Bind("frame", *uniformMat);
                 pass.Bind("geometry-object", *_objectMaterial);
-                pass.Bind("geometry-main", *propSlice.Material);
+                pass.Bind("geometry-main", *surface.Material);
                 pass.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
             }
         }

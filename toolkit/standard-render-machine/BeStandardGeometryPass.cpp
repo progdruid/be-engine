@@ -36,23 +36,19 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandList cmd) ->
     pass.Begin();
 
     for (const auto& entry : entries) {
-        be_assert(entry.Prop->DrawState.IsValid());
-
         _objectMaterial->SetMatrix("Model", entry.ModelMatrix);
         // todo: cmooooon, stuuuupid
         _objectMaterial->SetMatrix("ProjectionView", uniformMat->GetMatrix("CameraProjectionView"));
         _objectMaterial->SetFloat3("ViewerPosition", uniformMat->GetFloat3("CameraPosition"));
 
         const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
-        for (size_t j = 0; j < meshSlices.size(); ++j) {
-            const auto& meshSlice = meshSlices[j];
-            const auto& propSlice = entry.Prop->Slices[j];
+        for (const auto& surface : entry.Prop->Surfaces) {
+            const auto& meshSlice = meshSlices[surface.MeshSlice];
 
-            pass.SetState(entry.Prop->DrawState);
-            pass.OverrideCull(propSlice.TwoSided ? SenCull::None : SenCull::Back);
+            pass.SetState(_srm->GetDrawState(surface));
             pass.Bind("frame", *uniformMat);
             pass.Bind("geometry-object", *_objectMaterial);
-            pass.Bind("geometry-main", *propSlice.Material);
+            pass.Bind("geometry-main", *surface.Material);
 
             pass.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
         }

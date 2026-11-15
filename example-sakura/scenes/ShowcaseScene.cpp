@@ -80,21 +80,20 @@ auto ShowcaseScene::LoadModels(BeStandardRenderMachine& machine) -> void {
     
     const auto flowerPot = machine.LoadProp("assets/pixel-flower-pot/scene.gltf", standardShader);
     _assetRegistry.AddProp("flower-pot", flowerPot);
-    for (const auto& m : flowerPot->Materials) {
-        m->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
-    }
-    
-    const auto headset = machine.LoadProp("assets/headset/scene.gltf", standardShader);
-    _assetRegistry.AddProp("headset", headset);
-    for (const auto& m : headset->Materials) {
-        m->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
+    for (const auto& surface : flowerPot->Surfaces) {
+        surface.Material->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
     }
 
-    const auto skycube = BeProp::FromMesh(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
-    skycube->Materials[0]->SetFloat3("BaseColor", HexColor("#FAC8CD"));
-    skycube->Slices[0].TwoSided = true;
+    const auto headset = machine.LoadProp("assets/headset/scene.gltf", standardShader);
+    _assetRegistry.AddProp("headset", headset);
+    for (const auto& surface : headset->Surfaces) {
+        surface.Material->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
+    }
+
+    const auto skycube = machine.CreateProp(BeMeshPrimitives::Cube(), standardShader, "geometry-main");
+    skycube->Surfaces[0].Material->SetFloat3("BaseColor", HexColor("#FAC8CD"));
+    machine.SetDrawState(skycube->Surfaces[0],BeDrawState::Create(*standardShader).SetCull(SenCull::Front).Build());
     _assetRegistry.AddProp("skycube", skycube);
-    machine.RegisterMesh(skycube->Mesh);
 }
 
 auto ShowcaseScene::CreateObjects() -> void {
@@ -287,7 +286,7 @@ auto ShowcaseScene::ChangeShowcase(
     auto view = _registry.view<NameComponent, RenderComponent>();
     for (auto [entity, name, render] : view.each()) {
         if (name.Name == "skycube") {
-            render.Prop->Materials[0]->SetFloat3("BaseColor", HexColor(hxcolor.c_str()));
+            render.Prop->Surfaces[0].Material->SetFloat3("BaseColor", HexColor(hxcolor.c_str()));
         }
     }
 }

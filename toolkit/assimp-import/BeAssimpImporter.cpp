@@ -1,6 +1,6 @@
 #include "BeAssimpImporter.h"
 
-#include <ranges>
+#include <algorithm>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <stb_image/stb_image.h>
@@ -11,11 +11,8 @@
 BeAssimpImporter::BeAssimpImporter() {}
 BeAssimpImporter::~BeAssimpImporter() {}
 
-auto BeAssimpImporter::LoadProp(
-    const std::filesystem::path& modelPath,
-    raw_ptr<BeShader> usedShaderForMaterials,
-    const std::function<std::shared_ptr<BeMaterial>(aiMaterial const*, aiScene const*, const std::filesystem::path&)>& materialExtractFunction
-) -> std::shared_ptr<BeProp> {
+auto BeAssimpImporter::LoadProp(const std::filesystem::path& modelPath, const MaterialExtractFunction& materialExtractFunction) -> std::shared_ptr<BeProp> {
+    
     constexpr auto flags = (
         aiProcess_Triangulate |
         aiProcess_GenNormals |
@@ -32,37 +29,20 @@ auto BeAssimpImporter::LoadProp(
     
     auto prop = std::make_shared<BeProp>();
     prop->Mesh = std::make_shared<BeMesh>();
-    prop->DrawState = BeDrawState::Create(*usedShaderForMaterials).Build();
 
-    std::unordered_map<uint32_t, std::shared_ptr<BeMaterial>> assimpIndexToMaterial;
-    std::unordered_set<uint32_t> assimpIndexToTwoSided;
+    struct MaterialGroup {
+        uint32_t MaterialIndex;
+        std::vector<const aiMesh*> Meshes;
+    };
+    std::vector<MaterialGroup> groups;
     for (size_t i = 0; i < scene->mNumMeshes; ++i) {
         const auto mesh = scene->mMeshes[i];
-        const auto assimpMaterialIndex = mesh->mMaterialIndex;
-
-        const auto it = assimpIndexToMaterial.find(assimpMaterialIndex);
-        if (it != assimpIndexToMaterial.end())
-            continue;
-        
-        const auto meshMaterial = scene->mMaterials[assimpMaterialIndex];
-        
-        //TODO:
-        // X. move this to an optional BeAssimpImporter in toolkit/
-        // X. add a callback for all of this "ASSIMP -> BeMaterial / BePropSlice" bullshit
-        // 3? add a nice wrapper around aiMaterial to simplify API
-        // 4? add a default load route from SRM 
-        const auto material = materialExtractFunction(meshMaterial, scene, modelPath.parent_path());
-        
-        // TODO: this is temporary, has to be moved to the extract function
-        int twoSided = 0;
-        if (meshMaterial->Get(AI_MATKEY_TWOSIDED, twoSided) == AI_SUCCESS && twoSided) {
-            assimpIndexToTwoSided.emplace(assimpMaterialIndex);
+        auto it = std::ranges::find(groups, mesh->mMaterialIndex, &MaterialGroup::MaterialIndex);
+        if (it == groups.end()) {
+            groups.push_back({ .MaterialIndex = mesh->mMaterialIndex });
+            it = std::prev(groups.end());
         }
-        assimpIndexToMaterial[assimpMaterialIndex] = material;
-    }
-    
-    for (const auto & material : assimpIndexToMaterial | std::views::values) {
-        prop->Materials.push_back(material);
+        it->Meshes.push_back(mesh);
     }
 
     size_t numVertices = 0;
@@ -75,58 +55,61 @@ auto BeAssimpImporter::LoadProp(
 
     prop->Mesh->Vertices.reserve(numVertices);
     prop->Mesh->Indices.reserve(numIndices);
-    prop->Mesh->LocalSlices.reserve(scene->mNumMeshes);
+    prop->Mesh->LocalSlices.reserve(groups.size());
+    prop->Surfaces.reserve(groups.size());
 
-    int32_t vertexOffset = 0;
-    uint32_t indexOffset = 0;
-    for (size_t i = 0; i < scene->mNumMeshes; ++i) {
-        const auto mesh = scene->mMeshes[i];
+    for (const auto& group : groups) {
+        const int32_t groupVertexBase = static_cast<int32_t>(prop->Mesh->Vertices.size());
+        const uint32_t groupIndexBase = static_cast<uint32_t>(prop->Mesh->Indices.size());
 
-        for (size_t v = 0; v < mesh->mNumVertices; ++v) {
-            BeFullVertex vertex{};
-            aiVector3D position  = mesh->mVertices[v];
-            aiVector3D normal    = mesh->HasNormals() ? mesh->mNormals[v] : aiVector3D(0.f, 1.f, 0.f);
-            aiColor4D  color     = mesh->HasVertexColors(0) ? mesh->mColors[0][v] : aiColor4D(1, 1, 1, 1);
-            aiVector3D texCoord0 = mesh->HasTextureCoords(0) ? mesh->mTextureCoords[0][v] : aiVector3D(0.f, 0.f, 0.f);
-            aiVector3D tangent   = mesh->HasTangentsAndBitangents() ? mesh->mTangents[v]   : aiVector3D(1.f, 0.f, 0.f);
-            aiVector3D bitangent = mesh->HasTangentsAndBitangents() ? mesh->mBitangents[v] : aiVector3D(0.f, 1.f, 0.f);
+        for (const aiMesh* mesh : group.Meshes) {
+            const uint32_t meshVertexOffset = static_cast<uint32_t>(prop->Mesh->Vertices.size()) - static_cast<uint32_t>(groupVertexBase);
 
-            // Negate X on all vectors for the engine's left-handed coordinate system.
-            // Compute handedness in engine space so cross(N, T) * w reconstructs the correct bitangent.
-            glm::vec3 nNeg = {-normal.x,   normal.y,   normal.z};
-            glm::vec3 tNeg = {-tangent.x,  tangent.y,  tangent.z};
-            glm::vec3 bNeg = {-bitangent.x, bitangent.y, bitangent.z};
-            float handedness = glm::dot(glm::cross(nNeg, tNeg), bNeg) >= 0.0f ? 1.0f : -1.0f;
+            for (size_t v = 0; v < mesh->mNumVertices; ++v) {
+                BeFullVertex vertex{};
+                aiVector3D position  = mesh->mVertices[v];
+                aiVector3D normal    = mesh->HasNormals() ? mesh->mNormals[v] : aiVector3D(0.f, 1.f, 0.f);
+                aiColor4D  color     = mesh->HasVertexColors(0) ? mesh->mColors[0][v] : aiColor4D(1, 1, 1, 1);
+                aiVector3D texCoord0 = mesh->HasTextureCoords(0) ? mesh->mTextureCoords[0][v] : aiVector3D(0.f, 0.f, 0.f);
+                aiVector3D tangent   = mesh->HasTangentsAndBitangents() ? mesh->mTangents[v]   : aiVector3D(1.f, 0.f, 0.f);
+                aiVector3D bitangent = mesh->HasTangentsAndBitangents() ? mesh->mBitangents[v] : aiVector3D(0.f, 1.f, 0.f);
 
-            vertex.Position = {-position.x, position.y, position.z};
-            vertex.Normal      = nNeg;
-            vertex.Color    = {color.r, color.g, color.b, color.a};
-            vertex.UV0      = {texCoord0.x, texCoord0.y};
-            vertex.Tangent  = {tNeg.x, tNeg.y, tNeg.z, handedness};
-            prop->Mesh->Vertices.push_back(vertex);
-        }
+                // Negate X on all vectors for the engine's left-handed coordinate system.
+                // Compute handedness in engine space so cross(N, T) * w reconstructs the correct bitangent.
+                glm::vec3 nNeg = {-normal.x,   normal.y,   normal.z};
+                glm::vec3 tNeg = {-tangent.x,  tangent.y,  tangent.z};
+                glm::vec3 bNeg = {-bitangent.x, bitangent.y, bitangent.z};
+                float handedness = glm::dot(glm::cross(nNeg, tNeg), bNeg) >= 0.0f ? 1.0f : -1.0f;
 
-        for (size_t f = 0; f < mesh->mNumFaces; ++f) {
-            const aiFace& face = mesh->mFaces[f];
-            if (face.mNumIndices != 3) continue;
-            prop->Mesh->Indices.push_back(face.mIndices[0]);
-            prop->Mesh->Indices.push_back(face.mIndices[2]);
-            prop->Mesh->Indices.push_back(face.mIndices[1]);
+                vertex.Position = {-position.x, position.y, position.z};
+                vertex.Normal      = nNeg;
+                vertex.Color    = {color.r, color.g, color.b, color.a};
+                vertex.UV0      = {texCoord0.x, texCoord0.y};
+                vertex.Tangent  = {tNeg.x, tNeg.y, tNeg.z, handedness};
+                prop->Mesh->Vertices.push_back(vertex);
+            }
+
+            for (size_t f = 0; f < mesh->mNumFaces; ++f) {
+                const aiFace& face = mesh->mFaces[f];
+                if (face.mNumIndices != 3) continue;
+                prop->Mesh->Indices.push_back(face.mIndices[0] + meshVertexOffset);
+                prop->Mesh->Indices.push_back(face.mIndices[2] + meshVertexOffset);
+                prop->Mesh->Indices.push_back(face.mIndices[1] + meshVertexOffset);
+            }
         }
 
         prop->Mesh->LocalSlices.push_back({
-            .IndexCount = mesh->mNumFaces * 3,
-            .StartIndexLocation = indexOffset,
-            .BaseVertexLocation = vertexOffset,
+            .IndexCount = static_cast<uint32_t>(prop->Mesh->Indices.size()) - groupIndexBase,
+            .StartIndexLocation = groupIndexBase,
+            .BaseVertexLocation = groupVertexBase,
         });
 
-        prop->Slices.push_back({
-            .Material = assimpIndexToMaterial.at(mesh->mMaterialIndex),
-            .TwoSided = assimpIndexToTwoSided.contains(mesh->mMaterialIndex),
-        });
-
-        vertexOffset += mesh->mNumVertices;
-        indexOffset += mesh->mNumFaces * 3;
+        auto& surface = prop->Surfaces.emplace_back();
+        surface.MeshSlice = static_cast<uint32_t>(prop->Mesh->LocalSlices.size() - 1);
+        //TODO:
+        // 1. add a nice wrapper around aiMaterial to simplify API
+        // 2? add a default load route from SRM
+        surface.Material = materialExtractFunction(scene->mMaterials[group.MaterialIndex], scene, modelPath.parent_path(), surface);
     }
 
     return prop;

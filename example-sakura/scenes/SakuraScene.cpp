@@ -59,47 +59,43 @@ auto SakuraScene::DefineAssets() -> void {
     const auto phongShader = BeShaderLibrary::GetShader("standard-phong");
     const auto checkerboardShader = BeShaderLibrary::GetShader("checkerboard");
     
-    const auto cube = BeProp::FromMesh(BeMeshPrimitives::Cube(), checkerboardShader, "geometry-main");
-    cube->Materials[0]->SetTexture("DiffuseTexture",
+    const auto cube = _machine->CreateProp(BeMeshPrimitives::Cube(), checkerboardShader, "geometry-main");
+    cube->Surfaces[0].Material->SetTexture("DiffuseTexture",
         BeTexture::Create("Sakura_Checkerboard")
         .LoadFromFile("assets/checkerboard.png")
         .AddToRegistry(_assetRegistry)
         .Build()
     );
-    _machine->RegisterMesh(cube->Mesh);
     
-    const auto emissiveCube = BeProp::FromMesh(BeMeshPrimitives::Cube(), pbrShader, "geometry-main");
-    emissiveCube->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(1.f) * 4.0f);
-    _machine->RegisterMesh(emissiveCube->Mesh);
-    
-    const auto moon = BeProp::FromMesh(BeMeshPrimitives::Cube(), pbrShader, "geometry-main");
-    moon->Materials[0]->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 10.0f);
-    _machine->RegisterMesh(moon->Mesh);
-    
-    const auto testSphere = BeProp::FromMesh(BeMeshPrimitives::Sphere(), pbrShader, "geometry-main");
-    testSphere->Materials[0]->SetFloat3("BaseColor", glm::vec3(0.8f, 0.3f, 0.1f));
-    testSphere->Materials[0]->SetFloat1("Metallic", 0.8f);
-    testSphere->Materials[0]->SetFloat1("Roughness", 0.5f);
-    _machine->RegisterMesh(testSphere->Mesh);
-    
+    const auto emissiveCube = _machine->CreateProp(BeMeshPrimitives::Cube(), pbrShader, "geometry-main");
+    emissiveCube->Surfaces[0].Material->SetFloat3("EmissiveColor", glm::vec3(1.f) * 4.0f);
+
+    const auto moon = _machine->CreateProp(BeMeshPrimitives::Cube(), pbrShader, "geometry-main");
+    moon->Surfaces[0].Material->SetFloat3("EmissiveColor", glm::vec3(0.7f, 0.7f, 0.99f) * 10.0f);
+
+    const auto testSphere = _machine->CreateProp(BeMeshPrimitives::Sphere(), pbrShader, "geometry-main");
+    testSphere->Surfaces[0].Material->SetFloat3("BaseColor", glm::vec3(0.8f, 0.3f, 0.1f));
+    testSphere->Surfaces[0].Material->SetFloat1("Metallic", 0.8f);
+    testSphere->Surfaces[0].Material->SetFloat1("Roughness", 0.5f);
+
     const auto anvil = _machine->LoadProp("assets/anvil/scene.gltf", pbrShader);
-    anvil->Materials[0]->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
-    
+    anvil->Surfaces[0].Material->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
+
     const auto sakura = _machine->LoadProp("assets/sakura/scene.gltf", pbrShader);
-    sakura->Materials[0]->SetSampler("InputSampler", BeShaderLibrary::GetSampler("linear-wrap"));
-    
+    sakura->Surfaces[0].Material->SetSampler("InputSampler", BeShaderLibrary::GetSampler("linear-wrap"));
+
     const auto sakura2 = _machine->LoadProp("assets/stylized_sakura_tree.glb", pbrShader);
-    
+
     const auto axe = _machine->LoadProp("assets/pixel_molten_axe/scene.gltf",phongShader,BeSRMLightingModel::Phong);
-    for (const auto& material : axe->Materials) {
-        material->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
-        material->SetFloat3("EmissiveColor", glm::vec3(6.0f));
+    for (const auto& surface : axe->Surfaces) {
+        surface.Material->SetSampler("InputSampler", BeShaderLibrary::GetSampler("point-clamp"));
+        surface.Material->SetFloat3("EmissiveColor", glm::vec3(6.0f));
     }
-    
+
     const auto katana = _machine->LoadProp("assets/cyberpunk_katana/scene.gltf", pbrShader);
-    for (const auto& material : katana->Materials) {
-        material->SetFloat3("EmissiveColor", glm::vec3(6.0f));
-        material->SetFloat1("Metallic", 0.01f);
+    for (const auto& surface : katana->Surfaces) {
+        surface.Material->SetFloat3("EmissiveColor", glm::vec3(6.0f));
+        surface.Material->SetFloat1("Metallic", 0.01f);
     }
     
     const auto rustySphere = _machine->LoadProp("assets/rusty-sphere/scene.gltf", pbrShader);

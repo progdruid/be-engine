@@ -284,13 +284,12 @@ auto BeStandardFullScene::ApplyLuaAssets(const BeLuaValue& assets) -> void {
             } else {
                 mesh = BeMeshPrimitives::Cube();
             }
-            prop = BeProp::FromMesh(mesh, shader, propDef["material"].GetOr(std::string("geometry-main")));
-            _machine->RegisterMesh(prop->Mesh);
+            prop = _machine->CreateProp(mesh, shader, propDef["material"].GetOr(std::string("geometry-main")));
         }
 
         for (const auto& [key, value] : propDef["set"].Pairs()) {
-            for (const auto& material : prop->Materials) {
-                ApplyMaterialSet(*material, key, value);
+            for (const auto& surface : prop->Surfaces) {
+                ApplyMaterialSet(*surface.Material, key, value);
             }
         }
 

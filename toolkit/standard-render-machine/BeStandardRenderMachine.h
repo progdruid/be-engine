@@ -7,6 +7,7 @@
 #include <common.hpp>
 #include <include-glm.h>
 
+#include "BeDrawState.h"
 #include "BeMaterial.h"
 #include "BeMesh.h"
 #include "BePassSequence.h"
@@ -140,6 +141,7 @@ class BeStandardRenderMachine {
     // todo: raw ptr as a key is not cool, but this will change to a system at some point
     std::unordered_map<BeMesh*, std::vector<BeMeshSlice>> _sharedMeshSlices;
     std::vector<std::shared_ptr<BeMesh>> _registeredMeshes;
+    std::unordered_map<uint32_t, BeDrawState> _surfaceDrawStates;
 
     std::shared_ptr<BeMaterial> _tonemapperMaterial;
 
@@ -219,12 +221,21 @@ class BeStandardRenderMachine {
         raw_ptr<BeShader> shader,
         BeSRMLightingModel model = BeSRMLightingModel::PBR
     ) -> std::shared_ptr<BeProp>;
-    
+    expose auto CreateProp(
+        std::shared_ptr<BeMesh> mesh,
+        raw_ptr<BeShader> shader,
+        const std::string& schemeLink
+    ) -> std::shared_ptr<BeProp>;
+
     // mesh baking -----------------------------------------------------------------------------------------------------
+    hide
+    auto RegisterMesh(const std::shared_ptr<BeMesh>& mesh) -> void;
+
     expose
     auto ClearMeshes() -> void;
-    auto RegisterMesh(const std::shared_ptr<BeMesh>& mesh) -> void;
     auto BakeMeshes() -> void;
+    auto SetDrawState(const BePropSurface& surface, BeDrawState state) -> void;
+    auto GetDrawState(const BePropSurface& surface) const -> const BeDrawState&;
     auto GetMeshSlices(BeMesh* mesh) const -> const std::vector<BeMeshSlice>& { return _sharedMeshSlices.at(mesh); }
     auto GetSharedVertexBuffer() const -> SenBuffer { return _sharedVertexBuffer; }
     auto GetSharedIndexBuffer() const -> SenBuffer { return _sharedIndexBuffer; }
