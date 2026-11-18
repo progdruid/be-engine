@@ -5,6 +5,7 @@
 #include <assimp/scene.h>
 #include <stb_image/stb_image.h>
 #include <include-libassert.h>
+#include <BeBackend.h>
 #include <BeProp.h>
 #include <BeTexture.h>
 
@@ -28,7 +29,7 @@ auto BeAssimpImporter::LoadProp(const std::filesystem::path& modelPath, const Ma
     be_assert(scene && scene->mRootNode, "Failed to load model: " + modelPath.string());
     
     auto prop = std::make_shared<BeProp>();
-    prop->Mesh = std::make_shared<BeMesh>();
+    prop->MeshData = std::make_shared<BeMeshData>();
 
     struct MaterialGroup {
         uint32_t MaterialIndex;
@@ -53,17 +54,17 @@ auto BeAssimpImporter::LoadProp(const std::filesystem::path& modelPath, const Ma
         numIndices += 3 * mesh->mNumFaces;
     }
 
-    prop->Mesh->Vertices.reserve(numVertices);
-    prop->Mesh->Indices.reserve(numIndices);
-    prop->Mesh->LocalSlices.reserve(groups.size());
+    prop->MeshData->Vertices.reserve(numVertices);
+    prop->MeshData->Indices.reserve(numIndices);
+    prop->MeshData->Submeshes.reserve(groups.size());
     prop->Surfaces.reserve(groups.size());
 
     for (const auto& group : groups) {
-        const int32_t groupVertexBase = static_cast<int32_t>(prop->Mesh->Vertices.size());
-        const uint32_t groupIndexBase = static_cast<uint32_t>(prop->Mesh->Indices.size());
+        const int32_t groupVertexBase = static_cast<int32_t>(prop->MeshData->Vertices.size());
+        const uint32_t groupIndexBase = static_cast<uint32_t>(prop->MeshData->Indices.size());
 
         for (const aiMesh* mesh : group.Meshes) {
-            const uint32_t meshVertexOffset = static_cast<uint32_t>(prop->Mesh->Vertices.size()) - static_cast<uint32_t>(groupVertexBase);
+            const uint32_t meshVertexOffset = static_cast<uint32_t>(prop->MeshData->Vertices.size()) - static_cast<uint32_t>(groupVertexBase);
 
             for (size_t v = 0; v < mesh->mNumVertices; ++v) {
                 BeFullVertex vertex{};
@@ -86,32 +87,33 @@ auto BeAssimpImporter::LoadProp(const std::filesystem::path& modelPath, const Ma
                 vertex.Color    = {color.r, color.g, color.b, color.a};
                 vertex.UV0      = {texCoord0.x, texCoord0.y};
                 vertex.Tangent  = {tNeg.x, tNeg.y, tNeg.z, handedness};
-                prop->Mesh->Vertices.push_back(vertex);
+                prop->MeshData->Vertices.push_back(vertex);
             }
 
             for (size_t f = 0; f < mesh->mNumFaces; ++f) {
                 const aiFace& face = mesh->mFaces[f];
                 if (face.mNumIndices != 3) continue;
-                prop->Mesh->Indices.push_back(face.mIndices[0] + meshVertexOffset);
-                prop->Mesh->Indices.push_back(face.mIndices[2] + meshVertexOffset);
-                prop->Mesh->Indices.push_back(face.mIndices[1] + meshVertexOffset);
+                prop->MeshData->Indices.push_back(face.mIndices[0] + meshVertexOffset);
+                prop->MeshData->Indices.push_back(face.mIndices[2] + meshVertexOffset);
+                prop->MeshData->Indices.push_back(face.mIndices[1] + meshVertexOffset);
             }
         }
 
-        prop->Mesh->LocalSlices.push_back({
-            .IndexCount = static_cast<uint32_t>(prop->Mesh->Indices.size()) - groupIndexBase,
+        prop->MeshData->Submeshes.push_back({
+            .IndexCount = static_cast<uint32_t>(prop->MeshData->Indices.size()) - groupIndexBase,
             .StartIndexLocation = groupIndexBase,
             .BaseVertexLocation = groupVertexBase,
         });
 
         auto& surface = prop->Surfaces.emplace_back();
-        surface.MeshSlice = static_cast<uint32_t>(prop->Mesh->LocalSlices.size() - 1);
+        surface.Submesh = static_cast<uint32_t>(prop->MeshData->Submeshes.size() - 1);
         //TODO:
         // 1. add a nice wrapper around aiMaterial to simplify API
         // 2? add a default load route from SRM
         surface.Material = materialExtractFunction(scene->mMaterials[group.MaterialIndex], scene, modelPath.parent_path(), surface);
     }
 
+    prop->Mesh = BeBackend::CreateMesh(*prop->MeshData);
     return prop;
 }
 

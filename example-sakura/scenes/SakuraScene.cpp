@@ -42,7 +42,7 @@ void SakuraScene::Prepare() {
 
 auto SakuraScene::DefineAssets() -> void {
     _machine->ClearTargets();
-    _machine->ClearMeshes();
+    _machine->ClearDrawStates();
     
     _machine->DeclareGBufferTarget("Sakura_Albedo_RGB",      SenFormat::R11G11B10_Float);
     _machine->DeclareGBufferTarget("Sakura_WorldNormal_XYZ", SenFormat::RGBA16_Float);
@@ -114,8 +114,6 @@ auto SakuraScene::DefineAssets() -> void {
     _assetRegistry.AddProp("rusty-sphere", rustySphere);
     _assetRegistry.AddProp("compass", compass);
     _assetRegistry.AddProp("book", book);
-    
-    _machine->BakeMeshes();
 }
 
 auto SakuraScene::DefineSettings() -> void {

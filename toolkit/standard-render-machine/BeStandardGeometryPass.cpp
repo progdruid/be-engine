@@ -31,8 +31,6 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandList cmd) ->
     pass.AddColorTargets(_colorTargets);
     pass.SetDepthTarget(_depthTarget);
     pass.SetViewport(_colorTargets[0]->GetViewport());
-    pass.SetVertexBuffer(_srm->GetSharedVertexBuffer());
-    pass.SetIndexBuffer (_srm->GetSharedIndexBuffer());
     pass.Begin();
 
     for (const auto& entry : entries) {
@@ -41,16 +39,18 @@ auto BeStandardGeometryPass::Render(BeRenderer& renderer, SenCommandList cmd) ->
         _objectMaterial->SetMatrix("ProjectionView", uniformMat->GetMatrix("CameraProjectionView"));
         _objectMaterial->SetFloat3("ViewerPosition", uniformMat->GetFloat3("CameraPosition"));
 
-        const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
+        const auto& meshEntry = BeBackend::GetMeshEntry(entry.Prop->Mesh);
+        SenCmd::SetVertexBuffer(cmd, meshEntry.VertexBuffer);
+        SenCmd::SetIndexBuffer(cmd, meshEntry.IndexBuffer);
         for (const auto& surface : entry.Prop->Surfaces) {
-            const auto& meshSlice = meshSlices[surface.MeshSlice];
+            const auto& submesh = meshEntry.Submeshes[surface.Submesh];
 
             pass.SetState(_srm->GetDrawState(surface));
             pass.Bind("frame", *uniformMat);
             pass.Bind("geometry-object", *_objectMaterial);
             pass.Bind("geometry-main", *surface.Material);
 
-            pass.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
+            pass.DrawIndexed(submesh.IndexCount, submesh.StartIndexLocation, submesh.BaseVertexLocation);
         }
     }
 

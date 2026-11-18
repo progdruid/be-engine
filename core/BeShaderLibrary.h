@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <span>
 
 #include <common.hpp>
 #include <SenTypes.h>

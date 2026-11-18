@@ -68,8 +68,6 @@ auto OldScene::DefineAssets() -> void {
         }
     }
 
-    _machine->BakeMeshes();
-
     _machine->DeclareGBufferTarget("Old_BaseColor",         SenFormat::R11G11B10_Float);
     _machine->DeclareGBufferTarget("Old_WorldNormal",       SenFormat::RGBA16_Float);
     _machine->DeclareGBufferTarget("Old_SpecularShininess", SenFormat::RGBA8_Unorm);

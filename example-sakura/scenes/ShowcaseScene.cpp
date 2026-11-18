@@ -53,7 +53,6 @@ auto ShowcaseScene::DefineSettings() -> void {
 
 auto ShowcaseScene::DefineAssets() -> void {
     LoadModels(*_machine);
-    _machine->BakeMeshes();
 
     _machine->DeclareGBufferTarget("Showcase_BaseColor",         SenFormat::R11G11B10_Float);
     _machine->DeclareGBufferTarget("Showcase_WorldNormal",       SenFormat::RGBA16_Float);

@@ -27,6 +27,10 @@ std::vector<uint32_t> BeBackend::_textureSlots;
 std::vector<uint32_t> BeBackend::_samplerSlots;
 std::vector<BeBackend::TrackedLayouts> BeBackend::_textureLayouts;
 std::vector<SenTransition> BeBackend::_queuedTransitions;
+BeBackend::MeshAllocator BeBackend::_vertexAllocator { .ElementSize = sizeof(BeFullVertex), .SmallestClassElementCount = 256 };
+BeBackend::MeshAllocator BeBackend::_indexAllocator { .ElementSize = sizeof(uint32_t), .SmallestClassElementCount = 768 };
+std::vector<BeBackend::MeshEntryInternal> BeBackend::_meshEntries;
+std::vector<uint32_t> BeBackend::_freeMeshEntries;
 BeBackend::RetirementBucket BeBackend::_pending;
 std::vector<BeBackend::RetirementBucket> BeBackend::_retired;
 std::array<BeBackend::MaterialArenaChain, BeRenderer::FramesInFlight> BeBackend::_arenaChains;
@@ -66,6 +70,27 @@ auto BeBackend::Shutdown() -> void {
             Sen::DestroyBuffer(block.Buffer);
         }
         chain = {};
+    }
+
+    for (const auto& meshEntry : _meshEntries) {
+        if (meshEntry.VertexAllocation.Dedicated) {
+            Sen::DestroyBuffer(meshEntry.VertexAllocation.Buffer);
+        }
+        if (meshEntry.IndexAllocation.Dedicated) {
+            Sen::DestroyBuffer(meshEntry.IndexAllocation.Buffer);
+        }
+    }
+    _meshEntries.clear();
+    _freeMeshEntries.clear();
+
+    for (auto* allocator : { &_vertexAllocator, &_indexAllocator }) {
+        for (const auto& page : allocator->Pages) {
+            Sen::DestroyBuffer(page.Buffer);
+        }
+        allocator->Pages.clear();
+        for (auto& classPageIndices : allocator->ClassPageIndices) {
+            classPageIndices.clear();
+        }
     }
 
     _bindlessNext = {};
@@ -397,6 +422,160 @@ auto BeBackend::ReleaseSlot(BindlessKind kind, uint32_t slot) -> void {
 
 
 
+auto BeBackend::CreateMesh(const BeMeshData& data) -> BeMesh {
+    be_assert(!data.Vertices.empty() && !data.Indices.empty(), "BeBackend::CreateMesh: empty mesh data");
+
+    const auto vertexCount = static_cast<uint32_t>(data.Vertices.size());
+    const auto indexCount = static_cast<uint32_t>(data.Indices.size());
+    const auto vertexAllocation = AllocateMeshMemory(_vertexAllocator, vertexCount);
+    const auto indexAllocation = AllocateMeshMemory(_indexAllocator, indexCount);
+
+    uint32_t vertexOffsetInElements = 0;
+    if (!vertexAllocation.Dedicated) {
+        const auto& page = _vertexAllocator.Pages[vertexAllocation.Page];
+        vertexOffsetInElements = vertexAllocation.Slot * (_vertexAllocator.SmallestClassElementCount << page.Class);
+    }
+
+    uint32_t indexOffsetInElements = 0;
+    if (!indexAllocation.Dedicated) {
+        const auto& page = _indexAllocator.Pages[indexAllocation.Page];
+        indexOffsetInElements = indexAllocation.Slot * (_indexAllocator.SmallestClassElementCount << page.Class);
+    }
+
+    WriteBuffer(
+        data.Vertices.data(),
+        vertexCount * _vertexAllocator.ElementSize,
+        vertexAllocation.Buffer,
+        vertexOffsetInElements * _vertexAllocator.ElementSize
+    );
+    WriteBuffer(
+        data.Indices.data(),
+        indexCount * _indexAllocator.ElementSize,
+        indexAllocation.Buffer,
+        indexOffsetInElements * _indexAllocator.ElementSize
+    );
+
+    uint32_t entryIndex = 0;
+    if (_freeMeshEntries.empty()) {
+        entryIndex = static_cast<uint32_t>(_meshEntries.size());
+        _meshEntries.emplace_back();
+    } else {
+        entryIndex = _freeMeshEntries.back();
+        _freeMeshEntries.pop_back();
+    }
+
+    auto& meshEntry = _meshEntries[entryIndex];
+    meshEntry.VertexAllocation = vertexAllocation;
+    meshEntry.IndexAllocation = indexAllocation;
+    meshEntry.Entry.VertexBuffer = vertexAllocation.Buffer;
+    meshEntry.Entry.IndexBuffer = indexAllocation.Buffer;
+    meshEntry.Entry.Submeshes.clear();
+    for (const auto& submesh : data.Submeshes) {
+        meshEntry.Entry.Submeshes.push_back({
+            .IndexCount = submesh.IndexCount,
+            .StartIndexLocation = submesh.StartIndexLocation + indexOffsetInElements,
+            .BaseVertexLocation = submesh.BaseVertexLocation + static_cast<int32_t>(vertexOffsetInElements),
+        });
+    }
+
+    return BeMesh {
+        .Index = entryIndex,
+        .Generation = meshEntry.Generation,
+    };
+}
+
+auto BeBackend::ReleaseMesh(BeMesh mesh) -> void {
+    be_assert(mesh.Index < _meshEntries.size(), "BeBackend::ReleaseMesh: invalid mesh", mesh.Index);
+    auto& meshEntry = _meshEntries[mesh.Index];
+    be_assert(meshEntry.Generation == mesh.Generation, "BeBackend::ReleaseMesh: stale mesh", mesh.Index, mesh.Generation);
+
+    _pending.MeshAllocations.push_back(meshEntry.VertexAllocation);
+    _pending.MeshAllocations.push_back(meshEntry.IndexAllocation);
+    meshEntry.VertexAllocation = {};
+    meshEntry.IndexAllocation = {};
+    meshEntry.Entry = {};
+
+    ++meshEntry.Generation;
+    if (meshEntry.Generation == 0) {
+        meshEntry.Generation = 1;
+    }
+    _freeMeshEntries.push_back(mesh.Index);
+}
+
+auto BeBackend::GetMeshEntry(BeMesh mesh) -> const MeshEntry& {
+    be_assert(mesh.Index < _meshEntries.size(), "BeBackend::GetMeshEntry: invalid mesh", mesh.Index);
+    const auto& meshEntry = _meshEntries[mesh.Index];
+    be_assert(meshEntry.Generation == mesh.Generation, "BeBackend::GetMeshEntry: stale mesh", mesh.Index, mesh.Generation);
+    return meshEntry.Entry;
+}
+
+auto BeBackend::AllocateMeshMemory(MeshAllocator& allocator, uint32_t elementCount) -> MeshAllocation {
+    be_assert(elementCount > 0, "BeBackend::AllocateMeshMemory: empty allocation");
+
+    const auto biggestClassElementCount = (allocator.SmallestClassElementCount << (MeshClassCount - 1));
+    if (elementCount > biggestClassElementCount) {
+        return MeshAllocation {
+            .Dedicated = true,
+            .Buffer = Sen::CreateBuffer({
+                .Memory = SenMemory::Device,
+                .Size = elementCount * allocator.ElementSize,
+            }),
+        };
+    }
+
+    // find our size class
+    uint32_t meshClass = 0;
+    while ((allocator.SmallestClassElementCount << meshClass) < elementCount) {
+        ++meshClass;
+    }
+
+    // find if there is a page of our class with a free slot
+    auto& classPageIndices = allocator.ClassPageIndices[meshClass];
+    const auto found = std::ranges::find_if(classPageIndices, [&](uint32_t index) {
+        return !allocator.Pages[index].FreeSlots.empty();
+    });
+    
+    uint32_t pageIndex;
+    if (found != classPageIndices.end()) {
+        pageIndex = *found;
+    } else {
+        pageIndex = static_cast<uint32_t>(allocator.Pages.size());
+        auto& page = allocator.Pages.emplace_back();
+        page.Buffer = Sen::CreateBuffer({
+            .Memory = SenMemory::Device,
+            .Size = MeshPageSize,
+        });
+        page.Class = meshClass;
+        const uint32_t slotCount = MeshPageSize / ((allocator.SmallestClassElementCount << meshClass) * allocator.ElementSize);
+        for (uint32_t slot = slotCount; slot > 0; --slot) {
+            page.FreeSlots.push_back(slot - 1);
+        }
+        classPageIndices.push_back(pageIndex);
+    }
+
+    auto& page = allocator.Pages[pageIndex];
+    const uint32_t slot = page.FreeSlots.back();
+    page.FreeSlots.pop_back();
+
+    return MeshAllocation {
+        .Allocator = &allocator,
+        .Page = pageIndex,
+        .Slot = slot,
+        .Buffer = page.Buffer,
+    };
+}
+
+auto BeBackend::FreeMeshMemory(const MeshAllocation& allocation) -> void {
+    if (allocation.Dedicated) {
+        Sen::DestroyBuffer(allocation.Buffer);
+        return;
+    }
+
+    allocation.Allocator->Pages[allocation.Page].FreeSlots.push_back(allocation.Slot);
+}
+
+
+
 auto BeBackend::Retire(SenTexture handle)  -> void { _pending.Textures.push_back(handle); }
 auto BeBackend::Retire(SenView handle)     -> void { _pending.Views.push_back(handle); }
 auto BeBackend::Retire(SenBuffer handle)   -> void { _pending.Buffers.push_back(handle); }
@@ -419,11 +598,12 @@ auto BeBackend::FlushRetirements() -> void {
 }
 
 auto BeBackend::DestroyBucket(const RetirementBucket& bucket) -> void {
-    for (const auto handle : bucket.Views)     { UnregisterTexture(handle); Sen::DestroyView(handle); }
-    for (const auto handle : bucket.Textures)  {                            Sen::DestroyTexture(handle); }
-    for (const auto handle : bucket.Buffers)   {                            Sen::DestroyBuffer(handle); }
-    for (const auto handle : bucket.Samplers)  { UnregisterSampler(handle); Sen::DestroySampler(handle); }
-    for (const auto handle : bucket.Pipelines) {                            Sen::DestroyPipeline(handle); }
+    for (const auto  handle : bucket.Views)           { UnregisterTexture(handle); Sen::DestroyView(handle); }
+    for (const auto  handle : bucket.Textures)        {                            Sen::DestroyTexture(handle); }
+    for (const auto  handle : bucket.Buffers)         {                            Sen::DestroyBuffer(handle); }
+    for (const auto  handle : bucket.Samplers)        { UnregisterSampler(handle); Sen::DestroySampler(handle); }
+    for (const auto  handle : bucket.Pipelines)       {                            Sen::DestroyPipeline(handle); }
+    for (const auto& handle : bucket.MeshAllocations) {                            FreeMeshMemory(handle); }
 }
 
 

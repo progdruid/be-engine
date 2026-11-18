@@ -7,8 +7,8 @@
 
 namespace BeMeshPrimitives {
 
-    inline auto Plane(uint32_t subdivisions = 1) -> std::shared_ptr<BeMesh> {
-        auto mesh = std::make_shared<BeMesh>();
+    inline auto Plane(uint32_t subdivisions = 1) -> std::shared_ptr<BeMeshData> {
+        auto mesh = std::make_shared<BeMeshData>();
 
         const uint32_t vertsPerSide = subdivisions + 1;
         const float cellSize = 1.0f / subdivisions;
@@ -47,7 +47,7 @@ namespace BeMeshPrimitives {
             }
         }
 
-        mesh->LocalSlices.push_back({
+        mesh->Submeshes.push_back({
             .IndexCount = static_cast<uint32_t>(mesh->Indices.size()),
             .StartIndexLocation = 0,
             .BaseVertexLocation = 0,
@@ -56,8 +56,8 @@ namespace BeMeshPrimitives {
         return mesh;
     }
 
-    inline auto Cube() -> std::shared_ptr<BeMesh> {
-        auto mesh = std::make_shared<BeMesh>();
+    inline auto Cube() -> std::shared_ptr<BeMeshData> {
+        auto mesh = std::make_shared<BeMeshData>();
 
         // 6 faces, 4 vertices each = 24 vertices
         // Positions negated on X to match codebase convention
@@ -113,7 +113,7 @@ namespace BeMeshPrimitives {
             mesh->Indices.push_back(base + 3);
         }
 
-        mesh->LocalSlices.push_back({
+        mesh->Submeshes.push_back({
             .IndexCount = static_cast<uint32_t>(mesh->Indices.size()),
             .StartIndexLocation = 0,
             .BaseVertexLocation = 0,
@@ -122,8 +122,8 @@ namespace BeMeshPrimitives {
         return mesh;
     }
 
-    inline auto Sphere(uint32_t rings = 16, uint32_t segments = 32) -> std::shared_ptr<BeMesh> {
-        auto mesh = std::make_shared<BeMesh>();
+    inline auto Sphere(uint32_t rings = 16, uint32_t segments = 32) -> std::shared_ptr<BeMeshData> {
+        auto mesh = std::make_shared<BeMeshData>();
 
         constexpr float pi = std::numbers::pi_v<float>;
 
@@ -170,7 +170,7 @@ namespace BeMeshPrimitives {
             }
         }
 
-        mesh->LocalSlices.push_back({
+        mesh->Submeshes.push_back({
             .IndexCount = static_cast<uint32_t>(mesh->Indices.size()),
             .StartIndexLocation = 0,
             .BaseVertexLocation = 0,

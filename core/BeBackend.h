@@ -7,6 +7,7 @@
 #include <vector>
 #include <common.hpp>
 
+#include "BeMesh.h"
 #include "BeRenderer.h"
 #include "SenTypes.h"
 #include <Sen.h>
@@ -130,6 +131,58 @@ class BeBackend {
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // meshes //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    expose struct MeshEntry {
+        SenBuffer VertexBuffer;
+        SenBuffer IndexBuffer;
+        std::vector<BeSubmesh> Submeshes;
+    };
+
+    hide static constexpr uint32_t MeshClassCount = 7;
+    hide static constexpr uint32_t MeshPageSize = 4 * 1024 * 1024;
+
+    hide struct MeshPage {
+        SenBuffer Buffer;
+        uint32_t Class = 0;
+        std::vector<uint32_t> FreeSlots;
+    };
+
+    hide struct MeshAllocator {
+        uint32_t ElementSize = 0;
+        uint32_t SmallestClassElementCount = 0;
+        std::vector<MeshPage> Pages;
+        std::array<std::vector<uint32_t>, MeshClassCount> ClassPageIndices;
+    };
+
+    hide struct MeshAllocation {
+        bool Dedicated = false;
+        MeshAllocator* Allocator = nullptr;
+        uint32_t Page = 0;
+        uint32_t Slot = 0;
+        SenBuffer Buffer;
+    };
+
+    hide struct MeshEntryInternal {
+        MeshEntry Entry;
+        MeshAllocation VertexAllocation;
+        MeshAllocation IndexAllocation;
+        uint32_t Generation = 1;
+    };
+
+    hide static MeshAllocator _vertexAllocator;
+    hide static MeshAllocator _indexAllocator;
+    hide static std::vector<MeshEntryInternal> _meshEntries;
+    hide static std::vector<uint32_t> _freeMeshEntries;
+
+    expose static auto CreateMesh(const BeMeshData& data) -> BeMesh;
+    expose static auto ReleaseMesh(BeMesh mesh) -> void;
+    expose static auto GetMeshEntry(BeMesh mesh) -> const MeshEntry&;
+
+    hide static auto AllocateMeshMemory(MeshAllocator& allocator, uint32_t elementCount) -> MeshAllocation;
+    hide static auto FreeMeshMemory(const MeshAllocation& allocation) -> void;
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // retirement //////////////////////////////////////////////////////////////////////////////////////////////////////
     hide struct RetirementBucket {
         SenSubmission Submission;
@@ -138,6 +191,7 @@ class BeBackend {
         std::vector<SenBuffer> Buffers;
         std::vector<SenSampler> Samplers;
         std::vector<SenPipeline> Pipelines;
+        std::vector<MeshAllocation> MeshAllocations;
     };
 
     hide static RetirementBucket _pending;

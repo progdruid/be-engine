@@ -276,7 +276,7 @@ auto BeStandardFullScene::ApplyLuaAssets(const BeLuaValue& assets) -> void {
         }
         else {
             const auto primitive = meshDef["primitive"].GetOr(std::string("cube"));
-            std::shared_ptr<BeMesh> mesh;
+            std::shared_ptr<BeMeshData> mesh;
             if (primitive == "plane") {
                 mesh = BeMeshPrimitives::Plane(meshDef["subdivisions"].GetOr(1u));
             } else if (primitive == "sphere") {

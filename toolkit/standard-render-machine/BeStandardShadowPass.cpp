@@ -54,8 +54,6 @@ auto BeStandardShadowPass::RenderDirectionalShadows(
     BePass pass(cmd);
     pass.SetDepthTarget(shadowArray, SenLoadOp::Clear, 1.0f, static_cast<int16_t>(slice));
     pass.SetViewport({ 0, 0, resolution, resolution, 0, 1 });
-    pass.SetVertexBuffer(_srm->GetSharedVertexBuffer());
-    pass.SetIndexBuffer(_srm->GetSharedIndexBuffer());
     pass.Begin();
 
     for (const auto& entry : entries) {
@@ -67,15 +65,17 @@ auto BeStandardShadowPass::RenderDirectionalShadows(
         _objectMaterial->SetMatrix("ProjectionView", sunLight.ShadowViewProjection);
         _objectMaterial->SetFloat3("ViewerPosition", glm::vec3(0.f));
 
-        const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
+        const auto& meshEntry = BeBackend::GetMeshEntry(entry.Prop->Mesh);
+        SenCmd::SetVertexBuffer(cmd, meshEntry.VertexBuffer);
+        SenCmd::SetIndexBuffer(cmd, meshEntry.IndexBuffer);
         for (const auto& surface : entry.Prop->Surfaces) {
-            const auto& meshSlice = meshSlices[surface.MeshSlice];
+            const auto& submesh = meshEntry.Submeshes[surface.Submesh];
 
             pass.SetState(_srm->GetDrawState(surface));
             pass.Bind("frame", *uniformMat);
             pass.Bind("geometry-object", *_objectMaterial);
             pass.Bind("geometry-main", *surface.Material);
-            pass.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
+            pass.DrawIndexed(submesh.IndexCount, submesh.StartIndexLocation, submesh.BaseVertexLocation);
         }
     }
     pass.End();
@@ -99,8 +99,6 @@ auto BeStandardShadowPass::RenderPointLightShadows(
         BePass pass(cmd);
         pass.SetDepthTarget(shadowArray, SenLoadOp::Clear, 1.0f, layer);
         pass.SetViewport({ 0, 0, resolution, resolution, 0, 1 });
-        pass.SetVertexBuffer(_srm->GetSharedVertexBuffer());
-        pass.SetIndexBuffer(_srm->GetSharedIndexBuffer());
         pass.Begin();
 
         for (const auto& entry : entries) {
@@ -112,14 +110,16 @@ auto BeStandardShadowPass::RenderPointLightShadows(
             _objectMaterial->SetMatrix("ProjectionView", faceViewProj);
             _objectMaterial->SetFloat3("ViewerPosition", pointLight.Position);
 
-            const auto& meshSlices = _srm->GetMeshSlices(entry.Prop->Mesh.get());
+            const auto& meshEntry = BeBackend::GetMeshEntry(entry.Prop->Mesh);
+            SenCmd::SetVertexBuffer(cmd, meshEntry.VertexBuffer);
+            SenCmd::SetIndexBuffer(cmd, meshEntry.IndexBuffer);
             for (const auto& surface : entry.Prop->Surfaces) {
-                const auto& meshSlice = meshSlices[surface.MeshSlice];
+                const auto& submesh = meshEntry.Submeshes[surface.Submesh];
                 pass.SetState(_srm->GetDrawState(surface));
                 pass.Bind("frame", *uniformMat);
                 pass.Bind("geometry-object", *_objectMaterial);
                 pass.Bind("geometry-main", *surface.Material);
-                pass.DrawIndexed(meshSlice.IndexCount, meshSlice.StartIndexLocation, meshSlice.BaseVertexLocation);
+                pass.DrawIndexed(submesh.IndexCount, submesh.StartIndexLocation, submesh.BaseVertexLocation);
             }
         }
 

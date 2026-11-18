@@ -456,45 +456,37 @@ auto BeStandardRenderMachine::LoadProp(
     }
 
     static BeAssimpImporter importer;
-    auto prop = importer.LoadProp(modelPath, materialExtractFunction);
-    RegisterMesh(prop->Mesh);
-    return prop;
+    return importer.LoadProp(modelPath, materialExtractFunction);
 }
 
 auto BeStandardRenderMachine::CreateProp(
-    std::shared_ptr<BeMesh> mesh,
+    std::shared_ptr<BeMeshData> mesh,
     raw_ptr<BeShader> shader,
     const std::string& schemeLink
 ) -> std::shared_ptr<BeProp> {
     auto prop = std::make_shared<BeProp>();
-    prop->Mesh = std::move(mesh);
+    prop->MeshData = std::move(mesh);
+    prop->Mesh = BeBackend::CreateMesh(*prop->MeshData);
 
     const auto& scheme = BeShaderLibrary::GetShaderScheme(*shader, schemeLink);
     const auto state = BeDrawState::Create(*shader).Build();
-    for (size_t i = 0; i < prop->Mesh->LocalSlices.size(); ++i) {
+    for (size_t i = 0; i < prop->MeshData->Submeshes.size(); ++i) {
         auto& surface = prop->Surfaces.emplace_back();
-        surface.MeshSlice = static_cast<uint32_t>(i);
+        surface.Submesh = static_cast<uint32_t>(i);
         surface.Material = BeMaterial::Create(scheme);
         SetDrawState(surface, state);
     }
 
-    RegisterMesh(prop->Mesh);
     return prop;
 }
 
 
 // =====================================================================================================================
-// BeStandardRenderMachine -mesh baking
+// BeStandardRenderMachine -draw states
 // =====================================================================================================================
 
-auto BeStandardRenderMachine::ClearMeshes() -> void {
-    _registeredMeshes.clear();
-    _sharedMeshSlices.clear();
+auto BeStandardRenderMachine::ClearDrawStates() -> void {
     _surfaceDrawStates.clear();
-}
-
-auto BeStandardRenderMachine::RegisterMesh(const std::shared_ptr<BeMesh>& mesh) -> void {
-    _registeredMeshes.push_back(mesh);
 }
 
 auto BeStandardRenderMachine::SetDrawState(const BePropSurface& surface, BeDrawState state) -> void {
@@ -505,53 +497,5 @@ auto BeStandardRenderMachine::GetDrawState(const BePropSurface& surface) const -
     const auto it = _surfaceDrawStates.find(surface.Id);
     be_assert(it != _surfaceDrawStates.end(), "BeStandardRenderMachine::GetDrawState: surface was never registered", surface.Id);
     return it->second;
-}
-
-auto BeStandardRenderMachine::BakeMeshes() -> void {
-    size_t totalVertices = 0;
-    size_t totalIndices  = 0;
-    for (const auto& mesh : _registeredMeshes) {
-        totalVertices += mesh->Vertices.size();
-        totalIndices  += mesh->Indices.size();
-    }
-
-    std::vector<BeFullVertex> vertices;
-    std::vector<uint32_t> indices;
-    vertices.reserve(totalVertices);
-    indices.reserve(totalIndices);
-
-    for (const auto& mesh : _registeredMeshes) {
-        if (_sharedMeshSlices.contains(mesh.get()))
-            continue;
-
-        const auto vertexBase = static_cast<int32_t>(vertices.size());
-        const auto indexBase  = static_cast<uint32_t>(indices.size());
-
-        vertices.insert(vertices.end(), mesh->Vertices.begin(), mesh->Vertices.end());
-        indices.insert(indices.end(),   mesh->Indices.begin(),  mesh->Indices.end());
-
-        auto& slices = _sharedMeshSlices[mesh.get()];
-        for (const auto& slice : mesh->LocalSlices) {
-            slices.push_back({
-                .IndexCount          = slice.IndexCount,
-                .StartIndexLocation  = slice.StartIndexLocation + indexBase,
-                .BaseVertexLocation  = slice.BaseVertexLocation + vertexBase,
-            });
-        }
-    }
-
-    const auto vertexSize = static_cast<uint32_t>(vertices.size() * sizeof(BeFullVertex));
-    _sharedVertexBuffer = Sen::CreateBuffer({
-        .Memory = SenMemory::Device,
-        .Size   = vertexSize,
-    });
-    BeBackend::WriteBuffer(vertices.data(), vertexSize, _sharedVertexBuffer, 0);
-
-    const auto indexSize = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
-    _sharedIndexBuffer = Sen::CreateBuffer({
-        .Memory = SenMemory::Device,
-        .Size   = indexSize,
-    });
-    BeBackend::WriteBuffer(indices.data(), indexSize, _sharedIndexBuffer, 0);
 }
 

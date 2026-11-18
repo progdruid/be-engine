@@ -10,7 +10,7 @@
 #include "standard-game/Components.h"
 
 struct BeProp;
-struct BeMesh;
+struct BeMeshData;
 class BeMaterial;
 class BeTexture;
 
